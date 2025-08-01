@@ -15,7 +15,7 @@ import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AchievementQuickView } from '@/components/AchievementQuickView';
-import { FallbackStatistics } from '@/components/FallbackStatistics';
+
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -405,7 +405,21 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                 setShowSettingsMenu(true);
               }} 
             />
-            <FallbackStatistics userId={user.id} />
+            <Card className="shadow-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                    <Star className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium">Streak</div>
+                    <div className="text-sm text-muted-foreground">
+                      {streakLoading ? 'Wird geladen...' : `${streak} Tage in Folge! 🔥`}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Parent Linking - only show if no parent link exists */}
