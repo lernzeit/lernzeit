@@ -15,6 +15,7 @@ import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AchievementQuickView } from '@/components/AchievementQuickView';
+import { FallbackStatistics } from '@/components/FallbackStatistics';
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -404,15 +405,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                 setShowSettingsMenu(true);
               }} 
             />
-            <Card className="shadow-card bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-              <CardContent className="p-4 text-center">
-                <Zap className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <div className="text-sm font-medium text-blue-700">
-                  Streak: {streakLoading ? '...' : streak}
-                </div>
-                <div className="text-xs text-blue-600">Tage in Folge</div>
-              </CardContent>
-            </Card>
+            <FallbackStatistics userId={user.id} />
           </div>
 
           {/* Parent Linking - only show if no parent link exists */}

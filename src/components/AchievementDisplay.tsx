@@ -131,7 +131,9 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
                 🎉 Neue Erfolge!
               </div>
               <div className="space-y-1">
-                {recentAchievements.slice(0, 2).map((achievement) => (
+              {recentAchievements
+                .sort((a, b) => new Date(b.earned_at!).getTime() - new Date(a.earned_at!).getTime())
+                .slice(0, 2).map((achievement) => (
                   <div key={achievement.id} className="flex items-center gap-2 text-xs">
                     <span>{achievement.icon}</span>
                     <span className="text-muted-foreground">{achievement.name}</span>
