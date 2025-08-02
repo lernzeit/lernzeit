@@ -637,6 +637,21 @@ export type Database = {
         | "total_questions"
         | "fast_sessions"
         | "subjects_mastered"
+        | "monthly_active"
+        | "weekly_consistency"
+        | "seasonal_learner"
+        | "milestone_months"
+        | "progress_tracker"
+        | "dedication_levels"
+        | "knowledge_accumulator"
+        | "early_bird"
+        | "night_owl"
+        | "weekend_warrior"
+        | "comeback_kid"
+        | "mentor_ready"
+        | "accuracy_improvement"
+        | "long_term_dedication"
+        | "time_based_consistency"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -787,6 +802,21 @@ export const Constants = {
         "total_questions",
         "fast_sessions",
         "subjects_mastered",
+        "monthly_active",
+        "weekly_consistency",
+        "seasonal_learner",
+        "milestone_months",
+        "progress_tracker",
+        "dedication_levels",
+        "knowledge_accumulator",
+        "early_bird",
+        "night_owl",
+        "weekend_warrior",
+        "comeback_kid",
+        "mentor_ready",
+        "accuracy_improvement",
+        "long_term_dedication",
+        "time_based_consistency",
       ],
     },
   },
