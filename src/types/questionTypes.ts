@@ -1,4 +1,30 @@
 
+export type QuestionVariant = 'MULTIPLE_CHOICE' | 'SORT' | 'MATCH' | 'FREETEXT';
+
+// New question type system
+export interface NewBaseQuestion {
+  id: string;
+  grade: number;
+  subject: string;
+  variant: QuestionVariant;
+  body: string;
+  explanation: string;
+  verifier_score: number;
+  created_at: string;
+}
+
+export interface MCData { options: string[]; correct_idx: number }
+export interface SortData { items: string[]; correct_order: number[] }
+export interface MatchData { left: string[]; right: string[]; pairs: number[] }
+export interface FreeData { expected: string; grading: 'exact' | 'levenshtein' }
+
+export type Question =
+  | (NewBaseQuestion & { variant: 'MULTIPLE_CHOICE'; data: MCData })
+  | (NewBaseQuestion & { variant: 'SORT'; data: SortData })
+  | (NewBaseQuestion & { variant: 'MATCH'; data: MatchData })
+  | (NewBaseQuestion & { variant: 'FREETEXT'; data: FreeData });
+
+// Legacy types - maintaining exact compatibility
 export interface BaseQuestion {
   id: number;
   question: string;
