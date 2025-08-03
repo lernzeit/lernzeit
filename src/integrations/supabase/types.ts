@@ -493,6 +493,42 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          body: string
+          created_at: string | null
+          data: Json
+          explanation: string | null
+          grade: number
+          id: string
+          subject: string
+          variant: Database["public"]["Enums"]["question_variant"]
+          verifier_score: number | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          data?: Json
+          explanation?: string | null
+          grade: number
+          id?: string
+          subject: string
+          variant?: Database["public"]["Enums"]["question_variant"]
+          verifier_score?: number | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          data?: Json
+          explanation?: string | null
+          grade?: number
+          id?: string
+          subject?: string
+          variant?: Database["public"]["Enums"]["question_variant"]
+          verifier_score?: number | null
+        }
+        Relationships: []
+      }
       template_metrics: {
         Row: {
           created_at: string
@@ -652,6 +688,7 @@ export type Database = {
         | "accuracy_improvement"
         | "long_term_dedication"
         | "time_based_consistency"
+      question_variant: "MULTIPLE_CHOICE" | "SORT" | "MATCH" | "FREETEXT"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -818,6 +855,7 @@ export const Constants = {
         "long_term_dedication",
         "time_based_consistency",
       ],
+      question_variant: ["MULTIPLE_CHOICE", "SORT", "MATCH", "FREETEXT"],
     },
   },
 } as const
