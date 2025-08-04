@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.test-template-generation]
 verify_jwt = false
+
+[functions.question_factory_v2]
+verify_jwt = false
+
+[functions.controller]
+verify_jwt = false
