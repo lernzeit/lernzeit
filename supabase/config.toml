@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.controller]
 verify_jwt = false
+
+[functions.test_question_factory]
+verify_jwt = false
