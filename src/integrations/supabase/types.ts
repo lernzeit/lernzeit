@@ -140,6 +140,128 @@ export type Database = {
         }
         Relationships: []
       }
+      context_dimensions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          examples: string[] | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          examples?: string[] | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          examples?: string[] | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      context_diversity_metrics: {
+        Row: {
+          category: string
+          context_repetition_rate: number
+          created_at: string
+          grade: number
+          id: string
+          scenario_family_coverage: number
+          semantic_distance_score: number
+          session_date: string
+          total_questions: number
+          unique_contexts: number
+          updated_at: string
+          user_engagement_score: number
+          user_id: string
+        }
+        Insert: {
+          category: string
+          context_repetition_rate?: number
+          created_at?: string
+          grade: number
+          id?: string
+          scenario_family_coverage?: number
+          semantic_distance_score?: number
+          session_date?: string
+          total_questions?: number
+          unique_contexts?: number
+          updated_at?: string
+          user_engagement_score?: number
+          user_id: string
+        }
+        Update: {
+          category?: string
+          context_repetition_rate?: number
+          created_at?: string
+          grade?: number
+          id?: string
+          scenario_family_coverage?: number
+          semantic_distance_score?: number
+          session_date?: string
+          total_questions?: number
+          unique_contexts?: number
+          updated_at?: string
+          user_engagement_score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      context_variants: {
+        Row: {
+          created_at: string
+          dimension_type: string
+          id: string
+          quality_score: number
+          scenario_family_id: string
+          semantic_cluster: string | null
+          updated_at: string
+          usage_count: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          dimension_type: string
+          id?: string
+          quality_score?: number
+          scenario_family_id: string
+          semantic_cluster?: string | null
+          updated_at?: string
+          usage_count?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          dimension_type?: string
+          id?: string
+          quality_score?: number
+          scenario_family_id?: string
+          semantic_cluster?: string | null
+          updated_at?: string
+          usage_count?: number
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "context_variants_scenario_family_id_fkey"
+            columns: ["scenario_family_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_sessions: {
         Row: {
           category: string | null
@@ -529,6 +651,81 @@ export type Database = {
         }
         Relationships: []
       }
+      scenario_families: {
+        Row: {
+          base_template: string
+          category: string
+          context_slots: Json
+          created_at: string
+          description: string | null
+          difficulty_level: string
+          grade_max: number
+          grade_min: number
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          base_template: string
+          category: string
+          context_slots?: Json
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string
+          grade_max?: number
+          grade_min?: number
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          base_template?: string
+          category?: string
+          context_slots?: Json
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string
+          grade_max?: number
+          grade_min?: number
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      semantic_clusters: {
+        Row: {
+          category: string
+          cluster_name: string
+          created_at: string
+          dimension_type: string
+          id: string
+          representative_terms: string[] | null
+          semantic_distance_threshold: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          cluster_name: string
+          created_at?: string
+          dimension_type: string
+          id?: string
+          representative_terms?: string[] | null
+          semantic_distance_threshold?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cluster_name?: string
+          created_at?: string
+          dimension_type?: string
+          id?: string
+          representative_terms?: string[] | null
+          semantic_distance_threshold?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       template_metrics: {
         Row: {
           created_at: string
@@ -607,6 +804,53 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements_template"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_context_history: {
+        Row: {
+          category: string
+          context_combination: Json
+          context_hash: string
+          created_at: string
+          grade: number
+          id: string
+          question_id: string | null
+          scenario_family_id: string
+          session_date: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          context_combination: Json
+          context_hash: string
+          created_at?: string
+          grade: number
+          id?: string
+          question_id?: string | null
+          scenario_family_id: string
+          session_date?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          context_combination?: Json
+          context_hash?: string
+          created_at?: string
+          grade?: number
+          id?: string
+          question_id?: string | null
+          scenario_family_id?: string
+          session_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_context_history_scenario_family_id_fkey"
+            columns: ["scenario_family_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_families"
             referencedColumns: ["id"]
           },
         ]
