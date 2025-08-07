@@ -47,9 +47,9 @@ export interface DiversityMetrics {
 }
 
 export class ContextualDiversityEngine {
-  private userId: string;
-  private category: string;
-  private grade: number;
+  protected userId: string;
+  protected category: string;
+  protected grade: number;
 
   constructor(userId: string, category: string, grade: number) {
     this.userId = userId;
@@ -379,7 +379,7 @@ export class ContextualDiversityEngine {
   /**
    * Find which semantic cluster a value belongs to
    */
-  private findSemanticCluster(
+  protected findSemanticCluster(
     value: string, 
     dimensionType: string, 
     semanticClusters: SemanticCluster[]
@@ -418,7 +418,7 @@ export class ContextualDiversityEngine {
   /**
    * Generate a hash for a context combination for quick comparison
    */
-  private hashContext(context: ContextCombination): string {
+  protected hashContext(context: ContextCombination): string {
     const sorted = Object.keys(context)
       .sort()
       .map(key => `${key}:${context[key]}`)
