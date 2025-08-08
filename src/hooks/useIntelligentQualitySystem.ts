@@ -443,7 +443,7 @@ export function useIntelligentQualitySystem(
   // Store quality metrics in database
   const storeQualityMetrics = useCallback(async (questionId: number, report: QualityReport) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('question_quality_metrics')
         .upsert({
           question_id: questionId,

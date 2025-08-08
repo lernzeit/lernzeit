@@ -75,13 +75,13 @@ export function useAdaptiveDifficultySystem(
   // Load user's difficulty profile from database
   const loadDifficultyProfile = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('user_difficulty_profiles')
         .select('*')
         .eq('user_id', userId)
         .eq('category', category)
         .eq('grade', grade)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Failed to load difficulty profile:', error);
@@ -324,7 +324,7 @@ export function useAdaptiveDifficultySystem(
       setLastAdjustment(adjustment);
 
       // Store updated profile in database
-      await supabase
+      await (supabase as any)
         .from('user_difficulty_profiles')
         .upsert({
           user_id: userId,
