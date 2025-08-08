@@ -298,7 +298,7 @@ export class MultiContextTemplateEngine {
               {
                 name: 'start_time',
                 type: 'number',
-                source: 'context_dependent',
+                source: 'context',
                 constraints: {
                   min_value: 7,
                   max_value: 18,
