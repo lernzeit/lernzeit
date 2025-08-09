@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { ChildManagement } from '@/components/ChildManagement';
 import { RefreshCw, Users, Clock, TrendingUp, BookOpen, Plus } from 'lucide-react';
+import { QualityDashboardModal } from '@/components/QualityDashboardModal';
 
 interface ParentDashboardProps {
   userId: string;
@@ -25,12 +26,12 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       loadFamilyData(userId);
     }
   }, [userId, loadFamilyData]);
+  const [qualityOpen, setQualityOpen] = useState(false);
 
   // Event handlers
   const handleRefresh = () => {
     loadFamilyData(userId);
   };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -40,14 +41,19 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
             Verwalten Sie Ihre Kinder nach dem Family Link Prinzip
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={handleRefresh}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Aktualisieren
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Aktualisieren
+          </Button>
+          <Button onClick={() => setQualityOpen(true)}>
+            Qualitäts-Dashboard
+          </Button>
+        </div>
       </div>
 
       {/* Child Management - Family Link Style */}
@@ -81,6 +87,8 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      <QualityDashboardModal isOpen={qualityOpen} onOpenChange={setQualityOpen} userId={userId} />
     </div>
   );
 }

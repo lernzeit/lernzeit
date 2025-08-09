@@ -21,6 +21,7 @@ import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 
 interface CategoryMathProblemProps {
   category: string;
@@ -92,6 +93,24 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [gameCompleted, setGameCompleted] = useState(false);
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
+
+  // Adaptive Difficulty System
+  const normalizeCategoryForAdaptive = (c: string): string => {
+    const s = c.toLowerCase();
+    if (s.includes('mathematik') || s.includes('math')) return 'math';
+    if (s.includes('deutsch') || s.includes('german')) return 'german';
+    if (s.includes('englisch') || s.includes('english')) return 'english';
+    if (s.includes('geographie') || s.includes('geography')) return 'geography';
+    if (s.includes('geschichte') || s.includes('history')) return 'history';
+    if (s.includes('physik') || s.includes('physics')) return 'physics';
+    if (s.includes('biologie') || s.includes('biology')) return 'biology';
+    if (s.includes('chemie') || s.includes('chemistry')) return 'chemistry';
+    if (s.includes('latein') || s.includes('latin')) return 'latin';
+    return s;
+  };
+
+  const adaptiveUserId = user?.id || '00000000-0000-0000-0000-000000000000';
+  const adaptive = useAdaptiveDifficultySystem(normalizeCategoryForAdaptive(category), grade, adaptiveUserId);
 
   // Auto-generate math problems when component loads
   useEffect(() => {
@@ -247,6 +266,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   }, [gameCompleted, sessionEndTime, sessionStartTime, score, category, grade, problems.length, user, settings, addScreenTime, onComplete]);
 
   const startGame = () => {
+    adaptive.resetSession();
     setGameStarted(true);
     // Problems should already be generated at this point
   };
@@ -344,6 +364,18 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     const isCorrect = validateAnswer(currentQuestion);
     
     setFeedback(isCorrect ? 'correct' : 'incorrect');
+
+    // Adaptive difficulty tracking
+    const responseTime = Date.now() - questionStartTime;
+    try {
+      adaptive.updatePerformance(isCorrect, responseTime, false);
+      console.log('🎚️ Empfohlene Schwierigkeit:', adaptive.getRecommendedDifficulty());
+    } catch (e) {
+      console.warn('Adaptive tracking error', e);
+    }
+    if (user && adaptive.shouldAdjust) {
+      await adaptive.performAdaptiveAdjustment();
+    }
     
     if (isCorrect) {
       setScore(prev => prev + 1);
@@ -438,6 +470,18 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
 
   const handleMatchingComplete = (isCorrect: boolean) => {
     setFeedback(isCorrect ? 'correct' : 'incorrect');
+
+    // Adaptive difficulty tracking
+    const responseTime = Date.now() - questionStartTime;
+    try {
+      adaptive.updatePerformance(isCorrect, responseTime, false);
+      console.log('🎚️ Empfohlene Schwierigkeit:', adaptive.getRecommendedDifficulty());
+    } catch (e) {
+      console.warn('Adaptive tracking error', e);
+    }
+    if (user && adaptive.shouldAdjust) {
+      void adaptive.performAdaptiveAdjustment();
+    }
     
     if (isCorrect) {
       setScore(prev => prev + 1);
