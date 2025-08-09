@@ -615,6 +615,48 @@ export type Database = {
         }
         Relationships: []
       }
+      question_quality_metrics: {
+        Row: {
+          category: string
+          confidence_level: number
+          created_at: string | null
+          dimension_scores: Json
+          grade: number
+          id: string
+          improvement_suggestions: string[] | null
+          overall_score: number
+          question_id: number
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          confidence_level?: number
+          created_at?: string | null
+          dimension_scores?: Json
+          grade: number
+          id?: string
+          improvement_suggestions?: string[] | null
+          overall_score: number
+          question_id: number
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confidence_level?: number
+          created_at?: string | null
+          dimension_scores?: Json
+          grade?: number
+          id?: string
+          improvement_suggestions?: string[] | null
+          overall_score?: number
+          question_id?: number
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       questions: {
         Row: {
           body: string
@@ -854,6 +896,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_difficulty_profiles: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_level: number
+          grade: number
+          id: string
+          last_updated: string | null
+          learning_velocity: number
+          mastery_score: number
+          strengths: string[] | null
+          user_id: string
+          weaknesses: string[] | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          current_level?: number
+          grade: number
+          id?: string
+          last_updated?: string | null
+          learning_velocity?: number
+          mastery_score?: number
+          strengths?: string[] | null
+          user_id: string
+          weaknesses?: string[] | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_level?: number
+          grade?: number
+          id?: string
+          last_updated?: string | null
+          learning_velocity?: number
+          mastery_score?: number
+          strengths?: string[] | null
+          user_id?: string
+          weaknesses?: string[] | null
+        }
+        Relationships: []
       }
     }
     Views: {
