@@ -69,7 +69,24 @@ export function useImprovedMathGeneration(
       4: { min: 1, max: 10000, operations: ['+', '-', '×', '÷'] }
     };
     
-    const gradeConfig = ranges[config.grade as keyof typeof ranges] || ranges[4];
+    const baseConfig = ranges[config.grade as keyof typeof ranges] || ranges[4];
+
+    // Schwierigkeit berücksichtigen
+    const level = config.difficultyLevel === 'mixed'
+      ? (['easy','medium','hard'] as const)[Math.floor(Math.random()*3)]
+      : config.difficultyLevel;
+
+    const rangeMultiplier = level === 'easy' ? 0.6 : level === 'hard' ? 1.5 : 1.0;
+    const adjustedMax = Math.max(10, Math.floor(baseConfig.max * rangeMultiplier));
+    const adjustedMin = baseConfig.min;
+
+    let operations = [...baseConfig.operations];
+    if (level === 'easy') {
+      operations = ['+', '-'];
+    }
+    if (level === 'hard' && !operations.includes('÷') && config.grade >= 4) {
+      operations = Array.from(new Set([...operations, '×', '÷']));
+    }
     
     let attempts = 0;
     const maxAttempts = 50; // Erhöhe die Versuche deutlich
@@ -78,9 +95,9 @@ export function useImprovedMathGeneration(
       attempts++;
       
       // Generiere Zahlen und Operation
-      const a = Math.floor(Math.random() * (gradeConfig.max - gradeConfig.min + 1)) + gradeConfig.min;
-      const b = Math.floor(Math.random() * Math.min(gradeConfig.max / 2, 50)) + 1;
-      const operation = gradeConfig.operations[Math.floor(Math.random() * gradeConfig.operations.length)];
+      const a = Math.floor(Math.random() * (adjustedMax - adjustedMin + 1)) + adjustedMin;
+      const b = Math.floor(Math.random() * Math.min(adjustedMax / 2, 50)) + 1;
+      const operation = operations[Math.floor(Math.random() * operations.length)];
       
       // Spezialbehandlung für Subtraktion und Division
       let num1 = a;
@@ -276,7 +293,15 @@ export function useImprovedMathGeneration(
       4: { max: 500 }
     };
     
-    const maxNum = ranges[config.grade as keyof typeof ranges]?.max || 100;
+    const baseMax = ranges[config.grade as keyof typeof ranges]?.max || 100;
+
+    const level = config.difficultyLevel === 'mixed'
+      ? (['easy','medium','hard'] as const)[Math.floor(Math.random()*3)]
+      : config.difficultyLevel;
+
+    const rangeMultiplier = level === 'easy' ? 0.6 : level === 'hard' ? 1.5 : 1.0;
+    const maxNum = Math.max(10, Math.floor(baseMax * rangeMultiplier));
+
     let a = Math.floor(Math.random() * maxNum) + 1;
     let b = Math.floor(Math.random() * Math.min(maxNum / 2, 50)) + 1;
     

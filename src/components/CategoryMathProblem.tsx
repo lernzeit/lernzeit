@@ -39,15 +39,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   // Use improved math generation for math categories
   const isMathCategory = category.toLowerCase().includes('mathematik') || category.toLowerCase().includes('math');
   
-  const mathConfig: MathGenerationConfig = {
-    grade,
-    totalQuestions: 5,
-    enableDuplicateDetection: true,
-    enableEnhancedExplanations: true,
-    difficultyLevel: 'mixed'
-  };
-  
-  const improvedMathGeneration = useImprovedMathGeneration(user?.id || 'anonymous', mathConfig);
+  // Mathe-Generator wird nach Adaptive-Setup initialisiert
   
   const fallbackGeneration = useQuestionGenerationManager({
     category,
@@ -58,23 +50,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     useEnhancedMode: false
   });
   
-  // Use improved generation for math, fallback for others
-  const { 
-    problems, 
-    isGenerating, 
-    error: generationError,
-    generateProblems
-  } = isMathCategory ? improvedMathGeneration : {
-    problems: fallbackGeneration.problems,
-    isGenerating: fallbackGeneration.isGenerating,
-    error: fallbackGeneration.generationError,
-    generateProblems: fallbackGeneration.generateProblems
-  };
-  
-  const isInitialized = problems.length >= 5;
-  const canRetry = !isGenerating;
-  const manualRetry = generateProblems;
-  const refreshQuestions = generateProblems;
+  // Generator-Zuweisung und Hilfsvariablen folgen nach der Initialisierung des Math-Generators
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -92,7 +68,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [showAchievements, setShowAchievements] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
 
-  const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
+  
 
   // Adaptive Difficulty System
   const normalizeCategoryForAdaptive = (c: string): string => {
@@ -111,6 +87,43 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
 
   const adaptiveUserId = user?.id || '00000000-0000-0000-0000-000000000000';
   const adaptive = useAdaptiveDifficultySystem(normalizeCategoryForAdaptive(category), grade, adaptiveUserId);
+
+  // Konfiguriere Generator basierend auf empfohlener Schwierigkeit
+  const toDifficultyLabel = (v: number): MathGenerationConfig['difficultyLevel'] =>
+    v < 0.35 ? 'easy' : v < 0.7 ? 'medium' : 'hard';
+  const recommendedLevel = toDifficultyLabel(adaptive.getRecommendedDifficulty());
+
+  const mathConfig: MathGenerationConfig = {
+    grade,
+    totalQuestions: 5,
+    enableDuplicateDetection: true,
+    enableEnhancedExplanations: true,
+    difficultyLevel: recommendedLevel,
+  };
+
+  const improvedMathGeneration = useImprovedMathGeneration(user?.id || 'anonymous', mathConfig);
+
+  // Use improved generation for math, fallback for others
+  const {
+    problems,
+    isGenerating,
+    error: generationError,
+    generateProblems,
+  } = isMathCategory
+    ? improvedMathGeneration
+    : {
+        problems: fallbackGeneration.problems,
+        isGenerating: fallbackGeneration.isGenerating,
+        error: fallbackGeneration.generationError,
+        generateProblems: fallbackGeneration.generateProblems,
+      };
+
+  const isInitialized = problems.length >= 5;
+  const canRetry = !isGenerating;
+  const manualRetry = generateProblems;
+  const refreshQuestions = generateProblems;
+
+  const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
   // Auto-generate math problems when component loads
   useEffect(() => {
