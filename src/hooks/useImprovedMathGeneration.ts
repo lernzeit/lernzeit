@@ -66,7 +66,8 @@ export function useImprovedMathGeneration(
       1: { min: 1, max: 20, operations: ['+', '-'] },
       2: { min: 1, max: 100, operations: ['+', '-'] },
       3: { min: 1, max: 1000, operations: ['+', '-', '×'] },
-      4: { min: 1, max: 10000, operations: ['+', '-', '×', '÷'] }
+      4: { min: 1, max: 10000, operations: ['+', '-', '×', '÷'] },
+      5: { min: 1, max: 100000, operations: ['+', '-', '×', '÷'] }
     };
     
     const baseConfig = ranges[config.grade as keyof typeof ranges] || ranges[4];
@@ -260,7 +261,20 @@ export function useImprovedMathGeneration(
   const generateWordProblem = useCallback(async (
     existingQuestions: string[]
   ): Promise<SelectionQuestion | null> => {
-    const templates = [
+    const templates = config.grade >= 5 ? [
+      {
+        template: "Ein Rechteck hat Seitenlängen {a} cm und {b} cm. Berechne den Umfang.",
+        operation: 'perimeter'
+      },
+      {
+        template: "Ein Rechteck hat die Seiten {a} cm und {b} cm. Berechne die Fläche.",
+        operation: 'area'
+      },
+      {
+        template: "Ein Fahrrad fährt mit {a} km/h. Wie weit kommt es in {b} Stunden?",
+        operation: 'distance'
+      }
+    ] : [
       {
         template: "{name} hat {a} {item}. {pronoun} bekommt {b} weitere dazu. Wie viele {item} hat {pronoun} jetzt?",
         operation: '+',
@@ -318,10 +332,29 @@ export function useImprovedMathGeneration(
       .replace(/\{item\}/g, item);
     
     // Berechne Antwort
-    const answer = template.operation === '+' ? a + b : a - b;
+    let answer = 0;
+    switch (template.operation) {
+      case '+':
+        answer = a + b;
+        break;
+      case '-':
+        answer = a - b;
+        break;
+      case 'perimeter':
+        answer = 2 * (a + b);
+        break;
+      case 'area':
+        answer = a * b;
+        break;
+      case 'distance':
+        answer = a * b;
+        break;
+      default:
+        answer = a + b;
+    }
     
     // Generiere Erklärung
-    const explanation = StepByStepExplainer.generateExplanation(
+    const explanationObj = StepByStepExplainer.generateExplanation(
       { question: questionText, type: 'math' } as SelectionQuestion,
       answer,
       config.grade
@@ -333,11 +366,107 @@ export function useImprovedMathGeneration(
       questionType: 'text-input',
       type: 'math',
       answer: answer.toString(),
-      explanation: explanation.summary + '\n\n' + explanation.steps.map(s => 
+      explanation: explanationObj.summary + '\n\n' + explanationObj.steps.map(s => 
         `${s.step}. ${s.description}${s.calculation ? ': ' + s.calculation : ''}`
       ).join('\n')
     };
   }, [config]);
+
+  /**
+   * Algebra-Fragen-Generator für Klassenstufe 5+
+   */
+  const generateAlgebraQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    const startTime = Date.now();
+    try {
+      const level = config.difficultyLevel === 'mixed'
+        ? (['easy','medium','hard'] as const)[Math.floor(Math.random()*3)]
+        : config.difficultyLevel;
+
+      const pickInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+      const subtypes = level === 'easy' ? ['linear1','linear2'] as const
+        : level === 'medium' ? ['linear1','linear2','fraction1'] as const
+        : ['linear1','linear2','fraction1','balance'] as const;
+      const subtype = subtypes[Math.floor(Math.random() * subtypes.length)];
+
+      let a = 0, b = 0, c = 0, d = 0, x = 0;
+      let questionText = '';
+
+      if (subtype === 'linear1') {
+        a = pickInt(2, 12);
+        x = pickInt(1, 30);
+        b = pickInt(0, 20);
+        c = a * x + b;
+        questionText = `Löse die Gleichung: ${a}x + ${b} = ${c}`;
+      } else if (subtype === 'linear2') {
+        a = pickInt(2, 12);
+        x = pickInt(1, 30);
+        b = pickInt(0, 20);
+        c = a * x - b;
+        questionText = `Löse die Gleichung: ${a}x - ${b} = ${c}`;
+      } else if (subtype === 'fraction1') {
+        const k = pickInt(2, 12);
+        b = pickInt(0, 15);
+        const rhs = pickInt(2, 20);
+        x = k * rhs - b;
+        questionText = `Löse: (x + ${b}) / ${k} = ${rhs}`;
+      } else { // balance: ax + b = dx + e
+        a = pickInt(2, 12);
+        d = pickInt(2, 12);
+        while (a === d) d = pickInt(2, 12);
+        x = pickInt(1, 20);
+        b = pickInt(0, 20);
+        const e = a * x + b - d * x;
+        questionText = `Löse: ${a}x + ${b} = ${d}x + ${e}`;
+      }
+
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const duplicateCheck = duplicateDetectorRef.current.checkDuplicate(
+          questionText,
+          userId,
+          config.grade,
+          existingQuestions
+        );
+        if (duplicateCheck.isDuplicate) {
+          return null;
+        }
+      }
+
+      const explanation = [
+        'So gehst du vor:',
+        '1. Bringe alle x-Terme auf eine Seite.',
+        '2. Bringe die Zahlen auf die andere Seite.',
+        '3. Teile durch den Faktor vor x.',
+        `Ergebnis: x = ${x}`
+      ].join('\n');
+
+      const question: SelectionQuestion = {
+        id: Math.floor(Math.random() * 1000000),
+        question: questionText,
+        questionType: 'text-input',
+        type: 'math',
+        answer: x.toString(),
+        explanation
+      };
+
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        await duplicateDetectorRef.current.saveQuestion(questionText, userId, config.grade);
+      }
+
+      const generationTime = Date.now() - startTime;
+      setStats(prev => ({
+        ...prev,
+        totalGenerated: prev.totalGenerated + 1,
+        generationTime: prev.generationTime + generationTime
+      }));
+
+      return question;
+    } catch (err) {
+      console.error('Error generating algebra question:', err);
+      return null;
+    }
+  }, [config, userId]);
 
   /**
    * Generiert eine einfache Fallback-Frage wenn die normale Generierung fehlschlägt
@@ -437,15 +566,22 @@ export function useImprovedMathGeneration(
           attempts++;
           
           try {
-            if (attempts === 1) {
-              // Erster Versuch: Gewünschter Typ
-              if (rand < questionTypes['word-problem'] && config.grade >= 2) {
+          if (attempts === 1) {
+            const preferAlgebra = config.grade >= 5;
+            if (preferAlgebra && Math.random() < 0.8) {
+              question = await generateAlgebraQuestion(existingQuestions);
+            }
+            if (!question) {
+              // Erster Versuch: Gewünschter Typ (angepasst für höhere Klassen)
+              const allowWordProblems = config.grade <= 4;
+              if (allowWordProblems && rand < questionTypes['word-problem'] && config.grade >= 2) {
                 question = await generateWordProblem(existingQuestions);
               } else if (rand < questionTypes['word-problem'] + questionTypes['multiple-choice']) {
                 question = await generateMultipleChoiceQuestion(existingQuestions);
               } else {
                 question = await generateSingleQuestion(existingQuestions);
               }
+            }
             } else if (attempts === 2) {
               // Zweiter Versuch: Einfache Textaufgabe
               question = await generateSingleQuestion(existingQuestions);
@@ -490,7 +626,7 @@ export function useImprovedMathGeneration(
     } finally {
       setIsGenerating(false);
     }
-  }, [config, problems, stats, generateSingleQuestion, generateMultipleChoiceQuestion, generateWordProblem]);
+  }, [config, problems, stats, generateSingleQuestion, generateMultipleChoiceQuestion, generateWordProblem, generateAlgebraQuestion]);
 
   /**
    * Lädt Templates aus der Datenbank
