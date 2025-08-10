@@ -95,24 +95,43 @@ export function useImprovedMathGeneration(
     while (attempts < maxAttempts) {
       attempts++;
       
-      // Generiere Zahlen und Operation
-      const a = Math.floor(Math.random() * (adjustedMax - adjustedMin + 1)) + adjustedMin;
-      const b = Math.floor(Math.random() * Math.min(adjustedMax / 2, 50)) + 1;
+      // Generiere Operation und passende Zahlen mit kopfrechenfreundlichen Grenzen
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
-      // Spezialbehandlung für Subtraktion und Division
-      let num1 = a;
-      let num2 = b;
+      let num1 = 0;
+      let num2 = 0;
       
-      if (operation === '-' && num2 > num1) {
-        [num1, num2] = [num2, num1]; // Tausche für positive Ergebnisse
+      if (config.grade >= 5) {
+        // Für Klasse 5+ Priorität auf Kopfrechenbarkeit
+        if (operation === '×') {
+          const maxA = level === 'hard' ? 99 : level === 'medium' ? 80 : 50;
+          const maxB = level === 'hard' ? 30 : level === 'medium' ? 25 : 20;
+          num1 = Math.floor(Math.random() * maxA) + 2;  // bis zweistellig
+          num2 = Math.floor(Math.random() * (maxB - 2)) + 2;
+        } else if (operation === '÷') {
+          const divisor = Math.floor(Math.random() * 19) + 2; // 2..20
+          const maxQ = level === 'hard' ? 20 : level === 'medium' ? 15 : 12;
+          const quotient = Math.floor(Math.random() * (maxQ - 2)) + 2;
+          num1 = divisor * quotient;
+          num2 = divisor;
+        } else {
+          const maxA = level === 'hard' ? 500 : level === 'medium' ? 300 : 150;
+          const maxB = level === 'hard' ? 300 : level === 'medium' ? 200 : 100;
+          num1 = Math.floor(Math.random() * (maxA - adjustedMin + 1)) + adjustedMin;
+          num2 = Math.floor(Math.random() * (maxB - 1)) + 1;
+          if (operation === '-' && num2 > num1) [num1, num2] = [num2, num1];
+        }
+      } else {
+        // Unter Klasse 5: bisheriges Verhalten
+        const a = Math.floor(Math.random() * (adjustedMax - adjustedMin + 1)) + adjustedMin;
+        const b = Math.floor(Math.random() * Math.min(adjustedMax / 2, 50)) + 1;
+        num1 = a;
+        num2 = b;
+        if (operation === '-' && num2 > num1) [num1, num2] = [num2, num1];
+        if (operation === '÷') {
+          num1 = num2 * Math.floor(Math.random() * 10 + 1);
+        }
       }
-      
-      if (operation === '÷') {
-        // Stelle sicher, dass Division aufgeht
-        num1 = num2 * Math.floor(Math.random() * 10 + 1);
-      }
-      
       // Erstelle verschiedene Frageformate
       const formats = [
         `${num1} ${operation} ${num2} = ?`,
@@ -568,7 +587,7 @@ export function useImprovedMathGeneration(
           try {
           if (attempts === 1) {
             const preferAlgebra = config.grade >= 5;
-            if (preferAlgebra && Math.random() < 0.8) {
+            if (preferAlgebra && Math.random() < 0.95) {
               question = await generateAlgebraQuestion(existingQuestions);
             }
             if (!question) {
@@ -583,8 +602,14 @@ export function useImprovedMathGeneration(
               }
             }
             } else if (attempts === 2) {
-              // Zweiter Versuch: Einfache Textaufgabe
-              question = await generateSingleQuestion(existingQuestions);
+              // Zweiter Versuch: Bevorzugt Algebra für Klasse 5+
+              const preferAlgebra = config.grade >= 5;
+              if (preferAlgebra && Math.random() < 0.6) {
+                question = await generateAlgebraQuestion(existingQuestions);
+              }
+              if (!question) {
+                question = await generateSingleQuestion(existingQuestions);
+              }
             } else {
               // Dritter Versuch: Template-basierter Fallback
               question = generateSimpleFallbackQuestion(config.grade, existingQuestions, i + 1);
