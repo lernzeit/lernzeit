@@ -16,6 +16,20 @@ export interface MathGenerationConfig {
   enableDuplicateDetection: boolean;
   enableEnhancedExplanations: boolean;
   difficultyLevel: 'easy' | 'medium' | 'hard' | 'mixed';
+  // Themengewichtung (summe ~1.0); kann vom Aufrufer überschrieben werden
+  topicWeights?: {
+    algebra?: number;
+    arithmetic?: number;
+    fractions?: number;
+    percentage?: number;
+    geometry?: number;
+    patterns?: number;
+    wordProblems?: number;
+    multipleChoice?: number;
+  };
+  // KI-Vorlagenverwaltung
+  useTemplateRefresh?: boolean; // Edge Function regelmäßig anstoßen
+  templateRefreshHours?: number; // Standard 12h
 }
 
 export interface GenerationStats {
@@ -52,6 +66,25 @@ export function useImprovedMathGeneration(
       detector.initialize(userId, config.grade);
     }
   }, [userId, config.grade, config.enableDuplicateDetection]);
+
+  // Optional: KI-Templates regelmäßig anstoßen
+  useEffect(() => {
+    if (!config.useTemplateRefresh) return;
+    try {
+      const hours = config.templateRefreshHours ?? 12;
+      const key = `lastTemplateRefresh_math_grade_${config.grade}`;
+      const last = Number(localStorage.getItem(key) || '0');
+      const now = Date.now();
+      if (now - last > hours * 3600_000) {
+        supabase.functions.invoke('template-generator-cron', {
+          body: { grade: config.grade, category: 'Mathematik' }
+        }).catch((e) => console.warn('Template refresh failed (non-fatal):', e));
+        localStorage.setItem(key, String(now));
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [config.useTemplateRefresh, config.templateRefreshHours, config.grade]);
 
   /**
    * Generiert eine einzelne Mathematik-Frage
@@ -104,10 +137,12 @@ export function useImprovedMathGeneration(
       if (config.grade >= 5) {
         // Für Klasse 5+ Priorität auf Kopfrechenbarkeit
         if (operation === '×') {
-          const maxA = level === 'hard' ? 99 : level === 'medium' ? 80 : 50;
-          const maxB = level === 'hard' ? 30 : level === 'medium' ? 25 : 20;
-          num1 = Math.floor(Math.random() * maxA) + 2;  // bis zweistellig
-          num2 = Math.floor(Math.random() * (maxB - 2)) + 2;
+          // Für Kopfrechnen: zweistellig × einstellige/kleine zweistellige Zahl
+          const maxA = level === 'hard' ? 99 : level === 'medium' ? 80 : 60;
+          const preferredSmallMultipliers = [6, 7, 8, 9, 10, 11, 12];
+          num1 = Math.floor(Math.random() * (maxA - 10)) + 10; // 10..maxA
+          // Bevorzuge kleine Multiplikatoren
+          num2 = preferredSmallMultipliers[Math.floor(Math.random() * preferredSmallMultipliers.length)];
         } else if (operation === '÷') {
           const divisor = Math.floor(Math.random() * 19) + 2; // 2..20
           const maxQ = level === 'hard' ? 20 : level === 'medium' ? 15 : 12;
@@ -792,58 +827,102 @@ export function useImprovedMathGeneration(
       const generatedProblems: SelectionQuestion[] = [];
       const existingQuestions: string[] = problems.map(p => p.question);
       
-      // Mischung verschiedener Fragetypen
-      const questionTypes = {
-        'text-input': 0.5,
-        'multiple-choice': 0.3,
-        'word-problem': 0.2
+      // Parameterisierte Themengewichtung (überschreibbar via config.topicWeights)
+      const mergedWeights = (() => {
+        const defaults = config.grade >= 5 ? {
+          algebra: 0.4,
+          fractions: 0.2,
+          percentage: 0.15,
+          geometry: 0.15,
+          patterns: 0.1,
+          arithmetic: 0.0,
+          wordProblems: 0.0,
+          multipleChoice: 0.0
+        } : {
+          arithmetic: 0.4,
+          wordProblems: 0.2,
+          geometry: 0.15,
+          patterns: 0.1,
+          fractions: 0.1,
+          percentage: 0.05,
+          algebra: 0.0,
+          multipleChoice: 0.0
+        };
+        const custom = config.topicWeights || {};
+        const merged: Record<string, number> = { ...defaults, ...custom };
+        const entries = Object.entries(merged);
+        const total = entries.reduce((s, [, v]) => s + (v || 0), 0) || 1;
+        return entries.map(([k, v]) => [k, (v || 0) / total]) as Array<[string, number]>;
+      })();
+
+      const pickTopic = () => {
+        const r = Math.random();
+        let acc = 0;
+        for (const [k, p] of mergedWeights) {
+          acc += p;
+          if (r <= acc) return k as keyof NonNullable<MathGenerationConfig['topicWeights']>;
+        }
+        return mergedWeights[mergedWeights.length - 1][0] as keyof NonNullable<MathGenerationConfig['topicWeights']>;
       };
       
       for (let i = 0; i < config.totalQuestions; i++) {
-        const rand = Math.random();
         let question: SelectionQuestion | null = null;
         let attempts = 0;
         const maxAttempts = 3;
-        
-        // Versuche verschiedene Generierungsstrategien bis eine funktioniert
+
         while (!question && attempts < maxAttempts) {
           attempts++;
-          
           try {
-          if (attempts === 1) {
-            const preferAlgebra = config.grade >= 5;
-            if (preferAlgebra && Math.random() < 0.95) {
-              question = await generateAlgebraQuestion(existingQuestions);
-            }
-            if (!question) {
-              // Erster Versuch: Gewünschter Typ (angepasst für höhere Klassen)
-              const allowWordProblems = config.grade <= 4;
-              if (allowWordProblems && rand < questionTypes['word-problem'] && config.grade >= 2) {
-                question = await generateWordProblem(existingQuestions);
-              } else if (rand < questionTypes['word-problem'] + questionTypes['multiple-choice']) {
+            const topic = pickTopic();
+            switch (topic) {
+              case 'algebra':
+                if (config.grade >= 5) question = await generateAlgebraQuestion(existingQuestions);
+                break;
+              case 'fractions':
+                question = await generateFractionQuestion(existingQuestions);
+                break;
+              case 'percentage':
+                question = await generatePercentageQuestion(existingQuestions);
+                break;
+              case 'geometry':
+                question = await generateGeometryQuestion(existingQuestions);
+                break;
+              case 'patterns':
+                question = await generateNumberPatternQuestion(existingQuestions);
+                break;
+              case 'wordProblems':
+                if (config.grade <= 4) question = await generateWordProblem(existingQuestions);
+                break;
+              case 'multipleChoice':
                 question = await generateMultipleChoiceQuestion(existingQuestions);
-              } else {
+                break;
+              case 'arithmetic':
+              default:
                 question = await generateSingleQuestion(existingQuestions);
-              }
+                break;
             }
-            } else if (attempts === 2) {
-              // Zweiter Versuch: Bevorzugt Algebra für Klasse 5+
-              const preferAlgebra = config.grade >= 5;
-              if (preferAlgebra && Math.random() < 0.6) {
-                question = await generateAlgebraQuestion(existingQuestions);
+
+            // Fallback-Kette, falls gewählte Topic-Generation nichts liefert
+            if (!question) {
+              if (config.grade >= 5) {
+                question = await generateAlgebraQuestion(existingQuestions) ||
+                           await generatePercentageQuestion(existingQuestions) ||
+                           await generateGeometryQuestion(existingQuestions) ||
+                           await generateFractionQuestion(existingQuestions) ||
+                           await generateNumberPatternQuestion(existingQuestions) ||
+                           await generateSingleQuestion(existingQuestions);
+              } else {
+                question = await generateSingleQuestion(existingQuestions) ||
+                           await generateWordProblem(existingQuestions) ||
+                           await generateGeometryQuestion(existingQuestions) ||
+                           await generateNumberPatternQuestion(existingQuestions);
               }
-              if (!question) {
-                question = await generateSingleQuestion(existingQuestions);
-              }
-            } else {
-              // Dritter Versuch: Template-basierter Fallback
-              question = generateSimpleFallbackQuestion(config.grade, existingQuestions, i + 1);
             }
           } catch (error) {
             console.warn(`Generation attempt ${attempts} failed for question ${i + 1}:`, error);
           }
         }
-        
+
         if (question) {
           generatedProblems.push(question);
           existingQuestions.push(question.question);

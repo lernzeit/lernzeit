@@ -25,7 +25,7 @@ export interface NewAchievement {
   color: string;
 }
 
-export function useAchievements(userId?: string) {
+export function useAchievements(userId?: string, options?: { suppressToast?: boolean }) {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userAchievements, setUserAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,11 +78,13 @@ export function useAchievements(userId?: string) {
       setUserAchievements(combinedAchievements);
     } catch (error: any) {
       console.error('Fehler beim Laden der Achievements:', error);
-      toast({
-        title: "Fehler",
-        description: "Achievements konnten nicht geladen werden.",
-        variant: "destructive",
-      });
+      if (!options?.suppressToast) {
+        toast({
+          title: "Fehler",
+          description: "Achievements konnten nicht geladen werden.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
