@@ -488,6 +488,231 @@ export function useImprovedMathGeneration(
   }, [config, userId]);
 
   /**
+   * Zusätzliche Themen-Generatoren: Bruchrechnung, Prozent, Geometrie, Zahlenmuster
+   */
+  const generateFractionQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    // Wähle Untertypen: gleichnamige Addition/Subtraktion oder Kürzen
+    const subtype = Math.random() < 0.5 ? 'same-denominator' : 'simplify';
+
+    if (subtype === 'simplify') {
+      // Erzeuge kürzbaren Bruch
+      const denominators = [6, 8, 9, 10, 12, 14, 15, 16, 18];
+      const d = denominators[Math.floor(Math.random() * denominators.length)];
+      // Wähle Zähler so, dass ggT > 1
+      const factors = [2, 3, 4, 5, 6];
+      const f = factors[Math.floor(Math.random() * factors.length)];
+      const base = Math.floor(Math.random() * 3) + 1; // 1..3
+      const n = base * f;
+      const questionText = `Kürze den Bruch ${n}/${d} vollständig.`;
+
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+        if (dup.isDuplicate) return null;
+      }
+
+      // Kürze
+      const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+      const g = gcd(n, d);
+      const sn = n / g;
+      const sd = d / g;
+      const answer = `${sn}/${sd}`;
+
+      const explanation = [
+        'So gehst du vor:',
+        '1. Finde den größten gemeinsamen Teiler (ggT) von Zähler und Nenner.',
+        `2. ggT(${n}, ${d}) = ${g}.`,
+        `3. Teile Zähler und Nenner durch ${g}.`,
+        `Ergebnis: ${n}/${d} = ${sn}/${sd}`
+      ].join('\n');
+
+      return {
+        id: Math.floor(Math.random() * 1000000),
+        question: questionText,
+        questionType: 'text-input',
+        type: 'math',
+        answer,
+        explanation
+      };
+    } else {
+      // gleichnamige Addition/Subtraktion
+      const denom = Math.floor(Math.random() * 9) + 2; // 2..10
+      let a = Math.floor(Math.random() * (denom - 1)) + 1;
+      let b = Math.floor(Math.random() * (denom - 1)) + 1;
+      const op = Math.random() < 0.5 ? '+' : '-';
+      if (op === '-' && b > a) [a, b] = [b, a];
+
+      const questionText = `Berechne: ${a}/${denom} ${op} ${b}/${denom}`;
+
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+        if (dup.isDuplicate) return null;
+      }
+
+      const num = op === '+' ? a + b : a - b;
+      // Kürzen falls möglich
+      const gcd = (x: number, y: number): number => (y === 0 ? x : gcd(y, x % y));
+      const g = gcd(num, denom);
+      const sn = num / g;
+      const sd = denom / g;
+      const answer = `${sn}/${sd}`;
+
+      const explanation = [
+        'So gehst du vor:',
+        '1. Gleiche Nenner: Zähler zusammenrechnen.',
+        `2. ${a} ${op} ${b} = ${num}.`,
+        `3. Bruch ggf. kürzen: ggT(${num}, ${denom}) = ${g}.`,
+        `Ergebnis: ${num}/${denom} = ${sn}/${sd}`
+      ].join('\n');
+
+      return {
+        id: Math.floor(Math.random() * 1000000),
+        question: questionText,
+        questionType: 'text-input',
+        type: 'math',
+        answer,
+        explanation
+      };
+    }
+  }, [config, userId]);
+
+  const generatePercentageQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    // Nutze prozentuale Anteile, die im Kopf gut gehen
+    const percOptions = [10, 20, 25, 50];
+    const p = percOptions[Math.floor(Math.random() * percOptions.length)];
+    // Wähle Basis so, dass Ergebnis ganzzahlig ist
+    const base = p === 25 ? (Math.floor(Math.random() * 16) + 4) * 4 // Vielfaches von 4
+               : p === 20 ? (Math.floor(Math.random() * 15) + 5) * 5  // Vielfaches von 5
+               : p === 10 ? (Math.floor(Math.random() * 20) + 10) * 10 // Vielfaches von 10
+               : (Math.floor(Math.random() * 20) + 4) * 2; // 50% -> gerade Zahl
+
+    const questionText = `Berechne ${p}% von ${base}.`;
+
+    if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+      const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+      if (dup.isDuplicate) return null;
+    }
+
+    let answer = 0;
+    if (p === 10) answer = base / 10;
+    else if (p === 20) answer = base / 5;
+    else if (p === 25) answer = base / 4;
+    else answer = base / 2; // 50%
+
+    const explanation = [
+      'So gehst du vor:',
+      p === 10 ? '1. 10% sind ein Zehntel.' : p === 20 ? '1. 20% sind ein Fünftel.' : p === 25 ? '1. 25% sind ein Viertel.' : '1. 50% sind die Hälfte.',
+      `2. ${base} : ${p === 10 ? 10 : p === 20 ? 5 : p === 25 ? 4 : 2} = ${answer}.`,
+      `Ergebnis: ${answer}`
+    ].join('\n');
+
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'text-input',
+      type: 'math',
+      answer: answer.toString(),
+      explanation
+    };
+  }, [config, userId]);
+
+  const generateGeometryQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    // Wähle Untertyp: Umfang Dreieck, Fläche Dreieck, Umfang Rechteck, Fläche Rechteck
+    const subtype = ['tri_perimeter','tri_area','rect_perimeter','rect_area'][Math.floor(Math.random()*4)];
+
+    if (subtype === 'tri_perimeter') {
+      const a = Math.floor(Math.random() * 15) + 5; // 5..19
+      const b = Math.floor(Math.random() * 15) + 5;
+      const c = Math.floor(Math.random() * 15) + 5;
+      const questionText = `Ein Dreieck hat die Seiten ${a} cm, ${b} cm und ${c} cm. Berechne den Umfang.`;
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+        if (dup.isDuplicate) return null;
+      }
+      const answer = a + b + c;
+      const explanation = `So gehst du vor:\n1. Umfang ist die Summe aller Seiten.\n2. ${a} + ${b} + ${c} = ${answer}.\nErgebnis: ${answer} cm`;
+      return { id: Math.floor(Math.random()*1000000), question: questionText, questionType: 'text-input', type: 'math', answer: answer.toString(), explanation };
+    }
+
+    if (subtype === 'tri_area') {
+      const base = (Math.floor(Math.random() * 15) + 5) * 2; // gerade Zahl
+      const height = (Math.floor(Math.random() * 10) + 4) * 2; // gerade Zahl
+      const questionText = `Berechne die Fläche eines Dreiecks mit Grundseite ${base} cm und Höhe ${height} cm.`;
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+        if (dup.isDuplicate) return null;
+      }
+      const answer = (base * height) / 2;
+      const explanation = `So gehst du vor:\n1. A = (Grundseite · Höhe) / 2.\n2. (${base} · ${height}) / 2 = ${answer}.\nErgebnis: ${answer} cm²`;
+      return { id: Math.floor(Math.random()*1000000), question: questionText, questionType: 'text-input', type: 'math', answer: answer.toString(), explanation };
+    }
+
+    if (subtype === 'rect_perimeter') {
+      const a = Math.floor(Math.random() * 20) + 5;
+      const b = Math.floor(Math.random() * 20) + 5;
+      const questionText = `Ein Rechteck hat die Seiten ${a} cm und ${b} cm. Berechne den Umfang.`;
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+        if (dup.isDuplicate) return null;
+      }
+      const answer = 2 * (a + b);
+      const explanation = `So gehst du vor:\n1. Umfang Rechteck: 2·(a+b).\n2. 2·(${a}+${b}) = ${answer}.\nErgebnis: ${answer} cm`;
+      return { id: Math.floor(Math.random()*1000000), question: questionText, questionType: 'text-input', type: 'math', answer: answer.toString(), explanation };
+    }
+
+    // rect_area
+    const a = Math.floor(Math.random() * 20) + 5;
+    const b = Math.floor(Math.random() * 20) + 5;
+    const questionText = `Ein Rechteck hat die Seiten ${a} cm und ${b} cm. Berechne die Fläche.`;
+    if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+      const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+      if (dup.isDuplicate) return null;
+    }
+    const answer = a * b;
+    const explanation = `So gehst du vor:\n1. Fläche Rechteck: a·b.\n2. ${a}·${b} = ${answer}.\nErgebnis: ${answer} cm²`;
+    return { id: Math.floor(Math.random()*1000000), question: questionText, questionType: 'text-input', type: 'math', answer: answer.toString(), explanation };
+  }, [config, userId]);
+
+  const generateNumberPatternQuestion = useCallback(async (
+    existingQuestions: string[]
+  ): Promise<SelectionQuestion | null> => {
+    // Arithmetische Folge oder alternierendes Muster
+    const isArithmetic = Math.random() < 0.7;
+    if (isArithmetic) {
+      const start = Math.floor(Math.random() * 20);
+      const diff = Math.floor(Math.random() * 7) + 2; // 2..8
+      const seq = [start, start + diff, start + 2*diff, start + 3*diff];
+      const questionText = `Setze fort: ${seq[0]}, ${seq[1]}, ${seq[2]}, ${seq[3]}, ?`;
+      if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+        const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+        if (dup.isDuplicate) return null;
+      }
+      const answer = start + 4*diff;
+      const explanation = `So gehst du vor:\n1. Erkenne die Differenz: +${diff}.\n2. Nächste Zahl: ${seq[3]} + ${diff} = ${answer}.`;
+      return { id: Math.floor(Math.random()*1000000), question: questionText, questionType: 'text-input', type: 'math', answer: answer.toString(), explanation };
+    }
+
+    // Alternierendes Muster, z. B. +a, +b, +a, +b, ...
+    const start = Math.floor(Math.random() * 20);
+    const a = Math.floor(Math.random() * 6) + 2;
+    const b = Math.floor(Math.random() * 6) + 2;
+    const seq = [start, start + a, start + a + b, start + 2*a + b];
+    const questionText = `Setze fort: ${seq[0]}, ${seq[1]}, ${seq[2]}, ${seq[3]}, ?`;
+    if (config.enableDuplicateDetection && duplicateDetectorRef.current) {
+      const dup = duplicateDetectorRef.current.checkDuplicate(questionText, userId, config.grade, existingQuestions);
+      if (dup.isDuplicate) return null;
+    }
+    const answer = start + 2*a + 2*b;
+    const explanation = `So gehst du vor:\n1. Muster erkennen: +${a}, dann +${b}.\n2. Nächste Zahl: ${seq[3]} + ${b} = ${answer}.`;
+    return { id: Math.floor(Math.random()*1000000), question: questionText, questionType: 'text-input', type: 'math', answer: answer.toString(), explanation };
+  }, [config, userId]);
+
+  /**
    * Generiert eine einfache Fallback-Frage wenn die normale Generierung fehlschlägt
    */
   const generateSimpleFallbackQuestion = useCallback((
@@ -498,7 +723,7 @@ export function useImprovedMathGeneration(
     const operations = ['+', '-'];
     if (grade >= 3) operations.push('×');
     if (grade >= 4) operations.push('÷');
-    
+
     const operation = operations[Math.floor(Math.random() * operations.length)];
     const maxNum = grade <= 2 ? 20 : grade <= 3 ? 100 : 500;
     
