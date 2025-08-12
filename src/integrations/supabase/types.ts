@@ -768,6 +768,45 @@ export type Database = {
         }
         Relationships: []
       }
+      template_events: {
+        Row: {
+          created_at: string | null
+          id: string
+          payload: Json | null
+          template_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          template_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          template_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_events_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "template_scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_events_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_metrics: {
         Row: {
           created_at: string
@@ -811,6 +850,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      templates: {
+        Row: {
+          correct: number
+          created_at: string | null
+          difficulty: string
+          distractors: Json | null
+          domain: string
+          explanation_teacher: string | null
+          grade: number
+          grade_app: number
+          id: string
+          plays: number
+          quarter_app: string
+          question_type: string
+          rating_count: number
+          rating_sum: number
+          seed: number | null
+          solution: Json | null
+          source_skill_id: string | null
+          status: string
+          student_prompt: string
+          subcategory: string
+          tags: string[]
+          unit: string | null
+          updated_at: string | null
+          variables: Json
+        }
+        Insert: {
+          correct?: number
+          created_at?: string | null
+          difficulty: string
+          distractors?: Json | null
+          domain: string
+          explanation_teacher?: string | null
+          grade: number
+          grade_app: number
+          id?: string
+          plays?: number
+          quarter_app: string
+          question_type: string
+          rating_count?: number
+          rating_sum?: number
+          seed?: number | null
+          solution?: Json | null
+          source_skill_id?: string | null
+          status?: string
+          student_prompt: string
+          subcategory: string
+          tags?: string[]
+          unit?: string | null
+          updated_at?: string | null
+          variables?: Json
+        }
+        Update: {
+          correct?: number
+          created_at?: string | null
+          difficulty?: string
+          distractors?: Json | null
+          domain?: string
+          explanation_teacher?: string | null
+          grade?: number
+          grade_app?: number
+          id?: string
+          plays?: number
+          quarter_app?: string
+          question_type?: string
+          rating_count?: number
+          rating_sum?: number
+          seed?: number | null
+          solution?: Json | null
+          source_skill_id?: string | null
+          status?: string
+          student_prompt?: string
+          subcategory?: string
+          tags?: string[]
+          unit?: string | null
+          updated_at?: string | null
+          variables?: Json
+        }
+        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -941,7 +1061,99 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      template_scores: {
+        Row: {
+          correct: number | null
+          correct_rate_bayes: number | null
+          created_at: string | null
+          difficulty: string | null
+          distractors: Json | null
+          domain: string | null
+          explanation_teacher: string | null
+          grade: number | null
+          grade_app: number | null
+          id: string | null
+          novelty: number | null
+          plays: number | null
+          qscore: number | null
+          quarter_app: string | null
+          question_type: string | null
+          rating_count: number | null
+          rating_norm_bayes: number | null
+          rating_sum: number | null
+          seed: number | null
+          solution: Json | null
+          source_skill_id: string | null
+          status: string | null
+          student_prompt: string | null
+          subcategory: string | null
+          tags: string[] | null
+          unit: string | null
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          correct?: number | null
+          correct_rate_bayes?: never
+          created_at?: string | null
+          difficulty?: string | null
+          distractors?: Json | null
+          domain?: string | null
+          explanation_teacher?: string | null
+          grade?: number | null
+          grade_app?: number | null
+          id?: string | null
+          novelty?: never
+          plays?: number | null
+          qscore?: never
+          quarter_app?: string | null
+          question_type?: string | null
+          rating_count?: number | null
+          rating_norm_bayes?: never
+          rating_sum?: number | null
+          seed?: number | null
+          solution?: Json | null
+          source_skill_id?: string | null
+          status?: string | null
+          student_prompt?: string | null
+          subcategory?: string | null
+          tags?: string[] | null
+          unit?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          correct?: number | null
+          correct_rate_bayes?: never
+          created_at?: string | null
+          difficulty?: string | null
+          distractors?: Json | null
+          domain?: string | null
+          explanation_teacher?: string | null
+          grade?: number | null
+          grade_app?: number | null
+          id?: string | null
+          novelty?: never
+          plays?: number | null
+          qscore?: never
+          quarter_app?: string | null
+          question_type?: string | null
+          rating_count?: number | null
+          rating_norm_bayes?: never
+          rating_sum?: number | null
+          seed?: number | null
+          solution?: Json | null
+          source_skill_id?: string | null
+          status?: string | null
+          student_prompt?: string | null
+          subcategory?: string | null
+          tags?: string[] | null
+          unit?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       claim_invitation_code: {
