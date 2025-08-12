@@ -342,7 +342,7 @@ const generateUniqueProblems = (grade: number, count: number = 10): Problem[] =>
 
 export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemProps) {
   const { settings } = useChildSettings(userId || '');
-  const { updateProgress } = useAchievements(userId);
+  const { updateProgress } = useAchievements(userId, { suppressToast: true });
   
   const [problems] = useState<Problem[]>(() => generateUniqueProblems(grade, 10));
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);

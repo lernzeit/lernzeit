@@ -16,7 +16,7 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
     getRecentAchievements, 
     getTotalRewardMinutes, 
     loading 
-  } = useAchievements(userId);
+  } = useAchievements(userId, { suppressToast: true });
 
   console.log('🏆 AchievementDisplay data:', {
     userId,

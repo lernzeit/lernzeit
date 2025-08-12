@@ -9,7 +9,7 @@ interface AchievementQuickViewProps {
 }
 
 export function AchievementQuickView({ userId, onClick }: AchievementQuickViewProps) {
-  const { getRecentAchievements, getCompletedAchievements, loading } = useAchievements(userId);
+  const { getRecentAchievements, getCompletedAchievements, loading } = useAchievements(userId, { suppressToast: true });
 
   if (loading) {
     return (

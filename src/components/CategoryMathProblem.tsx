@@ -99,6 +99,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     enableDuplicateDetection: true,
     enableEnhancedExplanations: true,
     difficultyLevel: recommendedLevel,
+    useTemplateRefresh: true,
   };
 
   const improvedMathGeneration = useImprovedMathGeneration(user?.id || 'anonymous', mathConfig);
