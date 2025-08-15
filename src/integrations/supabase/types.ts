@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1156,8 +1156,16 @@ export type Database = {
       }
     }
     Functions: {
+      apply_template_rating: {
+        Args: { stars: number; tid: string }
+        Returns: undefined
+      }
+      apply_template_stat: {
+        Args: { is_correct: boolean; tid: string }
+        Returns: undefined
+      }
       claim_invitation_code: {
-        Args: { code_to_claim: string; claiming_child_id: string }
+        Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json
       }
       cleanup_expired_codes: {
@@ -1182,10 +1190,10 @@ export type Database = {
       }
       update_achievement_progress: {
         Args: {
-          p_user_id: string
           p_category: string
-          p_type: string
           p_increment?: number
+          p_type: string
+          p_user_id: string
         }
         Returns: Json
       }
