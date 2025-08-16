@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Bot, Palette, Calculator } from 'lucide-react';
 
 interface QuestionGenerationInfoProps {
-  generationSource: 'ai' | 'template' | 'simple' | 'database' | 'hybrid' | null;
+  generationSource: 'ai' | 'template' | 'simple' | 'database' | 'hybrid' | 'template-bank' | 'knowledge-generated' | 'legacy-fallback' | null;
   isGenerating: boolean;
 }
 

@@ -1,0 +1,407 @@
+// Template-Bank Service - Central interface to the new knowledge-based template system
+import { supabase } from '@/integrations/supabase/client';
+import { fetchActiveTemplates, pickSessionTemplates, Quarter } from '@/data/templateBank';
+import { loadKnowledge, preselectCards } from '@/knowledge/knowledge';
+import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory';
+import { SelectionQuestion } from '@/types/questionTypes';
+
+export interface TemplateBankConfig {
+  enableQualityControl: boolean;
+  minQualityThreshold: number;
+  preferredDifficulty?: "AFB I" | "AFB II" | "AFB III";
+  diversityWeight: number;
+  fallbackToLegacy: boolean;
+}
+
+export interface TemplateBankResult {
+  questions: SelectionQuestion[];
+  source: 'template-bank' | 'knowledge-generated' | 'legacy-fallback';
+  sessionId: string;
+  qualityMetrics: {
+    averageQuality: number;
+    templateCoverage: number;
+    domainDiversity: number;
+  };
+  error?: string;
+}
+
+export class TemplateBankService {
+  private static instance: TemplateBankService;
+  private cache = new Map<string, TemplateBankResult>();
+  private cacheTimeout = 5 * 60 * 1000; // 5 minutes
+
+  static getInstance(): TemplateBankService {
+    if (!TemplateBankService.instance) {
+      TemplateBankService.instance = new TemplateBankService();
+    }
+    return TemplateBankService.instance;
+  }
+
+  /**
+   * Main method to generate questions using the Template-Bank system
+   */
+  async generateQuestions(
+    category: string,
+    grade: number,
+    quarter: Quarter = "Q1",
+    totalQuestions: number = 5,
+    config: Partial<TemplateBankConfig> = {}
+  ): Promise<TemplateBankResult> {
+    const fullConfig: TemplateBankConfig = {
+      enableQualityControl: true,
+      minQualityThreshold: 0.7,
+      diversityWeight: 0.8,
+      fallbackToLegacy: true,
+      ...config
+    };
+
+    const sessionId = `tb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log(`🏦 Template-Bank: Generating ${totalQuestions} questions for ${category} Grade ${grade}`);
+
+    try {
+      // Phase 1: Try Template-Bank
+      const bankResult = await this.generateFromTemplateBank(
+        category, grade, quarter, totalQuestions, fullConfig, sessionId
+      );
+      
+      if (bankResult.questions.length >= totalQuestions) {
+        console.log(`✅ Template-Bank: Generated ${bankResult.questions.length} questions from template bank`);
+        return bankResult;
+      }
+
+      // Phase 2: Generate using Knowledge system
+      const knowledgeResult = await this.generateFromKnowledge(
+        category, grade, quarter, totalQuestions - bankResult.questions.length, fullConfig, sessionId
+      );
+
+      const combinedQuestions = [...bankResult.questions, ...knowledgeResult.questions];
+
+      if (combinedQuestions.length >= totalQuestions) {
+        console.log(`✅ Template-Bank: Combined generation successful (${combinedQuestions.length} questions)`);
+        return {
+          questions: combinedQuestions.slice(0, totalQuestions),
+          source: 'knowledge-generated',
+          sessionId,
+          qualityMetrics: {
+            averageQuality: (bankResult.qualityMetrics.averageQuality + knowledgeResult.qualityMetrics.averageQuality) / 2,
+            templateCoverage: bankResult.qualityMetrics.templateCoverage,
+            domainDiversity: Math.max(bankResult.qualityMetrics.domainDiversity, knowledgeResult.qualityMetrics.domainDiversity)
+          }
+        };
+      }
+
+      // Phase 3: Fallback to legacy if enabled
+      if (fullConfig.fallbackToLegacy) {
+        console.log(`⚠️ Template-Bank: Falling back to legacy system`);
+        const legacyResult = await this.generateLegacyFallback(category, grade, totalQuestions, sessionId);
+        return {
+          ...legacyResult,
+          questions: [...combinedQuestions, ...legacyResult.questions].slice(0, totalQuestions)
+        };
+      }
+
+      throw new Error(`Insufficient questions generated: ${combinedQuestions.length}/${totalQuestions}`);
+
+    } catch (error) {
+      console.error('❌ Template-Bank generation failed:', error);
+      return {
+        questions: [],
+        source: 'template-bank',
+        sessionId,
+        qualityMetrics: { averageQuality: 0, templateCoverage: 0, domainDiversity: 0 },
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Generate questions from existing Template-Bank
+   */
+  private async generateFromTemplateBank(
+    category: string,
+    grade: number,
+    quarter: Quarter,
+    count: number,
+    config: TemplateBankConfig,
+    sessionId: string
+  ): Promise<TemplateBankResult> {
+    try {
+      console.log(`📚 Fetching from Template-Bank: ${category}, Grade ${grade}, Quarter ${quarter}`);
+      
+      // Fetch active templates
+      const templates = await fetchActiveTemplates({ grade, quarter, limit: count * 3 });
+      
+      if (templates.length === 0) {
+        console.log(`📭 No templates found in Template-Bank`);
+        return {
+          questions: [],
+          source: 'template-bank',
+          sessionId,
+          qualityMetrics: { averageQuality: 0, templateCoverage: 0, domainDiversity: 0 }
+        };
+      }
+
+      // Filter by category and quality
+      const categoryTemplates = templates.filter(t => 
+        this.normalizeCategory(t.domain) === this.normalizeCategory(category) &&
+        (!config.enableQualityControl || (t.qscore || 0) >= config.minQualityThreshold)
+      );
+
+      console.log(`🔍 Filtered templates: ${categoryTemplates.length}/${templates.length}`);
+
+      // Pick session templates with diversity
+      const selectedTemplates = pickSessionTemplates(categoryTemplates, {
+        count,
+        minDistinctDomains: 2,
+        difficulty: config.preferredDifficulty
+      });
+
+      // Convert templates to questions
+      const questions = await this.convertTemplatesToQuestions(selectedTemplates, category);
+
+      const qualityScores = selectedTemplates.map(t => t.qscore || 0.7);
+      const averageQuality = qualityScores.length > 0 ? 
+        qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length : 0;
+
+      const uniqueDomains = new Set(selectedTemplates.map(t => t.domain)).size;
+      const domainDiversity = selectedTemplates.length > 0 ? uniqueDomains / selectedTemplates.length : 0;
+
+      return {
+        questions,
+        source: 'template-bank',
+        sessionId,
+        qualityMetrics: {
+          averageQuality,
+          templateCoverage: selectedTemplates.length / Math.max(1, categoryTemplates.length),
+          domainDiversity
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Template-Bank fetch failed:', error);
+      return {
+        questions: [],
+        source: 'template-bank',
+        sessionId,
+        qualityMetrics: { averageQuality: 0, templateCoverage: 0, domainDiversity: 0 },
+        error: error instanceof Error ? error.message : 'Template-Bank error'
+      };
+    }
+  }
+
+  /**
+   * Generate questions using Knowledge system
+   */
+  private async generateFromKnowledge(
+    category: string,
+    grade: number,
+    quarter: Quarter,
+    count: number,
+    config: TemplateBankConfig,
+    sessionId: string
+  ): Promise<TemplateBankResult> {
+    try {
+      console.log(`🧠 Generating from Knowledge system: ${count} questions`);
+
+      const { cards, blueprints } = await loadKnowledge();
+      
+      // Preselect relevant knowledge cards
+      const relevantCards = preselectCards(cards, {
+        grade,
+        quarter,
+        wantDomains: [category]
+      });
+
+      if (relevantCards.length === 0) {
+        console.log(`📭 No relevant knowledge cards found`);
+        return {
+          questions: [],
+          source: 'knowledge-generated',
+          sessionId,
+          qualityMetrics: { averageQuality: 0, templateCoverage: 0, domainDiversity: 0 }
+        };
+      }
+
+      // Find appropriate blueprint
+      const blueprint = blueprints.find(bp => 
+        this.normalizeCategory(bp.domain) === this.normalizeCategory(category)
+      ) || blueprints[0];
+
+      if (!blueprint) {
+        throw new Error('No blueprint found for category');
+      }
+
+      // For now, generate simple questions based on knowledge
+      // TODO: Integrate with LLM when available
+      const questions = this.generateKnowledgeBasedQuestions(relevantCards, category, count);
+
+      return {
+        questions,
+        source: 'knowledge-generated',
+        sessionId,
+        qualityMetrics: {
+          averageQuality: 0.8, // Simulated quality
+          templateCoverage: relevantCards.length / Math.max(1, cards.length),
+          domainDiversity: 1.0 // Knowledge-based has high diversity
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Knowledge generation failed:', error);
+      return {
+        questions: [],
+        source: 'knowledge-generated',
+        sessionId,
+        qualityMetrics: { averageQuality: 0, templateCoverage: 0, domainDiversity: 0 },
+        error: error instanceof Error ? error.message : 'Knowledge generation error'
+      };
+    }
+  }
+
+  /**
+   * Legacy fallback generation
+   */
+  private async generateLegacyFallback(
+    category: string,
+    grade: number,
+    count: number,
+    sessionId: string
+  ): Promise<TemplateBankResult> {
+    console.log(`🔄 Legacy fallback: generating ${count} simple questions`);
+
+    // Generate simple questions as fallback
+    const questions: SelectionQuestion[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const question = this.generateSimpleQuestion(category, grade, i);
+      if (question) questions.push(question);
+    }
+
+    return {
+      questions,
+      source: 'legacy-fallback',
+      sessionId,
+      qualityMetrics: {
+        averageQuality: 0.6,
+        templateCoverage: 0,
+        domainDiversity: 0.3
+      }
+    };
+  }
+
+  /**
+   * Helper methods
+   */
+  private normalizeCategory(category: string): string {
+    const normalized = category.toLowerCase().trim();
+    const mappings: Record<string, string> = {
+      'math': 'mathematik',
+      'mathematics': 'mathematik',
+      'zahlen & operationen': 'mathematik',
+      'german': 'deutsch',
+      'deutsche sprache': 'deutsch'
+    };
+    return mappings[normalized] || normalized;
+  }
+
+  private async convertTemplatesToQuestions(templates: any[], category: string): Promise<SelectionQuestion[]> {
+    const questions: SelectionQuestion[] = [];
+
+    for (const template of templates) {
+      try {
+        // Convert template to question format
+        const question: SelectionQuestion = {
+          id: Math.floor(Math.random() * 1000000),
+          question: template.student_prompt || `Frage für ${category}`,
+          questionType: this.mapQuestionType(template.question_type),
+          explanation: template.explanation_teacher || 'Automatisch generierte Erklärung',
+          type: category as any
+        };
+
+        // Add type-specific properties
+        if (question.questionType === 'text-input') {
+          (question as any).answer = template.solution || 'Antwort';
+        } else if (question.questionType === 'multiple-choice') {
+          (question as any).options = template.distractors || ['Option A', 'Option B', 'Option C'];
+          (question as any).correctAnswer = 0;
+        } else if (question.questionType === 'matching') {
+          (question as any).items = ['Item 1', 'Item 2'];
+          (question as any).categories = ['Category A', 'Category B'];
+        }
+
+        questions.push(question);
+      } catch (error) {
+        console.warn(`Failed to convert template ${template.id}:`, error);
+      }
+    }
+
+    return questions;
+  }
+
+  private mapQuestionType(templateType: string): "text-input" | "multiple-choice" | "word-selection" | "drag-drop" | "matching" {
+    const typeMap: Record<string, any> = {
+      'Freitext': 'text-input',
+      'MultipleChoice': 'multiple-choice',
+      'Lückentext': 'text-input',
+      'Zuordnung': 'matching',
+      'Diagramm': 'text-input'
+    };
+    return typeMap[templateType] || 'text-input';
+  }
+
+  private generateKnowledgeBasedQuestions(cards: any[], category: string, count: number): SelectionQuestion[] {
+    const questions: SelectionQuestion[] = [];
+
+    for (let i = 0; i < Math.min(count, cards.length); i++) {
+      const card = cards[i];
+      
+      const question: SelectionQuestion = {
+        id: Math.floor(Math.random() * 1000000),
+        question: `Erkläre: ${card.skill}`,
+        questionType: 'text-input',
+        explanation: `Diese Frage bezieht sich auf: ${card.subcategory}`,
+        type: category as any,
+        answer: `Antwort zu ${card.skill}`
+      };
+
+      questions.push(question);
+    }
+
+    return questions;
+  }
+
+  private generateSimpleQuestion(category: string, grade: number, index: number): SelectionQuestion | null {
+    const categoryQuestions: Record<string, () => SelectionQuestion> = {
+      'mathematik': () => {
+        const a = Math.floor(Math.random() * (grade * 10)) + 1;
+        const b = Math.floor(Math.random() * (grade * 5)) + 1;
+        return {
+          id: Math.floor(Math.random() * 1000000),
+          question: `${a} + ${b} = ?`,
+          questionType: 'text-input',
+          explanation: `Addition: ${a} + ${b} = ${a + b}`,
+          type: 'mathematik' as any,
+          answer: (a + b).toString()
+        };
+      },
+      'deutsch': () => ({
+        id: Math.floor(Math.random() * 1000000),
+        question: 'Wie lautet die Mehrzahl von "Haus"?',
+        questionType: 'text-input',
+        explanation: 'Die Mehrzahl von "Haus" ist "Häuser".',
+        type: 'deutsch' as any,
+        answer: 'Häuser'
+      })
+    };
+
+    const generator = categoryQuestions[this.normalizeCategory(category)];
+    return generator ? generator() : null;
+  }
+
+  /**
+   * Clear cache
+   */
+  clearCache(): void {
+    this.cache.clear();
+  }
+}
