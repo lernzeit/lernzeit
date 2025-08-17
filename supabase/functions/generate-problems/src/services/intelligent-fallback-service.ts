@@ -599,119 +599,257 @@ export class IntelligentFallbackService {
     correctMatches: Array<{item: string, category: string}>,
     explanation: string
   }> {
+    // Generate parametrized matching questions to avoid repetition
+    const templates = this.getParametrizedMatchingTemplates(grade);
+    return templates.map(template => this.instantiateMatchingTemplate(template, grade));
+  }
+
+  private getParametrizedMatchingTemplates(grade: number): Array<{
+    type: string,
+    questionTemplate: string,
+    itemTemplates: Array<{template: string, categoryTemplate: string}>,
+    explanationTemplate: string
+  }> {
     if (grade <= 2) {
       return [
         {
-          category: 'numbers',
-          question: 'Ordne die Zahlen den richtigen Gruppen zu:',
-          correctMatches: [
-            {item: '3', category: 'Kleine Zahlen (1-5)'},
-            {item: '8', category: 'Mittlere Zahlen (6-10)'},
-            {item: '15', category: 'Große Zahlen (über 10)'}
+          type: 'numbers',
+          questionTemplate: 'Ordne die Zahlen den richtigen Gruppen zu:',
+          itemTemplates: [
+            {template: '{small}', categoryTemplate: 'Kleine Zahlen (1-5)'},
+            {template: '{medium}', categoryTemplate: 'Mittlere Zahlen (6-10)'},
+            {template: '{large}', categoryTemplate: 'Große Zahlen (über 10)'}
           ],
-          explanation: 'Zahlen werden nach ihrer Größe gruppiert: klein (1-5), mittel (6-10), groß (über 10).'
+          explanationTemplate: 'Zahlen werden nach ihrer Größe gruppiert: klein (1-5), mittel (6-10), groß (über 10).'
         },
         {
-          category: 'shapes',
-          question: 'Ordne die Formen zu:',
-          correctMatches: [
-            {item: '⚪', category: 'Runde Formen'},
-            {item: '⬜', category: 'Eckige Formen'},
-            {item: '🔺', category: 'Spitze Formen'}
+          type: 'shapes',
+          questionTemplate: 'Ordne die Formen zu:',
+          itemTemplates: [
+            {template: '⚪', categoryTemplate: 'Runde Formen'},
+            {template: '⬜', categoryTemplate: 'Eckige Formen'},
+            {template: '🔺', categoryTemplate: 'Spitze Formen'}
           ],
-          explanation: 'Formen werden nach ihren Eigenschaften sortiert.'
+          explanationTemplate: 'Formen werden nach ihren Eigenschaften sortiert.'
         }
       ];
     } else if (grade <= 4) {
       return [
         {
-          category: 'operations',
-          question: 'Ordne jede Aufgabe der richtigen Rechenart zu:',
-          correctMatches: [
-            {item: '45 + 23', category: 'Addition'},
-            {item: '87 - 34', category: 'Subtraktion'},
-            {item: '7 × 8', category: 'Multiplikation'},
-            {item: '56 ÷ 8', category: 'Division'}
+          type: 'operations',
+          questionTemplate: 'Ordne jede Aufgabe der richtigen Rechenart zu:',
+          itemTemplates: [
+            {template: '{a} + {b}', categoryTemplate: 'Addition'},
+            {template: '{c} - {d}', categoryTemplate: 'Subtraktion'},
+            {template: '{e} × {f}', categoryTemplate: 'Multiplikation'},
+            {template: '{g} ÷ {h}', categoryTemplate: 'Division'}
           ],
-          explanation: 'Addition (+) bedeutet zusammenzählen, Subtraktion (-) bedeutet abziehen, Multiplikation (×) ist vervielfachen, Division (÷) ist teilen.'
+          explanationTemplate: 'Addition (+) bedeutet zusammenzählen, Subtraktion (-) bedeutet abziehen, Multiplikation (×) ist vervielfachen, Division (÷) ist teilen.'
         },
         {
-          category: 'word_problems',
-          question: 'Ordne die Textaufgabe der richtigen Rechenart zu:',
-          correctMatches: [
-            {item: 'Lisa kauft 3 Äpfel und 5 Birnen', category: 'Addition'},
-            {item: 'Von 20 Bonbons isst Tom 7', category: 'Subtraktion'},
-            {item: '4 Kinder bekommen je 3 Kekse', category: 'Multiplikation'},
-            {item: '12 Stifte auf 3 Kinder verteilen', category: 'Division'}
+          type: 'results',
+          questionTemplate: 'Ordne jede Aufgabe ihrem Ergebnis zu:',
+          itemTemplates: [
+            {template: '{simple_add_a} + {simple_add_b}', categoryTemplate: '{simple_add_result}'},
+            {template: '{simple_sub_a} - {simple_sub_b}', categoryTemplate: '{simple_sub_result}'},
+            {template: '{simple_mul_a} × {simple_mul_b}', categoryTemplate: '{simple_mul_result}'}
           ],
-          explanation: 'Textaufgaben enthalten Hinweise auf die richtige Rechenart.'
+          explanationTemplate: 'Jede Rechenaufgabe hat ein eindeutiges Ergebnis.'
         }
       ];
     } else if (grade <= 6) {
       return [
         {
-          category: 'fractions',
-          question: 'Ordne die Brüche ihrer Dezimaldarstellung zu:',
-          correctMatches: [
-            {item: '1/2', category: '0,5'},
-            {item: '1/4', category: '0,25'},
-            {item: '3/4', category: '0,75'},
-            {item: '1/5', category: '0,2'}
+          type: 'fractions_decimals',
+          questionTemplate: 'Ordne die Brüche ihrer Dezimaldarstellung zu:',
+          itemTemplates: [
+            {template: '{fraction_1}', categoryTemplate: '{decimal_1}'},
+            {template: '{fraction_2}', categoryTemplate: '{decimal_2}'},
+            {template: '{fraction_3}', categoryTemplate: '{decimal_3}'},
+            {template: '{fraction_4}', categoryTemplate: '{decimal_4}'}
           ],
-          explanation: 'Brüche können als Dezimalzahlen geschrieben werden: 1/2 = 0,5, 1/4 = 0,25, 3/4 = 0,75, 1/5 = 0,2.'
+          explanationTemplate: 'Brüche können als Dezimalzahlen geschrieben werden.'
         },
         {
-          category: 'geometry',
-          question: 'Ordne die Eigenschaften den Figuren zu:',
-          correctMatches: [
-            {item: '4 gleiche Seiten', category: 'Quadrat'},
-            {item: '3 Ecken', category: 'Dreieck'},
-            {item: 'rund ohne Ecken', category: 'Kreis'},
-            {item: '4 Seiten, gegenüber gleich', category: 'Rechteck'}
+          type: 'percentage_calculations',
+          questionTemplate: 'Ordne die Prozentaufgaben ihrem Ergebnis zu:',
+          itemTemplates: [
+            {template: '{percent_1}% von {base_1}', categoryTemplate: '{percent_result_1}'},
+            {template: '{percent_2}% von {base_2}', categoryTemplate: '{percent_result_2}'},
+            {template: '{percent_3}% von {base_3}', categoryTemplate: '{percent_result_3}'}
           ],
-          explanation: 'Geometrische Figuren haben charakteristische Eigenschaften.'
+          explanationTemplate: 'Prozentrechnung: {percent}% von {base} = ({percent} × {base}) ÷ 100'
         }
       ];
     } else if (grade <= 8) {
       return [
         {
-          category: 'algebra',
-          question: 'Ordne die mathematischen Begriffe ihrer Definition zu:',
-          correctMatches: [
-            {item: 'Variable (x, y)', category: 'Unbekannte Größe'},
-            {item: 'Koeffizient (5x)', category: 'Zahl vor der Variable'},
-            {item: 'Term (3x + 7)', category: 'Mathematischer Ausdruck'},
-            {item: 'Gleichung (2x = 10)', category: 'Aussage mit Gleichheitszeichen'}
+          type: 'powers_roots',
+          questionTemplate: 'Ordne die mathematischen Ausdrücke ihrem Wert zu:',
+          itemTemplates: [
+            {template: '{base_1}²', categoryTemplate: '{square_result_1}'},
+            {template: '√{root_base_1}', categoryTemplate: '{root_result_1}'},
+            {template: '{base_2}³', categoryTemplate: '{cube_result_1}'},
+            {template: '{linear_expr}', categoryTemplate: '{linear_result}'}
           ],
-          explanation: 'In der Algebra haben Begriffe spezifische Bedeutungen für mathematische Strukturen.'
+          explanationTemplate: 'Potenzen und Wurzeln sind umgekehrte Operationen.'
         },
         {
-          category: 'functions',
-          question: 'Ordne die Funktionstypen ihren Eigenschaften zu:',
-          correctMatches: [
-            {item: 'f(x) = 2x + 3', category: 'Lineare Funktion'},
-            {item: 'f(x) = x²', category: 'Quadratische Funktion'},
-            {item: 'f(x) = 5', category: 'Konstante Funktion'},
-            {item: 'f(x) = 1/x', category: 'Umgekehrt proportionale Funktion'}
+          type: 'equations',
+          questionTemplate: 'Ordne die Gleichungen ihren Lösungen zu:',
+          itemTemplates: [
+            {template: '{coeff_1}x = {result_1}', categoryTemplate: 'x = {solution_1}'},
+            {template: '{coeff_2}x + {add_1} = {total_1}', categoryTemplate: 'x = {solution_2}'},
+            {template: '{coeff_3}x - {sub_1} = {total_2}', categoryTemplate: 'x = {solution_3}'}
           ],
-          explanation: 'Verschiedene Funktionstypen haben charakteristische Eigenschaften und Graphen.'
+          explanationTemplate: 'Gleichungen lösen bedeutet, den Wert der Variablen zu finden.'
         }
       ];
     } else {
       return [
         {
-          category: 'advanced_algebra',
-          question: 'Ordne die mathematischen Konzepte ihren Anwendungen zu:',
-          correctMatches: [
-            {item: 'Quadratische Gleichungen', category: 'Parabeln und Wurfbahnen'},
-            {item: 'Logarithmus', category: 'Exponentielles Wachstum'},
-            {item: 'Trigonometrie', category: 'Dreiecksberechnungen'},
-            {item: 'Differentiation', category: 'Steigungsberechnungen'}
+          type: 'advanced_functions',
+          questionTemplate: 'Ordne die Funktionen ihren Eigenschaften zu:',
+          itemTemplates: [
+            {template: 'f(x) = {m}x + {b}', categoryTemplate: 'Lineare Funktion'},
+            {template: 'f(x) = x²', categoryTemplate: 'Quadratische Funktion'},
+            {template: 'f(x) = {constant}', categoryTemplate: 'Konstante Funktion'}
           ],
-          explanation: 'Höhere Mathematik findet Anwendung in verschiedenen Bereichen der Wissenschaft und Technik.'
+          explanationTemplate: 'Verschiedene Funktionstypen haben charakteristische Eigenschaften.'
         }
       ];
     }
+  }
+
+  private instantiateMatchingTemplate(template: any, grade: number): {
+    category: string,
+    question: string,
+    correctMatches: Array<{item: string, category: string}>,
+    explanation: string
+  } {
+    const parameters = this.generateMatchingParameters(template.type, grade);
+    
+    const correctMatches = template.itemTemplates.map((itemTemplate: any) => ({
+      item: this.fillTemplate(itemTemplate.template, parameters),
+      category: this.fillTemplate(itemTemplate.categoryTemplate, parameters)
+    }));
+
+    return {
+      category: template.type,
+      question: this.fillTemplate(template.questionTemplate, parameters),
+      correctMatches,
+      explanation: this.fillTemplate(template.explanationTemplate, parameters)
+    };
+  }
+
+  private generateMatchingParameters(templateType: string, grade: number): Record<string, any> {
+    const params: Record<string, any> = {};
+    
+    switch (templateType) {
+      case 'numbers':
+        params.small = Math.floor(Math.random() * 5) + 1;
+        params.medium = Math.floor(Math.random() * 5) + 6;
+        params.large = Math.floor(Math.random() * 10) + 11;
+        break;
+        
+      case 'operations':
+        params.a = Math.floor(Math.random() * 50) + 10;
+        params.b = Math.floor(Math.random() * 30) + 5;
+        params.c = Math.floor(Math.random() * 80) + 20;
+        params.d = Math.floor(Math.random() * 40) + 10;
+        params.e = Math.floor(Math.random() * 9) + 2;
+        params.f = Math.floor(Math.random() * 9) + 2;
+        params.g = (Math.floor(Math.random() * 8) + 2) * (Math.floor(Math.random() * 8) + 2);
+        params.h = Math.floor(Math.random() * 8) + 2;
+        break;
+        
+      case 'results':
+        params.simple_add_a = Math.floor(Math.random() * 20) + 5;
+        params.simple_add_b = Math.floor(Math.random() * 15) + 3;
+        params.simple_add_result = params.simple_add_a + params.simple_add_b;
+        
+        params.simple_sub_a = Math.floor(Math.random() * 30) + 20;
+        params.simple_sub_b = Math.floor(Math.random() * 15) + 5;
+        params.simple_sub_result = params.simple_sub_a - params.simple_sub_b;
+        
+        params.simple_mul_a = Math.floor(Math.random() * 8) + 2;
+        params.simple_mul_b = Math.floor(Math.random() * 8) + 2;
+        params.simple_mul_result = params.simple_mul_a * params.simple_mul_b;
+        break;
+        
+      case 'fractions_decimals':
+        const fractions = [
+          {fraction: '1/2', decimal: '0,5'},
+          {fraction: '1/4', decimal: '0,25'},
+          {fraction: '3/4', decimal: '0,75'},
+          {fraction: '1/5', decimal: '0,2'},
+          {fraction: '2/5', decimal: '0,4'},
+          {fraction: '3/5', decimal: '0,6'},
+          {fraction: '1/8', decimal: '0,125'},
+          {fraction: '3/8', decimal: '0,375'}
+        ];
+        
+        const shuffled = fractions.sort(() => Math.random() - 0.5).slice(0, 4);
+        shuffled.forEach((frac, i) => {
+          params[`fraction_${i + 1}`] = frac.fraction;
+          params[`decimal_${i + 1}`] = frac.decimal;
+        });
+        break;
+        
+      case 'percentage_calculations':
+        params.percent_1 = [10, 20, 25, 50, 75][Math.floor(Math.random() * 5)];
+        params.base_1 = [20, 40, 60, 80, 100][Math.floor(Math.random() * 5)];
+        params.percent_result_1 = (params.percent_1 * params.base_1) / 100;
+        
+        params.percent_2 = [15, 30, 45][Math.floor(Math.random() * 3)];
+        params.base_2 = [40, 60, 80][Math.floor(Math.random() * 3)];
+        params.percent_result_2 = (params.percent_2 * params.base_2) / 100;
+        
+        params.percent_3 = [5, 40, 60][Math.floor(Math.random() * 3)];
+        params.base_3 = [50, 25, 75][Math.floor(Math.random() * 3)];
+        params.percent_result_3 = (params.percent_3 * params.base_3) / 100;
+        break;
+        
+      case 'powers_roots':
+        params.base_1 = Math.floor(Math.random() * 8) + 2;
+        params.square_result_1 = params.base_1 * params.base_1;
+        
+        const roots = [4, 9, 16, 25, 36, 49, 64, 81, 100];
+        params.root_base_1 = roots[Math.floor(Math.random() * roots.length)];
+        params.root_result_1 = Math.sqrt(params.root_base_1);
+        
+        params.base_2 = Math.floor(Math.random() * 4) + 2;
+        params.cube_result_1 = params.base_2 * params.base_2 * params.base_2;
+        
+        params.linear_expr = `${Math.floor(Math.random() * 5) + 2}x = ${(Math.floor(Math.random() * 5) + 2) * (Math.floor(Math.random() * 8) + 2)}`;
+        const [coeff, result] = params.linear_expr.split(' = ');
+        params.linear_result = Math.floor(parseInt(result) / parseInt(coeff.replace('x', '')));
+        break;
+        
+      case 'equations':
+        params.coeff_1 = Math.floor(Math.random() * 5) + 2;
+        params.solution_1 = Math.floor(Math.random() * 8) + 2;
+        params.result_1 = params.coeff_1 * params.solution_1;
+        
+        params.coeff_2 = Math.floor(Math.random() * 4) + 2;
+        params.solution_2 = Math.floor(Math.random() * 6) + 3;
+        params.add_1 = Math.floor(Math.random() * 10) + 5;
+        params.total_1 = params.coeff_2 * params.solution_2 + params.add_1;
+        
+        params.coeff_3 = Math.floor(Math.random() * 3) + 2;
+        params.solution_3 = Math.floor(Math.random() * 7) + 4;
+        params.sub_1 = Math.floor(Math.random() * 8) + 3;
+        params.total_2 = params.coeff_3 * params.solution_3 - params.sub_1;
+        break;
+        
+      case 'advanced_functions':
+        params.m = Math.floor(Math.random() * 5) + 1;
+        params.b = Math.floor(Math.random() * 10) - 5;
+        params.constant = Math.floor(Math.random() * 20) + 1;
+        break;
+    }
+    
+    return params;
   }
 
   // Helper methods
