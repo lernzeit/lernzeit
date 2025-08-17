@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { ChildManagement } from '@/components/ChildManagement';
 import { RefreshCw, Users, Clock, TrendingUp, BookOpen, Plus } from 'lucide-react';
-import { QualityDashboardModal } from '@/components/QualityDashboardModal';
+import { ChildErrorAnalysis } from '@/components/ChildErrorAnalysis';
+
 
 interface ParentDashboardProps {
   userId: string;
@@ -26,7 +27,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       loadFamilyData(userId);
     }
   }, [userId, loadFamilyData]);
-  const [qualityOpen, setQualityOpen] = useState(false);
+  
 
   // Event handlers
   const handleRefresh = () => {
@@ -49,9 +50,6 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Aktualisieren
-          </Button>
-          <Button onClick={() => setQualityOpen(true)}>
-            Qualitäts-Dashboard
           </Button>
         </div>
       </div>
@@ -88,7 +86,21 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </Card>
       </div>
 
-      <QualityDashboardModal isOpen={qualityOpen} onOpenChange={setQualityOpen} userId={userId} />
+      {/* Fehleranalyse für jedes Kind */}
+      {linkedChildren.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Lernanalyse der Kinder</h2>
+          {linkedChildren.map((child) => (
+            <ChildErrorAnalysis 
+              key={child.id} 
+              childId={child.id} 
+              childName={child.name || 'Unbekannt'} 
+            />
+          ))}
+        </div>
+      )}
+
+      
     </div>
   );
 }
