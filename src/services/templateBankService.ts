@@ -433,8 +433,8 @@ export class TemplateBankService {
           maxNumber = 1000;
         }
         
-        // Rotate question types for variety
-        const questionTypes = ['text-input', 'multiple-choice', 'word-selection'];
+        // Rotate question types for variety - für Mathe matching = Aufgaben zu Ergebnissen zuordnen
+        const questionTypes = ['text-input', 'multiple-choice', 'matching'];
         const questionType = questionTypes[index % questionTypes.length];
         
         const a = Math.floor(Math.random() * maxNumber) + 1;
@@ -468,15 +468,23 @@ export class TemplateBankService {
             correctAnswer: options.indexOf(result.toString())
           };
         } else if (questionType === 'word-selection') {
-          // Create word selection with numbers
-          const numbers = Array.from({length: 8}, (_, i) => {
-            const num = result + i - 4;
-            return {
+          // Create word selection with only ONE correct answer for math
+          const wrongAnswers = [
+            result + 1,
+            result - 1, 
+            result + 2,
+            result - 2,
+            Math.max(1, result + 3),
+            Math.max(1, result - 3)
+          ].filter(ans => ans > 0 && ans !== result && ans <= maxNumber + 10);
+          
+          const allNumbers = [result, ...wrongAnswers.slice(0, 5)]
+            .sort((a, b) => a - b)
+            .map((num, i) => ({
               word: num.toString(),
-              isCorrect: num === result,
+              isCorrect: num === result, // Only ONE correct answer
               index: i
-            };
-          }).filter(item => parseInt(item.word) > 0);
+            }));
           
           return {
             id: Math.floor(Math.random() * 1000000),
@@ -485,7 +493,43 @@ export class TemplateBankService {
             explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'}: ${a} ${operation} ${b} = ${result}`,
             type: 'mathematik' as any,
             sentence: `Wähle das richtige Ergebnis für ${a} ${operation} ${b}:`,
-            selectableWords: numbers
+            selectableWords: allNumbers
+          };
+        } else if (questionType === 'matching') {
+          // Create math matching: Aufgaben zu Ergebnissen zuordnen
+          const tasks = [];
+          const results = [];
+          
+          // Generate 3-4 different math problems
+          for (let i = 0; i < 4; i++) {
+            const taskA = Math.floor(Math.random() * Math.min(maxNumber, 8)) + 1;
+            const taskB = Math.floor(Math.random() * Math.min(maxNumber, 5)) + 1;
+            const taskOp = operations[Math.floor(Math.random() * operations.length)];
+            const taskResult = taskOp === '+' ? taskA + taskB : taskA - taskB;
+            
+            if (taskResult > 0) {
+              tasks.push({
+                id: `task_${i}`,
+                content: `${taskA} ${taskOp} ${taskB}`,
+                category: `result_${taskResult}`
+              });
+              
+              results.push({
+                id: `result_${taskResult}`,
+                name: taskResult.toString(),
+                acceptsItems: [`task_${i}`]
+              });
+            }
+          }
+          
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: 'Ordne jede Aufgabe dem richtigen Ergebnis zu:',
+            questionType: 'matching',
+            explanation: 'Löse jede Aufgabe und ordne sie dem passenden Ergebnis zu.',
+            type: 'mathematik' as any,
+            items: tasks,
+            categories: results
           };
         } else {
           // Default text-input
