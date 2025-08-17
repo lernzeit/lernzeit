@@ -611,6 +611,7 @@ export class IntelligentFallbackService {
     explanationTemplate: string
   }> {
     if (grade <= 2) {
+      // Grade 1-2: Basic counting and shapes according to curriculum
       return [
         {
           type: 'numbers',
@@ -633,7 +634,8 @@ export class IntelligentFallbackService {
           explanationTemplate: 'Formen werden nach ihren Eigenschaften sortiert.'
         }
       ];
-    } else if (grade <= 4) {
+    } else if (grade <= 3) {
+      // Grade 3: Basic operations in ZR 100, geometry basics
       return [
         {
           type: 'operations',
@@ -641,13 +643,28 @@ export class IntelligentFallbackService {
           itemTemplates: [
             {template: '{a} + {b}', categoryTemplate: 'Addition'},
             {template: '{c} - {d}', categoryTemplate: 'Subtraktion'},
-            {template: '{e} × {f}', categoryTemplate: 'Multiplikation'},
+            {template: '{e} × {f}', categoryTemplate: 'Multiplikation'},  // Multiplication introduced in Grade 3
             {template: '{g} ÷ {h}', categoryTemplate: 'Division'}
           ],
           explanationTemplate: 'Addition (+) bedeutet zusammenzählen, Subtraktion (-) bedeutet abziehen, Multiplikation (×) ist vervielfachen, Division (÷) ist teilen.'
         },
         {
-          type: 'results',
+          type: 'geometry_properties',
+          questionTemplate: 'Ordne die Eigenschaften den Formen zu:',
+          itemTemplates: [
+            {template: '4 gleiche Seiten', categoryTemplate: 'Quadrat'},
+            {template: '3 Ecken', categoryTemplate: 'Dreieck'},
+            {template: 'rund ohne Ecken', categoryTemplate: 'Kreis'},
+            {template: '4 Seiten, gegenüber gleich', categoryTemplate: 'Rechteck'}
+          ],
+          explanationTemplate: 'Geometrische Figuren haben charakteristische Eigenschaften.'
+        }
+      ];
+    } else if (grade <= 4) {
+      // Grade 4: ZR 1000, decimal numbers introduced
+      return [
+        {
+          type: 'calculations',
           questionTemplate: 'Ordne jede Aufgabe ihrem Ergebnis zu:',
           itemTemplates: [
             {template: '{simple_add_a} + {simple_add_b}', categoryTemplate: '{simple_add_result}'},
@@ -655,9 +672,20 @@ export class IntelligentFallbackService {
             {template: '{simple_mul_a} × {simple_mul_b}', categoryTemplate: '{simple_mul_result}'}
           ],
           explanationTemplate: 'Jede Rechenaufgabe hat ein eindeutiges Ergebnis.'
+        },
+        {
+          type: 'decimal_basics',
+          questionTemplate: 'Ordne die Geldbeträge ihrer Schreibweise zu:',
+          itemTemplates: [
+            {template: '{euro_1} Euro {cent_1} Cent', categoryTemplate: '{euro_1},{cent_1_formatted} €'},
+            {template: '{euro_2} Euro {cent_2} Cent', categoryTemplate: '{euro_2},{cent_2_formatted} €'},
+            {template: '{euro_3} Euro {cent_3} Cent', categoryTemplate: '{euro_3},{cent_3_formatted} €'}
+          ],
+          explanationTemplate: 'Geldbeträge können als Dezimalzahlen mit Komma geschrieben werden.'
         }
       ];
-    } else if (grade <= 6) {
+    } else if (grade <= 5) {
+      // Grade 5: Fractions, negative numbers, basic proportions
       return [
         {
           type: 'fractions_decimals',
@@ -671,6 +699,20 @@ export class IntelligentFallbackService {
           explanationTemplate: 'Brüche können als Dezimalzahlen geschrieben werden.'
         },
         {
+          type: 'negative_numbers',
+          questionTemplate: 'Ordne die Zahlen ihrer Position zu:',
+          itemTemplates: [
+            {template: '{positive}', categoryTemplate: 'Positive Zahl'},
+            {template: '-{negative}', categoryTemplate: 'Negative Zahl'},
+            {template: '0', categoryTemplate: 'Null'}
+          ],
+          explanationTemplate: 'Negative Zahlen sind kleiner als null und stehen links von null auf der Zahlengerade.'
+        }
+      ];
+    } else if (grade <= 6) {
+      // Grade 6: Percentage basics, proportions, basic powers
+      return [
+        {
           type: 'percentage_calculations',
           questionTemplate: 'Ordne die Prozentaufgaben ihrem Ergebnis zu:',
           itemTemplates: [
@@ -679,43 +721,88 @@ export class IntelligentFallbackService {
             {template: '{percent_3}% von {base_3}', categoryTemplate: '{percent_result_3}'}
           ],
           explanationTemplate: 'Prozentrechnung: {percent}% von {base} = ({percent} × {base}) ÷ 100'
+        },
+        {
+          type: 'basic_powers',
+          questionTemplate: 'Ordne die Potenzen ihrem Wert zu:',
+          itemTemplates: [
+            {template: '{base_1}²', categoryTemplate: '{square_result_1}'},
+            {template: '{base_2}²', categoryTemplate: '{square_result_2}'},
+            {template: '{base_3}³', categoryTemplate: '{cube_result_1}'}  // Only basic cubes
+          ],
+          explanationTemplate: 'Potenzen sind verkürzte Schreibweise für wiederholte Multiplikation.'
+        }
+      ];
+    } else if (grade <= 7) {
+      // Grade 7: Proportions, basic algebra terms
+      return [
+        {
+          type: 'proportions',
+          questionTemplate: 'Ordne die Verhältnisse zu:',
+          itemTemplates: [
+            {template: '{ratio_a}:{ratio_b}', categoryTemplate: 'Verhältnis {ratio_desc_1}'},
+            {template: '{ratio_c}:{ratio_d}', categoryTemplate: 'Verhältnis {ratio_desc_2}'},
+            {template: '{ratio_e}:{ratio_f}', categoryTemplate: 'Verhältnis {ratio_desc_3}'}
+          ],
+          explanationTemplate: 'Verhältnisse zeigen, wie sich Größen zueinander verhalten.'
+        },
+        {
+          type: 'basic_algebra',
+          questionTemplate: 'Ordne die Terme ihrer Beschreibung zu:',
+          itemTemplates: [
+            {template: '{coeff}x', categoryTemplate: 'Variable mit Koeffizient'},
+            {template: '{term_a}x + {term_b}', categoryTemplate: 'Linearer Term'},
+            {template: '{constant}', categoryTemplate: 'Konstante Zahl'}
+          ],
+          explanationTemplate: 'Algebraische Terme enthalten Zahlen, Variablen und Rechenzeichen.'
         }
       ];
     } else if (grade <= 8) {
+      // Grade 8: Linear functions, basic equation solving
       return [
         {
-          type: 'powers_roots',
-          questionTemplate: 'Ordne die mathematischen Ausdrücke ihrem Wert zu:',
+          type: 'linear_functions',
+          questionTemplate: 'Ordne die linearen Funktionen ihrer Eigenschaft zu:',
           itemTemplates: [
-            {template: '{base_1}²', categoryTemplate: '{square_result_1}'},
-            {template: '√{root_base_1}', categoryTemplate: '{root_result_1}'},
-            {template: '{base_2}³', categoryTemplate: '{cube_result_1}'},
-            {template: '{linear_expr}', categoryTemplate: '{linear_result}'}
+            {template: 'f(x) = {m}x + {b}', categoryTemplate: 'Steigung: {m}'},
+            {template: 'f(x) = {m2}x', categoryTemplate: 'Ursprungsgerade mit Steigung {m2}'},
+            {template: 'f(x) = {constant}', categoryTemplate: 'Waagerechte Gerade'}
           ],
-          explanationTemplate: 'Potenzen und Wurzeln sind umgekehrte Operationen.'
+          explanationTemplate: 'Lineare Funktionen haben eine konstante Steigung.'
         },
         {
-          type: 'equations',
+          type: 'simple_equations',
           questionTemplate: 'Ordne die Gleichungen ihren Lösungen zu:',
           itemTemplates: [
-            {template: '{coeff_1}x = {result_1}', categoryTemplate: 'x = {solution_1}'},
-            {template: '{coeff_2}x + {add_1} = {total_1}', categoryTemplate: 'x = {solution_2}'},
-            {template: '{coeff_3}x - {sub_1} = {total_2}', categoryTemplate: 'x = {solution_3}'}
+            {template: 'x + {add} = {total}', categoryTemplate: 'x = {solution_1}'},
+            {template: 'x - {sub} = {result}', categoryTemplate: 'x = {solution_2}'},
+            {template: '{coeff}x = {product}', categoryTemplate: 'x = {solution_3}'}
           ],
           explanationTemplate: 'Gleichungen lösen bedeutet, den Wert der Variablen zu finden.'
         }
       ];
     } else {
+      // Grade 9+: Quadratic functions, advanced algebra
       return [
         {
-          type: 'advanced_functions',
-          questionTemplate: 'Ordne die Funktionen ihren Eigenschaften zu:',
+          type: 'quadratic_functions',
+          questionTemplate: 'Ordne die Funktionen ihrem Typ zu:',
           itemTemplates: [
-            {template: 'f(x) = {m}x + {b}', categoryTemplate: 'Lineare Funktion'},
-            {template: 'f(x) = x²', categoryTemplate: 'Quadratische Funktion'},
-            {template: 'f(x) = {constant}', categoryTemplate: 'Konstante Funktion'}
+            {template: 'f(x) = x²', categoryTemplate: 'Normalparabel'},
+            {template: 'f(x) = {a}x² + {b}', categoryTemplate: 'Verschobene Parabel'},
+            {template: 'f(x) = {m}x + {n}', categoryTemplate: 'Lineare Funktion'}
           ],
-          explanationTemplate: 'Verschiedene Funktionstypen haben charakteristische Eigenschaften.'
+          explanationTemplate: 'Quadratische Funktionen haben x² als höchste Potenz.'
+        },
+        {
+          type: 'advanced_equations',
+          questionTemplate: 'Ordne die Gleichungstypen zu:',
+          itemTemplates: [
+            {template: 'x² = {square_val}', categoryTemplate: 'Quadratische Gleichung'},
+            {template: '{a}x + {b} = {c}x + {d}', categoryTemplate: 'Lineare Gleichung'},
+            {template: '√x = {root_val}', categoryTemplate: 'Wurzelgleichung'}
+          ],
+          explanationTemplate: 'Verschiedene Gleichungstypen erfordern unterschiedliche Lösungsverfahren.'
         }
       ];
     }
@@ -753,9 +840,11 @@ export class IntelligentFallbackService {
         break;
         
       case 'operations':
-        params.a = Math.floor(Math.random() * 50) + 10;
+        // Grade-appropriate ranges for operations
+        const maxRange = grade <= 3 ? 50 : 100;
+        params.a = Math.floor(Math.random() * maxRange) + 10;
         params.b = Math.floor(Math.random() * 30) + 5;
-        params.c = Math.floor(Math.random() * 80) + 20;
+        params.c = Math.floor(Math.random() * maxRange) + 20;
         params.d = Math.floor(Math.random() * 40) + 10;
         params.e = Math.floor(Math.random() * 9) + 2;
         params.f = Math.floor(Math.random() * 9) + 2;
@@ -763,7 +852,7 @@ export class IntelligentFallbackService {
         params.h = Math.floor(Math.random() * 8) + 2;
         break;
         
-      case 'results':
+      case 'calculations':
         params.simple_add_a = Math.floor(Math.random() * 20) + 5;
         params.simple_add_b = Math.floor(Math.random() * 15) + 3;
         params.simple_add_result = params.simple_add_a + params.simple_add_b;
@@ -776,6 +865,20 @@ export class IntelligentFallbackService {
         params.simple_mul_b = Math.floor(Math.random() * 8) + 2;
         params.simple_mul_result = params.simple_mul_a * params.simple_mul_b;
         break;
+
+      case 'decimal_basics':
+        params.euro_1 = Math.floor(Math.random() * 10) + 1;
+        params.cent_1 = Math.floor(Math.random() * 95) + 5;
+        params.cent_1_formatted = params.cent_1.toString().padStart(2, '0');
+        
+        params.euro_2 = Math.floor(Math.random() * 20) + 5;
+        params.cent_2 = Math.floor(Math.random() * 90) + 10;
+        params.cent_2_formatted = params.cent_2.toString().padStart(2, '0');
+        
+        params.euro_3 = Math.floor(Math.random() * 15) + 3;
+        params.cent_3 = Math.floor(Math.random() * 85) + 15;
+        params.cent_3_formatted = params.cent_3.toString().padStart(2, '0');
+        break;
         
       case 'fractions_decimals':
         const fractions = [
@@ -786,7 +889,9 @@ export class IntelligentFallbackService {
           {fraction: '2/5', decimal: '0,4'},
           {fraction: '3/5', decimal: '0,6'},
           {fraction: '1/8', decimal: '0,125'},
-          {fraction: '3/8', decimal: '0,375'}
+          {fraction: '3/8', decimal: '0,375'},
+          {fraction: '1/10', decimal: '0,1'},
+          {fraction: '3/10', decimal: '0,3'}
         ];
         
         const shuffled = fractions.sort(() => Math.random() - 0.5).slice(0, 4);
@@ -795,9 +900,15 @@ export class IntelligentFallbackService {
           params[`decimal_${i + 1}`] = frac.decimal;
         });
         break;
+
+      case 'negative_numbers':
+        params.positive = Math.floor(Math.random() * 20) + 1;
+        params.negative = Math.floor(Math.random() * 15) + 1;
+        break;
         
       case 'percentage_calculations':
-        params.percent_1 = [10, 20, 25, 50, 75][Math.floor(Math.random() * 5)];
+        // Only simple percentages for grade 6
+        params.percent_1 = [10, 20, 25, 50][Math.floor(Math.random() * 4)];
         params.base_1 = [20, 40, 60, 80, 100][Math.floor(Math.random() * 5)];
         params.percent_result_1 = (params.percent_1 * params.base_1) / 100;
         
@@ -805,47 +916,78 @@ export class IntelligentFallbackService {
         params.base_2 = [40, 60, 80][Math.floor(Math.random() * 3)];
         params.percent_result_2 = (params.percent_2 * params.base_2) / 100;
         
-        params.percent_3 = [5, 40, 60][Math.floor(Math.random() * 3)];
-        params.base_3 = [50, 25, 75][Math.floor(Math.random() * 3)];
+        params.percent_3 = [5, 25, 75][Math.floor(Math.random() * 3)];
+        params.base_3 = [20, 40, 80][Math.floor(Math.random() * 3)];
         params.percent_result_3 = (params.percent_3 * params.base_3) / 100;
         break;
         
-      case 'powers_roots':
-        params.base_1 = Math.floor(Math.random() * 8) + 2;
+      case 'basic_powers':
+        params.base_1 = Math.floor(Math.random() * 6) + 2; // 2-7
         params.square_result_1 = params.base_1 * params.base_1;
         
-        const roots = [4, 9, 16, 25, 36, 49, 64, 81, 100];
-        params.root_base_1 = roots[Math.floor(Math.random() * roots.length)];
-        params.root_result_1 = Math.sqrt(params.root_base_1);
+        params.base_2 = Math.floor(Math.random() * 5) + 3; // 3-7
+        params.square_result_2 = params.base_2 * params.base_2;
         
-        params.base_2 = Math.floor(Math.random() * 4) + 2;
-        params.cube_result_1 = params.base_2 * params.base_2 * params.base_2;
-        
-        params.linear_expr = `${Math.floor(Math.random() * 5) + 2}x = ${(Math.floor(Math.random() * 5) + 2) * (Math.floor(Math.random() * 8) + 2)}`;
-        const [coeff, result] = params.linear_expr.split(' = ');
-        params.linear_result = Math.floor(parseInt(result) / parseInt(coeff.replace('x', '')));
+        params.base_3 = Math.floor(Math.random() * 3) + 2; // 2-4
+        params.cube_result_1 = params.base_3 * params.base_3 * params.base_3;
         break;
+
+      case 'proportions':
+        params.ratio_a = Math.floor(Math.random() * 8) + 2;
+        params.ratio_b = Math.floor(Math.random() * 6) + 2;
+        params.ratio_desc_1 = `${params.ratio_a} zu ${params.ratio_b}`;
         
-      case 'equations':
-        params.coeff_1 = Math.floor(Math.random() * 5) + 2;
-        params.solution_1 = Math.floor(Math.random() * 8) + 2;
-        params.result_1 = params.coeff_1 * params.solution_1;
+        params.ratio_c = Math.floor(Math.random() * 7) + 3;
+        params.ratio_d = Math.floor(Math.random() * 5) + 2;
+        params.ratio_desc_2 = `${params.ratio_c} zu ${params.ratio_d}`;
         
-        params.coeff_2 = Math.floor(Math.random() * 4) + 2;
-        params.solution_2 = Math.floor(Math.random() * 6) + 3;
-        params.add_1 = Math.floor(Math.random() * 10) + 5;
-        params.total_1 = params.coeff_2 * params.solution_2 + params.add_1;
-        
-        params.coeff_3 = Math.floor(Math.random() * 3) + 2;
-        params.solution_3 = Math.floor(Math.random() * 7) + 4;
-        params.sub_1 = Math.floor(Math.random() * 8) + 3;
-        params.total_2 = params.coeff_3 * params.solution_3 - params.sub_1;
+        params.ratio_e = Math.floor(Math.random() * 9) + 1;
+        params.ratio_f = Math.floor(Math.random() * 8) + 2;
+        params.ratio_desc_3 = `${params.ratio_e} zu ${params.ratio_f}`;
         break;
-        
-      case 'advanced_functions':
-        params.m = Math.floor(Math.random() * 5) + 1;
+
+      case 'basic_algebra':
+        params.coeff = Math.floor(Math.random() * 7) + 2;
+        params.term_a = Math.floor(Math.random() * 5) + 2;
+        params.term_b = Math.floor(Math.random() * 10) + 1;
+        params.constant = Math.floor(Math.random() * 15) + 5;
+        break;
+
+      case 'linear_functions':
+        params.m = Math.floor(Math.random() * 8) + 1;
         params.b = Math.floor(Math.random() * 10) - 5;
-        params.constant = Math.floor(Math.random() * 20) + 1;
+        params.m2 = Math.floor(Math.random() * 6) + 1;
+        params.constant = Math.floor(Math.random() * 12) + 1;
+        break;
+
+      case 'simple_equations':
+        params.add = Math.floor(Math.random() * 10) + 5;
+        params.total = Math.floor(Math.random() * 20) + 15;
+        params.solution_1 = params.total - params.add;
+        
+        params.sub = Math.floor(Math.random() * 8) + 3;
+        params.result = Math.floor(Math.random() * 15) + 5;
+        params.solution_2 = params.result + params.sub;
+        
+        params.coeff = Math.floor(Math.random() * 5) + 2;
+        params.product = params.coeff * (Math.floor(Math.random() * 8) + 2);
+        params.solution_3 = params.product / params.coeff;
+        break;
+
+      case 'quadratic_functions':
+        params.a = Math.floor(Math.random() * 4) + 1;
+        params.b = Math.floor(Math.random() * 10) - 5;
+        params.m = Math.floor(Math.random() * 5) + 1;
+        params.n = Math.floor(Math.random() * 8) + 1;
+        break;
+
+      case 'advanced_equations':
+        params.square_val = Math.pow(Math.floor(Math.random() * 6) + 2, 2);
+        params.a = Math.floor(Math.random() * 4) + 2;
+        params.b = Math.floor(Math.random() * 8) + 3;
+        params.c = Math.floor(Math.random() * 3) + 1;
+        params.d = Math.floor(Math.random() * 6) + 2;
+        params.root_val = Math.floor(Math.random() * 8) + 2;
         break;
     }
     
