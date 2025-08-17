@@ -46,8 +46,10 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     grade,
     userId: user?.id || 'anonymous',
     totalQuestions: 5,
-    autoGenerate: !isMathCategory, // Only auto-generate for non-math categories
-    useEnhancedMode: false
+    autoGenerate: true, // Always auto-generate from Template-Bank
+    useEnhancedMode: false,
+    useTemplateBankMode: true, // Force Template-Bank for all categories including math
+    quarter: grade === 1 ? "Q1" : grade === 2 ? "Q1" : "Q1" // Map grade to appropriate quarter
   });
   
   // Generator-Zuweisung und Hilfsvariablen folgen nach der Initialisierung des Math-Generators
@@ -104,20 +106,13 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
 
   const improvedMathGeneration = useImprovedMathGeneration(user?.id || 'anonymous', mathConfig);
 
-  // Use improved generation for math, fallback for others
+  // Use Template-Bank for all categories now (disable old math generation)
   const {
     problems,
     isGenerating,
-    error: generationError,
+    generationError,
     generateProblems,
-  } = isMathCategory
-    ? improvedMathGeneration
-    : {
-        problems: fallbackGeneration.problems,
-        isGenerating: fallbackGeneration.isGenerating,
-        error: fallbackGeneration.generationError,
-        generateProblems: fallbackGeneration.generateProblems,
-      };
+  } = fallbackGeneration;
 
   const isInitialized = problems.length >= 5;
   const canRetry = !isGenerating;
@@ -126,13 +121,13 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
-  // Auto-generate math problems when component loads
+  // Auto-generate problems from Template-Bank when component loads
   useEffect(() => {
-    if (isMathCategory && problems.length === 0 && !isGenerating) {
-      console.log('🧮 Auto-generating improved math problems');
+    if (problems.length === 0 && !isGenerating) {
+      console.log('🏦 Auto-generating problems from Template-Bank system');
       generateProblems();
     }
-  }, [isMathCategory, problems.length, isGenerating, generateProblems]);
+  }, [problems.length, isGenerating, generateProblems]);
 
   useEffect(() => {
     console.log(`🔄 Game effect: gameStarted=${gameStarted}, problems.length=${problems.length}, isGenerating=${isGenerating}`);

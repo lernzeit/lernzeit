@@ -419,15 +419,38 @@ export class TemplateBankService {
   private generateSimpleQuestion(category: string, grade: number, index: number): SelectionQuestion | null {
     const categoryQuestions: Record<string, () => SelectionQuestion> = {
       'mathematik': () => {
-        const a = Math.floor(Math.random() * (grade * 10)) + 1;
-        const b = Math.floor(Math.random() * (grade * 5)) + 1;
+        // Generate grade-appropriate problems for math
+        let maxNumber = 10;
+        let useAdvanced = false;
+        
+        // Grade-specific constraints based on curriculum
+        if (grade === 1) {
+          maxNumber = 10; // Q1: counting to 10, simple addition/subtraction without carry
+        } else if (grade === 2) {
+          maxNumber = 20; // Q1: addition/subtraction to 20 without carry
+        } else if (grade === 3) {
+          maxNumber = 100;
+        } else if (grade >= 4) {
+          maxNumber = 1000;
+          useAdvanced = true;
+        }
+        
+        const a = Math.floor(Math.random() * maxNumber) + 1;
+        const b = Math.floor(Math.random() * Math.min(maxNumber / 2, a)) + 1; // Ensure b <= a for subtraction
+        
+        // Simple operations appropriate for each grade
+        const operations = grade === 1 ? ['+'] : ['+', '-'];
+        const operation = operations[Math.floor(Math.random() * operations.length)];
+        
+        const result = operation === '+' ? a + b : a - b;
+        
         return {
           id: Math.floor(Math.random() * 1000000),
-          question: `${a} + ${b} = ?`,
+          question: `${a} ${operation} ${b} = ?`,
           questionType: 'text-input',
-          explanation: `Addition: ${a} + ${b} = ${a + b}`,
+          explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'}: ${a} ${operation} ${b} = ${result}`,
           type: 'mathematik' as any,
-          answer: (a + b).toString()
+          answer: result.toString()
         };
       },
       'deutsch': () => ({
