@@ -102,11 +102,15 @@ export class IntelligentFallbackService {
         const adjTemplates = this.fallbackTemplates.get(adjKey) || [];
         templates = [...templates, ...adjTemplates];
         
-        // Also include matching templates for adjacent grades
+        // Also include matching and terminology templates for adjacent grades
         if (category === 'math') {
           const adjMatchingKey = `math_matching_${adjGrade}`;
           const adjMatchingTemplates = this.fallbackTemplates.get(adjMatchingKey) || [];
           templates = [...templates, ...adjMatchingTemplates];
+          
+          const adjTerminologyKey = `math_terminology_${adjGrade}`;
+          const adjTerminologyTemplates = this.fallbackTemplates.get(adjTerminologyKey) || [];
+          templates = [...templates, ...adjTerminologyTemplates];
         }
       }
     }
@@ -196,7 +200,7 @@ export class IntelligentFallbackService {
         questionType: template.questionType
       };
 
-      // Add type-specific properties
+      // Add type-specific properties - NEVER allow word-selection for math
       if (template.questionType === 'multiple-choice') {
         selectionQuestion.options = this.generateMultipleChoiceOptions(answer, template, parameters);
         selectionQuestion.correctAnswer = 0; // Correct answer is always first, then shuffled
@@ -206,6 +210,15 @@ export class IntelligentFallbackService {
         const matchingData = this.generateMatchingData(template, parameters);
         selectionQuestion.items = matchingData.items;
         selectionQuestion.categories = matchingData.categories;
+      } else if (template.questionType === 'word-selection' && request.category !== 'math') {
+        // Only allow word-selection for non-math subjects
+        // Word selection not implemented for fallback service
+        selectionQuestion.sentence = template.questionTemplate;
+        selectionQuestion.selectableWords = [];
+      } else if (template.questionType === 'word-selection' && request.category === 'math') {
+        // Convert to text-input for math subjects
+        selectionQuestion.questionType = 'text-input';
+        selectionQuestion.answer = answer;
       }
 
       return selectionQuestion;
@@ -345,6 +358,12 @@ export class IntelligentFallbackService {
     for (let grade = 1; grade <= 10; grade++) {
       const templates = this.createGradeSpecificMathTemplates(grade);
       this.fallbackTemplates.set(`math_${grade}`, templates);
+      
+      // Add math terminology questions for higher grades
+      if (grade >= 3) {
+        const terminologyTemplates = this.createMathTerminologyTemplates(grade);
+        this.fallbackTemplates.set(`math_terminology_${grade}`, terminologyTemplates);
+      }
     }
   }
 
@@ -381,6 +400,29 @@ export class IntelligentFallbackService {
     return templates;
   }
 
+  private createMathTerminologyTemplates(grade: number): FallbackTemplate[] {
+    const templates: FallbackTemplate[] = [];
+    
+    const terminologyQuestions = this.getMathTerminologyByGrade(grade);
+    
+    terminologyQuestions.forEach((termQuestion, index) => {
+      templates.push({
+        id: `math_terminology_${termQuestion.concept}_grade${grade}`,
+        category: 'math',
+        grade,
+        questionTemplate: termQuestion.question,
+        answerTemplate: termQuestion.correctAnswer,
+        explanationTemplate: termQuestion.explanation,
+        difficulty: grade <= 4 ? 'easy' : grade <= 7 ? 'medium' : 'hard',
+        questionType: 'multiple-choice',
+        baseQuality: 0.9,
+        curriculumAlignment: 0.95
+      });
+    });
+
+    return templates;
+  }
+
   private getOperationTemplate(operation: string, grade: number): string {
     switch (operation) {
       case '+':
@@ -396,6 +438,61 @@ export class IntelligentFallbackService {
       default:
         return '{a} + {b} = ?';
     }
+  }
+
+  private getMathTerminologyByGrade(grade: number): Array<{
+    concept: string;
+    question: string;
+    correctAnswer: string;
+    explanation: string;
+  }> {
+    const terminology = {
+      3: [
+        {
+          concept: 'addition',
+          question: 'Wie heißt das Ergebnis einer Addition?',
+          correctAnswer: 'Summe',
+          explanation: 'Das Ergebnis einer Addition heißt Summe. Beispiel: 3 + 5 = 8. Die Summe ist 8.'
+        },
+        {
+          concept: 'subtraktion',
+          question: 'Wie heißt das Ergebnis einer Subtraktion?',
+          correctAnswer: 'Differenz',
+          explanation: 'Das Ergebnis einer Subtraktion heißt Differenz. Beispiel: 8 - 3 = 5. Die Differenz ist 5.'
+        }
+      ],
+      4: [
+        {
+          concept: 'multiplikation',
+          question: 'Wie heißt das Ergebnis einer Multiplikation?',
+          correctAnswer: 'Produkt',
+          explanation: 'Das Ergebnis einer Multiplikation heißt Produkt. Beispiel: 4 × 3 = 12. Das Produkt ist 12.'
+        },
+        {
+          concept: 'division',
+          question: 'Wie heißt das Ergebnis einer Division?',
+          correctAnswer: 'Quotient',
+          explanation: 'Das Ergebnis einer Division heißt Quotient. Beispiel: 12 ÷ 3 = 4. Der Quotient ist 4.'
+        }
+      ],
+      5: [
+        {
+          concept: 'bruch',
+          question: 'Wie heißt die Zahl über dem Bruchstrich?',
+          correctAnswer: 'Zähler',
+          explanation: 'Die Zahl über dem Bruchstrich heißt Zähler. Bei 3/4 ist 3 der Zähler.'
+        },
+        {
+          concept: 'bruch',
+          question: 'Wie heißt die Zahl unter dem Bruchstrich?',
+          correctAnswer: 'Nenner',
+          explanation: 'Die Zahl unter dem Bruchstrich heißt Nenner. Bei 3/4 ist 4 der Nenner.'
+        }
+      ]
+    };
+
+    const gradeTerms = terminology[Math.min(grade, 5) as keyof typeof terminology] || terminology[5];
+    return gradeTerms;
   }
 
   private getOperationExplanation(operation: string, grade: number): string {
@@ -700,21 +797,52 @@ export class IntelligentFallbackService {
   private generateMultipleChoiceOptions(correctAnswer: string, template: FallbackTemplate, parameters: Record<string, any>): string[] {
     const options = [correctAnswer];
     
-    // Generate plausible wrong answers
-    if (template.category === 'math') {
+    // Generate plausible wrong answers based on template type
+    if (template.id.includes('terminology')) {
+      // For math terminology, use meaningful wrong answers
+      const wrongAnswers = this.getMathTerminologyDistractors(correctAnswer, template.grade);
+      options.push(...wrongAnswers);
+    } else if (template.category === 'math') {
+      // For numeric answers
       const correct = parseInt(correctAnswer);
-      options.push((correct + 1).toString());
-      options.push((correct - 1).toString());
-      options.push((correct + 5).toString());
+      if (!isNaN(correct)) {
+        options.push((correct + 1).toString());
+        options.push((correct - 1).toString());
+        options.push((correct + 5).toString());
+      } else {
+        // For non-numeric math answers
+        options.push('Ergebnis', 'Lösung', 'Antwort');
+      }
     }
+    
+    // Ensure we have exactly 4 options
+    while (options.length < 4) {
+      options.push(`Option ${options.length + 1}`);
+    }
+    
+    // Remove duplicates and take only first 4
+    const uniqueOptions = [...new Set(options)].slice(0, 4);
     
     // Shuffle options
-    for (let i = options.length - 1; i > 0; i--) {
+    for (let i = uniqueOptions.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [options[i], options[j]] = [options[j], options[i]];
+      [uniqueOptions[i], uniqueOptions[j]] = [uniqueOptions[j], uniqueOptions[i]];
     }
     
-    return options;
+    return uniqueOptions;
+  }
+
+  private getMathTerminologyDistractors(correctAnswer: string, grade: number): string[] {
+    const distractorMap: Record<string, string[]> = {
+      'Summe': ['Differenz', 'Produkt', 'Quotient'],
+      'Differenz': ['Summe', 'Produkt', 'Rest'],
+      'Produkt': ['Summe', 'Quotient', 'Ergebnis'],
+      'Quotient': ['Produkt', 'Summe', 'Teiler'],
+      'Zähler': ['Nenner', 'Bruchstrich', 'Ganzes'],
+      'Nenner': ['Zähler', 'Bruchstrich', 'Teil']
+    };
+    
+    return distractorMap[correctAnswer] || ['Option A', 'Option B', 'Option C'];
   }
 
   private validateFallbackQuestion(question: SelectionQuestion, existingQuestions: string[]): boolean {
