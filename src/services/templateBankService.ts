@@ -421,7 +421,6 @@ export class TemplateBankService {
       'mathematik': () => {
         // Generate grade-appropriate problems for math
         let maxNumber = 10;
-        let useAdvanced = false;
         
         // Grade-specific constraints based on curriculum
         if (grade === 1) {
@@ -432,11 +431,14 @@ export class TemplateBankService {
           maxNumber = 100;
         } else if (grade >= 4) {
           maxNumber = 1000;
-          useAdvanced = true;
         }
         
+        // Rotate question types for variety
+        const questionTypes = ['text-input', 'multiple-choice', 'word-selection'];
+        const questionType = questionTypes[index % questionTypes.length];
+        
         const a = Math.floor(Math.random() * maxNumber) + 1;
-        const b = Math.floor(Math.random() * Math.min(maxNumber / 2, a)) + 1; // Ensure b <= a for subtraction
+        const b = Math.floor(Math.random() * Math.min(maxNumber / 2, a)) + 1;
         
         // Simple operations appropriate for each grade
         const operations = grade === 1 ? ['+'] : ['+', '-'];
@@ -444,23 +446,121 @@ export class TemplateBankService {
         
         const result = operation === '+' ? a + b : a - b;
         
-        return {
-          id: Math.floor(Math.random() * 1000000),
-          question: `${a} ${operation} ${b} = ?`,
-          questionType: 'text-input',
-          explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'}: ${a} ${operation} ${b} = ${result}`,
-          type: 'mathematik' as any,
-          answer: result.toString()
-        };
+        if (questionType === 'multiple-choice') {
+          // Generate wrong answers for multiple choice
+          const wrongAnswers = [
+            result + 1,
+            result - 1,
+            result + Math.floor(Math.random() * 3) + 2
+          ].filter(ans => ans > 0 && ans !== result);
+          
+          const options = [result, ...wrongAnswers.slice(0, 3)]
+            .sort(() => Math.random() - 0.5)
+            .map(n => n.toString());
+          
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: `Was ist ${a} ${operation} ${b}?`,
+            questionType: 'multiple-choice',
+            explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'}: ${a} ${operation} ${b} = ${result}`,
+            type: 'mathematik' as any,
+            options,
+            correctAnswer: options.indexOf(result.toString())
+          };
+        } else if (questionType === 'word-selection') {
+          // Create word selection with numbers
+          const numbers = Array.from({length: 8}, (_, i) => {
+            const num = result + i - 4;
+            return {
+              word: num.toString(),
+              isCorrect: num === result,
+              index: i
+            };
+          }).filter(item => parseInt(item.word) > 0);
+          
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: `Wähle das richtige Ergebnis für ${a} ${operation} ${b}:`,
+            questionType: 'word-selection',
+            explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'}: ${a} ${operation} ${b} = ${result}`,
+            type: 'mathematik' as any,
+            sentence: `Wähle das richtige Ergebnis für ${a} ${operation} ${b}:`,
+            selectableWords: numbers
+          };
+        } else {
+          // Default text-input
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: `${a} ${operation} ${b} = ?`,
+            questionType: 'text-input',
+            explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'}: ${a} ${operation} ${b} = ${result}`,
+            type: 'mathematik' as any,
+            answer: result.toString()
+          };
+        }
       },
-      'deutsch': () => ({
-        id: Math.floor(Math.random() * 1000000),
-        question: 'Wie lautet die Mehrzahl von "Haus"?',
-        questionType: 'text-input',
-        explanation: 'Die Mehrzahl von "Haus" ist "Häuser".',
-        type: 'deutsch' as any,
-        answer: 'Häuser'
-      })
+      'deutsch': () => {
+        // Rotate question types for variety
+        const questionTypes = ['multiple-choice', 'word-selection', 'matching'];
+        const questionType = questionTypes[index % questionTypes.length];
+        
+        if (questionType === 'multiple-choice') {
+          const vowelQuestions = [
+            { question: 'Welcher Buchstabe ist ein Vokal?', answer: 'A', options: ['B', 'A', 'K', 'T'] },
+            { question: 'Welcher Buchstabe ist ein Vokal?', answer: 'E', options: ['F', 'E', 'G', 'H'] },
+            { question: 'Welcher Buchstabe ist ein Vokal?', answer: 'I', options: ['J', 'K', 'I', 'L'] }
+          ];
+          const q = vowelQuestions[Math.floor(Math.random() * vowelQuestions.length)];
+          
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: q.question,
+            questionType: 'multiple-choice',
+            explanation: 'Vokale sind: A, E, I, O, U',
+            type: 'deutsch' as any,
+            options: q.options,
+            correctAnswer: q.options.indexOf(q.answer)
+          };
+        } else if (questionType === 'word-selection') {
+          const words = ['Hund', 'Katze', 'Auto', 'Haus', 'Baum', 'Sonne'];
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: 'Wähle alle Wörter mit dem Buchstaben "a":',
+            questionType: 'word-selection',
+            explanation: 'Wörter mit "a": Katze, Auto, Haus, Baum',
+            type: 'deutsch' as any,
+            sentence: 'Wähle alle Wörter mit dem Buchstaben "a":',
+            selectableWords: words.map((word, i) => ({
+              word,
+              isCorrect: word.toLowerCase().includes('a'),
+              index: i
+            }))
+          };
+        } else {
+          // Matching question
+          const items = [
+            { id: 'tier1', content: 'Hund', category: 'tier' },
+            { id: 'tier2', content: 'Katze', category: 'tier' },
+            { id: 'farbe1', content: 'Rot', category: 'farbe' },
+            { id: 'farbe2', content: 'Blau', category: 'farbe' }
+          ];
+          
+          const categories = [
+            { id: 'tier', name: 'Tiere', acceptsItems: ['tier1', 'tier2'] },
+            { id: 'farbe', name: 'Farben', acceptsItems: ['farbe1', 'farbe2'] }
+          ];
+          
+          return {
+            id: Math.floor(Math.random() * 1000000),
+            question: 'Ordne die Wörter den richtigen Kategorien zu:',
+            questionType: 'matching',
+            explanation: 'Tiere: Hund, Katze - Farben: Rot, Blau',
+            type: 'deutsch' as any,
+            items,
+            categories
+          };
+        }
+      }
     };
 
     const generator = categoryQuestions[this.normalizeCategory(category)];
