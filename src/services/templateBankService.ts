@@ -88,7 +88,8 @@ export class EnhancedTemplateBankService {
     
     if (normalizedCategory === 'mathematik') {
       for (let i = 0; i < count; i++) {
-        const questionTypes = ['text-input', 'multiple-choice', 'word-selection', 'matching'];
+        // Word-selection entfernt für Mathe - nur sinnvolle Fragetypen
+        const questionTypes = ['text-input', 'multiple-choice', 'matching'];
         const questionType = questionTypes[i % questionTypes.length];
         
         const question = this.generateMathQuestion(grade, questionType, i);
@@ -111,9 +112,11 @@ export class EnhancedTemplateBankService {
     if (questionType === 'matching') {
       return this.generateMathMatchingQuestion(grade);
     } else if (questionType === 'multiple-choice') {
-      return this.generateMathMultipleChoiceQuestion(grade);
-    } else if (questionType === 'word-selection') {
-      return this.generateMathWordSelectionQuestion(grade);
+      // Mix normale Multiple Choice und sinnvolle Textaufgaben
+      const useTextProblem = Math.random() < 0.3; // 30% Textaufgaben
+      return useTextProblem 
+        ? this.generateMathTextWordProblem(grade) 
+        : this.generateMathMultipleChoiceQuestion(grade);
     } else {
       return this.generateMathTextInputQuestion(grade);
     }
@@ -650,73 +653,108 @@ export class EnhancedTemplateBankService {
     };
   }
 
-  private generateMathWordSelectionQuestion(grade: number): SelectionQuestion {
-    // Sinnvolle Wort-Auswahl Aufgaben für Mathematik
-    const wordSelectionTemplates = [
+  private generateMathTextWordProblem(grade: number): SelectionQuestion {
+    // Sinnvolle Textaufgaben als Multiple Choice für Mathematik
+    const textProblemTemplates = [
       // Gerade/Ungerade für Klasse 1-3
       {
         type: 'even_odd',
-        words: ['gerade', 'ungerade'],
         grades: [1, 2, 3]
       },
       // Größer/Kleiner für Klasse 1-4
       {
         type: 'compare',
-        words: ['größer', 'kleiner'],
         grades: [1, 2, 3, 4]
       },
       // Operationstyp für Klasse 2+
       {
         type: 'operation_type',
-        words: ['Addition', 'Subtraktion', 'Multiplikation'],
+        grades: [2, 3, 4, 5]
+      },
+      // Textaufgaben für Klasse 2+
+      {
+        type: 'word_problem',
         grades: [2, 3, 4, 5]
       }
     ];
 
-    const availableTemplates = wordSelectionTemplates.filter(t => t.grades.includes(grade));
+    const availableTemplates = textProblemTemplates.filter(t => t.grades.includes(grade));
     const template = availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
     
     let question: string;
-    let correctAnswer: string;
+    let options: string[];
+    let correctAnswer: number;
+    let explanation: string;
     
     if (template.type === 'even_odd') {
       // Gerade/Ungerade
       const num = Math.floor(Math.random() * 20) + 1;
       question = `Ist die Zahl ${num} gerade oder ungerade?`;
-      correctAnswer = num % 2 === 0 ? 'gerade' : 'ungerade';
+      options = ['gerade', 'ungerade'];
+      correctAnswer = num % 2 === 0 ? 0 : 1;
+      explanation = `${num} ist ${options[correctAnswer]}, weil ${num % 2 === 0 ? 'sie durch 2 teilbar ist' : 'sie nicht durch 2 teilbar ist'}.`;
     } else if (template.type === 'compare') {
-      // Größer/Kleiner
+      // Größer/Kleiner Vergleich
       const a = Math.floor(Math.random() * 50) + 1;
       let b = Math.floor(Math.random() * 50) + 1;
-      if (a === b) {
-        // Vermeiden gleicher Zahlen
-        b = a + Math.floor(Math.random() * 10) + 1;
-      }
-      question = `Ist ${a} größer oder kleiner als ${b}?`;
-      correctAnswer = a > b ? 'größer' : 'kleiner';
+      if (a === b) b = a + Math.floor(Math.random() * 10) + 1;
+      question = `Vergleiche: Ist ${a} größer oder kleiner als ${b}?`;
+      options = ['größer', 'kleiner', 'gleich'];
+      correctAnswer = a > b ? 0 : 1;
+      explanation = `${a} ist ${options[correctAnswer]} als ${b}.`;
+    } else if (template.type === 'operation_type') {
+      // Operationstyp erkennen
+      const operations = [
+        { symbol: '+', name: 'Addition', verb: 'addiert' },
+        { symbol: '-', name: 'Subtraktion', verb: 'subtrahiert' },
+        { symbol: '×', name: 'Multiplikation', verb: 'multipliziert' }
+      ];
+      const op = operations[Math.floor(Math.random() * operations.length)];
+      const a = Math.floor(Math.random() * 12) + 1;
+      const b = Math.floor(Math.random() * 12) + 1;
+      
+      question = `Was für eine Rechenart wird hier verwendet: ${a} ${op.symbol} ${b}?`;
+      options = ['Addition', 'Subtraktion', 'Multiplikation', 'Division'];
+      correctAnswer = operations.findIndex(o => o.name === op.name);
+      explanation = `${a} ${op.symbol} ${b} ist eine ${op.name}, weil die Zahlen ${op.verb} werden.`;
     } else {
-      // Operationstyp
-      const a = Math.floor(Math.random() * 20) + 1;
-      const b = Math.floor(Math.random() * 20) + 1;
-      const result = a + b;
-      question = `Was für eine Rechenart ist ${a} + ${b} = ${result}?`;
-      correctAnswer = 'Addition';
+      // Textaufgabe
+      const scenarios = [
+        {
+          text: "Lisa hat 8 Äpfel. Sie gibt 3 Äpfel an ihre Freundin ab. Wie viele Äpfel hat Lisa noch?",
+          options: ["5", "6", "4", "7"],
+          correct: 0,
+          explanation: "8 - 3 = 5. Lisa hat noch 5 Äpfel."
+        },
+        {
+          text: "In einer Klasse sind 12 Jungen und 9 Mädchen. Wie viele Kinder sind insgesamt in der Klasse?",
+          options: ["20", "21", "22", "19"],
+          correct: 1,
+          explanation: "12 + 9 = 21. Es sind 21 Kinder in der Klasse."
+        },
+        {
+          text: "Tom kauft 4 Pakete Kekse. In jedem Paket sind 6 Kekse. Wie viele Kekse hat Tom insgesamt?",
+          options: ["22", "24", "26", "20"],
+          correct: 1,
+          explanation: "4 × 6 = 24. Tom hat 24 Kekse."
+        }
+      ];
+      
+      const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+      question = scenario.text;
+      options = scenario.options;
+      correctAnswer = scenario.correct;
+      explanation = scenario.explanation;
     }
-
-    const selectableWords = template.words.map((word, index) => ({
-      word,
-      isCorrect: word === correctAnswer,
-      index
-    }));
 
     return {
       id: Math.floor(Math.random() * 1000000),
       question,
-      questionType: 'word-selection',
-      explanation: `Die richtige Antwort ist: ${correctAnswer}`,
+      questionType: 'multiple-choice',
+      explanation,
       type: 'mathematik' as any,
-      sentence: question,
-      selectableWords
+      options,
+      correctAnswer
     };
   }
 
