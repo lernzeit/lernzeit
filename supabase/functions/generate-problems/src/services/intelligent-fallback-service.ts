@@ -754,7 +754,6 @@ export class IntelligentFallbackService {
     
     return questions;
   }
-}
 
   private generateMatchingData(template: FallbackTemplate, parameters: Record<string, any>): {
     items: Array<{id: string, content: string, category: string}>,
