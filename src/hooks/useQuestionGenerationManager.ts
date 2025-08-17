@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { useBalancedQuestionGeneration } from './useBalancedQuestionGeneration';
 import { useEnhancedCurriculumGeneration } from './useEnhancedCurriculumGeneration';
-import { TemplateBankService } from '@/services/templateBankService';
+import { EnhancedTemplateBankService } from '@/services/templateBankService';
 import type { Quarter } from '@/data/templateBank';
 
 interface QuestionGenerationManagerProps {
@@ -43,7 +43,7 @@ export function useQuestionGenerationManager({
   const initializationRef = useRef(false);
   
   // Template Bank Service instance
-  const templateBankService = useRef(TemplateBankService.getInstance());
+  const templateBankService = useRef(EnhancedTemplateBankService.getInstance());
   
   // Use Template Bank, enhanced, or balanced generation based on mode
   const balancedGeneration = useBalancedQuestionGeneration(category, grade, userId, totalQuestions);

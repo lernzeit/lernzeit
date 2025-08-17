@@ -1,7 +1,7 @@
 // Hook for Template-Bank based question generation
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
-import { TemplateBankService, TemplateBankResult } from '@/services/templateBankService';
+import { EnhancedTemplateBankService, TemplateBankResult } from '@/services/templateBankService';
 import type { Quarter } from '@/data/templateBank';
 
 interface TemplateBankGenerationOptions {
@@ -31,7 +31,7 @@ export function useTemplateBankGeneration(
     domainDiversity: 0
   });
 
-  const templateBankService = useRef(TemplateBankService.getInstance());
+  const templateBankService = useRef(EnhancedTemplateBankService.getInstance());
   const lastParamsRef = useRef<string>('');
   const initializationRef = useRef(false);
 

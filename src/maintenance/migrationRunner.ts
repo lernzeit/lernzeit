@@ -1,5 +1,5 @@
 // Migration Runner - Orchestrates the step-by-step migration to Template-Bank system
-import { TemplateBankService } from '@/services/templateBankService';
+import { EnhancedTemplateBankService } from '@/services/templateBankService';
 import { topUpBank, pruneOldBad } from './templateBankRunner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,10 +21,10 @@ interface MigrationResult {
 
 export class MigrationRunner {
   private static instance: MigrationRunner;
-  private templateBankService: TemplateBankService;
+  private templateBankService: EnhancedTemplateBankService;
 
   constructor() {
-    this.templateBankService = TemplateBankService.getInstance();
+    this.templateBankService = EnhancedTemplateBankService.getInstance();
   }
 
   static getInstance(): MigrationRunner {
