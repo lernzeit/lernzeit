@@ -158,7 +158,7 @@ export class IntelligentFallbackService {
     let score = template.baseQuality;
 
     // Variety bonus - prefer different question types
-    const existingTypes = new Set(existingQuestions.map(q => this.inferQuestionType(q)));
+    const existingTypes = new Set(existingQuestions.map(q => this.inferQuestionType(q, 'unknown')));
     if (!existingTypes.has(template.questionType)) {
       score += 0.3;
     }
@@ -731,10 +731,36 @@ export class IntelligentFallbackService {
     return intersection.size / union.size;
   }
 
-  private inferQuestionType(question: string): string {
-    if (question.includes('=')) return 'math';
-    if (question.includes('?')) return 'question';
-    return 'statement';
+  private inferQuestionType(question: string, category: string = 'unknown'): string {
+    // Never use word-selection for math subjects
+    if (category.toLowerCase() === 'math' || category.toLowerCase() === 'mathematik') {
+      if (question.includes('Wähle') || question.includes('Markiere')) {
+        return 'multiple-choice';
+      }
+      if (question.includes('Ordne') || question.includes('Verbinde')) {
+        return 'matching';
+      }
+      return 'text-input'; // Default for math
+    }
+    
+    // For non-math subjects, allow word-selection
+    if (question.includes('Wähle') && question.includes('Wort')) {
+      return 'word-selection';
+    }
+    if (question.includes('Wähle') || question.includes('Markiere')) {
+      return 'multiple-choice';
+    }
+    if (question.includes('Ordne') || question.includes('Verbinde')) {
+      return 'matching';
+    }
+    if (question.includes('Berechne') || question.includes('Rechne')) {
+      return 'text-input';
+    }
+    
+    // Legacy fallback logic
+    if (question.includes('=')) return 'text-input';
+    if (question.includes('?')) return 'multiple-choice';
+    return 'text-input';
   }
 
   private generateBasicFallbacks(request: ProblemRequest): SelectionQuestion[] {
