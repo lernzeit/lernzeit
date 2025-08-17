@@ -617,4 +617,213 @@ export class TemplateBankService {
   clearCache(): void {
     this.cache.clear();
   }
+
+  private generateMathTheoryMatching(grade: number) {
+    if (grade <= 2) {
+      // Grundlagen für Klasse 1-2
+      const items = [
+        { id: 'term1', content: '3 + 4', category: 'addition' },
+        { id: 'term2', content: '7 - 2', category: 'subtraktion' },
+        { id: 'term3', content: '2 × 3', category: 'multiplikation' },
+        { id: 'term4', content: '8 ÷ 2', category: 'division' }
+      ];
+      
+      const categories = [
+        { id: 'addition', name: 'Addition (Plus-Aufgabe)', acceptsItems: ['term1'] },
+        { id: 'subtraktion', name: 'Subtraktion (Minus-Aufgabe)', acceptsItems: ['term2'] },
+        { id: 'multiplikation', name: 'Multiplikation (Mal-Aufgabe)', acceptsItems: ['term3'] },
+        { id: 'division', name: 'Division (Geteilt-Aufgabe)', acceptsItems: ['term4'] }
+      ];
+
+      return {
+        question: 'Ordne jede Rechenart dem richtigen Namen zu:',
+        explanation: 'Plus bedeutet addieren, Minus subtrahieren, Mal multiplizieren, Geteilt dividieren.',
+        items,
+        categories
+      };
+    } else if (grade <= 4) {
+      // Erweiterte Begriffe für Klasse 3-4
+      const items = [
+        { id: 'term1', content: '5 × 4 = 20', category: 'multiplikation' },
+        { id: 'term2', content: '20 ÷ 4 = 5', category: 'division' },
+        { id: 'term3', content: 'Die Zahl 5', category: 'faktor' },
+        { id: 'term4', content: 'Das Ergebnis 20', category: 'produkt' }
+      ];
+      
+      const categories = [
+        { id: 'multiplikation', name: 'Multiplikation', acceptsItems: ['term1'] },
+        { id: 'division', name: 'Division', acceptsItems: ['term2'] },
+        { id: 'faktor', name: 'Faktor', acceptsItems: ['term3'] },
+        { id: 'produkt', name: 'Produkt', acceptsItems: ['term4'] }
+      ];
+
+      return {
+        question: 'Ordne die Begriffe den mathematischen Fachausdrücken zu:',
+        explanation: 'Bei 5 × 4 = 20 sind 5 und 4 die Faktoren, 20 ist das Produkt. Division ist die Umkehrung.',
+        items,
+        categories
+      };
+    } else {
+      // Fortgeschrittene Begriffe für Klasse 5+
+      const items = [
+        { id: 'term1', content: '15 ÷ 3 = 5', category: 'division' },
+        { id: 'term2', content: 'Die Zahl 15', category: 'dividend' },
+        { id: 'term3', content: 'Die Zahl 3', category: 'divisor' },
+        { id: 'term4', content: 'Das Ergebnis 5', category: 'quotient' }
+      ];
+      
+      const categories = [
+        { id: 'division', name: 'Division', acceptsItems: ['term1'] },
+        { id: 'dividend', name: 'Dividend', acceptsItems: ['term2'] },
+        { id: 'divisor', name: 'Divisor', acceptsItems: ['term3'] },
+        { id: 'quotient', name: 'Quotient', acceptsItems: ['term4'] }
+      ];
+
+      return {
+        question: 'Ordne die Teile der Divisionsaufgabe den Fachbegriffen zu:',
+        explanation: 'Bei 15 ÷ 3 = 5 ist 15 der Dividend, 3 der Divisor und 5 der Quotient.',
+        items,
+        categories
+      };
+    }
+  }
+
+  private generateGradeAppropriateMatching(grade: number) {
+    const tasks = [];
+    const results = [];
+    
+    if (grade <= 2) {
+      // Zahlenraum bis 20
+      const maxNum = 10;
+      const operations = ['+', '-'];
+      
+      for (let i = 0; i < 4; i++) {
+        const a = Math.floor(Math.random() * maxNum) + 1;
+        const b = Math.floor(Math.random() * Math.min(a, 5)) + 1;
+        const op = operations[Math.floor(Math.random() * operations.length)];
+        const result = op === '+' ? a + b : a - b;
+        
+        if (result > 0 && result <= 20) {
+          tasks.push({
+            id: `task_${i}`,
+            content: `${a} ${op} ${b}`,
+            category: `result_${result}`
+          });
+          
+          results.push({
+            id: `result_${result}`,
+            name: result.toString(),
+            acceptsItems: [`task_${i}`]
+          });
+        }
+      }
+      
+      return {
+        question: 'Rechne aus und ordne jede Aufgabe dem richtigen Ergebnis zu:',
+        explanation: 'Löse jede Aufgabe im Zahlenraum bis 20 und ordne sie dem passenden Ergebnis zu.',
+        items: tasks,
+        categories: results
+      };
+    } else if (grade <= 4) {
+      // Zahlenraum bis 100, Einmaleins
+      const useMultiplication = Math.random() < 0.5;
+      
+      if (useMultiplication) {
+        for (let i = 0; i < 4; i++) {
+          const a = Math.floor(Math.random() * 9) + 2;
+          const b = Math.floor(Math.random() * 9) + 2;
+          const result = a * b;
+          
+          tasks.push({
+            id: `task_${i}`,
+            content: `${a} × ${b}`,
+            category: `result_${result}`
+          });
+          
+          results.push({
+            id: `result_${result}`,
+            name: result.toString(),
+            acceptsItems: [`task_${i}`]
+          });
+        }
+        
+        return {
+          question: 'Löse die Multiplikationsaufgaben und ordne sie den Ergebnissen zu:',
+          explanation: 'Verwende das kleine Einmaleins, um die Aufgaben zu lösen.',
+          items: tasks,
+          categories: results
+        };
+      } else {
+        for (let i = 0; i < 4; i++) {
+          const a = Math.floor(Math.random() * 80) + 10;
+          const b = Math.floor(Math.random() * 30) + 5;
+          const op = Math.random() < 0.5 ? '+' : '-';
+          const result = op === '+' ? a + b : a - b;
+          
+          if (result > 0) {
+            tasks.push({
+              id: `task_${i}`,
+              content: `${a} ${op} ${b}`,
+              category: `result_${result}`
+            });
+            
+            results.push({
+              id: `result_${result}`,
+              name: result.toString(),
+              acceptsItems: [`task_${i}`]
+            });
+          }
+        }
+        
+        return {
+          question: 'Rechne im Zahlenraum bis 100 und ordne die Aufgaben den Ergebnissen zu:',
+          explanation: 'Löse die Additions- und Subtraktionsaufgaben im größeren Zahlenraum.',
+          items: tasks,
+          categories: results
+        };
+      }
+    } else {
+      // Zahlenraum bis 1000+, komplexere Aufgaben
+      for (let i = 0; i < 4; i++) {
+        const a = Math.floor(Math.random() * 500) + 100;
+        const b = Math.floor(Math.random() * 200) + 50;
+        const operations = ['+', '-', '×'];
+        const op = operations[Math.floor(Math.random() * operations.length)];
+        let result;
+        
+        if (op === '×') {
+          const smallA = Math.floor(Math.random() * 20) + 10;
+          const smallB = Math.floor(Math.random() * 9) + 2;
+          result = smallA * smallB;
+          tasks.push({
+            id: `task_${i}`,
+            content: `${smallA} × ${smallB}`,
+            category: `result_${result}`
+          });
+        } else {
+          result = op === '+' ? a + b : a - b;
+          tasks.push({
+            id: `task_${i}`,
+            content: `${a} ${op} ${b}`,
+            category: `result_${result}`
+          });
+        }
+        
+        if (result > 0) {
+          results.push({
+            id: `result_${result}`,
+            name: result.toString(),
+            acceptsItems: [`task_${i}`]
+          });
+        }
+      }
+      
+      return {
+        question: 'Löse die Rechenaufgaben und ordne sie den korrekten Ergebnissen zu:',
+        explanation: 'Berechne sorgfältig und verwende bei Bedarf schriftliche Rechenverfahren.',
+        items: tasks,
+        categories: results
+      };
+    }
+  }
 }
