@@ -651,39 +651,72 @@ export class EnhancedTemplateBankService {
   }
 
   private generateMathWordSelectionQuestion(grade: number): SelectionQuestion {
-    const maxNumber = grade <= 2 ? 10 : grade <= 4 ? 50 : 100;
-    const operations = grade <= 2 ? ['+', '-'] : ['+', '-', '×'];
+    // Sinnvolle Wort-Auswahl Aufgaben für Mathematik
+    const wordSelectionTemplates = [
+      // Gerade/Ungerade für Klasse 1-3
+      {
+        type: 'even_odd',
+        words: ['gerade', 'ungerade'],
+        grades: [1, 2, 3]
+      },
+      // Größer/Kleiner für Klasse 1-4
+      {
+        type: 'compare',
+        words: ['größer', 'kleiner'],
+        grades: [1, 2, 3, 4]
+      },
+      // Operationstyp für Klasse 2+
+      {
+        type: 'operation_type',
+        words: ['Addition', 'Subtraktion', 'Multiplikation'],
+        grades: [2, 3, 4, 5]
+      }
+    ];
+
+    const availableTemplates = wordSelectionTemplates.filter(t => t.grades.includes(grade));
+    const template = availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
     
-    const a = Math.floor(Math.random() * maxNumber) + 1;
-    const b = Math.floor(Math.random() * Math.min(a, 5)) + 1;
-    const operation = operations[Math.floor(Math.random() * operations.length)];
-    const result = operation === '+' ? a + b : operation === '-' ? a - b : a * b;
+    let question: string;
+    let correctAnswer: string;
     
-    const wrongAnswers = [
-      result + 1,
-      result - 1, 
-      result + 2,
-      result - 2,
-      Math.max(1, result + 3),
-      Math.max(1, result - 3)
-    ].filter(ans => ans > 0 && ans !== result);
-    
-    const allNumbers = [result, ...wrongAnswers.slice(0, 5)]
-      .sort((a, b) => a - b)
-      .map((num, i) => ({
-        word: num.toString(),
-        isCorrect: num === result,
-        index: i
-      }));
-    
+    if (template.type === 'even_odd') {
+      // Gerade/Ungerade
+      const num = Math.floor(Math.random() * 20) + 1;
+      question = `Ist die Zahl ${num} gerade oder ungerade?`;
+      correctAnswer = num % 2 === 0 ? 'gerade' : 'ungerade';
+    } else if (template.type === 'compare') {
+      // Größer/Kleiner
+      const a = Math.floor(Math.random() * 50) + 1;
+      let b = Math.floor(Math.random() * 50) + 1;
+      if (a === b) {
+        // Vermeiden gleicher Zahlen
+        b = a + Math.floor(Math.random() * 10) + 1;
+      }
+      question = `Ist ${a} größer oder kleiner als ${b}?`;
+      correctAnswer = a > b ? 'größer' : 'kleiner';
+    } else {
+      // Operationstyp
+      const a = Math.floor(Math.random() * 20) + 1;
+      const b = Math.floor(Math.random() * 20) + 1;
+      const result = a + b;
+      question = `Was für eine Rechenart ist ${a} + ${b} = ${result}?`;
+      correctAnswer = 'Addition';
+    }
+
+    const selectableWords = template.words.map((word, index) => ({
+      word,
+      isCorrect: word === correctAnswer,
+      index
+    }));
+
     return {
       id: Math.floor(Math.random() * 1000000),
-      question: `Wähle das richtige Ergebnis für ${a} ${operation} ${b}:`,
+      question,
       questionType: 'word-selection',
-      explanation: `Die richtige Antwort ist ${result}`,
+      explanation: `Die richtige Antwort ist: ${correctAnswer}`,
       type: 'mathematik' as any,
-      sentence: `Wähle das richtige Ergebnis für ${a} ${operation} ${b}:`,
-      selectableWords: allNumbers
+      sentence: question,
+      selectableWords
     };
   }
 
