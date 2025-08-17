@@ -440,13 +440,18 @@ export class EnhancedTemplateBankService {
     const results = [];
     
     if (grade <= 2) {
-      // Zahlenraum bis 20 mit Zehnerübergang
-      const calculations = [
-        { task: '8 + 7', result: 15 },
-        { task: '13 - 5', result: 8 },
-        { task: '9 + 6', result: 15 },
-        { task: '16 - 8', result: 8 }
+      // Zahlenraum bis 20 mit Zehnerübergang - Parametrisiert
+      const calcTemplates = [
+        { a: Math.floor(Math.random() * 8) + 7, b: Math.floor(Math.random() * 6) + 4, op: '+' },
+        { a: Math.floor(Math.random() * 8) + 12, b: Math.floor(Math.random() * 7) + 3, op: '-' },
+        { a: Math.floor(Math.random() * 6) + 7, b: Math.floor(Math.random() * 5) + 4, op: '+' },
+        { a: Math.floor(Math.random() * 7) + 13, b: Math.floor(Math.random() * 6) + 4, op: '-' }
       ];
+      
+      const calculations = calcTemplates.map(t => ({
+        task: `${t.a} ${t.op} ${t.b}`,
+        result: t.op === '+' ? t.a + t.b : t.a - t.b
+      }));
       
       calculations.forEach((calc, i) => {
         tasks.push({
@@ -477,13 +482,18 @@ export class EnhancedTemplateBankService {
         categories: results
       };
     } else if (grade <= 4) {
-      // Schriftliche Verfahren
-      const calculations = [
-        { task: '345 + 278', result: 623 },
-        { task: '456 - 189', result: 267 },
-        { task: '15 × 12', result: 180 },
-        { task: '144 ÷ 12', result: 12 }
+      // Schriftliche Verfahren - Parametrisiert
+      const calcTemplates = [
+        { a: Math.floor(Math.random() * 200) + 200, b: Math.floor(Math.random() * 200) + 100, op: '+' },
+        { a: Math.floor(Math.random() * 300) + 300, b: Math.floor(Math.random() * 200) + 100, op: '-' },
+        { a: Math.floor(Math.random() * 8) + 12, b: Math.floor(Math.random() * 8) + 12, op: '×' },
+        { a: (Math.floor(Math.random() * 8) + 8) * (Math.floor(Math.random() * 10) + 10), b: Math.floor(Math.random() * 8) + 8, op: '÷' }
       ];
+      
+      const calculations = calcTemplates.map(t => ({
+        task: `${t.a} ${t.op} ${t.b}`,
+        result: t.op === '+' ? t.a + t.b : t.op === '-' ? t.a - t.b : t.op === '×' ? t.a * t.b : Math.floor(t.a / t.b)
+      }));
       
       calculations.forEach((calc, i) => {
         tasks.push({
@@ -505,14 +515,75 @@ export class EnhancedTemplateBankService {
         items: tasks,
         categories: results
       };
-    } else {
-      // Erweiterte Aufgaben für höhere Klassen
-      const calculations = [
-        { task: '2³', result: 8 },
-        { task: '√16', result: 4 },
-        { task: '25% von 80', result: 20 },
-        { task: '3x = 15', result: 5 }
+    } else if (grade <= 6) {
+      // Bruchrechnung, einfache Geometrie - Lehrplankonform
+      const calcTemplates = [
+        { task: `1/${Math.floor(Math.random() * 3) + 2} + 1/${Math.floor(Math.random() * 3) + 2}`, type: 'fraction' },
+        { area: Math.floor(Math.random() * 5) + 3, type: 'rectangle' },
+        { radius: Math.floor(Math.random() * 4) + 2, type: 'circle' },
+        { percent: [10, 20, 25, 50][Math.floor(Math.random() * 4)], base: Math.floor(Math.random() * 50) + 20, type: 'percent' }
       ];
+      
+      const calculations = calcTemplates.map((t, i) => {
+        if (t.type === 'fraction') {
+          const result = Math.floor(Math.random() * 3) + 1;
+          return { task: `${result}/4`, result: `${result}/4` };
+        } else if (t.type === 'rectangle') {
+          const result = t.area * t.area;
+          return { task: `Flächeninhalt ${t.area}×${t.area}`, result };
+        } else if (t.type === 'circle') {
+          const result = Math.round(2 * 3.14 * t.radius);
+          return { task: `Umfang Kreis r=${t.radius}`, result };
+        } else {
+          const result = (t.percent * t.base) / 100;
+          return { task: `${t.percent}% von ${t.base}`, result };
+        }
+      });
+      
+      calculations.forEach((calc, i) => {
+        tasks.push({
+          id: `task_${i}`,
+          content: calc.task,
+          category: `result_${calc.result}`
+        });
+        
+        results.push({
+          id: `result_${calc.result}`,
+          name: calc.result.toString(),
+          acceptsItems: [`task_${i}`]
+        });
+      });
+      
+      return {
+        question: 'Löse die Bruch-, Geometrie- und Prozentaufgaben:',
+        explanation: 'Verschiedene Bereiche der Klasse 5-6 Mathematik.',
+        items: tasks,
+        categories: results
+      };
+    } else {
+      // Erweiterte Aufgaben für höhere Klassen (7+) - Lehrplankonform parametrisiert
+      const calcTemplates = [
+        { base: Math.floor(Math.random() * 4) + 2, exp: Math.floor(Math.random() * 3) + 2, type: 'power' },
+        { number: [9, 16, 25, 36, 49, 64, 81, 100][Math.floor(Math.random() * 8)], type: 'root' },
+        { percent: [15, 20, 25, 30, 40][Math.floor(Math.random() * 5)], base: Math.floor(Math.random() * 60) + 40, type: 'percent' },
+        { coeff: Math.floor(Math.random() * 5) + 2, result: Math.floor(Math.random() * 8) + 3, type: 'equation' }
+      ];
+      
+      const calculations = calcTemplates.map(t => {
+        if (t.type === 'power') {
+          const result = Math.pow(t.base, t.exp);
+          return { task: `${t.base}^${t.exp}`, result };
+        } else if (t.type === 'root') {
+          const result = Math.sqrt(t.number);
+          return { task: `√${t.number}`, result };
+        } else if (t.type === 'percent') {
+          const result = (t.percent * t.base) / 100;
+          return { task: `${t.percent}% von ${t.base}`, result };
+        } else {
+          const equation_result = t.coeff * t.result;
+          return { task: `${t.coeff}x = ${equation_result}`, result: t.result };
+        }
+      });
       
       calculations.forEach((calc, i) => {
         tasks.push({
