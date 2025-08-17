@@ -87,6 +87,13 @@ export class IntelligentFallbackService {
     const key = `${category}_${grade}`;
     let templates = this.fallbackTemplates.get(key) || [];
     
+    // Also include matching templates for math category
+    if (category === 'math') {
+      const matchingKey = `math_matching_${grade}`;
+      const matchingTemplates = this.fallbackTemplates.get(matchingKey) || [];
+      templates = [...templates, ...matchingTemplates];
+    }
+    
     // Include templates from adjacent grades if needed
     if (templates.length < 5) {
       const adjacentGrades = [grade - 1, grade + 1].filter(g => g >= 1 && g <= 8);
@@ -94,6 +101,13 @@ export class IntelligentFallbackService {
         const adjKey = `${category}_${adjGrade}`;
         const adjTemplates = this.fallbackTemplates.get(adjKey) || [];
         templates = [...templates, ...adjTemplates];
+        
+        // Also include matching templates for adjacent grades
+        if (category === 'math') {
+          const adjMatchingKey = `math_matching_${adjGrade}`;
+          const adjMatchingTemplates = this.fallbackTemplates.get(adjMatchingKey) || [];
+          templates = [...templates, ...adjMatchingTemplates];
+        }
       }
     }
 
@@ -188,6 +202,10 @@ export class IntelligentFallbackService {
         selectionQuestion.correctAnswer = 0; // Correct answer is always first, then shuffled
       } else if (template.questionType === 'text-input') {
         selectionQuestion.answer = answer;
+      } else if (template.questionType === 'matching') {
+        const matchingData = this.generateMatchingData(template, parameters);
+        selectionQuestion.items = matchingData.items;
+        selectionQuestion.categories = matchingData.categories;
       }
 
       return selectionQuestion;
@@ -316,61 +334,286 @@ export class IntelligentFallbackService {
     // German templates
     this.addGermanFallbackTemplates();
     
+    // Add matching questions for all grades
+    this.addMatchingFallbackTemplates();
+    
     // Additional categories can be added here
   }
 
   private addMathFallbackTemplates(): void {
-    const mathTemplates: FallbackTemplate[] = [
-      {
-        id: 'math_fallback_addition',
-        category: 'math',
-        grade: 1,
-        questionTemplate: '{a} + {b} = ?',
-        answerTemplate: '{sum}',
-        explanationTemplate: '{a} + {b} = {sum}. Addition bedeutet zusammenzählen.',
-        difficulty: 'easy',
-        questionType: 'text-input',
-        baseQuality: 0.7,
-        curriculumAlignment: 0.9
-      },
-      {
-        id: 'math_fallback_subtraction',
-        category: 'math',
-        grade: 1,
-        questionTemplate: '{a} - {b} = ?',
-        answerTemplate: '{difference}',
-        explanationTemplate: '{a} - {b} = {difference}. Subtraktion bedeutet abziehen.',
-        difficulty: 'easy',
-        questionType: 'text-input',
-        baseQuality: 0.7,
-        curriculumAlignment: 0.9
-      }
-    ];
+    // Grade-specific math templates
+    for (let grade = 1; grade <= 10; grade++) {
+      const templates = this.createGradeSpecificMathTemplates(grade);
+      this.fallbackTemplates.set(`math_${grade}`, templates);
+    }
+  }
 
-    // Add templates for different grades
-    for (let grade = 1; grade <= 4; grade++) {
-      this.fallbackTemplates.set(`math_${grade}`, mathTemplates);
+  private createGradeSpecificMathTemplates(grade: number): FallbackTemplate[] {
+    const templates: FallbackTemplate[] = [];
+
+    // Difficulty-appropriate number ranges
+    const ranges = {
+      1: { min: 1, max: 10, operations: ['+', '-'] },
+      2: { min: 1, max: 100, operations: ['+', '-', '×'] },
+      3: { min: 1, max: 1000, operations: ['+', '-', '×', '÷'] },
+      4: { min: 1, max: 10000, operations: ['+', '-', '×', '÷'] },
+      5: { min: 1, max: 100000, operations: ['+', '-', '×', '÷', 'bruch'] }
+    };
+
+    const config = ranges[Math.min(grade, 5) as keyof typeof ranges] || ranges[5];
+
+    // Basic arithmetic
+    config.operations.forEach((op, index) => {
+      templates.push({
+        id: `math_fallback_${op}_grade${grade}`,
+        category: 'math',
+        grade,
+        questionTemplate: this.getOperationTemplate(op, grade),
+        answerTemplate: '{result}',
+        explanationTemplate: this.getOperationExplanation(op, grade),
+        difficulty: grade <= 2 ? 'easy' : grade <= 4 ? 'medium' : 'hard',
+        questionType: 'text-input',
+        baseQuality: 0.75,
+        curriculumAlignment: 0.85
+      });
+    });
+
+    return templates;
+  }
+
+  private getOperationTemplate(operation: string, grade: number): string {
+    switch (operation) {
+      case '+':
+        return grade >= 3 ? '{a} + {b} + {c} = ?' : '{a} + {b} = ?';
+      case '-':
+        return '{a} - {b} = ?';
+      case '×':
+        return grade >= 4 ? '{a} × {b} × {c} = ?' : '{a} × {b} = ?';
+      case '÷':
+        return '{a} ÷ {b} = ?';
+      case 'bruch':
+        return '{numerator}/{denominator} = ?';
+      default:
+        return '{a} + {b} = ?';
+    }
+  }
+
+  private getOperationExplanation(operation: string, grade: number): string {
+    switch (operation) {
+      case '+':
+        return grade >= 3 
+          ? '{a} + {b} + {c} = {result}. Bei der Addition zählen wir zusammen.'
+          : '{a} + {b} = {result}. Addition bedeutet zusammenzählen.';
+      case '-':
+        return '{a} - {b} = {result}. Subtraktion bedeutet abziehen.';
+      case '×':
+        return '{a} × {b} = {result}. Multiplikation ist wiederholte Addition.';
+      case '÷':
+        return '{a} ÷ {b} = {result}. Division ist das Aufteilen in gleiche Teile.';
+      case 'bruch':
+        return '{numerator}/{denominator} als Dezimalzahl ist {result}.';
+      default:
+        return 'Rechenweg: {a} + {b} = {result}';
     }
   }
 
   private addGermanFallbackTemplates(): void {
-    const germanTemplates: FallbackTemplate[] = [
-      {
-        id: 'german_fallback_spelling',
-        category: 'german',
-        grade: 1,
-        questionTemplate: 'Wie schreibt man "{word}" richtig?',
-        answerTemplate: '{word}',
-        explanationTemplate: 'Das Wort "{word}" wird so geschrieben.',
-        difficulty: 'easy',
-        questionType: 'text-input',
-        baseQuality: 0.6,
-        curriculumAlignment: 0.8
-      }
-    ];
+    for (let grade = 1; grade <= 10; grade++) {
+      const templates = this.createGradeSpecificGermanTemplates(grade);
+      this.fallbackTemplates.set(`german_${grade}`, templates);
+    }
+  }
 
-    for (let grade = 1; grade <= 4; grade++) {
-      this.fallbackTemplates.set(`german_${grade}`, germanTemplates);
+  private createGradeSpecificGermanTemplates(grade: number): FallbackTemplate[] {
+    const templates: FallbackTemplate[] = [];
+
+    const topics = this.getGermanTopicsByGrade(grade);
+    
+    topics.forEach((topic, index) => {
+      templates.push({
+        id: `german_fallback_${topic.type}_grade${grade}`,
+        category: 'german',
+        grade,
+        questionTemplate: topic.template,
+        answerTemplate: topic.answer,
+        explanationTemplate: topic.explanation,
+        difficulty: grade <= 2 ? 'easy' : grade <= 4 ? 'medium' : 'hard',
+        questionType: 'text-input',
+        baseQuality: 0.7,
+        curriculumAlignment: 0.8
+      });
+    });
+
+    return templates;
+  }
+
+  private getGermanTopicsByGrade(grade: number): Array<{type: string, template: string, answer: string, explanation: string}> {
+    const gradeTopics = {
+      1: [
+        { type: 'spelling', template: 'Wie schreibt man "{word}" richtig?', answer: '{word}', explanation: 'Das Wort "{word}" schreibt man so.' },
+        { type: 'reading', template: 'Lies das Wort: {word}', answer: '{word}', explanation: 'Das Wort heißt "{word}".' }
+      ],
+      2: [
+        { type: 'grammar', template: 'Setze den richtigen Artikel: ___ {noun}', answer: '{article}', explanation: 'Der richtige Artikel ist "{article}".' },
+        { type: 'spelling', template: 'Ergänze den fehlenden Buchstaben: {word_incomplete}', answer: '{letter}', explanation: 'Der fehlende Buchstabe ist "{letter}".' }
+      ],
+      3: [
+        { type: 'grammar', template: 'Bilde die Mehrzahl von: {noun}', answer: '{plural}', explanation: 'Die Mehrzahl von {noun} ist {plural}.' },
+        { type: 'sentence', template: 'Vervollständige den Satz: {sentence_start}', answer: '{sentence_end}', explanation: 'Der vollständige Satz lautet: {sentence_start} {sentence_end}' }
+      ]
+    };
+
+    return gradeTopics[Math.min(grade, 3) as keyof typeof gradeTopics] || gradeTopics[3];
+  }
+
+  private addMatchingFallbackTemplates(): void {
+    for (let grade = 1; grade <= 10; grade++) {
+      const templates = this.createGradeSpecificMatchingTemplates(grade);
+      this.fallbackTemplates.set(`math_matching_${grade}`, templates);
+    }
+  }
+
+  private createGradeSpecificMatchingTemplates(grade: number): FallbackTemplate[] {
+    const templates: FallbackTemplate[] = [];
+
+    const matchingTypes = this.getMatchingTypesByGrade(grade);
+    
+    matchingTypes.forEach((type, index) => {
+      templates.push({
+        id: `matching_fallback_${type.category}_grade${grade}`,
+        category: 'math',
+        grade,
+        questionTemplate: type.question,
+        answerTemplate: JSON.stringify(type.correctMatches),
+        explanationTemplate: type.explanation,
+        difficulty: grade <= 3 ? 'easy' : grade <= 6 ? 'medium' : 'hard',
+        questionType: 'matching',
+        baseQuality: 0.8,
+        curriculumAlignment: 0.9
+      });
+    });
+
+    return templates;
+  }
+
+  private getMatchingTypesByGrade(grade: number): Array<{
+    category: string,
+    question: string,
+    correctMatches: Array<{item: string, category: string}>,
+    explanation: string
+  }> {
+    if (grade <= 2) {
+      return [
+        {
+          category: 'numbers',
+          question: 'Ordne die Zahlen den richtigen Gruppen zu:',
+          correctMatches: [
+            {item: '3', category: 'Kleine Zahlen (1-5)'},
+            {item: '8', category: 'Mittlere Zahlen (6-10)'},
+            {item: '15', category: 'Große Zahlen (über 10)'}
+          ],
+          explanation: 'Zahlen werden nach ihrer Größe gruppiert: klein (1-5), mittel (6-10), groß (über 10).'
+        },
+        {
+          category: 'shapes',
+          question: 'Ordne die Formen zu:',
+          correctMatches: [
+            {item: '⚪', category: 'Runde Formen'},
+            {item: '⬜', category: 'Eckige Formen'},
+            {item: '🔺', category: 'Spitze Formen'}
+          ],
+          explanation: 'Formen werden nach ihren Eigenschaften sortiert.'
+        }
+      ];
+    } else if (grade <= 4) {
+      return [
+        {
+          category: 'operations',
+          question: 'Ordne jede Aufgabe der richtigen Rechenart zu:',
+          correctMatches: [
+            {item: '45 + 23', category: 'Addition'},
+            {item: '87 - 34', category: 'Subtraktion'},
+            {item: '7 × 8', category: 'Multiplikation'},
+            {item: '56 ÷ 8', category: 'Division'}
+          ],
+          explanation: 'Addition (+) bedeutet zusammenzählen, Subtraktion (-) bedeutet abziehen, Multiplikation (×) ist vervielfachen, Division (÷) ist teilen.'
+        },
+        {
+          category: 'word_problems',
+          question: 'Ordne die Textaufgabe der richtigen Rechenart zu:',
+          correctMatches: [
+            {item: 'Lisa kauft 3 Äpfel und 5 Birnen', category: 'Addition'},
+            {item: 'Von 20 Bonbons isst Tom 7', category: 'Subtraktion'},
+            {item: '4 Kinder bekommen je 3 Kekse', category: 'Multiplikation'},
+            {item: '12 Stifte auf 3 Kinder verteilen', category: 'Division'}
+          ],
+          explanation: 'Textaufgaben enthalten Hinweise auf die richtige Rechenart.'
+        }
+      ];
+    } else if (grade <= 6) {
+      return [
+        {
+          category: 'fractions',
+          question: 'Ordne die Brüche ihrer Dezimaldarstellung zu:',
+          correctMatches: [
+            {item: '1/2', category: '0,5'},
+            {item: '1/4', category: '0,25'},
+            {item: '3/4', category: '0,75'},
+            {item: '1/5', category: '0,2'}
+          ],
+          explanation: 'Brüche können als Dezimalzahlen geschrieben werden: 1/2 = 0,5, 1/4 = 0,25, 3/4 = 0,75, 1/5 = 0,2.'
+        },
+        {
+          category: 'geometry',
+          question: 'Ordne die Eigenschaften den Figuren zu:',
+          correctMatches: [
+            {item: '4 gleiche Seiten', category: 'Quadrat'},
+            {item: '3 Ecken', category: 'Dreieck'},
+            {item: 'rund ohne Ecken', category: 'Kreis'},
+            {item: '4 Seiten, gegenüber gleich', category: 'Rechteck'}
+          ],
+          explanation: 'Geometrische Figuren haben charakteristische Eigenschaften.'
+        }
+      ];
+    } else if (grade <= 8) {
+      return [
+        {
+          category: 'algebra',
+          question: 'Ordne die mathematischen Begriffe ihrer Definition zu:',
+          correctMatches: [
+            {item: 'Variable (x, y)', category: 'Unbekannte Größe'},
+            {item: 'Koeffizient (5x)', category: 'Zahl vor der Variable'},
+            {item: 'Term (3x + 7)', category: 'Mathematischer Ausdruck'},
+            {item: 'Gleichung (2x = 10)', category: 'Aussage mit Gleichheitszeichen'}
+          ],
+          explanation: 'In der Algebra haben Begriffe spezifische Bedeutungen für mathematische Strukturen.'
+        },
+        {
+          category: 'functions',
+          question: 'Ordne die Funktionstypen ihren Eigenschaften zu:',
+          correctMatches: [
+            {item: 'f(x) = 2x + 3', category: 'Lineare Funktion'},
+            {item: 'f(x) = x²', category: 'Quadratische Funktion'},
+            {item: 'f(x) = 5', category: 'Konstante Funktion'},
+            {item: 'f(x) = 1/x', category: 'Umgekehrt proportionale Funktion'}
+          ],
+          explanation: 'Verschiedene Funktionstypen haben charakteristische Eigenschaften und Graphen.'
+        }
+      ];
+    } else {
+      return [
+        {
+          category: 'advanced_algebra',
+          question: 'Ordne die mathematischen Konzepte ihren Anwendungen zu:',
+          correctMatches: [
+            {item: 'Quadratische Gleichungen', category: 'Parabeln und Wurfbahnen'},
+            {item: 'Logarithmus', category: 'Exponentielles Wachstum'},
+            {item: 'Trigonometrie', category: 'Dreiecksberechnungen'},
+            {item: 'Differentiation', category: 'Steigungsberechnungen'}
+          ],
+          explanation: 'Höhere Mathematik findet Anwendung in verschiedenen Bereichen der Wissenschaft und Technik.'
+        }
+      ];
     }
   }
 
@@ -379,14 +622,71 @@ export class IntelligentFallbackService {
     const params: Record<string, any> = {};
     
     if (template.category === 'math') {
-      const range = grade <= 2 ? { min: 1, max: 20 } : { min: 1, max: 100 };
+      // Grade-appropriate number ranges
+      const ranges = {
+        1: { min: 1, max: 10 },
+        2: { min: 1, max: 50 },
+        3: { min: 1, max: 100 },
+        4: { min: 1, max: 1000 },
+        5: { min: 1, max: 10000 }
+      };
+      
+      const range = ranges[Math.min(grade, 5) as keyof typeof ranges] || ranges[5];
+      
       params.a = Math.floor(Math.random() * range.max) + range.min;
-      params.b = Math.floor(Math.random() * Math.min(range.max / 2, 20)) + 1;
+      params.b = Math.floor(Math.random() * Math.min(range.max / 4, 50)) + 1;
+      params.c = Math.floor(Math.random() * Math.min(range.max / 8, 25)) + 1;
+      
+      // Ensure b doesn't exceed a for subtraction
+      if (params.b > params.a) {
+        [params.a, params.b] = [params.b, params.a];
+      }
+      
+      // Calculate results
       params.sum = params.a + params.b;
-      params.difference = Math.max(params.a - params.b, 0);
+      params.difference = params.a - params.b;
+      params.product = params.a * params.b;
+      params.quotient = params.b !== 0 ? Math.floor(params.a / params.b) : 1;
+      params.result = params.sum; // Default result
+      
+      // For fractions (grade 5+)
+      if (grade >= 5) {
+        params.numerator = Math.floor(Math.random() * 10) + 1;
+        params.denominator = Math.floor(Math.random() * 9) + 2; // Avoid division by 1
+        params.decimal = (params.numerator / params.denominator).toFixed(2);
+      }
+    } else if (template.category === 'german') {
+      // German-specific parameters
+      const words = this.getWordsForGrade(grade);
+      const word = words[index % words.length];
+      params.word = word;
+      params.article = this.getArticle(word);
+      params.plural = this.getPlural(word);
     }
     
     return params;
+  }
+
+  private getWordsForGrade(grade: number): string[] {
+    const wordLists = {
+      1: ['Haus', 'Baum', 'Auto', 'Ball', 'Buch', 'Hund', 'Katze'],
+      2: ['Schule', 'Freund', 'Familie', 'Garten', 'Straße', 'Lehrer', 'Spielen'],
+      3: ['Abenteuer', 'Geschichte', 'Natur', 'Wissenschaft', 'Kunst', 'Bibliothek', 'Computer']
+    };
+    
+    return wordLists[Math.min(grade, 3) as keyof typeof wordLists] || wordLists[3];
+  }
+
+  private getArticle(word: string): string {
+    // Simplified article assignment
+    const articles = { 'Haus': 'das', 'Baum': 'der', 'Auto': 'das', 'Schule': 'die' };
+    return articles[word as keyof typeof articles] || 'der';
+  }
+
+  private getPlural(word: string): string {
+    // Simplified plural forms
+    const plurals = { 'Haus': 'Häuser', 'Baum': 'Bäume', 'Auto': 'Autos', 'Schule': 'Schulen' };
+    return plurals[word as keyof typeof plurals] || word + 'e';
   }
 
   private fillTemplate(template: string, parameters: Record<string, any>): string {
@@ -456,6 +756,60 @@ export class IntelligentFallbackService {
   }
 }
 
+  private generateMatchingData(template: FallbackTemplate, parameters: Record<string, any>): {
+    items: Array<{id: string, content: string, category: string}>,
+    categories: Array<{id: string, name: string, acceptsItems: string[]}>
+  } {
+    if (template.grade <= 2) {
+      // Simple number matching for early grades
+      return {
+        items: [
+          { id: 'item1', content: '3', category: 'small' },
+          { id: 'item2', content: '8', category: 'medium' },
+          { id: 'item3', content: '15', category: 'large' }
+        ],
+        categories: [
+          { id: 'small', name: 'Kleine Zahlen (1-5)', acceptsItems: ['item1'] },
+          { id: 'medium', name: 'Mittlere Zahlen (6-10)', acceptsItems: ['item2'] },
+          { id: 'large', name: 'Große Zahlen (über 10)', acceptsItems: ['item3'] }
+        ]
+      };
+    } else if (template.grade <= 4) {
+      // Operation matching
+      return {
+        items: [
+          { id: 'item1', content: `${parameters.a} + ${parameters.b}`, category: 'addition' },
+          { id: 'item2', content: `${parameters.a} - ${parameters.b}`, category: 'subtraction' },
+          { id: 'item3', content: `${parameters.a} × ${parameters.b}`, category: 'multiplication' },
+          { id: 'item4', content: `${parameters.a} ÷ ${parameters.b}`, category: 'division' }
+        ],
+        categories: [
+          { id: 'addition', name: 'Addition (+)', acceptsItems: ['item1'] },
+          { id: 'subtraction', name: 'Subtraktion (-)', acceptsItems: ['item2'] },
+          { id: 'multiplication', name: 'Multiplikation (×)', acceptsItems: ['item3'] },
+          { id: 'division', name: 'Division (÷)', acceptsItems: ['item4'] }
+        ]
+      };
+    } else {
+      // Advanced mathematical concepts
+      return {
+        items: [
+          { id: 'item1', content: 'x', category: 'variable' },
+          { id: 'item2', content: '5x', category: 'coefficient' },
+          { id: 'item3', content: '3x + 7', category: 'term' },
+          { id: 'item4', content: '2x = 10', category: 'equation' }
+        ],
+        categories: [
+          { id: 'variable', name: 'Variable', acceptsItems: ['item1'] },
+          { id: 'coefficient', name: 'Koeffizient', acceptsItems: ['item2'] },
+          { id: 'term', name: 'Term', acceptsItems: ['item3'] },
+          { id: 'equation', name: 'Gleichung', acceptsItems: ['item4'] }
+        ]
+      };
+    }
+  }
+}
+
 interface FallbackTemplate {
   id: string;
   category: string;
@@ -464,7 +818,7 @@ interface FallbackTemplate {
   answerTemplate: string;
   explanationTemplate: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  questionType: 'text-input' | 'multiple-choice' | 'word-selection';
+  questionType: 'text-input' | 'multiple-choice' | 'word-selection' | 'matching';
   baseQuality: number;
   curriculumAlignment: number;
 }
