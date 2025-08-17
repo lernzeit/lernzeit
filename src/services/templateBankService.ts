@@ -309,24 +309,70 @@ export class TemplateBankService {
 
     for (const template of templates) {
       try {
-        // Convert template to question format
-        const question: SelectionQuestion = {
+        const questionType = this.mapQuestionType(template.question_type);
+        
+        // Create base question properties
+        const baseProps = {
           id: Math.floor(Math.random() * 1000000),
           question: template.student_prompt || `Frage für ${category}`,
-          questionType: this.mapQuestionType(template.question_type),
+          questionType,
           explanation: template.explanation_teacher || 'Automatisch generierte Erklärung',
           type: category as any
         };
 
-        // Add type-specific properties
-        if (question.questionType === 'text-input') {
-          (question as any).answer = template.solution || 'Antwort';
-        } else if (question.questionType === 'multiple-choice') {
-          (question as any).options = template.distractors || ['Option A', 'Option B', 'Option C'];
-          (question as any).correctAnswer = 0;
-        } else if (question.questionType === 'matching') {
-          (question as any).items = ['Item 1', 'Item 2'];
-          (question as any).categories = ['Category A', 'Category B'];
+        // Create type-specific question with all required properties
+        let question: SelectionQuestion;
+
+        if (questionType === 'text-input') {
+          question = {
+            ...baseProps,
+            questionType: 'text-input',
+            answer: template.solution || 'Antwort'
+          };
+        } else if (questionType === 'multiple-choice') {
+          question = {
+            ...baseProps,
+            questionType: 'multiple-choice',
+            options: template.distractors || ['Option A', 'Option B', 'Option C'],
+            correctAnswer: 0
+          };
+        } else if (questionType === 'matching') {
+          question = {
+            ...baseProps,
+            questionType: 'matching',
+            items: template.items || ['Item 1', 'Item 2'],
+            categories: template.categories || ['Category A', 'Category B']
+          };
+        } else if (questionType === 'word-selection') {
+          question = {
+            ...baseProps,
+            questionType: 'word-selection',
+            sentence: template.sentence || 'Wähle die richtigen Wörter aus.',
+            selectableWords: template.selectableWords || [
+              { word: 'Wort1', isCorrect: true, index: 0 },
+              { word: 'Wort2', isCorrect: false, index: 1 }
+            ]
+          };
+        } else if (questionType === 'drag-drop') {
+          question = {
+            ...baseProps,
+            questionType: 'drag-drop',
+            items: template.items || [
+              { id: '1', content: 'Item 1', category: 'cat1' },
+              { id: '2', content: 'Item 2', category: 'cat2' }
+            ],
+            categories: template.categories || [
+              { id: 'cat1', name: 'Category A', acceptsItems: ['1'] },
+              { id: 'cat2', name: 'Category B', acceptsItems: ['2'] }
+            ]
+          };
+        } else {
+          // Default to text-input
+          question = {
+            ...baseProps,
+            questionType: 'text-input',
+            answer: template.solution || 'Antwort'
+          };
         }
 
         questions.push(question);
