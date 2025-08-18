@@ -168,7 +168,13 @@ export class EnhancedTemplateBankService {
     questionType: string, 
     feedbackAnalysis?: any
   ): SelectionQuestion | null {
-    console.log(`🎯 Generating ${questionType} question for skill: ${curriculumCard.skill}`);
+    console.log(`🎯 Generating ${questionType} question for Grade ${curriculumCard.grade} Q${curriculumCard.quarter}: ${curriculumCard.skill}`);
+    
+    // Strikt curriculum-basierte Generierung - keine zu schweren Inhalte
+    if (this.isTopicTooAdvanced(curriculumCard)) {
+      console.warn(`❌ Topic too advanced for Grade ${curriculumCard.grade}: ${curriculumCard.skill}`);
+      return null;
+    }
     
     if (questionType === 'matching') {
       return this.generateCurriculumMatchingQuestion(curriculumCard);
@@ -177,6 +183,27 @@ export class EnhancedTemplateBankService {
     } else {
       return this.generateCurriculumTextInputQuestion(curriculumCard, feedbackAnalysis);
     }
+  }
+
+  private isTopicTooAdvanced(curriculumCard: KnowledgeCard): boolean {
+    // Kreis-Berechnungen erst ab Klasse 5 Q3
+    if (curriculumCard.tags.includes('Kreis') && 
+        (curriculumCard.grade < 5 || (curriculumCard.grade === 5 && curriculumCard.quarter !== 'Q3'))) {
+      return true;
+    }
+    
+    // Prozentrechnung erst ab Klasse 5 Q3
+    if (curriculumCard.tags.includes('Prozent') && 
+        (curriculumCard.grade < 5 || (curriculumCard.grade === 5 && curriculumCard.quarter !== 'Q3'))) {
+      return true;
+    }
+    
+    // Bruchrechnung erst ab entsprechendem Lehrplan
+    if (curriculumCard.tags.includes('Brüche') && curriculumCard.grade < 4) {
+      return true;
+    }
+    
+    return false;
   }
 
   private generateCurriculumMatchingQuestion(curriculumCard: KnowledgeCard): SelectionQuestion {
@@ -211,23 +238,31 @@ export class EnhancedTemplateBankService {
   }
 
   private generateCurriculumMultipleChoiceQuestion(curriculumCard: KnowledgeCard, feedbackAnalysis?: any): SelectionQuestion {
-    console.log(`🎯 Generating multiple choice for: ${curriculumCard.skill}`);
+    console.log(`🎯 Generating MC for Grade ${curriculumCard.grade}: ${curriculumCard.skill}`);
     
-    // Angepasste Schwierigkeit basierend auf Curriculum
-    if (curriculumCard.tags.includes('ZR_10')) {
+    // Strikt lehrplankonforme Generierung basierend auf Skills
+    if (curriculumCard.skill.includes('Zählen bis 10')) {
+      return this.generateCountingMC(curriculumCard.grade, 10);
+    } else if (curriculumCard.skill.includes('Plus/Minus im ZR 10')) {
       return this.generateBasicMathMC(curriculumCard.grade, 10);
-    } else if (curriculumCard.tags.includes('ZR_20')) {
+    } else if (curriculumCard.skill.includes('Plus/Minus im ZR 20')) {
       return this.generateBasicMathMC(curriculumCard.grade, 20);
-    } else if (curriculumCard.tags.includes('ZR_100')) {
+    } else if (curriculumCard.skill.includes('ZR 100') || curriculumCard.tags.includes('ZR_100')) {
       return this.generateBasicMathMC(curriculumCard.grade, 100);
-    } else if (curriculumCard.tags.includes('ZR_1000')) {
+    } else if (curriculumCard.skill.includes('ZR 1000') || curriculumCard.tags.includes('ZR_1000')) {
       return this.generateAdvancedMathMC(curriculumCard.grade, 1000);
-    } else if (curriculumCard.tags.includes('Einmaleins')) {
-      return this.generateMultiplicationMC(curriculumCard.grade);
-    } else if (curriculumCard.tags.includes('Brüche')) {
-      return this.generateFractionMC(curriculumCard.grade);
+    } else if (curriculumCard.skill.includes('2er/5er/10er Reihen') || curriculumCard.tags.includes('Einmaleins')) {
+      return this.generateBasicMultiplicationMC(curriculumCard.grade);
+    } else if (curriculumCard.skill.includes('Formen') || curriculumCard.tags.includes('Formen')) {
+      return this.generateShapesMC(curriculumCard.grade);
+    } else if (curriculumCard.skill.includes('Erweitern/Kürzen') && curriculumCard.grade >= 4) {
+      return this.generateSimpleFractionMC(curriculumCard.grade);
+    } else if (curriculumCard.skill.includes('Negative Zahlen') && curriculumCard.grade >= 5) {
+      return this.generateNegativeNumbersMC(curriculumCard.grade);
     } else {
-      return this.generateAdvancedMathMC(curriculumCard.grade, 100);
+      // Fallback auf angemessene Grundoperationen
+      const maxNumber = curriculumCard.grade <= 1 ? 10 : curriculumCard.grade <= 2 ? 100 : 1000;
+      return this.generateBasicMathMC(curriculumCard.grade, maxNumber);
     }
   }
 
@@ -250,7 +285,32 @@ export class EnhancedTemplateBankService {
     }
   }
 
-  // Neue Methoden für curriculum-spezifische Generierung
+  // Neue Methoden für strikt curriculum-spezifische Generierung
+  private generateCountingMC(grade: number, maxNumber: number): SelectionQuestion {
+    const targetNumber = Math.floor(Math.random() * maxNumber) + 1;
+    const questionText = `Welche Zahl kommt nach ${targetNumber - 1}?`;
+    
+    const wrongAnswers = [
+      targetNumber + 1,
+      targetNumber - 1,
+      targetNumber + 2
+    ].filter(ans => ans > 0 && ans <= maxNumber && ans !== targetNumber);
+    
+    const options = [targetNumber, ...wrongAnswers.slice(0, 3)]
+      .sort(() => Math.random() - 0.5)
+      .map(n => n.toString());
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation: `Zahlenreihe: Nach ${targetNumber - 1} kommt ${targetNumber}`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: options.indexOf(targetNumber.toString())
+    };
+  }
+
   private generateBasicMathMC(grade: number, maxNumber: number): SelectionQuestion {
     const a = Math.floor(Math.random() * maxNumber) + 1;
     const b = Math.floor(Math.random() * Math.min(a, maxNumber / 2)) + 1;
@@ -258,13 +318,19 @@ export class EnhancedTemplateBankService {
     const operation = operations[Math.floor(Math.random() * operations.length)];
     
     const result = operation === '+' ? a + b : a - b;
+    
+    // Sicherstellen, dass das Ergebnis im erlaubten Bereich liegt
+    if (result < 0 || result > maxNumber) {
+      return this.generateBasicMathMC(grade, maxNumber);
+    }
+    
     const questionText = `Was ist ${a} ${operation} ${b}?`;
     
     const wrongAnswers = [
       result + 1,
       result - 1,
       result + Math.floor(Math.random() * 3) + 2
-    ].filter(ans => ans > 0 && ans !== result);
+    ].filter(ans => ans > 0 && ans <= maxNumber && ans !== result);
     
     const options = [result, ...wrongAnswers.slice(0, 3)]
       .sort(() => Math.random() - 0.5)
@@ -278,6 +344,99 @@ export class EnhancedTemplateBankService {
       type: 'mathematik' as any,
       options,
       correctAnswer: options.indexOf(result.toString())
+    };
+  }
+
+  private generateBasicMultiplicationMC(grade: number): SelectionQuestion {
+    const smallFactors = [2, 5, 10]; // Nur 2er, 5er, 10er Reihen für Klasse 2
+    const factor1 = smallFactors[Math.floor(Math.random() * smallFactors.length)];
+    const factor2 = Math.floor(Math.random() * 10) + 1;
+    const result = factor1 * factor2;
+    
+    const questionText = `Was ist ${factor1} × ${factor2}?`;
+    
+    const wrongAnswers = [
+      result + factor1,
+      result - factor1,
+      result + factor2
+    ].filter(ans => ans > 0 && ans !== result);
+    
+    const options = [result, ...wrongAnswers.slice(0, 3)]
+      .sort(() => Math.random() - 0.5)
+      .map(n => n.toString());
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation: `${factor1}er-Reihe: ${factor1} × ${factor2} = ${result}`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: options.indexOf(result.toString())
+    };
+  }
+
+  private generateShapesMC(grade: number): SelectionQuestion {
+    const shapes = ['Kreis', 'Dreieck', 'Quadrat', 'Rechteck'];
+    const correctShape = shapes[Math.floor(Math.random() * shapes.length)];
+    const questionText = `Welche Form hat 4 gleich lange Seiten und 4 rechte Winkel?`;
+    
+    let correctAnswer = 'Quadrat';
+    let explanation = 'Ein Quadrat hat 4 gleich lange Seiten und 4 rechte Winkel.';
+    
+    if (Math.random() < 0.5) {
+      correctAnswer = 'Kreis';
+      explanation = 'Ein Kreis ist rund und hat keine Ecken.';
+    }
+    
+    const options = shapes.sort(() => Math.random() - 0.5);
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: options.indexOf(correctAnswer)
+    };
+  }
+
+  private generateSimpleFractionMC(grade: number): SelectionQuestion {
+    const numerators = [1, 2, 3];
+    const denominators = [2, 3, 4];
+    const numerator = numerators[Math.floor(Math.random() * numerators.length)];
+    const denominator = denominators[Math.floor(Math.random() * denominators.length)];
+    
+    const questionText = `Welcher Bruch zeigt ${numerator} von ${denominator} Teilen?`;
+    
+    const options = [`${numerator}/${denominator}`, `${denominator}/${numerator}`, `${numerator + 1}/${denominator}`, `${numerator}/${denominator + 1}`];
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation: `${numerator} von ${denominator} Teilen wird als ${numerator}/${denominator} geschrieben.`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: 0
+    };
+  }
+
+  private generateNegativeNumbersMC(grade: number): SelectionQuestion {
+    const num = Math.floor(Math.random() * 10) + 1;
+    const questionText = `Welche Zahl liegt auf der Zahlengerade zwischen -${num + 1} und -${num - 1}?`;
+    
+    const options = [`-${num}`, `-${num + 2}`, `-${num - 2}`, `${num}`];
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation: `Auf der Zahlengerade liegt -${num} zwischen -${num + 1} und -${num - 1}.`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: 0
     };
   }
 
