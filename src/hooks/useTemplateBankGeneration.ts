@@ -59,7 +59,8 @@ export function useTemplateBankGeneration(
           diversityWeight: 0.8,
           fallbackToLegacy: true,
           ...options
-        }
+        },
+        userId // Pass userId for feedback analysis
       );
 
       if (result.error) {
@@ -80,11 +81,11 @@ export function useTemplateBankGeneration(
     } finally {
       setIsGenerating(false);
     }
-  }, [category, grade, quarter, totalQuestions, options, isGenerating]);
+  }, [category, grade, quarter, totalQuestions, options, isGenerating, userId]);
 
   // Auto-generate on parameter change
   useEffect(() => {
-    const currentParams = `${category}-${grade}-${quarter}-${totalQuestions}`;
+    const currentParams = `${category}-${grade}-${quarter}-${totalQuestions}-${userId}`;
     
     if (lastParamsRef.current !== currentParams) {
       console.log('📝 Template-Bank parameters changed, resetting');
@@ -96,7 +97,7 @@ export function useTemplateBankGeneration(
       initializationRef.current = false;
       lastParamsRef.current = currentParams;
     }
-  }, [category, grade, quarter, totalQuestions]);
+  }, [category, grade, quarter, totalQuestions, userId]);
 
   // Auto-generate when parameters are stable
   useEffect(() => {

@@ -1,9 +1,10 @@
-// Enhanced Template-Bank Service with grade-appropriate questions and mathematical terminology
+// Enhanced Template-Bank Service with feedback-based curriculum-compliant questions
 import { supabase } from '@/integrations/supabase/client';
 import { fetchActiveTemplates, pickSessionTemplates, Quarter } from '@/data/templateBank';
 import { loadKnowledge, preselectCards } from '@/knowledge/knowledge';
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory';
 import { SelectionQuestion } from '@/types/questionTypes';
+import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
 
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
@@ -37,14 +38,15 @@ export class EnhancedTemplateBankService {
   }
 
   /**
-   * Generate grade-appropriate questions with enhanced variety and mathematical terminology
+   * Generate curriculum-compliant questions with feedback integration
    */
   async generateQuestions(
     category: string,
     grade: number,
     quarter: Quarter = "Q1",
     totalQuestions: number = 5,
-    config: Partial<TemplateBankConfig> = {}
+    config: Partial<TemplateBankConfig> = {},
+    userId?: string
   ): Promise<TemplateBankResult> {
     const fullConfig: TemplateBankConfig = {
       enableQualityControl: true,
@@ -58,7 +60,21 @@ export class EnhancedTemplateBankService {
     console.log(`🏦 Enhanced Template-Bank: Generating ${totalQuestions} questions for ${category} Grade ${grade}`);
 
     try {
-      const questions = this.generateEnhancedQuestions(category, grade, totalQuestions);
+      // Feedback-Analyse integrieren
+      let feedbackAnalysis = null;
+      if (userId) {
+        const feedbackService = FeedbackBasedGenerationService.getInstance();
+        feedbackAnalysis = await feedbackService.analyzeUserFeedback(userId, category, grade);
+        console.log(`📊 Feedback analysis completed:`, feedbackAnalysis.recommendations);
+      }
+
+      const questions = await this.generateEnhancedQuestions(
+        category, 
+        grade, 
+        totalQuestions, 
+        quarter,
+        feedbackAnalysis
+      );
       
       return {
         questions,
@@ -82,9 +98,25 @@ export class EnhancedTemplateBankService {
     }
   }
 
-  private generateEnhancedQuestions(category: string, grade: number, count: number): SelectionQuestion[] {
+  private async generateEnhancedQuestions(
+    category: string, 
+    grade: number, 
+    count: number,
+    quarter: Quarter,
+    feedbackAnalysis?: any
+  ): Promise<SelectionQuestion[]> {
     const normalizedCategory = this.normalizeCategory(category);
     const questions: SelectionQuestion[] = [];
+    
+    // Laden der Knowledge-Base für lehrplankonforme Generierung
+    const { cards } = await loadKnowledge();
+    const curriculumCards = preselectCards(cards, { 
+      grade, 
+      quarter, 
+      wantDomains: ["Zahlen & Operationen"] 
+    });
+
+    console.log(`📚 Loaded ${curriculumCards.length} curriculum cards for Grade ${grade} ${quarter}`);
     
     if (normalizedCategory === 'mathematik') {
       for (let i = 0; i < count; i++) {
