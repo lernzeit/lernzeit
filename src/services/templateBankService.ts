@@ -1,7 +1,7 @@
 // Enhanced Template-Bank Service with feedback-based curriculum-compliant questions
 import { supabase } from '@/integrations/supabase/client';
 import { fetchActiveTemplates, pickSessionTemplates, Quarter } from '@/data/templateBank';
-import { loadKnowledge, preselectCards } from '@/knowledge/knowledge';
+import { loadKnowledge, preselectCards, KnowledgeCard } from '@/knowledge/knowledge';
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
@@ -110,21 +110,41 @@ export class EnhancedTemplateBankService {
     
     // Laden der Knowledge-Base für lehrplankonforme Generierung
     const { cards } = await loadKnowledge();
-    const curriculumCards = preselectCards(cards, { 
+    let curriculumCards = preselectCards(cards, { 
       grade, 
       quarter, 
-      wantDomains: ["Zahlen & Operationen"] 
+      wantDomains: normalizedCategory === 'mathematik' ? ["Zahlen & Operationen", "Raum & Form", "Größen & Messen"] : ["Deutsch"] 
     });
 
     console.log(`📚 Loaded ${curriculumCards.length} curriculum cards for Grade ${grade} ${quarter}`);
     
+    // Feedback-basierte Filterung anwenden
+    if (feedbackAnalysis) {
+      const { FeedbackBasedGenerationService } = await import('./feedbackBasedGeneration');
+      const feedbackService = FeedbackBasedGenerationService.getInstance();
+      curriculumCards = feedbackService.filterKnowledgeCards(
+        curriculumCards, 
+        feedbackAnalysis.curriculumGuidelines, 
+        feedbackAnalysis.recommendations
+      );
+      console.log(`🎯 Filtered to ${curriculumCards.length} cards based on feedback`);
+    }
+
+    if (curriculumCards.length === 0) {
+      console.warn(`⚠️ No curriculum cards found for Grade ${grade} ${quarter} ${normalizedCategory}`);
+      return [];
+    }
+    
     if (normalizedCategory === 'mathematik') {
       for (let i = 0; i < count; i++) {
-        // Word-selection entfernt für Mathe - nur sinnvolle Fragetypen
         const questionTypes = ['text-input', 'multiple-choice', 'matching'];
         const questionType = questionTypes[i % questionTypes.length];
         
-        const question = this.generateMathQuestion(grade, questionType, i);
+        // Verwende curriculum card für spezifische Fragenerzeugung
+        const cardIndex = i % curriculumCards.length;
+        const curriculumCard = curriculumCards[cardIndex];
+        
+        const question = this.generateCurriculumBasedMathQuestion(curriculumCard, questionType, feedbackAnalysis);
         if (question) questions.push(question);
       }
     } else if (normalizedCategory === 'deutsch') {
@@ -132,7 +152,10 @@ export class EnhancedTemplateBankService {
         const questionTypes = ['multiple-choice', 'word-selection', 'matching'];
         const questionType = questionTypes[i % questionTypes.length];
         
-        const question = this.generateGermanQuestion(grade, questionType, i);
+        const cardIndex = i % curriculumCards.length;
+        const curriculumCard = curriculumCards[cardIndex];
+        
+        const question = this.generateCurriculumBasedMathQuestion(curriculumCard, questionType, feedbackAnalysis);
         if (question) questions.push(question);
       }
     }
@@ -140,17 +163,274 @@ export class EnhancedTemplateBankService {
     return questions;
   }
 
-  private generateMathQuestion(grade: number, questionType: string, index: number): SelectionQuestion | null {
+  private generateCurriculumBasedMathQuestion(
+    curriculumCard: KnowledgeCard, 
+    questionType: string, 
+    feedbackAnalysis?: any
+  ): SelectionQuestion | null {
+    console.log(`🎯 Generating ${questionType} question for skill: ${curriculumCard.skill}`);
+    
     if (questionType === 'matching') {
-      return this.generateMathMatchingQuestion(grade);
+      return this.generateCurriculumMatchingQuestion(curriculumCard);
     } else if (questionType === 'multiple-choice') {
-      // Mix normale Multiple Choice und sinnvolle Textaufgaben
-      const useTextProblem = Math.random() < 0.3; // 30% Textaufgaben
-      return useTextProblem 
-        ? this.generateMathTextWordProblem(grade) 
-        : this.generateMathMultipleChoiceQuestion(grade);
+      return this.generateCurriculumMultipleChoiceQuestion(curriculumCard, feedbackAnalysis);
     } else {
-      return this.generateMathTextInputQuestion(grade);
+      return this.generateCurriculumTextInputQuestion(curriculumCard, feedbackAnalysis);
+    }
+  }
+
+  private generateCurriculumMatchingQuestion(curriculumCard: KnowledgeCard): SelectionQuestion {
+    console.log(`🎯 Generating matching for: ${curriculumCard.skill}`);
+    
+    let questionData;
+    if (curriculumCard.tags.includes('ZR_10')) {
+      questionData = this.generateCountingMatching(curriculumCard.grade);
+    } else if (curriculumCard.tags.includes('Formen')) {
+      questionData = this.generateShapeMatching(curriculumCard.grade);
+    } else if (curriculumCard.tags.includes('Addition') || curriculumCard.tags.includes('Subtraktion')) {
+      questionData = this.generateSimpleCalculationMatching(curriculumCard.grade);
+    } else if (curriculumCard.tags.includes('Einmaleins')) {
+      questionData = this.generateMultiplicationMatching(curriculumCard.grade);
+    } else if (curriculumCard.tags.includes('Zeit') || curriculumCard.tags.includes('Geld')) {
+      questionData = this.generateTimeMoneyMatching(curriculumCard.grade);
+    } else if (curriculumCard.tags.includes('Brüche')) {
+      questionData = this.generateFractionMatching(curriculumCard.grade);
+    } else {
+      questionData = this.generateAdvancedCalculationMatching(curriculumCard.grade);
+    }
+
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionData.question,
+      questionType: 'matching',
+      explanation: questionData.explanation,
+      type: 'mathematik' as any,
+      items: questionData.items,
+      categories: questionData.categories
+    };
+  }
+
+  private generateCurriculumMultipleChoiceQuestion(curriculumCard: KnowledgeCard, feedbackAnalysis?: any): SelectionQuestion {
+    console.log(`🎯 Generating multiple choice for: ${curriculumCard.skill}`);
+    
+    // Angepasste Schwierigkeit basierend auf Curriculum
+    if (curriculumCard.tags.includes('ZR_10')) {
+      return this.generateBasicMathMC(curriculumCard.grade, 10);
+    } else if (curriculumCard.tags.includes('ZR_20')) {
+      return this.generateBasicMathMC(curriculumCard.grade, 20);
+    } else if (curriculumCard.tags.includes('ZR_100')) {
+      return this.generateBasicMathMC(curriculumCard.grade, 100);
+    } else if (curriculumCard.tags.includes('ZR_1000')) {
+      return this.generateAdvancedMathMC(curriculumCard.grade, 1000);
+    } else if (curriculumCard.tags.includes('Einmaleins')) {
+      return this.generateMultiplicationMC(curriculumCard.grade);
+    } else if (curriculumCard.tags.includes('Brüche')) {
+      return this.generateFractionMC(curriculumCard.grade);
+    } else {
+      return this.generateAdvancedMathMC(curriculumCard.grade, 100);
+    }
+  }
+
+  private generateCurriculumTextInputQuestion(curriculumCard: KnowledgeCard, feedbackAnalysis?: any): SelectionQuestion {
+    console.log(`🎯 Generating text input for: ${curriculumCard.skill}`);
+    
+    // Zahlenraum-spezifische Aufgaben generieren
+    if (curriculumCard.tags.includes('ZR_10')) {
+      return this.generateBasicMathInput(curriculumCard.grade, 10);
+    } else if (curriculumCard.tags.includes('ZR_20')) {
+      return this.generateBasicMathInput(curriculumCard.grade, 20);
+    } else if (curriculumCard.tags.includes('ZR_100')) {
+      return this.generateBasicMathInput(curriculumCard.grade, 100);
+    } else if (curriculumCard.tags.includes('ZR_1000')) {
+      return this.generateAdvancedMathInput(curriculumCard.grade, 1000);
+    } else if (curriculumCard.tags.includes('Einmaleins')) {
+      return this.generateMultiplicationInput(curriculumCard.grade);
+    } else {
+      return this.generateAdvancedMathInput(curriculumCard.grade, 100);
+    }
+  }
+
+  // Neue Methoden für curriculum-spezifische Generierung
+  private generateBasicMathMC(grade: number, maxNumber: number): SelectionQuestion {
+    const a = Math.floor(Math.random() * maxNumber) + 1;
+    const b = Math.floor(Math.random() * Math.min(a, maxNumber / 2)) + 1;
+    const operations = grade <= 1 ? ['+'] : ['+', '-'];
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+    
+    const result = operation === '+' ? a + b : a - b;
+    const questionText = `Was ist ${a} ${operation} ${b}?`;
+    
+    const wrongAnswers = [
+      result + 1,
+      result - 1,
+      result + Math.floor(Math.random() * 3) + 2
+    ].filter(ans => ans > 0 && ans !== result);
+    
+    const options = [result, ...wrongAnswers.slice(0, 3)]
+      .sort(() => Math.random() - 0.5)
+      .map(n => n.toString());
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'} im Zahlenraum bis ${maxNumber}: ${a} ${operation} ${b} = ${result}`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: options.indexOf(result.toString())
+    };
+  }
+
+  private generateAdvancedMathMC(grade: number, maxNumber: number): SelectionQuestion {
+    const operations = grade <= 3 ? ['+', '-', '×'] : ['+', '-', '×', '÷'];
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+    
+    let a: number, b: number, result: number, questionText: string;
+    
+    if (operation === '×') {
+      a = Math.floor(Math.random() * 12) + 2;
+      b = Math.floor(Math.random() * 12) + 2;
+      result = a * b;
+      questionText = `Was ist ${a} × ${b}?`;
+    } else if (operation === '÷') {
+      result = Math.floor(Math.random() * 12) + 2;
+      b = Math.floor(Math.random() * 12) + 2;
+      a = result * b;
+      questionText = `Was ist ${a} ÷ ${b}?`;
+    } else {
+      a = Math.floor(Math.random() * maxNumber) + 1;
+      b = Math.floor(Math.random() * Math.min(a, maxNumber / 2)) + 1;
+      result = operation === '+' ? a + b : a - b;
+      questionText = `Was ist ${a} ${operation} ${b}?`;
+    }
+    
+    const wrongAnswers = [
+      result + 1,
+      result - 1,
+      result + Math.floor(Math.random() * 5) + 2
+    ].filter(ans => ans > 0 && ans !== result);
+    
+    const options = [result, ...wrongAnswers.slice(0, 3)]
+      .sort(() => Math.random() - 0.5)
+      .map(n => n.toString());
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: questionText,
+      questionType: 'multiple-choice',
+      explanation: `${operation}: ${questionText.replace('Was ist ', '').replace('?', '')} = ${result}`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: options.indexOf(result.toString())
+    };
+  }
+
+  private generateMultiplicationMC(grade: number): SelectionQuestion {
+    const tables = grade <= 2 ? [2, 5, 10] : [2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const table = tables[Math.floor(Math.random() * tables.length)];
+    const multiplier = Math.floor(Math.random() * 10) + 1;
+    const result = table * multiplier;
+    
+    const wrongAnswers = [
+      result + table,
+      result - table,
+      result + 1
+    ].filter(ans => ans > 0 && ans !== result);
+    
+    const options = [result, ...wrongAnswers.slice(0, 3)]
+      .sort(() => Math.random() - 0.5)
+      .map(n => n.toString());
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: `Was ist ${table} × ${multiplier}?`,
+      questionType: 'multiple-choice',
+      explanation: `Einmaleins: ${table} × ${multiplier} = ${result}`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer: options.indexOf(result.toString())
+    };
+  }
+
+  private generateFractionMC(grade: number): SelectionQuestion {
+    const fractions = [
+      { display: '1/2', decimal: 0.5, name: 'ein Halb' },
+      { display: '1/4', decimal: 0.25, name: 'ein Viertel' },
+      { display: '3/4', decimal: 0.75, name: 'drei Viertel' },
+      { display: '1/3', decimal: 0.33, name: 'ein Drittel' }
+    ];
+    
+    const fraction = fractions[Math.floor(Math.random() * fractions.length)];
+    const options = fractions.map(f => f.name);
+    const correctAnswer = options.indexOf(fraction.name);
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: `Wie heißt der Bruch ${fraction.display}?`,
+      questionType: 'multiple-choice',
+      explanation: `${fraction.display} = ${fraction.name}`,
+      type: 'mathematik' as any,
+      options,
+      correctAnswer
+    };
+  }
+
+  private generateBasicMathInput(grade: number, maxNumber: number): SelectionQuestion {
+    const a = Math.floor(Math.random() * maxNumber) + 1;
+    const b = Math.floor(Math.random() * Math.min(a, maxNumber / 2)) + 1;
+    const operations = grade <= 1 ? ['+'] : ['+', '-'];
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+    const result = operation === '+' ? a + b : a - b;
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: `${a} ${operation} ${b} = ?`,
+      questionType: 'text-input',
+      explanation: `${operation === '+' ? 'Addition' : 'Subtraktion'} im Zahlenraum bis ${maxNumber}: ${a} ${operation} ${b} = ${result}`,
+      type: 'mathematik' as any,
+      answer: result.toString()
+    };
+  }
+
+  private generateAdvancedMathInput(grade: number, maxNumber: number): SelectionQuestion {
+    const operations = grade <= 3 ? ['+', '-'] : ['+', '-', '×'];
+    const operation = operations[Math.floor(Math.random() * operations.length)];
+    
+    let a: number, b: number, result: number;
+    
+    if (operation === '×') {
+      a = Math.floor(Math.random() * 12) + 2;
+      b = Math.floor(Math.random() * 12) + 2;
+      result = a * b;
+    } else {
+      a = Math.floor(Math.random() * maxNumber) + 1;
+      b = Math.floor(Math.random() * Math.min(a, maxNumber / 2)) + 1;
+      result = operation === '+' ? a + b : a - b;
+    }
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: `${a} ${operation} ${b} = ?`,
+      questionType: 'text-input',
+      explanation: `${operation}: ${a} ${operation} ${b} = ${result}`,
+      type: 'mathematik' as any,
+      answer: result.toString()
+    };
+  }
+
+  private generateMultiplicationInput(grade: number): SelectionQuestion {
+    const tables = grade <= 2 ? [2, 5, 10] : [2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const table = tables[Math.floor(Math.random() * tables.length)];
+    const multiplier = Math.floor(Math.random() * 10) + 1;
+    const result = table * multiplier;
+    
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      question: `${table} × ${multiplier} = ?`,
+      questionType: 'text-input',
+      explanation: `Einmaleins: ${table} × ${multiplier} = ${result}`,
+      type: 'mathematik' as any,
+      answer: result.toString()
     }
   }
 
