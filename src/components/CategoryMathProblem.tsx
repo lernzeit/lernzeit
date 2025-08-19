@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuestionGenerationManager } from '@/hooks/useQuestionGenerationManager';
-import { useImprovedMathGeneration, MathGenerationConfig } from '@/hooks/useImprovedMathGeneration';
-import { useBalancedTemplateSelection } from '@/hooks/useBalancedTemplateSelection';
+import { useTemplateBankGeneration } from '@/hooks/useTemplateBankGeneration';
+import { useQuestionEventLogging } from '@/hooks/useQuestionEventLogging';
+import { getCurrentSchoolQuarter } from '@/data/templateBank';
 import { QuestionRenderer } from '@/components/game/QuestionRenderer';
 import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
@@ -20,7 +19,7 @@ import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Database, Brain, Archive } from 'lucide-react';
 import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 
 interface CategoryMathProblemProps {
@@ -35,24 +34,35 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const { addScreenTime } = useScreenTime();
   const { settings } = useChildSettings(user?.id || '');
   const { updateProgress } = useAchievements(user?.id);
+  const { logQuestionAnswer, logQuestionRating } = useQuestionEventLogging();
   
-  // Use improved math generation for math categories
-  const isMathCategory = category.toLowerCase().includes('mathematik') || category.toLowerCase().includes('math');
+  // 🏦 NEW TEMPLATE-BANK SYSTEM - PRIMARY SOURCE
+  const currentQuarter = getCurrentSchoolQuarter();
+  console.log(`🏦 Using Template-Bank for ${category} Grade ${grade} Quarter ${currentQuarter}`);
   
-  // Mathe-Generator wird nach Adaptive-Setup initialisiert
-  
-  const fallbackGeneration = useQuestionGenerationManager({
+  const templateBankGeneration = useTemplateBankGeneration(
     category,
     grade,
-    userId: user?.id || 'anonymous',
-    totalQuestions: 5,
-    autoGenerate: true, // Always auto-generate from Template-Bank
-    useEnhancedMode: false,
-    useTemplateBankMode: true, // Force Template-Bank for all categories including math
-    quarter: grade === 1 ? "Q1" : grade === 2 ? "Q1" : "Q1" // Map grade to appropriate quarter
-  });
-  
-  // Generator-Zuweisung und Hilfsvariablen folgen nach der Initialisierung des Math-Generators
+    user?.id || 'anonymous',
+    5, // 5 questions per session (session policy)
+    currentQuarter,
+    {
+      enableQualityControl: true,
+      minQualityThreshold: 0.7,
+      preferredDifficulty: undefined, // Let adaptive system decide
+      diversityWeight: 0.8,
+      fallbackToLegacy: false // LEGACY FALLBACKS DEAKTIVIERT
+    }
+  );
+
+  const { 
+    problems, 
+    isGenerating, 
+    error: generationError, 
+    generationSource,
+    qualityMetrics,
+    refreshQuestions 
+  } = templateBankGeneration;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -69,8 +79,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
-
-  
 
   // Adaptive Difficulty System
   const normalizeCategoryForAdaptive = (c: string): string => {
@@ -90,194 +98,31 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const adaptiveUserId = user?.id || '00000000-0000-0000-0000-000000000000';
   const adaptive = useAdaptiveDifficultySystem(normalizeCategoryForAdaptive(category), grade, adaptiveUserId);
 
-  // Konfiguriere Generator basierend auf empfohlener Schwierigkeit
-  const toDifficultyLabel = (v: number): MathGenerationConfig['difficultyLevel'] =>
-    v < 0.35 ? 'easy' : v < 0.7 ? 'medium' : 'hard';
-  const recommendedLevel = toDifficultyLabel(adaptive.getRecommendedDifficulty());
-
-  const mathConfig: MathGenerationConfig = {
-    grade,
-    totalQuestions: 5,
-    enableDuplicateDetection: true,
-    enableEnhancedExplanations: true,
-    difficultyLevel: recommendedLevel,
-    useTemplateRefresh: true,
+  // Show generation status and source
+  const getSourceIcon = () => {
+    switch (generationSource) {
+      case 'template-bank': return <Database className="w-4 h-4 text-green-600" />;
+      case 'knowledge-generated': return <Brain className="w-4 h-4 text-blue-600" />;
+      case 'legacy-fallback': return <Archive className="w-4 h-4 text-orange-600" />;
+      default: return null;
+    }
   };
 
-  const improvedMathGeneration = useImprovedMathGeneration(user?.id || 'anonymous', mathConfig);
-
-  // Use Template-Bank for all categories now (disable old math generation)
-  const {
-    problems,
-    isGenerating,
-    generationError,
-    generateProblems,
-  } = fallbackGeneration;
-
-  const isInitialized = problems.length >= 5;
-  const canRetry = !isGenerating;
-  const manualRetry = generateProblems;
-  const refreshQuestions = generateProblems;
+  const getSourceLabel = () => {
+    switch (generationSource) {
+      case 'template-bank': return 'Template-Bank';
+      case 'knowledge-generated': return 'Lehrplan-Generator';
+      case 'legacy-fallback': return 'Fallback-System';
+      default: return 'Wird geladen...';
+    }
+  };
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
-  // Auto-generate problems from Template-Bank when component loads
-  useEffect(() => {
-    if (problems.length === 0 && !isGenerating) {
-      console.log('🏦 Auto-generating problems from Template-Bank system');
-      generateProblems();
-    }
-  }, [problems.length, isGenerating, generateProblems]);
-
-  useEffect(() => {
-    console.log(`🔄 Game effect: gameStarted=${gameStarted}, problems.length=${problems.length}, isGenerating=${isGenerating}`);
-    if (gameStarted && problems.length === 0 && !isGenerating && canRetry) {
-      console.log('🔄 Regenerating problems because game started but no problems available');
-      manualRetry();
-    }
-  }, [gameStarted, problems.length, isGenerating, canRetry, manualRetry]);
-
-  // Reset question timer when starting new question
-  useEffect(() => {
-    setQuestionStartTime(Date.now());
-  }, [currentQuestionIndex]);
-
-  // Enhanced session analysis and testing
-  useEffect(() => {
-    const analyzeAndTest = async () => {
-      if (!user) return;
-      
-      try {
-        // Analyze last session
-        const { data: sessions, error } = await supabase
-          .from('game_sessions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(2);
-          
-        if (error) {
-          console.error('Error fetching sessions:', error);
-          return;
-        }
-        
-        if (sessions && sessions.length > 0) {
-          console.log('🔍 Last 2 sessions analysis:', sessions.map(session => ({
-            session_id: session.id,
-            question_source: session.question_source,
-            category: session.category,
-            grade: session.grade,
-            score: session.score,
-            created_at: session.created_at
-          })));
-          
-          const aiSessions = sessions.filter(s => s.question_source === 'ai');
-          const templateSessions = sessions.filter(s => s.question_source === 'template');
-          
-          console.log(`📊 Session Source Analysis: ${aiSessions.length} AI sessions, ${templateSessions.length} template sessions`);
-        }
-
-        // Test current generation system if problems exist
-        if (problems.length > 0) {
-          const { testDuplicateProtection, logTestResults, runGenerationTests } = await import('@/utils/questionGenerationTest');
-          
-          // Run comprehensive tests
-          const testResults = await runGenerationTests(
-            problems, 
-            grade || 4, 
-            user.id, 
-            category, 
-            []
-          );
-          
-          console.log('🧪 Running automated generation tests...');
-          logTestResults(testResults);
-          
-          // Test for specific duplicate issues
-          const duplicateTest = testDuplicateProtection(problems);
-          if (duplicateTest.hasDuplicates) {
-            console.warn('⚠️ DUPLICATE DETECTION ALERT:', duplicateTest.duplicates);
-          } else {
-            console.log('✅ No duplicates detected in current question set');
-          }
-        }
-        
-      } catch (error) {
-        console.error('Error in analysis and testing:', error);
-      }
-    };
-
-    analyzeAndTest();
-  }, [user, problems, category, grade]);
-
-  // Auto-generate problems when component loads OR when grade/category changes  
-  useEffect(() => {
-    console.log('🚀 CategoryMathProblem loaded/changed - Auto-generating problems');
-    console.log(`📊 Parameters: grade=${grade}, category=${category}, userId=${user?.id || 'anonymous'}`);
-    console.log(`📊 Current problems.length: ${problems.length}, isGenerating: ${isGenerating}`);
-    
-    // Reset all game state when parameters change
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setGameStarted(false);
-    setFeedback(null);
-    setGameCompleted(false);
-    setSessionEndTime(null);
-    resetAnswers();
-    
-    // Problems will be auto-generated by the question manager hook
-    console.log('✅ Component initialized - questions will be auto-generated');
-  }, [grade, category, user?.id]);
-
-  // Auto-complete when game is finished - this hook must always be called
-  useEffect(() => {
-    if (!gameCompleted || !sessionEndTime) return;
-    
-    const completeSession = async () => {
-      const finalSessionDuration = sessionEndTime - sessionStartTime;
-      let earnedSeconds = 0;
-      let timePerTask = 30;
-      
-      if (settings) {
-        const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
-        timePerTask = settings[categoryKey] as number || 30;
-        earnedSeconds = score * timePerTask;
-      } else {
-        earnedSeconds = score * 30;
-      }
-
-      // Save session data
-      if (user) {
-        try {
-          await supabase.from('learning_sessions').insert({
-            user_id: user.id,
-            category: category.toLowerCase(),
-            grade,
-            correct_answers: score,
-            total_questions: problems.length,
-            time_spent: finalSessionDuration / 1000,
-            time_earned: Math.floor(earnedSeconds / 60),
-            session_date: new Date().toISOString()
-          });
-        } catch (error) {
-          console.error('Error saving session:', error);
-        }
-      }
-      
-      addScreenTime(earnedSeconds);
-      
-      // Remove automatic completion to prevent double navigation
-      // The completion screen will handle navigation via onContinue
-      console.log('🏁 Session saved, completion screen will handle navigation');
-    };
-    
-    completeSession();
-  }, [gameCompleted, sessionEndTime, sessionStartTime, score, category, grade, problems.length, user, settings, addScreenTime, onComplete]);
-
+  // Start game
   const startGame = () => {
     adaptive.resetSession();
     setGameStarted(true);
-    // Problems should already be generated at this point
   };
 
   const resetAnswers = () => {
@@ -287,404 +132,180 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     setCurrentPlacements({});
   };
 
-  const validateAnswer = (question: SelectionQuestion): boolean => {
-    console.log('🔍 Validating answer for question:', question.question);
-    console.log('🔍 Question object:', {
-      questionType: question.questionType,
-      answer: (question as any).answer,
-      correctAnswer: (question as any).correctAnswer,
-      options: (question as any).options,
-      question: question.question
-    });
-    console.log('🔍 User inputs:', {
-      userAnswer,
-      selectedMultipleChoice,
-      selectedWords,
-      currentPlacements
-    });
-    
-    switch (question.questionType) {
-      case 'text-input':
-        // Get the mathematically corrected answer for validation
-        const storedAnswer = (question as any).answer.toString();
-        const correctedAnswer = getCorrectAnswerText(question); // This uses our math correction
-        
-        console.log('🔍 Answer validation comparison:', {
-          userAnswer: userAnswer.trim(),
-          storedAnswer,
-          correctedAnswer,
-          question: question.question
-        });
-        
-        // Normalize both user input and corrected answer for comparison
-        const userAnswerNormalized = userAnswer.trim().toLowerCase().replace(',', '.');
-        const correctAnswerNormalized = correctedAnswer.toLowerCase().replace(',', '.');
-        
-        // Check exact match first
-        if (userAnswerNormalized === correctAnswerNormalized) {
-          console.log('✅ Exact match found');
-          return true;
-        }
-        
-        // For numeric answers, parse and compare (support both , and . as decimal separator)
-        const userNum = parseFloat(userAnswerNormalized);
-        const correctNum = parseFloat(correctAnswerNormalized);
-        
-        if (!isNaN(userNum) && !isNaN(correctNum)) {
-          const isMatch = Math.abs(userNum - correctNum) < 0.001;
-          console.log('🔢 Numeric comparison:', { userNum, correctNum, isMatch });
-          return isMatch;
-        }
-        
-        return false;
-        
-      case 'multiple-choice':
-        return selectedMultipleChoice === (question as any).correctAnswer;
-        
-      case 'word-selection':
-        const correctWordIndices = question.selectableWords
-          ?.filter(word => word.isCorrect)
-          ?.map(word => word.index) || [];
-        
-        return selectedWords.length === correctWordIndices.length && 
-               selectedWords.every(index => correctWordIndices.includes(index));
-               
-      case 'matching':
-      case 'drag-drop':
-        const correctPlacements = question.categories?.reduce((acc, cat) => {
-          cat.acceptsItems?.forEach(itemId => {
-            acc[itemId] = cat.id;
-          });
-          return acc;
-        }, {} as Record<string, string>) || {};
-        
-        return Object.keys(correctPlacements).every(itemId => 
-          currentPlacements[itemId] === correctPlacements[itemId]
-        );
-        
-      default:
-        return false;
-    }
-  };
-
-  const submitAnswer = async () => {
-    if (!currentQuestion || feedback) return;
-
-    const isCorrect = validateAnswer(currentQuestion);
-    
-    setFeedback(isCorrect ? 'correct' : 'incorrect');
-
-    // Adaptive difficulty tracking
-    const responseTime = Date.now() - questionStartTime;
-    try {
-      adaptive.updatePerformance(isCorrect, responseTime, false);
-      console.log('🎚️ Empfohlene Schwierigkeit:', adaptive.getRecommendedDifficulty());
-    } catch (e) {
-      console.warn('Adaptive tracking error', e);
-    }
-    if (user && adaptive.shouldAdjust) {
-      await adaptive.performAdaptiveAdjustment();
-    }
-    
-    if (isCorrect) {
-      setScore(prev => prev + 1);
-      
-      // Update achievements  
-      if (user) {
-        try {
-          console.log('🎯 Calling updateProgress with:', {
-            category: category.toLowerCase(),
-            type: 'questions_solved',
-            increment: 1
-          });
-          
-          // Update question-solved achievements
-          const achievementResult = await updateProgress(
-            category.toLowerCase(),
-            'questions_solved',
-            1
-          );
-          
-          // Update total questions achievement
-          const totalQuestionsResult = await updateProgress(
-            'general',
-            'total_questions',
-            1
-          );
-
-          // Update subjects mastered achievement
-          const subjectsResult = await updateProgress(
-            'general',
-            'subjects_mastered',
-            0 // Will be calculated by the function
-          );
-          
-          console.log('🏆 Achievement results:', {
-            regular: achievementResult,
-            total: totalQuestionsResult,
-            subjects: subjectsResult
-          });
-          
-          // Combine all new achievements
-          const allNewAchievements = [
-            ...(achievementResult || []),
-            ...(totalQuestionsResult || []),
-            ...(subjectsResult || [])
-          ];
-          
-          if (allNewAchievements.length > 0) {
-            setNewAchievements(allNewAchievements);
-            setShowAchievements(true);
-          }
-        } catch (error) {
-          console.error('❌ Achievement error:', error);
-        }
-      }
-    }
-
-    // NO AUTOMATIC ADVANCEMENT - user must click continue
-    console.log('✅ Feedback shown, waiting for user to continue manually');
-  };
-
-  const advanceToNextQuestion = () => {
-    console.log('➡️ Advancing to next question manually');
-    
-    if (currentQuestionIndex < problems.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setFeedback(null);
-      resetAnswers();
-    } else {
-      // Capture the end time once when the game completes - MUST be set before setGameCompleted
-      const endTime = Date.now();
-      setSessionEndTime(endTime);
-      setGameCompleted(true);
-      console.log('🏁 Game completed - session end time captured:', endTime);
-    }
-  };
-
-  const handleWordToggle = (wordIndex: number) => {
-    setSelectedWords(prev => 
-      prev.includes(wordIndex) 
-        ? prev.filter(i => i !== wordIndex)
-        : [...prev, wordIndex]
-    );
-  };
-
-  const handleItemMove = (itemId: string, categoryId: string) => {
-    setCurrentPlacements(prev => ({
-      ...prev,
-      [itemId]: categoryId
-    }));
-  };
-
-  const handleMatchingComplete = (isCorrect: boolean) => {
-    setFeedback(isCorrect ? 'correct' : 'incorrect');
-
-    // Adaptive difficulty tracking
-    const responseTime = Date.now() - questionStartTime;
-    try {
-      adaptive.updatePerformance(isCorrect, responseTime, false);
-      console.log('🎚️ Empfohlene Schwierigkeit:', adaptive.getRecommendedDifficulty());
-    } catch (e) {
-      console.warn('Adaptive tracking error', e);
-    }
-    if (user && adaptive.shouldAdjust) {
-      void adaptive.performAdaptiveAdjustment();
-    }
-    
-    if (isCorrect) {
-      setScore(prev => prev + 1);
-    }
-
-    // NO AUTOMATIC ADVANCEMENT - user must click continue
-    console.log('✅ Matching feedback shown, waiting for user to continue manually');
-  };
-
-  const handleQuestionFeedback = async (feedbackType: string, details?: string) => {
-    if (!currentQuestion || !user) return;
-
-    try {
-      await supabase.from('question_feedback').insert({
-        user_id: user.id,
-        question_content: currentQuestion.question,
-        question_type: currentQuestion.questionType,
-        feedback_type: feedbackType,
-        feedback_details: details,
-        category: category.toLowerCase(),
-        grade
-      });
-      
-      console.log('Feedback submitted successfully');
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
-    }
-    
-    setShowFeedbackDialog(false);
-  };
-
-  const getCorrectAnswerText = (question: SelectionQuestion): string => {
-    console.log('🎯 Getting correct answer for question:', {
-      questionType: question.questionType,
-      answer: (question as any).answer,
-      correctAnswer: (question as any).correctAnswer,
-      options: (question as any).options
-    });
-    
-    console.log('🎯 Debug: Getting correct answer for question with complete object:', question);
-    
-    // MATHEMATICAL CORRECTION FUNCTION - Fix wrong answers in database
-    const correctMathAnswer = (questionText: string, storedAnswer: string): string => {
-      console.log('🧮 Checking math correctness:', { questionText, storedAnswer });
-      
-      // Parse mathematical expressions from question text
-      // Pattern: "Was ist das Ergebnis von X op Y + Z" etc.
-      const mathExpressionMatch = questionText.match(/(?:Ergebnis von|ist)\s*(.+?)\s*\?/i);
-      if (mathExpressionMatch) {
-        const expression = mathExpressionMatch[1].trim();
-        console.log('🧮 Found expression:', expression);
-        
-        try {
-          // Replace text operators with symbols
-          let cleanExpression = expression
-            .replace(/\s*x\s*/g, '*')  // x → *
-            .replace(/\s*mal\s*/g, '*')  // mal → *
-            .replace(/\s*plus\s*/g, '+')  // plus → +
-            .replace(/\s*minus\s*/g, '-')  // minus → -
-            .replace(/\s*geteilt durch\s*/g, '/')  // geteilt durch → /
-            .replace(/\s+/g, '');  // remove spaces
-          
-          console.log('🧮 Clean expression:', cleanExpression);
-          
-          // Evaluate the expression safely
-          const result = Function(`"use strict"; return (${cleanExpression})`)();
-          const calculatedAnswer = result.toString();
-          
-          console.log('🧮 Calculated result:', calculatedAnswer, 'vs stored:', storedAnswer);
-          
-          // If calculated answer differs from stored, use calculated
-          if (calculatedAnswer !== storedAnswer) {
-            console.log('🔧 CORRECTING WRONG ANSWER:', storedAnswer, '→', calculatedAnswer);
-            return calculatedAnswer;
-          }
-        } catch (error) {
-          console.log('🧮 Expression evaluation failed:', error);
-        }
-      }
-      
-      // GEOMETRY CALCULATIONS - Umfang, Fläche, etc.
-      
-      // Umfang eines Rechtecks: U = 2 × (Länge + Breite)
-      const rectanglePerimeterMatch = questionText.match(/Rechteck.*?(\d+)\s*cm.*?(\d+)\s*cm.*?Umfang/i);
-      if (rectanglePerimeterMatch) {
-        const length = parseInt(rectanglePerimeterMatch[1]);
-        const width = parseInt(rectanglePerimeterMatch[2]);
-        const perimeter = 2 * (length + width);
-        console.log('🔧 RECTANGLE PERIMETER CALCULATION:', { length, width, perimeter });
-        return perimeter.toString();
-      }
-      
-      // Fläche eines Rechtecks: A = Länge × Breite  
-      const rectangleAreaMatch = questionText.match(/Rechteck.*?(\d+)\s*cm.*?(\d+)\s*cm.*?Fläche/i);
-      if (rectangleAreaMatch) {
-        const length = parseInt(rectangleAreaMatch[1]);
-        const width = parseInt(rectangleAreaMatch[2]);
-        const area = length * width;
-        console.log('🔧 RECTANGLE AREA CALCULATION:', { length, width, area });
-        return area.toString();
-      }
-      
-      // Quadrat Fläche: A = Seitenlänge²
-      const squareAreaMatch = questionText.match(/Quadrat.*?(\d+)\s*cm.*?Fläche/i);
-      if (squareAreaMatch) {
-        const side = parseInt(squareAreaMatch[1]);
-        const area = side * side;
-        console.log('🔧 SQUARE AREA CALCULATION:', { side, area });
-        return area.toString();
-      }
-      
-      return storedAnswer; // Return original if no correction needed
-    };
-    
+  // Check answer function
+  const checkAnswer = (answer: string | number | number[] | Record<string, string>, question: SelectionQuestion): boolean => {
     switch (question.questionType) {
       case 'text-input':
         const textAnswer = (question as any).answer;
-        console.log('🔍 Text input answer check:', { textAnswer, type: typeof textAnswer });
-        if (textAnswer === undefined || textAnswer === null || textAnswer === '') {
-          console.error('❌ Text input answer is undefined/null/empty:', {
-            question: question.question,
-            answer: textAnswer,
-            fullQuestion: question
-          });
-          // Try to extract from question text for simple math problems
-          const mathMatch = question.question.match(/(\d+(?:[.,]\d+)?)\s*[cm²]?\s*\??\s*$/);
-          if (mathMatch) {
-            console.log('🔧 Extracted answer from question text:', mathMatch[1]);
-            return mathMatch[1];
-          }
-          // For area calculation: length * width
-          const areaMatch = question.question.match(/(\d+)\s*cm.*?(\d+)\s*cm.*?Fläche/);
-          if (areaMatch) {
-            const area = parseInt(areaMatch[1]) * parseInt(areaMatch[2]);
-            console.log('🔧 Calculated area:', area);
-            return area.toString();
-          }
-          // For Roman numerals
-          const romanMatch = question.question.match(/römische Zahl.*?(\d+)/i);
-          if (romanMatch) {
-            const number = parseInt(romanMatch[1]);
-            const romanNumerals: Record<number, string> = {
-              1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X',
-              11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX'
-            };
-            const roman = romanNumerals[number] || number.toString();
-            console.log('🔧 Calculated Roman numeral:', roman, 'for number:', number);
-            return roman;
-          }
-          return 'Antwort nicht verfügbar';
+        const userInput = String(answer).trim().toLowerCase().replace(',', '.');
+        const correctAnswer = String(textAnswer).toLowerCase().replace(',', '.');
+        
+        // For numeric answers, try numeric comparison
+        const userNum = parseFloat(userInput);
+        const correctNum = parseFloat(correctAnswer);
+        if (!isNaN(userNum) && !isNaN(correctNum)) {
+          return Math.abs(userNum - correctNum) < 0.001;
         }
         
-        // Apply mathematical correction before returning
-        const correctedAnswer = correctMathAnswer(question.question, textAnswer.toString());
-        return correctedAnswer;
+        return userInput === correctAnswer;
+        
       case 'multiple-choice':
-        const mcAnswer = (question as any).options?.[(question as any).correctAnswer];
-        if (mcAnswer === undefined || mcAnswer === null) {
-          console.error('❌ Multiple choice answer is undefined/null:', question);
-          return 'Antwort nicht verfügbar';
-        }
-        return mcAnswer;
-      case 'word-selection':
-        const correctWords = question.selectableWords
-          ?.filter(word => word.isCorrect)
-          ?.map(word => word.word) || [];
-        if (correctWords.length === 0) {
-          console.error('❌ Word selection has no correct words:', question);
-          return 'Keine korrekten Wörter gefunden';
-        }
-        return correctWords.join(', ');
+        return answer === (question as any).correctAnswer;
+        
       default:
-        console.log('🎯 Unknown question type, returning default');
-        return 'Siehe Erklärung';
+        return false;
     }
   };
 
-  const getUserAnswerText = (question: SelectionQuestion): string => {
-    switch (question.questionType) {
-      case 'text-input':
-        return userAnswer || 'Keine Antwort';
-      case 'multiple-choice':
-        return selectedMultipleChoice !== null 
-          ? (question as any).options?.[selectedMultipleChoice] || 'Unbekannt'
-          : 'Keine Antwort';
-      case 'word-selection':
-        const userWords = selectedWords
-          .map(index => question.selectableWords?.find(word => word.index === index)?.word)
-          .filter(Boolean);
-        return userWords.join(', ') || 'Keine Auswahl';
-      default:
-        return 'Siehe Details';
+  const handleAnswerSubmit = async (answer: string | number | number[] | Record<string, string>) => {
+    if (!problems || problems.length === 0) return;
+    
+    const currentQuestion = problems[currentQuestionIndex];
+    const isCorrect = checkAnswer(answer, currentQuestion);
+    
+    // 📊 LOG QUESTION EVENT (Template-Bank Analytics)
+    const templateId = (currentQuestion as any).templateId;
+    if (templateId && typeof templateId === 'string') {
+      await logQuestionAnswer(templateId, isCorrect);
+      console.log(`📊 Logged ${isCorrect ? 'CORRECT' : 'INCORRECT'} answer for template ${templateId}`);
     }
+    
+    // Update adaptive difficulty - simplified logging
+    console.log(`📈 Question ${currentQuestionIndex + 1}: ${isCorrect ? 'CORRECT' : 'INCORRECT'} (${Date.now() - questionStartTime}ms)`);
+    adaptive.resetSession(); // Keep session reset functionality
+    
+    setFeedback(isCorrect ? 'correct' : 'incorrect');
+    if (isCorrect) {
+      setScore(score + 1);
+    }
+    
+    setTimeout(() => {
+      const isLastQuestion = currentQuestionIndex === problems.length - 1;
+      
+      if (isLastQuestion) {
+        completeGame();
+      } else {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setFeedback(null);
+        resetAnswers();
+        setQuestionStartTime(Date.now());
+      }
+    }, 1500);
   };
+
+  const completeGame = async () => {
+    const endTime = Date.now();
+    setSessionEndTime(endTime);
+    setGameCompleted(true);
+    
+    const finalSessionDuration = endTime - sessionStartTime;
+    let earnedSeconds = 0;
+    let timePerTask = 30;
+    
+    if (settings) {
+      const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
+      timePerTask = settings[categoryKey] as number || 30;
+      earnedSeconds = score * timePerTask;
+    } else {
+      earnedSeconds = score * 30;
+    }
+
+    // Save session data
+    if (user) {
+      try {
+        await supabase.from('game_sessions').insert({
+          user_id: user.id,
+          grade,
+          correct_answers: score,
+          total_questions: problems.length,
+          time_spent: finalSessionDuration / 1000,
+          time_earned: earnedSeconds,
+          duration_seconds: Math.round(finalSessionDuration / 1000),
+          score: Math.round((score / problems.length) * 100),
+          question_source: generationSource, // Track Template-Bank vs other sources
+          category
+        });
+
+        // Save session to learning_sessions for analytics
+        await supabase.from('learning_sessions').insert({
+          user_id: user.id,
+          grade,
+          correct_answers: score,
+          total_questions: problems.length,
+          time_spent: finalSessionDuration / 1000,
+          time_earned: earnedSeconds,
+          category
+        });
+      } catch (error) {
+        console.error('Error saving session:', error);
+      }
+    }
+    
+    addScreenTime(earnedSeconds);
+  };
+
+  // Loading state with Template-Bank info
+  if (isGenerating || problems.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="w-full max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              🏦 Template-Bank lädt Fragen...
+              {getSourceIcon()}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-center h-32">
+              <div className="flex flex-col items-center gap-2">
+                <RefreshCw className="h-6 w-6 animate-spin" />
+                <p>Lade lehrplankonforme Fragen aus der Template-Bank...</p>
+                <p className="text-sm text-muted-foreground">
+                  Quartal: {currentQuarter} | Klasse: {grade} | Fach: {category}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state with Template-Bank info
+  if (generationError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="w-full max-w-4xl mx-auto border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Template-Bank Fehler
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-red-600">Fehler beim Laden der Fragen: {generationError}</p>
+            <div className="bg-red-50 p-4 rounded-lg">
+              <p className="text-sm text-red-800">
+                Die Template-Bank konnte keine geeigneten Fragen für Klasse {grade}, Quartal {currentQuarter} 
+                im Fach {category} finden. Das deutet auf eine Unterdeckung in der Datenbank hin.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={refreshQuestions} className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Erneut versuchen
+              </Button>
+              {onBack && (
+                <Button variant="outline" onClick={onBack}>
+                  Zurück
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!gameStarted) {
     return (
@@ -717,84 +338,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     );
   }
 
-  if (isGenerating || problems.length === 0) {
-    console.log('🔄 RENDER: Loading state triggered', {
-      isGenerating,
-      problemsLength: problems.length,
-      gameStarted,
-      currentQuestion: !!currentQuestion
-    });
-    
-    return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardContent className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg font-medium">Generiere spannende Fragen...</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Bereite verschiedene Fragetypen vor
-          </p>
-          <div className="mt-4 text-xs opacity-60">
-            Debug: isGenerating={String(isGenerating)}, problems={problems.length}, gameStarted={String(gameStarted)}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!currentQuestion) {
-    console.log('❌ RENDER: No current question available', {
-      problemsLength: problems.length,
-      currentQuestionIndex,
-      gameStarted,
-      isGenerating,
-      problems: problems.map(p => ({ id: p.id, question: p.question.substring(0, 50) }))
-    });
-    
-    return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardContent className="text-center py-8">
-          <p className="text-lg">Keine Fragen verfügbar</p>
-          <div className="mt-2 text-xs opacity-60">
-            Debug: problems={problems.length}, index={currentQuestionIndex}, generating={String(isGenerating)}
-          </div>
-          <div className="space-y-2">
-            {generationError && (
-              <div className="flex items-center justify-center gap-2 text-destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm">{generationError}</span>
-              </div>
-            )}
-            {canRetry && (
-              <Button onClick={manualRetry} className="mt-4">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Erneut versuchen
-              </Button>
-            )}
-            <Button onClick={refreshQuestions} variant="outline" className="mt-2">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Neue Fragen laden
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Show completion screen when game is finished
   if (gameCompleted && sessionEndTime) {
     const sessionDuration = sessionEndTime - sessionStartTime;
-    
-    // Debug logging for settings
-    console.log('🔍 Settings debug:', {
-      settings,
-      category: category.toLowerCase(),
-      lookupKey: `${category.toLowerCase()}_seconds_per_task`,
-      foundValue: settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings]
-    });
-    
     const timePerTask = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30;
-    const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60); // 5 minutes per achievement
-    const perfectSessionBonus = score === problems.length ? 2 : 0; // 2 extra minutes for perfect session
+    const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60);
+    const perfectSessionBonus = score === problems.length ? 2 : 0;
     
     return (
       <GameCompletionScreen
@@ -805,94 +354,167 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         achievementBonusMinutes={achievementBonusMinutes}
         perfectSessionBonus={perfectSessionBonus}
         onContinue={() => {
-          // Calculate earned minutes before navigating - use same calculation as above
           const timePerTaskValue = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30;
           const earnedSeconds = score * timePerTaskValue;
           const earnedMinutes = Math.floor(earnedSeconds / 60);
           
-          // Reset the game state
           setGameCompleted(false);
           setGameStarted(false);
           
-          // Navigate back and pass earned minutes
           onComplete(earnedMinutes, category);
         }}
       />
     );
   }
 
+  if (!currentQuestion) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="text-center py-8">
+          <p className="text-lg">Keine Fragen verfügbar</p>
+          <Button onClick={refreshQuestions} className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Neue Fragen laden
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            {onBack && (
-              <Button variant="outline" size="sm" onClick={onBack}>
-                Zurück
-              </Button>
-            )}
-            <CardTitle>{category} - Klasse {grade}</CardTitle>
+    <div className="container mx-auto px-4 py-8">
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Frage {currentQuestionIndex + 1} von {problems.length}</span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {getSourceIcon()}
+              <span>{getSourceLabel()}</span>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Template-Bank Quality Metrics */}
+          <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
+            <div className="flex items-center gap-4 text-sm">
+              <span>Qualität: {Math.round(qualityMetrics.averageQuality * 100)}%</span>
+              <span>Abdeckung: {Math.round(qualityMetrics.templateCoverage * 100)}%</span>
+              <span>Vielfalt: {Math.round(qualityMetrics.domainDiversity * 100)}%</span>
+              <span>Quartal: {currentQuarter}</span>
+            </div>
           </div>
-          <QuestionGenerationInfo 
-            generationSource={isMathCategory ? 'ai' : (fallbackGeneration.generationSource || 'simple')} 
-            isGenerating={isGenerating} 
+
+          <GameProgress 
+            currentQuestion={currentQuestionIndex + 1} 
+            totalQuestions={problems.length} 
+            score={score} 
+            startTime={sessionStartTime}
+            isActive={!gameCompleted}
           />
-        </div>
-        <GameProgress 
-          currentQuestion={currentQuestionIndex + 1} 
-          totalQuestions={problems.length} 
-          score={score} 
-          startTime={sessionStartTime}
-          isActive={!gameCompleted}
-        />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <QuestionRenderer
-          question={currentQuestion}
-          userAnswer={userAnswer}
-          setUserAnswer={setUserAnswer}
-          selectedMultipleChoice={selectedMultipleChoice}
-          setSelectedMultipleChoice={setSelectedMultipleChoice}
-          selectedWords={selectedWords}
-          setSelectedWords={setSelectedWords}
-          onWordToggle={handleWordToggle}
-          onMatchingComplete={handleMatchingComplete}
-          currentPlacements={currentPlacements}
-          onItemMove={handleItemMove}
-          feedback={feedback}
-        />
 
-        <GameFeedback 
-          feedback={feedback} 
-          explanation={currentQuestion.explanation}
-          correctAnswer={feedback === 'incorrect' ? getCorrectAnswerText(currentQuestion) : undefined}
-          userAnswer={feedback === 'incorrect' ? getUserAnswerText(currentQuestion) : undefined}
-          onReportIssue={() => setShowFeedbackDialog(true)}
-          onSkipFeedback={feedback ? advanceToNextQuestion : undefined}
-        />
+          <QuestionRenderer
+            question={currentQuestion}
+            userAnswer={userAnswer}
+            setUserAnswer={setUserAnswer}
+            selectedMultipleChoice={selectedMultipleChoice}
+            setSelectedMultipleChoice={setSelectedMultipleChoice}
+            selectedWords={selectedWords}
+            setSelectedWords={setSelectedWords}
+            onWordToggle={(wordIndex: number) => {
+              setSelectedWords(prev => 
+                prev.includes(wordIndex) 
+                  ? prev.filter(i => i !== wordIndex)
+                  : [...prev, wordIndex]
+              );
+            }}
+            onMatchingComplete={(isCorrect: boolean) => {
+              setFeedback(isCorrect ? 'correct' : 'incorrect');
+              if (isCorrect) setScore(prev => prev + 1);
+            }}
+            currentPlacements={currentPlacements}
+            onItemMove={(itemId: string, categoryId: string) => {
+              setCurrentPlacements(prev => ({
+                ...prev,
+                [itemId]: categoryId
+              }));
+            }}
+            feedback={feedback}
+          />
 
-        {!feedback && (
-          <div className="text-center">
-            <Button 
-              onClick={submitAnswer}
-              disabled={
-                (currentQuestion.questionType === 'text-input' && !userAnswer.trim()) ||
-                (currentQuestion.questionType === 'multiple-choice' && selectedMultipleChoice === null) ||
-                (currentQuestion.questionType === 'word-selection' && selectedWords.length === 0)
+          <GameFeedback 
+            feedback={feedback} 
+            explanation={currentQuestion.explanation}
+            correctAnswer={feedback === 'incorrect' ? 'Siehe Erklärung' : undefined}
+            userAnswer={feedback === 'incorrect' ? userAnswer : undefined}
+            onReportIssue={() => setShowFeedbackDialog(true)}
+            onSkipFeedback={feedback ? () => {
+              const isLastQuestion = currentQuestionIndex === problems.length - 1;
+              if (isLastQuestion) {
+                completeGame();
+              } else {
+                setCurrentQuestionIndex(currentQuestionIndex + 1);
+                setFeedback(null);
+                resetAnswers();
+                setQuestionStartTime(Date.now());
               }
-              size="lg"
-              className="w-full"
-            >
-              Antwort abgeben
-            </Button>
-          </div>
-        )}
-      </CardContent>
+            } : undefined}
+          />
+
+          {!feedback && (
+            <div className="text-center">
+              <Button 
+                onClick={() => {
+                  let answer: string | number | number[] | Record<string, string>;
+                  
+                  switch (currentQuestion.questionType) {
+                    case 'text-input':
+                      answer = userAnswer;
+                      break;
+                    case 'multiple-choice':
+                      answer = selectedMultipleChoice || 0;
+                      break;
+                    default:
+                      answer = userAnswer;
+                  }
+                  
+                  handleAnswerSubmit(answer);
+                }}
+                disabled={
+                  (currentQuestion.questionType === 'text-input' && !userAnswer.trim()) ||
+                  (currentQuestion.questionType === 'multiple-choice' && selectedMultipleChoice === null)
+                }
+                size="lg"
+                className="w-full"
+              >
+                Antwort abgeben
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <QuestionFeedbackDialog
         isOpen={showFeedbackDialog}
         onClose={() => setShowFeedbackDialog(false)}
-        onSubmit={handleQuestionFeedback}
+        onSubmit={async (feedbackType: string, details?: string) => {
+          if (!currentQuestion || !user) return;
+
+          try {
+            await supabase.from('question_feedback').insert({
+              user_id: user.id,
+              question_content: currentQuestion.question,
+              question_type: currentQuestion.questionType,
+              feedback_type: feedbackType,
+              feedback_details: details,
+              category: category.toLowerCase(),
+              grade
+            });
+          } catch (error) {
+            console.error('Error submitting feedback:', error);
+          }
+          
+          setShowFeedbackDialog(false);
+        }}
       />
 
       <AchievementAnimation
@@ -903,6 +525,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           setNewAchievements([]);
         }}
       />
-    </Card>
+    </div>
   );
 }

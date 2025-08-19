@@ -67,7 +67,7 @@ export function useQuestionGenerationManager({
           enableQualityControl: true,
           minQualityThreshold: 0.7,
           diversityWeight: 0.8,
-          fallbackToLegacy: true
+          fallbackToLegacy: false // LEGACY DEAKTIVIERT
         }
       );
       
