@@ -57,7 +57,7 @@ export function useTemplateBankGeneration(
           enableQualityControl: true,
           minQualityThreshold: 0.7,
           diversityWeight: 0.8,
-          fallbackToLegacy: true,
+          fallbackToLegacy: false, // LEGACY FALLBACKS DEAKTIVIERT
           ...options
         },
         userId // Pass userId for feedback analysis
