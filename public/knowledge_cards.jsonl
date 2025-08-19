@@ -1,0 +1,4 @@
+{"id":"G1-Q1-ZO-COUNT","grade":1,"grade_app":1,"quarter_app":"Q2","domain":"Zahlen & Operationen","subcategory":"Zählen","skill":"Zählen bis 20, Anzahlen vergleichen","tags":["Zählen","ZR_20"],"text":"Zähle Objekte bis 20 und vergleiche Anzahlen."}
+{"id":"G3-Q1-GM-EINH","grade":3,"grade_app":3,"quarter_app":"Q2","domain":"Größen & Messen","subcategory":"Einheiten","skill":"Längen umrechnen (mm–cm–m)","tags":["Einheiten","Länge"],"text":"Rechne Längen in mm, cm und m um."}
+{"id":"G5-Q3-ALG-FRAC","grade":5,"grade_app":5,"quarter_app":"Q4","domain":"Algebra","subcategory":"Brüche","skill":"Brüche addieren und kürzen","tags":["Brüche","Addition"],"text":"Addiere und kürze Brüche."}
+{"id":"G7-Q2-GEO-TRI","grade":7,"grade_app":7,"quarter_app":"Q3","domain":"Geometrie","subcategory":"Dreiecke","skill":"Satz des Pythagoras anwenden","tags":["Pythagoras"],"text":"Berechne Seiten in rechtwinkligen Dreiecken."}
