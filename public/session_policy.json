@@ -1,0 +1,7 @@
+{
+  "questions_per_session": 5,
+  "min_domain_diversity": 4,
+  "difficulty_progression": ["AFB I", "AFB II", "AFB III"],
+  "quarter_offset": 1,
+  "max_repeats_per_skill": 1
+}
