@@ -1,0 +1,46 @@
+[
+  {
+    "id": "BP-ZO-COUNT",
+    "domain": "Zahlen & Operationen",
+    "subcategory": "Zählen",
+    "question_type": "multiple-choice",
+    "grade_suggestion": 1,
+    "quarter_app": "Q2",
+    "tags": ["Zählen","ZR_20"],
+    "validation": "check_answer_equals",
+    "source_skill_id": "G1-Q1-ZO-COUNT"
+  },
+  {
+    "id": "BP-GM-EINH",
+    "domain": "Größen & Messen",
+    "subcategory": "Einheiten",
+    "question_type": "text-input",
+    "grade_suggestion": 3,
+    "quarter_app": "Q2",
+    "tags": ["Einheiten","Länge"],
+    "validation": "check_answer_numeric",
+    "source_skill_id": "G3-Q1-GM-EINH"
+  },
+  {
+    "id": "BP-ALG-FRAC",
+    "domain": "Algebra",
+    "subcategory": "Brüche",
+    "question_type": "multiple-choice",
+    "grade_suggestion": 5,
+    "quarter_app": "Q4",
+    "tags": ["Brüche"],
+    "validation": "check_answer_fraction",
+    "source_skill_id": "G5-Q3-ALG-FRAC"
+  },
+  {
+    "id": "BP-GEO-TRI",
+    "domain": "Geometrie",
+    "subcategory": "Dreiecke",
+    "question_type": "text-input",
+    "grade_suggestion": 7,
+    "quarter_app": "Q3",
+    "tags": ["Pythagoras"],
+    "validation": "check_answer_numeric",
+    "source_skill_id": "G7-Q2-GEO-TRI"
+  }
+]
