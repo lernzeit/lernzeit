@@ -308,7 +308,12 @@ export class EnhancedTemplateBankService {
       const allQuestions = [...bankQuestions, ...knowledgeQuestions];
 
       if (allQuestions.length === 0 && fullConfig.fallbackToLegacy) {
-        throw new Error("No questions available from template bank or knowledge base");
+        // Use existing balanced generation fallback
+        console.log(`🔄 Using existing fallback system for ${category} Grade ${grade}`);
+        const { useBalancedQuestionGeneration } = await import('@/hooks/useBalancedQuestionGeneration');
+        
+        // This would need to be handled by the calling component
+        throw new Error("FALLBACK_TO_BALANCED_GENERATION");
       }
 
       return {
@@ -326,13 +331,9 @@ export class EnhancedTemplateBankService {
       if (!fullConfig.fallbackToLegacy) {
         throw error; // Fallbacks deaktiviert - Fehler propagieren
       }
-      return {
-        questions: [],
-        source: 'legacy-fallback',
-        sessionId,
-        qualityMetrics: { averageQuality: 0, templateCoverage: 0, domainDiversity: 0 },
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      
+      // Signal to use existing fallback system
+      throw new Error("FALLBACK_TO_BALANCED_GENERATION");
     }
   }
 

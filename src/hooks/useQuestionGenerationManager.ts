@@ -67,7 +67,7 @@ export function useQuestionGenerationManager({
           enableQualityControl: true,
           minQualityThreshold: 0.7,
           diversityWeight: 0.8,
-          fallbackToLegacy: false // LEGACY DEAKTIVIERT
+          fallbackToLegacy: true // Use existing fallback system
         }
       );
       
@@ -82,7 +82,17 @@ export function useQuestionGenerationManager({
       
     } catch (error) {
       console.error('❌ Template-Bank generation failed:', error);
-      setTemplateBankError(error instanceof Error ? error.message : 'Template-Bank generation failed');
+      
+      // Handle fallback to existing balanced generation
+      if (error instanceof Error && error.message === "FALLBACK_TO_BALANCED_GENERATION") {
+        console.log('🔄 Falling back to existing balanced generation');
+        setTemplateBankError('Using existing question generation system');
+        
+        // Trigger balanced generation as fallback
+        balancedGeneration.generateProblems();
+      } else {
+        setTemplateBankError(error instanceof Error ? error.message : 'Template-Bank generation failed');
+      }
     } finally {
       setTemplateBankLoading(false);
     }

@@ -57,7 +57,7 @@ export function useTemplateBankGeneration(
           enableQualityControl: true,
           minQualityThreshold: 0.7,
           diversityWeight: 0.8,
-          fallbackToLegacy: false, // LEGACY FALLBACKS DEAKTIVIERT
+          fallbackToLegacy: true, // Enable existing fallback
           ...options
         },
         userId // Pass userId for feedback analysis
@@ -77,7 +77,15 @@ export function useTemplateBankGeneration(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Template-Bank generation failed';
       console.error('❌ Template-Bank generation error:', errorMessage);
-      setError(errorMessage);
+      
+      // Handle fallback to existing system
+      if (err instanceof Error && err.message === "FALLBACK_TO_BALANCED_GENERATION") {
+        console.log('🔄 Falling back to existing balanced generation system');
+        setError('Using existing question generation system');
+        setGenerationSource('legacy-fallback');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsGenerating(false);
     }
