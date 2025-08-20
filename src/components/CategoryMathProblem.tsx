@@ -244,25 +244,51 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     addScreenTime(earnedSeconds);
   };
 
-  // Loading state with Template-Bank info
+  // Loading state - child-friendly design
   if (isGenerating || problems.length === 0) {
+    const loadingMessages = [
+      "🎯 Suche die besten Fragen für dich...",
+      "📚 Bereite spannende Aufgaben vor...",
+      "✨ Zaubere tolle Rätsel herbei...",
+      "🌟 Sammle interessante Fragen...",
+      "🎈 Mache alles bereit für dich..."
+    ];
+    
+    const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    
     return (
       <div className="container mx-auto px-4 py-8">
-        <Card className="w-full max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              🏦 Template-Bank lädt Fragen...
-              {getSourceIcon()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-center h-32">
-              <div className="flex flex-col items-center gap-2">
-                <RefreshCw className="h-6 w-6 animate-spin" />
-                <p>Lade lehrplankonforme Fragen aus der Template-Bank...</p>
-                <p className="text-sm text-muted-foreground">
-                  Quartal: {currentQuarter} | Klasse: {grade} | Fach: {category}
+        <Card className="w-full max-w-2xl mx-auto shadow-lg border-0 bg-gradient-to-br from-primary/5 to-purple-50">
+          <CardContent className="p-8">
+            <div className="text-center space-y-6">
+              {/* Animated loading icon */}
+              <div className="relative mx-auto w-20 h-20">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary to-purple-500 animate-spin opacity-75"></div>
+                <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center">
+                  <span className="text-2xl animate-bounce">🎮</span>
+                </div>
+              </div>
+              
+              {/* Friendly loading message */}
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-primary animate-pulse">
+                  {randomMessage}
+                </h3>
+                <p className="text-muted-foreground">
+                  Gleich kann es losgehen! 🚀
                 </p>
+              </div>
+              
+              {/* Loading dots animation */}
+              <div className="flex justify-center space-x-2">
+                <div className="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-3 h-3 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+              </div>
+              
+              {/* Progress indication */}
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-primary to-purple-500 rounded-full animate-pulse"></div>
               </div>
             </div>
           </CardContent>
