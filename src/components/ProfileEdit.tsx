@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Camera, User, Save } from 'lucide-react';
+import { ArrowLeft, Palette, User, Save } from 'lucide-react';
+import { AvatarSelector } from './AvatarSelector';
+import { getAvatarById } from '@/data/avatars';
 
 interface ProfileEditProps {
   user: any;
@@ -17,85 +20,48 @@ interface ProfileEditProps {
 
 export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProps) {
   const [name, setName] = useState(profile?.name || '');
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const { toast } = useToast();
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Get current avatar info from profile
+  const currentAvatar = getAvatarById(profile?.avatar_id || 'cat');
+  const currentAvatarColor = profile?.avatar_color || '#3b82f6';
+
+  const handleAvatarChange = async (avatarId: string, color: string) => {
     try {
-      setUploading(true);
-      
-      const file = event.target.files?.[0];
-      if (!file) return;
+      setSaving(true);
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Fehler",
-          description: "Bitte wähle eine Bilddatei aus.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Fehler", 
-          description: "Das Bild ist zu groß. Maximale Größe: 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Create unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
-
-      // Delete old avatar if exists
-      if (profile?.avatar_url) {
-        const oldPath = profile.avatar_url.split('/').pop();
-        if (oldPath && oldPath !== fileName) {
-          await supabase.storage.from('profile-pictures').remove([`${user.id}/${oldPath}`]);
-        }
-      }
-
-      // Upload new file
-      const { error: uploadError, data } = await supabase.storage
-        .from('profile-pictures')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-pictures')
-        .getPublicUrl(fileName);
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ 
+          avatar_id: avatarId,
+          avatar_color: color
+        })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      onUpdate({ ...profile, avatar_url: publicUrl });
+      onUpdate({ 
+        ...profile, 
+        avatar_id: avatarId,
+        avatar_color: color
+      });
       
       toast({
         title: "Erfolgreich",
-        description: "Profilbild wurde aktualisiert!",
+        description: "Dein Avatar wurde aktualisiert! ✨",
       });
 
     } catch (error: any) {
-      console.error('Error uploading image:', error);
+      console.error('Error updating avatar:', error);
       toast({
         title: "Fehler",
-        description: "Das Profilbild konnte nicht hochgeladen werden.",
+        description: "Der Avatar konnte nicht aktualisiert werden.",
         variant: "destructive",
       });
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
   };
 
@@ -145,34 +111,33 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
           </CardHeader>
         </Card>
 
-        {/* Profile Picture */}
+        {/* Avatar Selection */}
         <Card className="shadow-card">
           <CardContent className="p-6 text-center">
             <div className="space-y-4">
               <div className="relative inline-block">
-                <Avatar className="w-24 h-24 mx-auto">
-                  <AvatarImage src={profile?.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-2xl">
-                    {profile?.name ? profile.name.charAt(0).toUpperCase() : <User className="w-8 h-8" />}
+                <Avatar 
+                  className="w-24 h-24 mx-auto" 
+                  style={{ backgroundColor: currentAvatarColor }}
+                >
+                  <AvatarFallback className="text-3xl bg-transparent text-white">
+                    {currentAvatar?.emoji || '😊'}
                   </AvatarFallback>
                 </Avatar>
                 
-                <label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors">
-                  <Camera className="w-4 h-4 text-white" />
-                </label>
-                
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
+                <button 
+                  onClick={() => setShowAvatarSelector(true)}
+                  className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                >
+                  <Palette className="w-4 h-4 text-white" />
+                </button>
               </div>
               
-              <div className="text-sm text-muted-foreground">
-                {uploading ? 'Lädt hoch...' : 'Klicke auf das Kamera-Symbol um dein Profilbild zu ändern'}
+              <div className="space-y-2">
+                <p className="font-medium">{currentAvatar?.name || 'Dein Avatar'}</p>
+                <p className="text-sm text-muted-foreground">
+                  Klicke auf das Palette-Symbol um deinen Avatar zu ändern
+                </p>
               </div>
             </div>
           </CardContent>
@@ -195,7 +160,7 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
               
               <Button 
                 onClick={handleSave}
-                disabled={saving || !name.trim() || name.trim() === profile?.name}
+                disabled={saving || !name.trim() || (name.trim() === profile?.name)}
                 className="w-full"
               >
                 <Save className="w-4 h-4 mr-2" />
@@ -204,6 +169,23 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
             </div>
           </CardContent>
         </Card>
+
+        {/* Avatar Selector Dialog */}
+        <Dialog open={showAvatarSelector} onOpenChange={setShowAvatarSelector}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl">
+                ✨ Wähle deinen Avatar
+              </DialogTitle>
+            </DialogHeader>
+            <AvatarSelector
+              selectedAvatarId={profile?.avatar_id || 'cat'}
+              selectedColor={currentAvatarColor}
+              onAvatarChange={handleAvatarChange}
+              onClose={() => setShowAvatarSelector(false)}
+            />
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>
