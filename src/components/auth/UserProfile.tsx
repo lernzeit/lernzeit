@@ -18,6 +18,7 @@ import { AchievementQuickView } from '@/components/AchievementQuickView';
 
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAvatarById } from '@/data/avatars';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
@@ -283,12 +284,15 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => setShowProfileEdit(true)}
-                    className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                    className="w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                    style={{ backgroundColor: profile?.avatar_color || '#3b82f6' }}
                   >
                     <Avatar className="w-14 h-14">
-                      <AvatarImage src={profile?.avatar_url} />
                       <AvatarFallback className="bg-transparent text-white text-xl">
-                        {profile?.name ? profile.name.charAt(0).toUpperCase() : '👦'}
+                        {(() => {
+                          const avatarData = getAvatarById(profile?.avatar_id || 'cat');
+                          return avatarData?.emoji || '👦';
+                        })()}
                       </AvatarFallback>
                     </Avatar>
                   </button>
