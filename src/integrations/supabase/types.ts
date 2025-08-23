@@ -1239,6 +1239,19 @@ export type Database = {
         | "accuracy_improvement"
         | "long_term_dedication"
         | "time_based_consistency"
+        | "overtime_learning"
+        | "improvement"
+        | "accuracy_master"
+        | "marathon_sessions"
+        | "speed_master"
+        | "consistency"
+        | "comeback"
+        | "subject_explorer"
+        | "midnight_scholar"
+        | "perfect_week"
+        | "time_traveler"
+        | "knowledge_thirst"
+        | "supernova"
       question_variant: "MULTIPLE_CHOICE" | "SORT" | "MATCH" | "FREETEXT"
     }
     CompositeTypes: {
@@ -1405,6 +1418,19 @@ export const Constants = {
         "accuracy_improvement",
         "long_term_dedication",
         "time_based_consistency",
+        "overtime_learning",
+        "improvement",
+        "accuracy_master",
+        "marathon_sessions",
+        "speed_master",
+        "consistency",
+        "comeback",
+        "subject_explorer",
+        "midnight_scholar",
+        "perfect_week",
+        "time_traveler",
+        "knowledge_thirst",
+        "supernova",
       ],
       question_variant: ["MULTIPLE_CHOICE", "SORT", "MATCH", "FREETEXT"],
     },
