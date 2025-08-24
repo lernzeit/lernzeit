@@ -177,6 +177,22 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
       setScore(score + 1);
+      
+      // 🎯 UPDATE ACHIEVEMENTS for correct answers
+      if (user?.id && updateProgress) {
+        try {
+          console.log('🎯 Triggering achievement update for correct answer');
+          const newAchievements = await updateProgress(category, 'questions_solved', 1);
+          
+          if (newAchievements && newAchievements.length > 0) {
+            console.log('🏆 New achievements earned:', newAchievements);
+            // Store new achievements to show later
+            setNewAchievements(prev => [...(prev || []), ...newAchievements]);
+          }
+        } catch (error) {
+          console.error('❌ Error updating achievements:', error);
+        }
+      }
     }
     
     setTimeout(() => {
@@ -197,6 +213,78 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     const endTime = Date.now();
     setSessionEndTime(endTime);
     setGameCompleted(true);
+    
+    // 🏆 UPDATE SESSION-BASED ACHIEVEMENTS
+    if (user?.id && updateProgress) {
+      try {
+        const sessionDurationMinutes = Math.round((endTime - sessionStartTime) / 1000 / 60);
+        const accuracy = Math.round((score / problems.length) * 100);
+        
+        console.log('🎯 Triggering session completion achievements:', {
+          category,
+          sessionDurationMinutes,
+          accuracy,
+          score,
+          totalQuestions: problems.length
+        });
+        
+        // Update total questions achievement
+        const totalQuestionsAchievements = await updateProgress('general', 'total_questions', score);
+        
+        // Update streak achievement (daily learning)
+        const streakAchievements = await updateProgress('general', 'streak', 1);
+        
+        // Update accuracy achievements if high accuracy
+        let accuracyAchievements = [];
+        if (accuracy >= 90) {
+          accuracyAchievements = await updateProgress('general', 'accuracy_master', accuracy);
+        }
+        
+        // Update perfect session bonus
+        let perfectAchievements = [];
+        if (accuracy === 100) {
+          perfectAchievements = await updateProgress('general', 'perfect_sessions', 1);
+        }
+        
+        // Update marathon sessions if session was long (> 30 minutes)
+        let marathonAchievements = [];
+        if (sessionDurationMinutes > 30) {
+          marathonAchievements = await updateProgress('general', 'marathon_sessions', 1);
+        }
+        
+        // Update night owl achievement if after 8 PM
+        let nightOwlAchievements = [];
+        const currentHour = new Date().getHours();
+        if (currentHour >= 20 || currentHour <= 5) {
+          nightOwlAchievements = await updateProgress('general', 'night_owl', 1);
+        }
+        
+        // Update weekend warrior on weekends
+        let weekendAchievements = [];
+        const dayOfWeek = new Date().getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) { // Sunday = 0, Saturday = 6
+          weekendAchievements = await updateProgress('general', 'weekend_warrior', 1);
+        }
+        
+        // Collect all new achievements
+        const allNewAchievements = [
+          ...totalQuestionsAchievements,
+          ...streakAchievements,
+          ...accuracyAchievements,
+          ...perfectAchievements,
+          ...marathonAchievements,
+          ...nightOwlAchievements,
+          ...weekendAchievements
+        ];
+        
+        if (allNewAchievements.length > 0) {
+          console.log('🏆 Session completion achievements earned:', allNewAchievements);
+          setNewAchievements(prev => [...(prev || []), ...allNewAchievements]);
+        }
+      } catch (error) {
+        console.error('❌ Error updating session achievements:', error);
+      }
+    }
     
     const finalSessionDuration = endTime - sessionStartTime;
     let earnedSeconds = 0;
