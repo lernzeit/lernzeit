@@ -188,6 +188,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             console.log('🏆 New achievements earned:', newAchievements);
             // Store new achievements to show later
             setNewAchievements(prev => [...(prev || []), ...newAchievements]);
+            setShowAchievements(true); // ✅ FIXED: Show achievement animation
           }
         } catch (error) {
           console.error('❌ Error updating achievements:', error);
@@ -280,6 +281,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         if (allNewAchievements.length > 0) {
           console.log('🏆 Session completion achievements earned:', allNewAchievements);
           setNewAchievements(prev => [...(prev || []), ...allNewAchievements]);
+          setShowAchievements(true); // ✅ FIXED: Show achievement animation
         }
       } catch (error) {
         console.error('❌ Error updating session achievements:', error);
