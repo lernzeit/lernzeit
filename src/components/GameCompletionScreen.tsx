@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, Clock, Zap, Target, Award } from 'lucide-react';
+import { Trophy, Clock, Zap, Target, Award, Star, Gift } from 'lucide-react';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -27,136 +27,126 @@ export function GameCompletionScreen({
   const perfectSessionBonusSeconds = perfectSessionBonus * 60;
   const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
   const efficiency = Math.round((score / totalQuestions) * 100);
+  const earnedMinutes = Math.round(netTimeSeconds / 60 * 10) / 10;
+
+  // Determine celebration level
+  const getCelebrationLevel = () => {
+    if (efficiency >= 90) return 'excellent';
+    if (efficiency >= 70) return 'good';
+    return 'okay';
+  };
+
+  const celebrationLevel = getCelebrationLevel();
+  const celebrationEmojis = {
+    excellent: '🏆🌟✨',
+    good: '🎉👏💫',
+    okay: '🎯💪🔥'
+  };
+
+  const celebrationTitles = {
+    excellent: 'Unglaublich!',
+    good: 'Fantastisch!',
+    okay: 'Gut gemacht!'
+  };
+
+  const celebrationMessages = {
+    excellent: 'Du bist ein wahrer Champion! Perfekte Leistung!',
+    good: 'Tolle Arbeit! Du machst echte Fortschritte!',
+    okay: 'Weiter so! Jede richtige Antwort zählt!'
+  };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader className="text-center pb-4">
-        {/* Success Animation */}
-        <div className="text-7xl mb-4 animate-bounce">🎉</div>
+    <div className="w-full max-w-xl mx-auto space-y-4 overflow-hidden">
+      {/* Celebration Header */}
+      <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
+        <CardHeader className="pb-4">
+          {/* Animated Celebration Icons */}
+          <div className="text-6xl mb-4 animate-bounce">
+            {celebrationEmojis[celebrationLevel]}
+          </div>
+          
+          {/* Dynamic Title */}
+          <h1 className="text-3xl font-bold text-primary mb-2">
+            {celebrationTitles[celebrationLevel]}
+          </h1>
+          
+          <p className="text-muted-foreground">
+            {celebrationMessages[celebrationLevel]}
+          </p>
+
+          {/* Score Badge */}
+          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mt-4">
+            <Award className="w-4 h-4" />
+            {score} von {totalQuestions} richtig!
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Main Results */}
+      <Card>
+        <CardContent className="p-6">
+          {/* Key Stats Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="text-center p-4 bg-primary/5 rounded-xl border border-primary/10">
+              <Target className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <div className="text-3xl font-bold text-primary">{efficiency}%</div>
+              <div className="text-sm text-muted-foreground">Genauigkeit</div>
+            </div>
+            
+            <div className="text-center p-4 bg-accent/20 rounded-xl border border-accent/30">
+              <Gift className="w-8 h-8 mx-auto mb-2 text-accent-foreground" />
+              <div className="text-3xl font-bold text-accent-foreground">{earnedMinutes}</div>
+              <div className="text-sm text-muted-foreground">Min. gewonnen</div>
+            </div>
+          </div>
+
+          {/* Bonus Summary */}
+          {(achievementBonusMinutes > 0 || perfectSessionBonus > 0) && (
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 rounded-xl p-4 mb-6 border border-yellow-200 dark:border-yellow-800/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="w-5 h-5 text-yellow-600" />
+                <span className="font-semibold text-yellow-800 dark:text-yellow-200">Bonus-Belohnungen!</span>
+              </div>
+              <div className="space-y-1 text-sm">
+                {perfectSessionBonus > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-300">Perfect Session</span>
+                    <span className="font-medium text-yellow-800 dark:text-yellow-200">+{perfectSessionBonus} Min.</span>
+                  </div>
+                )}
+                {achievementBonusMinutes > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-300">Achievement Bonus</span>
+                    <span className="font-medium text-yellow-800 dark:text-yellow-200">+{achievementBonusMinutes} Min.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Simple Time Calculation */}
+          <div className="text-center text-sm text-muted-foreground mb-6">
+            <Clock className="w-4 h-4 inline mr-1" />
+            {score} richtige × {timePerTask}s - {timeSpentSeconds}s verbraucht = <span className="font-semibold text-primary">{netTimeSeconds}s</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Button */}
+      <div className="space-y-3">
+        <Button 
+          onClick={onContinue}
+          size="lg" 
+          className="w-full text-lg py-6 bg-primary hover:bg-primary/90"
+        >
+          <Trophy className="w-5 h-5 mr-2" />
+          {earnedMinutes} Min. Bildschirmzeit erhalten!
+        </Button>
         
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-green-600 mb-2">
-          Fantastisch!
-        </h1>
-        
-        <p className="text-lg text-muted-foreground mb-4">
-          Du hast erfolgreich zusätzliche Handyzeit verdient!
-        </p>
-
-        {/* Achievement Badge */}
-        <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-4 py-2 rounded-full text-sm font-medium">
-          <Award className="w-4 h-4" />
-          {score} von {totalQuestions} Fragen richtig beantwortet!
+        <div className="text-center text-sm text-muted-foreground">
+          Deine Zeit wurde hinzugefügt! 📱✨
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Time Calculation Display */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-xl p-6 border">
-          <h2 className="text-xl font-bold text-center mb-6 text-blue-800 dark:text-blue-200">
-            Zeitberechnung
-          </h2>
-          
-          {/* Calculation Steps */}
-          <div className="space-y-4">
-            {/* Earned Time */}
-            <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Trophy className="w-5 h-5 text-green-600" />
-                <span className="font-medium">Verdiente Zeit:</span>
-              </div>
-              <div className="text-lg font-mono">
-                {score} × {timePerTask}s = <span className="font-bold text-green-600">{earnedSeconds}s</span>
-              </div>
-            </div>
-
-            {/* Time Spent */}
-            <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-orange-600" />
-                <span className="font-medium">Verbrauchte Zeit:</span>
-              </div>
-              <div className="text-lg font-mono font-bold text-orange-600">
-                {timeSpentSeconds}s
-              </div>
-            </div>
-
-            {/* Perfect Session Bonus */}
-            {perfectSessionBonus > 0 && (
-              <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-5 h-5 text-green-600" />
-                  <span className="font-medium">Perfect Session Bonus:</span>
-                </div>
-                <div className="text-lg font-mono font-bold text-green-600">
-                  +{perfectSessionBonusSeconds}s
-                </div>
-              </div>
-            )}
-
-            {/* Achievement Bonus */}
-            {achievementBonusMinutes > 0 && (
-              <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Zap className="w-5 h-5 text-purple-600" />
-                  <span className="font-medium">Achievement Bonus:</span>
-                </div>
-                <div className="text-lg font-mono font-bold text-purple-600">
-                  +{achievementBonusMinutes * 60}s
-                </div>
-              </div>
-            )}
-
-            {/* Final Calculation */}
-            <div className="border-t pt-4">
-              <div className="text-center">
-                <div className="text-sm text-muted-foreground mb-2">Berechnung:</div>
-                <div className="font-mono text-lg mb-3">
-                  {earnedSeconds}s
-                  {timeSpentSeconds > 0 && ` - ${timeSpentSeconds}s`}
-                  {perfectSessionBonus > 0 && ` + ${perfectSessionBonusSeconds}s`}
-                  {achievementBonusMinutes > 0 && ` + ${achievementBonusMinutes * 60}s`}
-                  = <span className="font-bold text-2xl text-green-600">{netTimeSeconds}s</span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Das sind <span className="font-bold">{Math.round(netTimeSeconds / 60 * 10) / 10} Minuten</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Results Summary */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-4 bg-muted/30 rounded-lg">
-            <Target className="w-6 h-6 mx-auto mb-2 text-blue-600" />
-            <div className="text-2xl font-bold text-blue-600">{efficiency}%</div>
-            <div className="text-sm text-muted-foreground">Genauigkeit</div>
-          </div>
-          
-          <div className="text-center p-4 bg-muted/30 rounded-lg">
-            <Clock className="w-6 h-6 mx-auto mb-2 text-green-600" />
-            <div className="text-2xl font-bold text-green-600">{netTimeSeconds}s</div>
-            <div className="text-sm text-muted-foreground">Gewonnene Sekunden</div>
-          </div>
-        </div>
-
-        {/* Main Action Button */}
-        <div className="space-y-3">
-          <Button 
-            onClick={onContinue}
-            size="lg" 
-            className="w-full text-lg py-6 bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Trophy className="w-5 h-5 mr-2" />
-            +{netTimeSeconds}s ({Math.round(netTimeSeconds / 60 * 10) / 10}min) Bildschirmzeit verdient!
-          </Button>
-          
-          <div className="text-center text-sm text-muted-foreground">
-            Zeit wurde zu deinem Konto hinzugefügt! 📱⏰
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
