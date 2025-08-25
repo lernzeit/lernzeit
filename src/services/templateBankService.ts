@@ -29,6 +29,7 @@ export interface TemplateBankResult {
 export class EnhancedTemplateBankService {
   private static instance: EnhancedTemplateBankService;
   private cache = new Map<string, TemplateBankResult>();
+  private sessionPolicy: any = null;
 
   static getInstance(): EnhancedTemplateBankService {
     if (!EnhancedTemplateBankService.instance) {
