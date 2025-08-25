@@ -1,0 +1,636 @@
+{
+  "1": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Zahlen bis 10: zählen, ordnen",
+        "Zerlegen im Zehnerraum"
+      ],
+      "Größen & Messen": [
+        "Längen vergleichen",
+        "Uhr: volle Stunden"
+      ],
+      "Raum & Form": [
+        "Einfache Formen erkennen",
+        "Muster fortsetzen"
+      ],
+      "Daten & Zufall": [
+        "Strichlisten und einfache Häufigkeiten"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Addition/Subtraktion bis 20 ohne Zehnerübergang"
+      ],
+      "Größen & Messen": [
+        "Längen schätzen",
+        "Uhr: halbe Stunden"
+      ],
+      "Raum & Form": [
+        "Spiegelachsen einfache Symmetrien"
+      ],
+      "Daten & Zufall": [
+        "Einfache Bilddiagramme lesen"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Addition/Subtraktion bis 20 mit Zehnerübergang"
+      ],
+      "Größen & Messen": [
+        "Geld: Euro/Münzen kennenlernen"
+      ],
+      "Raum & Form": [
+        "Formen ordnen nach Eigenschaften"
+      ],
+      "Daten & Zufall": [
+        "Daten erheben (Klassenumfrage)"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Zahlen bis 100 kennenlernen",
+        "Erste Multiplikationsvorstellungen"
+      ],
+      "Größen & Messen": [
+        "Längen mit Lineal (cm) messen"
+      ],
+      "Raum & Form": [
+        "Räumliche Orientierung",
+        "Symmetrische Muster"
+      ],
+      "Daten & Zufall": [
+        "Säulendiagramme einfach"
+      ]
+    }
+  },
+  "2": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Zahlen bis 100 sicher ordnen",
+        "Addition/Subtraktion im ZR 100"
+      ],
+      "Größen & Messen": [
+        "Geldrechnen bis 2€",
+        "Uhr: Minuten genau"
+      ],
+      "Raum & Form": [
+        "Rechteck, Quadrat: Eigenschaften"
+      ],
+      "Daten & Zufall": [
+        "Einfache Kombinatorik"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Einmaleins-Vorstellungen (2er, 5er, 10er)"
+      ],
+      "Größen & Messen": [
+        "Längen in cm/m"
+      ],
+      "Raum & Form": [
+        "Dreiecke benennen"
+      ],
+      "Daten & Zufall": [
+        "Häufigkeitstabellen"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Einmaleins erweitern (3er, 4er, 6er)",
+        "Division als Aufteilen"
+      ],
+      "Größen & Messen": [
+        "Masse: g/kg kennenlernen"
+      ],
+      "Raum & Form": [
+        "Spiegelung an Gitterachsen"
+      ],
+      "Daten & Zufall": [
+        "Zufall: möglich/unmöglich/sicher"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Einmaleins automatisieren",
+        "Rechentricks"
+      ],
+      "Größen & Messen": [
+        "Längen umrechnen cm↔m"
+      ],
+      "Raum & Form": [
+        "Würfelnetze"
+      ],
+      "Daten & Zufall": [
+        "Zufallsexperimente"
+      ]
+    }
+  },
+  "3": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "ZR 1000: ordnen, runden",
+        "Schriftliche Addition/Subtraktion einführend"
+      ],
+      "Größen & Messen": [
+        "Längen mm–cm–m",
+        "Zeitspannen berechnen"
+      ],
+      "Raum & Form": [
+        "Umfang Rechteck/Quadrat",
+        "Symmetrien"
+      ],
+      "Daten & Zufall": [
+        "Säulendiagramme interpretieren"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Multiplikation, Division als Umkehr"
+      ],
+      "Größen & Messen": [
+        "Gewicht g–kg",
+        "Geld Wechselgeld"
+      ],
+      "Raum & Form": [
+        "Flächen über Zählen",
+        "Winkelarten erkennen"
+      ],
+      "Daten & Zufall": [
+        "Arithmetisches Mittel einführen"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Multiplikation mehrstelliger Zahlen",
+        "Division mit Rest"
+      ],
+      "Größen & Messen": [
+        "Fläche Rechteck (a·b)",
+        "Volumen Würfel/Quader"
+      ],
+      "Raum & Form": [
+        "Netze Würfel/Quader",
+        "Koordinatensystem einführend"
+      ],
+      "Daten & Zufall": [
+        "Diagrammvergleich"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Dezimalzahlen (Geld)",
+        "Zahlendarstellung erweitern"
+      ],
+      "Größen & Messen": [
+        "Zeitpläne lesen",
+        "Temperaturen ablesen"
+      ],
+      "Raum & Form": [
+        "Spiegelungen/Drehungen",
+        "Gitterkoordinaten nutzen"
+      ],
+      "Daten & Zufall": [
+        "Wahrscheinlichkeit als Häufigkeit"
+      ]
+    }
+  },
+  "4": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "ZR bis 1.000.000",
+        "Schriftliche Addition/Subtraktion sicher"
+      ],
+      "Größen & Messen": [
+        "m–km, g–kg Umrechnung",
+        "Zeit addieren/subtrahieren"
+      ],
+      "Raum & Form": [
+        "Winkel messen/zeichnen",
+        "Fläche Rechteck/Quadrat"
+      ],
+      "Daten & Zufall": [
+        "Mittelwert, Spannweite"
+      ]
+    }
+  },
+  "5": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Klasse 5 Q1: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 5 Q1: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 5 Q1: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 5 Q1: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 5 Q1: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Klasse 5 Q2: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 5 Q2: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 5 Q2: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 5 Q2: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 5 Q2: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Klasse 5 Q3: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 5 Q3: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 5 Q3: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 5 Q3: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 5 Q3: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Klasse 5 Q4: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 5 Q4: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 5 Q4: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 5 Q4: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 5 Q4: Statistik/Wahrscheinlichkeit"
+      ]
+    }
+  },
+  "6": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Klasse 6 Q1: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 6 Q1: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 6 Q1: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 6 Q1: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 6 Q1: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Klasse 6 Q2: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 6 Q2: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 6 Q2: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 6 Q2: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 6 Q2: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Klasse 6 Q3: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 6 Q3: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 6 Q3: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 6 Q3: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 6 Q3: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Klasse 6 Q4: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 6 Q4: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 6 Q4: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 6 Q4: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 6 Q4: Statistik/Wahrscheinlichkeit"
+      ]
+    }
+  },
+  "7": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Klasse 7 Q1: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 7 Q1: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 7 Q1: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 7 Q1: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 7 Q1: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Klasse 7 Q2: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 7 Q2: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 7 Q2: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 7 Q2: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 7 Q2: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Klasse 7 Q3: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 7 Q3: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 7 Q3: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 7 Q3: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 7 Q3: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Klasse 7 Q4: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 7 Q4: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 7 Q4: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 7 Q4: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 7 Q4: Statistik/Wahrscheinlichkeit"
+      ]
+    }
+  },
+  "8": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Klasse 8 Q1: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 8 Q1: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 8 Q1: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 8 Q1: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 8 Q1: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Klasse 8 Q2: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 8 Q2: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 8 Q2: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 8 Q2: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 8 Q2: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Klasse 8 Q3: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 8 Q3: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 8 Q3: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 8 Q3: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 8 Q3: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Klasse 8 Q4: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 8 Q4: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 8 Q4: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 8 Q4: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 8 Q4: Statistik/Wahrscheinlichkeit"
+      ]
+    }
+  },
+  "9": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Klasse 9 Q1: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 9 Q1: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 9 Q1: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 9 Q1: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 9 Q1: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Klasse 9 Q2: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 9 Q2: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 9 Q2: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 9 Q2: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 9 Q2: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Klasse 9 Q3: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 9 Q3: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 9 Q3: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 9 Q3: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 9 Q3: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Klasse 9 Q4: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 9 Q4: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 9 Q4: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 9 Q4: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 9 Q4: Statistik/Wahrscheinlichkeit"
+      ]
+    }
+  },
+  "10": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Klasse 10 Q1: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 10 Q1: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 10 Q1: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 10 Q1: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 10 Q1: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Klasse 10 Q2: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 10 Q2: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 10 Q2: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 10 Q2: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 10 Q2: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Klasse 10 Q3: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 10 Q3: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 10 Q3: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 10 Q3: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 10 Q3: Statistik/Wahrscheinlichkeit"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Klasse 10 Q4: zentrale Rechenfertigkeit"
+      ],
+      "Größen & Messen": [
+        "Klasse 10 Q4: Einheiten/Geometrieaufgabe"
+      ],
+      "Raum & Form": [
+        "Klasse 10 Q4: Geometrie/Trigonometrieaufgabe"
+      ],
+      "Gleichungen & Funktionen": [
+        "Klasse 10 Q4: Gleichungen/Funktionen"
+      ],
+      "Daten & Zufall": [
+        "Klasse 10 Q4: Statistik/Wahrscheinlichkeit"
+      ]
+    }
+  }
+}
