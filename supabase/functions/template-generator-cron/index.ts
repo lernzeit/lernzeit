@@ -6,11 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Configuration
-const SUBJECTS = ['Mathematik', 'Deutsch', 'Englisch', 'Geographie', 'Geschichte', 'Physik', 'Biologie', 'Chemie', 'Latein'];
-const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const TEMPLATES_PER_SUBJECT_GRADE = 50;
-const MAX_TEMPLATES_TO_KEEP = 75; // Keep more than needed for rotation and diversity
+// Configuration - Focus on Mathematics based on curriculum
+const MATH_DOMAINS = [
+  'Zahlen & Operationen',
+  'Größen & Messen', 
+  'Raum & Form',
+  'Gleichungen & Funktionen',
+  'Daten & Zufall'
+];
+const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4'];
+const TEMPLATES_PER_DOMAIN_GRADE_QUARTER = 12; // 60 total per grade/domain (12 x 5 quarters including seasonal variation)
+const MAX_TEMPLATES_TO_KEEP = 80;
 
 interface TemplateGenerationRequest {
   category: string;
@@ -47,91 +54,86 @@ serve(async (req) => {
     
     const startTime = Date.now();
 
-    // Process each subject and grade combination
-    for (const subject of SUBJECTS) {
-      console.log(`📚 [${requestId}] Processing subject: ${subject}`);
+    // Process Math domains systematically based on curriculum
+    for (const domain of MATH_DOMAINS) {
+      console.log(`📐 [${requestId}] Processing Math domain: ${domain}`);
       
       for (const grade of GRADES) {
         try {
-          // Check current template count for this subject/grade
+          // Check current template count for this domain/grade in templates table
           const { data: existingTemplates, error: countError } = await supabase
-            .from('generated_templates')
-            .select('id')
-            .eq('category', subject)
+            .from('templates')
+            .select('id, quarter_app')
+            .eq('domain', domain)
             .eq('grade', grade)
-            .eq('is_active', true);
+            .eq('status', 'ACTIVE');
 
           if (countError) {
-            console.error(`❌ [${requestId}] Error counting templates for ${subject} Grade ${grade}:`, countError);
+            console.error(`❌ [${requestId}] Error counting templates for ${domain} Grade ${grade}:`, countError);
             results.errors++;
             continue;
           }
 
           const existingCount = existingTemplates?.length || 0;
+          const targetCount = TEMPLATES_PER_DOMAIN_GRADE_QUARTER * QUARTERS.length; // 60 total per domain/grade
           
           // Skip if we already have enough templates
-          if (existingCount >= TEMPLATES_PER_SUBJECT_GRADE) {
-            console.log(`✅ [${requestId}] ${subject} Grade ${grade}: ${existingCount} templates already exist, skipping`);
+          if (existingCount >= targetCount) {
+            console.log(`✅ [${requestId}] ${domain} Grade ${grade}: ${existingCount} templates already exist, skipping`);
             continue;
           }
 
-          const neededTemplates = TEMPLATES_PER_SUBJECT_GRADE - existingCount;
-          console.log(`🎯 [${requestId}] ${subject} Grade ${grade}: Need ${neededTemplates} templates (${existingCount} existing)`);
+          const neededTemplates = Math.min(TEMPLATES_PER_DOMAIN_GRADE_QUARTER, targetCount - existingCount);
+          console.log(`🎯 [${requestId}] ${domain} Grade ${grade}: Need ${neededTemplates} templates (${existingCount} existing)`);
 
-          // Generate new templates by calling the existing generate-problems function
-          const generateRequest: TemplateGenerationRequest = {
-            category: subject,
-            grade: grade,
-            count: neededTemplates,
-            sessionId: `cron_${requestId}`,
-            requestId: `${requestId}_${subject}_${grade}`,
-            gradeRequirement: `grade_${grade}_appropriate`,
-            qualityThreshold: 0.7
-          };
-
-          const response = await supabase.functions.invoke('generate-problems', {
-            body: generateRequest
+          // Use seed_templates function which is designed for systematic generation
+          const response = await supabase.functions.invoke('seed_templates', {
+            body: {
+              grade: grade,
+              domain: domain,
+              n: neededTemplates
+            }
           });
 
           if (response.error) {
-            console.error(`❌ [${requestId}] Error generating templates for ${subject} Grade ${grade}:`, response.error);
+            console.error(`❌ [${requestId}] Error generating templates for ${domain} Grade ${grade}:`, response.error);
             results.errors++;
             continue;
           }
 
-          const generatedCount = response.data?.problems?.length || 0;
-          console.log(`✅ [${requestId}] Generated ${generatedCount} templates for ${subject} Grade ${grade}`);
+          const generatedCount = response.data?.data?.total_inserted || 0;
+          console.log(`✅ [${requestId}] Generated ${generatedCount} templates for ${domain} Grade ${grade}`);
           
           results.generated += generatedCount;
-          results.subjects.push(`${subject}-${grade}`);
+          results.subjects.push(`${domain}-${grade}`);
 
           // Add diversity factor - don't generate too many similar templates in one batch
           if (generatedCount > 0) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Longer delay for diversity
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Longer delay for diversity
           }
           
           // Clean up old templates if we have too many
           if (existingCount + generatedCount > MAX_TEMPLATES_TO_KEEP) {
             const { error: deleteError } = await supabase
-              .from('generated_templates')
+              .from('templates')
               .delete()
-              .eq('category', subject)
+              .eq('domain', domain)
               .eq('grade', grade)
               .order('created_at', { ascending: true })
               .limit((existingCount + generatedCount) - MAX_TEMPLATES_TO_KEEP);
 
             if (deleteError) {
-              console.error(`⚠️ [${requestId}] Error cleaning up old templates for ${subject} Grade ${grade}:`, deleteError);
+              console.error(`⚠️ [${requestId}] Error cleaning up old templates for ${domain} Grade ${grade}:`, deleteError);
             } else {
-              console.log(`🧹 [${requestId}] Cleaned up old templates for ${subject} Grade ${grade}`);
+              console.log(`🧹 [${requestId}] Cleaned up old templates for ${domain} Grade ${grade}`);
             }
           }
 
           // Add small delay between requests to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
         } catch (error) {
-          console.error(`❌ [${requestId}] Error processing ${subject} Grade ${grade}:`, error);
+          console.error(`❌ [${requestId}] Error processing ${domain} Grade ${grade}:`, error);
           results.errors++;
         }
       }
