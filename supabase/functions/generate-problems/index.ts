@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, validateConfig } from "./src/config.ts";
 import { logger } from "./src/utils/logger.ts";
 import { TemplateGenerator } from "./src/jobs/template-generator.ts";
+import { EdgeParametrizedTemplateService } from "./src/services/parametrized-template-service.ts";
 import { validateProblemRequest } from "./src/utils/validator.ts";
 import type { ProblemRequest } from "./src/types.ts";
 
@@ -41,10 +42,30 @@ serve(async (req) => {
     
     const problemRequest: ProblemRequest = validationResult.data;
     
-    // Initialize template generator with request ID
-    const templateGenerator = new TemplateGenerator(requestId);
+    // 1. Try parametrized templates first
+    const parametrizedService = new EdgeParametrizedTemplateService(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!
+    );
     
-    // Generate problems using the new modular system
+    const parametrizedQuestions = await parametrizedService.generateParametrizedQuestions(
+      problemRequest.grade,
+      problemRequest.subject || 'mathematik',
+      problemRequest.count || 1
+    );
+
+    if (parametrizedQuestions.length > 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: parametrizedQuestions,
+        source: 'parametrized-templates'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 2. Fallback to original template generator
+    const templateGenerator = new TemplateGenerator(requestId);
     const result = await templateGenerator.generateProblems(problemRequest);
     
     return new Response(JSON.stringify(result), {

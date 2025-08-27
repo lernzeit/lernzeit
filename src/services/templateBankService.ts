@@ -5,6 +5,7 @@ import { loadKnowledge, preselectCards, KnowledgeCard } from '@/knowledge/knowle
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory';
 import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion } from '@/types/questionTypes';
 import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
+import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
@@ -290,39 +291,69 @@ export class EnhancedTemplateBankService {
     console.log(`🏦 Enhanced Template-Bank: Generating ${totalQuestions} questions for ${category} Grade ${grade} Quarter ${quarter}`);
 
     try {
-      // 1. TEMPLATE-BANK ALS PRIMÄRQUELLE
-      const bankQuestions = await this.generateFromTemplateBank(
+      // 1. PARAMETRISIERTE TEMPLATES ALS PRIMÄRQUELLE
+      const parametrizedService = ParametrizedTemplateService.getInstance();
+      const parametrizedResult = await parametrizedService.generateParametrizedQuestions(
         category,
         grade,
         quarter,
-        totalQuestions
+        totalQuestions,
+        userId
       );
 
-      if (bankQuestions.length >= totalQuestions) {
-        console.log(`✅ Template-Bank provided ${bankQuestions.length} questions`);
+      if (parametrizedResult.questions.length >= totalQuestions) {
+        console.log(`✅ Parametrisierte Templates lieferten ${parametrizedResult.questions.length} Fragen`);
         return {
-          questions: bankQuestions,
+          questions: parametrizedResult.questions,
           source: 'template-bank',
-          sessionId,
+          sessionId: parametrizedResult.sessionId,
           qualityMetrics: {
-            averageQuality: 0.9,
-            templateCoverage: 1.0,
-            domainDiversity: this.calculateDomainDiversity(bankQuestions)
+            averageQuality: parametrizedResult.qualityMetrics.curriculumCompliance,
+            templateCoverage: parametrizedResult.qualityMetrics.parametrizedCount / totalQuestions,
+            domainDiversity: parametrizedResult.qualityMetrics.uniquenessScore
           }
         };
       }
 
-      // 2. KNOWLEDGE-BASED GENERATION (NUR BEI UNTERDECKUNG)
-      console.log(`⚠️ Template-Bank insufficient (${bankQuestions.length}/${totalQuestions}), using knowledge generation`);
+      console.log(`⚠️ Parametrisierte Templates unzureichend (${parametrizedResult.questions.length}/${totalQuestions}), nutze Template-Bank`);
+
+      // 2. TEMPLATE-BANK ALS SEKUNDÄRQUELLE
+      const bankQuestions = await this.generateFromTemplateBank(
+        category,
+        grade,
+        quarter,
+        totalQuestions - parametrizedResult.questions.length
+      );
+
+      // Kombiniere parametrisierte + Template-Bank Fragen
+      const combinedQuestions = [...parametrizedResult.questions, ...bankQuestions];
+
+      if (combinedQuestions.length >= totalQuestions) {
+        console.log(`✅ Kombiniert: ${combinedQuestions.length} Fragen (${parametrizedResult.questions.length} parametrisiert + ${bankQuestions.length} Template-Bank)`);
+        return {
+          questions: combinedQuestions.slice(0, totalQuestions),
+          source: 'template-bank',
+          sessionId,
+          qualityMetrics: {
+            averageQuality: 0.9,
+            templateCoverage: combinedQuestions.length / totalQuestions,
+            domainDiversity: this.calculateDomainDiversity(combinedQuestions)
+          }
+        };
+      }
+
+      // 3. KNOWLEDGE-BASED GENERATION (NUR BEI UNTERDECKUNG)
+      const neededQuestions = totalQuestions - combinedQuestions.length;
+      console.log(`⚠️ Kombiniert unzureichend (${combinedQuestions.length}/${totalQuestions}), nutze Knowledge Generation für ${neededQuestions} Fragen`);
       
       const knowledgeQuestions = await this.generateFromKnowledge(
         category,
         grade,
         quarter,
-        totalQuestions - bankQuestions.length
+        neededQuestions
       );
 
-      const allQuestions = [...bankQuestions, ...knowledgeQuestions];
+      const allQuestions = [...combinedQuestions, ...knowledgeQuestions];
 
       if (allQuestions.length === 0 && fullConfig.fallbackToLegacy) {
         // Use existing balanced generation fallback
