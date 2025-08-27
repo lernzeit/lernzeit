@@ -262,6 +262,45 @@ export type Database = {
           },
         ]
       }
+      curriculum_parameter_rules: {
+        Row: {
+          allowed_contexts: string[] | null
+          complexity_level: string | null
+          created_at: string | null
+          domain: string
+          grade: number
+          id: string
+          operation_types: string[] | null
+          quarter: string
+          zahlenraum_max: number | null
+          zahlenraum_min: number | null
+        }
+        Insert: {
+          allowed_contexts?: string[] | null
+          complexity_level?: string | null
+          created_at?: string | null
+          domain: string
+          grade: number
+          id?: string
+          operation_types?: string[] | null
+          quarter: string
+          zahlenraum_max?: number | null
+          zahlenraum_min?: number | null
+        }
+        Update: {
+          allowed_contexts?: string[] | null
+          complexity_level?: string | null
+          created_at?: string | null
+          domain?: string
+          grade?: number
+          id?: string
+          operation_types?: string[] | null
+          quarter?: string
+          zahlenraum_max?: number | null
+          zahlenraum_min?: number | null
+        }
+        Relationships: []
+      }
       game_sessions: {
         Row: {
           category: string | null
@@ -858,6 +897,7 @@ export type Database = {
         Row: {
           correct: number
           created_at: string | null
+          curriculum_rules: Json | null
           difficulty: string
           distractors: Json | null
           domain: string
@@ -865,6 +905,8 @@ export type Database = {
           grade: number
           grade_app: number
           id: string
+          is_parametrized: boolean | null
+          parameter_definitions: Json | null
           plays: number
           quarter_app: string
           question_type: string
@@ -884,6 +926,7 @@ export type Database = {
         Insert: {
           correct?: number
           created_at?: string | null
+          curriculum_rules?: Json | null
           difficulty: string
           distractors?: Json | null
           domain: string
@@ -891,6 +934,8 @@ export type Database = {
           grade: number
           grade_app: number
           id?: string
+          is_parametrized?: boolean | null
+          parameter_definitions?: Json | null
           plays?: number
           quarter_app: string
           question_type: string
@@ -910,6 +955,7 @@ export type Database = {
         Update: {
           correct?: number
           created_at?: string | null
+          curriculum_rules?: Json | null
           difficulty?: string
           distractors?: Json | null
           domain?: string
@@ -917,6 +963,8 @@ export type Database = {
           grade?: number
           grade_app?: number
           id?: string
+          is_parametrized?: boolean | null
+          parameter_definitions?: Json | null
           plays?: number
           quarter_app?: string
           question_type?: string
