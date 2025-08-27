@@ -27,7 +27,7 @@ export async function fetchActiveTemplates(params: {
     .from("template_scores")
     .select("*")
     .eq("status","ACTIVE")
-    .lte("grade_app", grade)
+    .eq("grade_app", grade)
     .in("quarter_app", availableQuarters)
     .order("qscore",{ ascending:false })
     .limit(limit);
