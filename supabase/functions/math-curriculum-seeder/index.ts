@@ -323,22 +323,34 @@ ${topics.map(topic => `- ${topic}`).join('\n')}
 - Realistische Kontexte: Alltag, Schule, Sport, Einkaufen
 - Vielfältige Zahlenwerte (auch "krumme" Zahlen)
 
-**JSON-Ausgabe (Array):**
-[{
-  "grade": ${grade},
-  "quarter_app": "${quarter}",
-  "domain": "${domain}",
-  "subcategory": string,
-  "difficulty": "AFB I|AFB II|AFB III",
-  "question_type": "multiple-choice|text-input|matching",
-  "student_prompt": string (max ${grade <= 4 ? 200 : 300} Zeichen),
-  "variables": {},
-  "solution": string,
-  "unit": string?,
-  "distractors": string[] (für MC: 3 falsche Antworten),
-  "explanation_teacher": string,
-  "tags": string[]
-}]
+**WICHTIGE FORMATIERUNGSANWEISUNGEN:**
+- Antworte NUR mit reinem JSON - keine Markdown-Blöcke, keine Erklärungen
+- Verwende ausschließlich doppelte Anführungszeichen (") für JSON-Strings
+- Achte auf korrekte JSON-Syntax: keine abschließenden Kommas
+- Verwende Unicode-Escaping für Sonderzeichen bei Bedarf
+- Gib das JSON als Array zurück
+
+**JSON-Schema (EXAKT so formatieren):**
+[
+  {
+    "grade": ${grade},
+    "quarter_app": "${quarter}",
+    "domain": "${domain}",
+    "subcategory": "string",
+    "difficulty": "AFB I",
+    "question_type": "multiple-choice",
+    "student_prompt": "Aufgabentext hier (max ${grade <= 4 ? 200 : 300} Zeichen)",
+    "variables": {},
+    "solution": "Lösung als String",
+    "unit": "Einheit (optional)",
+    "distractors": ["Falsche Antwort 1", "Falsche Antwort 2", "Falsche Antwort 3"],
+    "explanation_teacher": "Erklärung für Lehrkraft",
+    "tags": ["tag1", "tag2"]
+  }
+]
+
+**ANTWORTFORMAT:**
+Beginne direkt mit [ und ende mit ] - keine zusätzlichen Zeichen, Erklärungen oder Markdown-Formatierung.
 
 Erstelle ${count} unterschiedliche, hochwertige Aufgaben basierend auf den Lehrplan-Themen!`;
 }
