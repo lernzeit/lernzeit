@@ -308,51 +308,43 @@ async function generateWithGemini(prompt: string): Promise<any> {
 }
 
 function buildCurriculumPrompt(grade: number, quarter: string, domain: string, topics: string[], count: number = 12): string {
-  const difficulties = ['AFB I', 'AFB II', 'AFB III'];
-  const questionTypes = ['multiple-choice', 'text-input', 'matching'];
-  
-  return `Erstelle ${count} verschiedene deutsche Mathematikaufgaben für Klasse ${grade}, Quartal ${quarter}, Domäne "${domain}":
+  return `Du bist ein Experte für deutsche Mathematik-Lehrpläne. Erstelle EXAKT ${count} Mathematikaufgaben.
 
-**Lehrplan-Themen:**
-${topics.map(topic => `- ${topic}`).join('\n')}
+**Lehrplan-Kontext:**
+- Klasse: ${grade}
+- Quartal: ${quarter} 
+- Domäne: ${domain}
+- Themen: ${topics.join(', ')}
 
-**Anforderungen:**
-- Schwierigkeitsverteilung: AFB I (50%), AFB II (35%), AFB III (15%)
-- Itemtyp-Mix: Multiple Choice (45%), Text-Input (35%), Matching (20%)
-- Deutsche Sprache, altersgerecht für Klasse ${grade}
-- Realistische Kontexte: Alltag, Schule, Sport, Einkaufen
-- Vielfältige Zahlenwerte (auch "krumme" Zahlen)
+**KRITISCHE FORMAT-REGEL:**
+Antworte AUSSCHLIESSLICH mit einem JSON-Array. KEINE Markdown-Blöcke, KEINE Erklärungen, KEINE zusätzlichen Zeichen.
 
-**WICHTIGE FORMATIERUNGSANWEISUNGEN:**
-- Antworte NUR mit reinem JSON - keine Markdown-Blöcke, keine Erklärungen
-- Verwende ausschließlich doppelte Anführungszeichen (") für JSON-Strings
-- Achte auf korrekte JSON-Syntax: keine abschließenden Kommas
-- Verwende Unicode-Escaping für Sonderzeichen bei Bedarf
-- Gib das JSON als Array zurück
-
-**JSON-Schema (EXAKT so formatieren):**
+**JSON-Format (GENAU befolgen):**
 [
   {
     "grade": ${grade},
     "quarter_app": "${quarter}",
     "domain": "${domain}",
-    "subcategory": "string",
+    "subcategory": "Unterkategorie hier",
     "difficulty": "AFB I",
     "question_type": "multiple-choice",
-    "student_prompt": "Aufgabentext hier (max ${grade <= 4 ? 200 : 300} Zeichen)",
+    "student_prompt": "Klare Aufgabenstellung (max 200 Zeichen für Klasse ${grade})",
     "variables": {},
-    "solution": "Lösung als String",
-    "unit": "Einheit (optional)",
+    "solution": "Korrekte Antwort",
+    "unit": "Einheit falls nötig",
     "distractors": ["Falsche Antwort 1", "Falsche Antwort 2", "Falsche Antwort 3"],
-    "explanation_teacher": "Erklärung für Lehrkraft",
+    "explanation_teacher": "Kurze Erklärung für Lehrkraft",
     "tags": ["tag1", "tag2"]
   }
 ]
 
-**ANTWORTFORMAT:**
-Beginne direkt mit [ und ende mit ] - keine zusätzlichen Zeichen, Erklärungen oder Markdown-Formatierung.
+**Anforderungen:**
+- Schwierigkeit: 60% AFB I, 30% AFB II, 10% AFB III
+- Itemtypen: 50% multiple-choice, 30% text-input, 20% matching
+- Deutsche Sprache, altersgerecht für Klasse ${grade}
+- Realistische Alltagskontexte
 
-Erstelle ${count} unterschiedliche, hochwertige Aufgaben basierend auf den Lehrplan-Themen!`;
+STARTE DEINE ANTWORT SOFORT MIT [ UND ENDE MIT ]`;
 }
 
 async function insertMathTemplates(templates: GeneratedTemplate[]): Promise<void> {
