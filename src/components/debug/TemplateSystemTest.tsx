@@ -51,9 +51,9 @@ export function TemplateSystemTest() {
   const loadDatabaseStats = async () => {
     try {
       const { data: templates, error } = await supabase
-        .from('generated_templates')
-        .select('category, grade, quality_score, usage_count, is_active, created_at')
-        .eq('is_active', true);
+        .from('templates')
+        .select('domain, grade, plays, correct, rating_sum, rating_count, status, created_at')
+        .eq('status', 'ACTIVE');
 
       if (error) {
         console.error('Error loading database stats:', error);
@@ -73,16 +73,17 @@ export function TemplateSystemTest() {
 
       templates.forEach(template => {
         // Category stats
-        stats.templatesByCategory[template.category] = 
-          (stats.templatesByCategory[template.category] || 0) + 1;
+        stats.templatesByCategory[template.domain] = 
+          (stats.templatesByCategory[template.domain] || 0) + 1;
         
         // Grade stats
         stats.templatesByGrade[template.grade] = 
           (stats.templatesByGrade[template.grade] || 0) + 1;
         
-        // Quality and usage
-        stats.averageQuality += template.quality_score || 0;
-        stats.totalUsage += template.usage_count || 0;
+        // Quality and usage (calculate from rating data)
+        const qualityScore = template.rating_count > 0 ? template.rating_sum / template.rating_count : 0;
+        stats.averageQuality += qualityScore;
+        stats.totalUsage += template.plays || 0;
         
         // Recently added
         if (new Date(template.created_at) > oneDayAgo) {
@@ -117,11 +118,11 @@ export function TemplateSystemTest() {
         for (const grade of grades) {
           try {
             const { data: dbTemplates, error } = await supabase
-              .from('generated_templates')
+              .from('templates')
               .select('*')
-              .eq('category', category)
+              .eq('domain', category)
               .eq('grade', grade)
-              .eq('is_active', true)
+              .eq('status', 'ACTIVE')
               .limit(5);
 
             const testResult = {
@@ -137,14 +138,14 @@ export function TemplateSystemTest() {
             if (dbTemplates && dbTemplates.length > 0) {
               for (const template of dbTemplates) {
                 try {
-                  // Try to parse content
-                  if (template.content) {
-                    JSON.parse(template.content);
+                  // Try to parse student_prompt content
+                  if (template.student_prompt) {
+                    // Templates have student_prompt field as content
                     testResult.parseableTemplates++;
                   }
                 } catch (parseError) {
                   // Check if it's valid plain text
-                  if (template.content && template.content.trim().length > 5) {
+                  if (template.student_prompt && template.student_prompt.trim().length > 5) {
                     testResult.parseableTemplates++;
                   } else {
                     testResult.parseErrors.push(`Template ${template.id}: Invalid content`);

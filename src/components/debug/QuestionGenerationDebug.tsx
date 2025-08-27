@@ -93,29 +93,31 @@ export function QuestionGenerationDebug() {
     try {
       // Get total templates count
       const { count: totalTemplates } = await supabase
-        .from('generated_templates')
+        .from('templates')
         .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
+        .eq('status', 'ACTIVE');
 
       // Get category breakdown
       const { data: categoryData } = await supabase
-        .from('generated_templates')
-        .select('category')
-        .eq('is_active', true);
+        .from('templates')
+        .select('domain')
+        .eq('status', 'ACTIVE');
 
       const categoryBreakdown = categoryData?.reduce((acc, item) => {
-        acc[item.category] = (acc[item.category] || 0) + 1;
+        acc[item.domain] = (acc[item.domain] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
 
-      // Get quality distribution
+      // Get quality distribution (using rating data instead)
       const { data: qualityData } = await supabase
-        .from('generated_templates')
-        .select('quality_score')
-        .eq('is_active', true);
+        .from('templates')
+        .select('rating_sum, rating_count')
+        .eq('status', 'ACTIVE')
+        .gt('rating_count', 0);
 
       const qualityDistribution = qualityData?.reduce((acc, item) => {
-        const bucket = Math.floor(item.quality_score * 10) / 10;
+        const score = item.rating_count > 0 ? item.rating_sum / item.rating_count : 0;
+        const bucket = Math.floor(score * 10) / 10;
         const key = `${bucket.toFixed(1)}`;
         acc[key] = (acc[key] || 0) + 1;
         return acc;
@@ -123,18 +125,17 @@ export function QuestionGenerationDebug() {
 
       // Analyze duplicates using our enhanced detection
       const { data: allQuestions } = await supabase
-        .from('generated_templates')
-        .select('content, category, grade')
-        .eq('is_active', true)
-        .eq('category', selectedCategory)
+        .from('templates')
+        .select('student_prompt, domain, grade')
+        .eq('status', 'ACTIVE')
+        .eq('domain', selectedCategory)
         .eq('grade', selectedGrade);
 
       const questionTexts = allQuestions?.map(q => {
         try {
-          const parsed = JSON.parse(q.content);
-          return parsed.question || q.content;
+          return q.student_prompt;
         } catch {
-          return q.content;
+          return q.student_prompt;
         }
       }) || [];
 
@@ -194,9 +195,9 @@ export function QuestionGenerationDebug() {
     
     try {
       await supabase
-        .from('generated_templates')
-        .update({ is_active: false })
-        .eq('category', selectedCategory)
+        .from('templates')
+        .update({ status: 'INACTIVE' })
+        .eq('domain', selectedCategory)
         .eq('grade', selectedGrade);
       
       await refreshDatabaseInfo();

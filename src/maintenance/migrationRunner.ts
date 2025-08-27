@@ -223,16 +223,16 @@ export class MigrationRunner {
     console.log('🧹 Phase 3: Legacy Cleanup');
 
     try {
-      // Analyze current template usage
+      // Analyze template usage
       const { data: templateUsage, error } = await supabase
-        .from('generated_templates')
-        .select('category, grade, is_active')
-        .eq('is_active', true);
+        .from('templates')
+        .select('domain, grade, status')
+        .eq('status', 'ACTIVE');
 
       if (error) throw error;
 
       const usageStats = templateUsage?.reduce((acc: any, template) => {
-        const key = `${template.category}-${template.grade}`;
+        const key = `${template.domain}-${template.grade}`;
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {}) || {};

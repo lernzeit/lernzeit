@@ -76,11 +76,11 @@ export function useBalancedQuestionGeneration(
       
       // FIXED: Enhanced database query with explicit problematic content exclusion
       const { data: templates, error } = await supabase
-        .from('generated_templates')
+        .from('templates')
         .select('*')
-        .in('category', categoryVariations)
+        .in('domain', categoryVariations)
         .eq('grade', grade)
-        .eq('is_active', true)
+        .eq('status', 'ACTIVE')
         .gte('quality_score', 0.6) // Higher quality threshold
         .not('content', 'ilike', '%23 + 17%') // Explicitly exclude problematic content
         .not('content', 'ilike', '%undefined%')
@@ -105,11 +105,11 @@ export function useBalancedQuestionGeneration(
       if (templates && templates.length > 0) {
         console.log('📋 Template analysis:', templates.map(t => ({ 
           id: t.id.substring(0, 8), 
-          category: t.category, 
+          domain: t.domain, 
           grade: t.grade,
-          quality: t.quality_score,
+          quality: t.rating_count > 0 ? t.rating_sum / t.rating_count : 0,
           type: t.question_type,
-          contentPreview: t.content?.substring(0, 50) + '...' 
+          contentPreview: t.student_prompt?.substring(0, 50) + '...' 
         })));
       }
 
@@ -132,10 +132,10 @@ export function useBalancedQuestionGeneration(
         
         try {
           console.log(`🔧 Processing template ${template.id}:`, {
-            category: template.category,
+            domain: template.domain,
             grade: template.grade,
             type: template.question_type,
-            quality: template.quality_score
+            quality: template.rating_count > 0 ? template.rating_sum / template.rating_count : 0
           });
 
           // ROBUST PARSING: Multiple parsing strategies
@@ -179,7 +179,7 @@ export function useBalancedQuestionGeneration(
           questions.push(question);
           
           // Update usage count asynchronously
-          updateTemplateUsageAsync(template.id, template.usage_count);
+          updateTemplateUsageAsync(template.id, template.plays);
             
         } catch (parseError) {
           const errorMsg = `Parse error for template ${template.id}: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`;
@@ -698,8 +698,8 @@ export function useBalancedQuestionGeneration(
   const updateTemplateUsageAsync = async (templateId: string, currentUsage: number) => {
     try {
       await supabase
-        .from('generated_templates')
-        .update({ usage_count: (currentUsage || 0) + 1 })
+        .from('templates')
+        .update({ plays: (currentUsage || 0) + 1 })
         .eq('id', templateId);
       console.log(`📈 Updated usage count for template ${templateId}`);
     } catch (err) {

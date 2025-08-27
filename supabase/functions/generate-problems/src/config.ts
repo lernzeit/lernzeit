@@ -42,7 +42,7 @@ export const GENERATION_CONSTANTS = {
 
 // Database Constants
 export const DB_CONSTANTS = {
-  TEMPLATES_TABLE: 'generated_templates',
+  TEMPLATES_TABLE: 'templates',
   SESSIONS_TABLE: 'generation_sessions',
   METRICS_TABLE: 'template_metrics'
 };

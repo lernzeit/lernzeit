@@ -298,13 +298,13 @@ export function useAdvancedQuestionGeneration({
       const categoryVariations = getCategoryVariations(category);
       
       const { data: templates, error } = await supabase
-        .from('generated_templates')
+        .from('templates')
         .select('*')
-        .in('category', categoryVariations)
+        .in('domain', categoryVariations)
         .eq('grade', grade)
-        .eq('is_active', true)
-        .gte('quality_score', options.qualityThreshold)
-        .order('quality_score', { ascending: false })
+        .eq('status', 'ACTIVE')
+        .gte('plays', options.qualityThreshold * 10) // Use plays as quality indicator
+        .order('plays', { ascending: false })
         .limit(count * 3);
 
       if (error) {
@@ -355,7 +355,7 @@ export function useAdvancedQuestionGeneration({
             metrics.databaseTemplatesUsed++;
 
             // Update template usage
-            updateTemplateUsageAsync(template.id, template.usage_count);
+            updateTemplateUsageAsync(template.id, template.plays);
           }
         } catch (error) {
           console.warn(`⚠️ Failed to parse template ${template.id}:`, error);
@@ -574,8 +574,8 @@ export function useAdvancedQuestionGeneration({
   const updateTemplateUsageAsync = async (templateId: string, currentUsage: number) => {
     try {
       await supabase
-        .from('generated_templates')
-        .update({ usage_count: (currentUsage || 0) + 1 })
+        .from('templates')
+        .update({ plays: (currentUsage || 0) + 1 })
         .eq('id', templateId);
     } catch (err) {
       console.warn('Failed to update template usage:', err);

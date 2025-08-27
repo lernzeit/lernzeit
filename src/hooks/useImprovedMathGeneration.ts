@@ -963,11 +963,11 @@ export function useImprovedMathGeneration(
   const loadDatabaseTemplates = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('generated_templates')
+        .from('templates')
         .select('*')
-        .eq('category', 'Mathematik')
+        .eq('domain', 'Mathematik')
         .eq('grade', config.grade)
-        .eq('is_active', true)
+        .eq('status', 'ACTIVE')
         .gte('quality_score', 0.7)
         .order('quality_score', { ascending: false })
         .limit(50);

@@ -64,14 +64,14 @@ export function useBalancedTemplateSelection(
 
       // Enhanced query with more aggressive template loading
       const { data: templates, error } = await supabase
-        .from('generated_templates')
+        .from('templates')
         .select('*')
-        .in('category', categoryVariations)
+        .in('domain', categoryVariations)
         .eq('grade', grade)
-        .eq('is_active', true)
-        .gte('quality_score', Math.max(0.3, defaultConfig.qualityThreshold - 0.3)) // Lower threshold for more templates
-        .order('quality_score', { ascending: false })
-        .order('usage_count', { ascending: true }) // Prefer less-used templates
+        .eq('status', 'ACTIVE')
+        .gte('plays', 5) // Use plays as minimum usage indicator
+        .order('plays', { ascending: false })
+        .order('plays', { ascending: true }) // Prefer less-used templates
         .limit(100); // Load many more templates for better selection
 
       if (error) {
@@ -97,8 +97,9 @@ export function useBalancedTemplateSelection(
   const analyzeQualityDistribution = (templates: any[]) => {
     const distribution = { high: 0, medium: 0, low: 0 };
     templates.forEach(t => {
-      if (t.quality_score >= 0.8) distribution.high++;
-      else if (t.quality_score >= 0.6) distribution.medium++;
+      const score = t.rating_count > 0 ? t.rating_sum / t.rating_count : 0;
+      if (score >= 0.8) distribution.high++;
+      else if (score >= 0.6) distribution.medium++;
       else distribution.low++;
     });
     return distribution;

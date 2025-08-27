@@ -253,11 +253,11 @@ export function useEnhancedCurriculumGeneration(
     
     try {
       const { data, error } = await supabase
-        .from('generated_templates')
+        .from('templates')
         .select('*')
-        .eq('category', category)
+        .eq('domain', category)
         .eq('grade', grade)
-        .eq('is_active', true)
+        .eq('status', 'ACTIVE')
         .gte('quality_score', enhancedOptions.minQualityThreshold)
         .order('quality_score', { ascending: false })
         .limit(totalQuestions * 2); // Get more for filtering
