@@ -209,6 +209,7 @@ ${knowledgeContext}
 - Realistische Kontexte: Einkaufen, Sport, Natur, Schule, Alltag
 - Deutsche Sprache, altersgerecht formuliert
 - Vielfältige Zahlenwerte (auch "krumme" Zahlen)
+- WICHTIG: Verwende Platzhalter {variable} für parametrisierbare Werte
 
 **JSON-Ausgabe (Array):**
 [{
@@ -217,11 +218,11 @@ ${knowledgeContext}
   "subcategory": string,
   "difficulty": "AFB I|AFB II|AFB III",
   "question_type": "multiple-choice|text-input|matching",
-  "student_prompt": string (max 240 Zeichen Grundschule, 350 Sek I),
+  "student_prompt": string (mit {Platzhaltern} für Parameter),
   "variables": {},
-  "solution": string,
+  "solution": string (kann {Platzhalter} enthalten),
   "unit": string?,
-  "distractors": string[] (für MC: 3 falsche Antworten),
+  "distractors": string[] (für MC: 3 falsche Antworten, können {Platzhalter} enthalten),
   "explanation_teacher": string,
   "source_skill_id": string,
   "tags": string[],
@@ -260,6 +261,13 @@ function validateTemplate(template: GeneratedTemplate): { valid: boolean; errors
     if (!Array.isArray(template.distractors) || template.distractors.length !== 3) {
       errors.push('Multiple Choice braucht genau 3 Distraktoren');
     }
+  }
+
+  // Filter out drawing instructions
+  const drawingKeywords = ['zeichne', 'zeichnet', 'zeichnen', 'male', 'malt', 'malen', 'skizziere', 'konstruiere'];
+  const lowerPrompt = template.student_prompt.toLowerCase();
+  if (drawingKeywords.some(keyword => lowerPrompt.includes(keyword))) {
+    errors.push('Zeichnungsaufgaben sind nicht erlaubt');
   }
 
   return { valid: errors.length === 0, errors };
@@ -308,26 +316,117 @@ async function checkDuplicates(templates: GeneratedTemplate[], blueprintId: stri
   return uniqueTemplates;
 }
 
+function generateParameterDefinitions(template: GeneratedTemplate): Record<string, any> {
+  const paramDefs: Record<string, any> = {};
+  
+  // Extrahiere Parameter aus student_prompt ({variable} Format)
+  const paramMatches = template.student_prompt.match(/\{(\w+)\}/g);
+  if (paramMatches) {
+    paramMatches.forEach(match => {
+      const paramName = match.slice(1, -1); // Entferne { und }
+      
+      // Intelligente Parameter-Definition basierend auf Name
+      if (paramName.includes('zahl') || paramName.includes('number')) {
+        paramDefs[paramName] = {
+          type: 'number',
+          curriculum_rule: 'zahlenraum_grade_quarter'
+        };
+      } else if (paramName.includes('name')) {
+        paramDefs[paramName] = {
+          type: 'word',
+          curriculum_rule: 'age_appropriate_names'
+        };
+      } else if (paramName.includes('gegenstand') || paramName.includes('object')) {
+        paramDefs[paramName] = {
+          type: 'word',
+          curriculum_rule: 'context_objects'
+        };
+      } else {
+        // Standard-Definition
+        paramDefs[paramName] = {
+          type: 'text',
+          curriculum_rule: 'default'
+        };
+      }
+    });
+  }
+  
+  return paramDefs;
+}
+
+function generateCurriculumRules(grade: number, quarter: string, domain: string): Record<string, any> {
+  const baseRules = {
+    zahlenraum_grade_quarter: {
+      grade,
+      quarter,
+      domain
+    },
+    age_appropriate_names: {
+      grade_level: grade <= 4 ? 'elementary' : 'secondary'
+    },
+    context_objects: {
+      contexts: grade <= 4 ? ['toys', 'animals', 'food'] : ['technology', 'sports', 'science']
+    }
+  };
+  
+  // Domain-spezifische Regeln
+  if (domain === 'Zahlen & Operationen') {
+    const zahlenraum = getZahlenraumForGrade(grade);
+    baseRules.zahlenraum_grade_quarter = {
+      ...baseRules.zahlenraum_grade_quarter,
+      min_value: zahlenraum.min,
+      max_value: zahlenraum.max
+    };
+  }
+  
+  return baseRules;
+}
+
+function getZahlenraumForGrade(grade: number): { min: number; max: number } {
+  const zahlenraeume: Record<number, { min: number; max: number }> = {
+    1: { min: 1, max: 20 },
+    2: { min: 1, max: 100 },
+    3: { min: 1, max: 1000 },
+    4: { min: 1, max: 10000 },
+    5: { min: -100, max: 100000 },
+    6: { min: -1000, max: 1000000 },
+    7: { min: -1000, max: 1000000 },
+    8: { min: -1000000, max: 1000000 },
+    9: { min: -1000000, max: 1000000 },
+    10: { min: -1000000, max: 1000000 }
+  };
+  
+  return zahlenraeume[grade] || { min: 1, max: 100 };
+}
+
 async function insertTemplates(templates: GeneratedTemplate[], domain: string): Promise<void> {
-  const dbTemplates = templates.map(template => ({
-    grade: template.grade_suggestion,
-    grade_app: template.grade_suggestion,
-    quarter_app: template.quarter_app,
-    domain: domain,
-    subcategory: template.subcategory,
-    difficulty: template.difficulty,
-    question_type: template.question_type,
-    student_prompt: template.student_prompt,
-    variables: template.variables || {},
-    solution: template.solution,
-    unit: template.unit,
-    distractors: template.distractors || [],
-    explanation_teacher: template.explanation_teacher,
-    source_skill_id: template.source_skill_id,
-    tags: template.tags || [],
-    seed: template.seed ? parseInt(template.seed) : Math.floor(Math.random() * 1000000),
-    status: 'ACTIVE'
-  }));
+  const dbTemplates = templates.map(template => {
+    const hasPlaceholders = template.student_prompt.includes('{');
+    const isParametrized = hasPlaceholders || Math.random() < 0.3; // 30% Basis-Chance + immer wenn Platzhalter vorhanden
+    
+    return {
+      grade: template.grade_suggestion,
+      grade_app: template.grade_suggestion,
+      quarter_app: template.quarter_app,
+      domain: domain,
+      subcategory: template.subcategory,
+      difficulty: template.difficulty,
+      question_type: template.question_type,
+      student_prompt: template.student_prompt,
+      variables: template.variables || {},
+      solution: template.solution,
+      unit: template.unit,
+      distractors: template.distractors || [],
+      explanation_teacher: template.explanation_teacher,
+      source_skill_id: template.source_skill_id,
+      tags: template.tags || [],
+      seed: template.seed ? parseInt(template.seed) : Math.floor(Math.random() * 1000000),
+      status: 'ACTIVE',
+      is_parametrized: isParametrized,
+      parameter_definitions: isParametrized ? generateParameterDefinitions(template) : {},
+      curriculum_rules: isParametrized ? generateCurriculumRules(template.grade_suggestion, template.quarter_app, domain) : {}
+    };
+  });
 
   const { error } = await supabase
     .from('templates')
@@ -338,7 +437,8 @@ async function insertTemplates(templates: GeneratedTemplate[], domain: string): 
     throw error;
   }
 
-  console.log(`✅ Inserted ${dbTemplates.length} templates for domain: ${domain}`);
+  const parametrizedCount = dbTemplates.filter(t => t.is_parametrized).length;
+  console.log(`✅ Inserted ${dbTemplates.length} templates for domain: ${domain} (${parametrizedCount} parametrized)`);
 }
 
 async function seedTemplates(grade?: number, domain?: string, count: number = 12): Promise<any> {
@@ -355,6 +455,7 @@ async function seedTemplates(grade?: number, domain?: string, count: number = 12
   const results = {
     total_generated: 0,
     total_inserted: 0,
+    parametrized_inserted: 0,
     errors: [] as string[],
     domains_processed: [] as string[]
   };
@@ -422,6 +523,12 @@ async function seedTemplates(grade?: number, domain?: string, count: number = 12
                   // Insert into database
                   await insertTemplates(uniqueTemplates, targetDomain);
                   results.total_inserted += uniqueTemplates.length;
+                  
+                  // Count parametrized templates
+                  const parametrizedCount = uniqueTemplates.filter(t => 
+                    t.student_prompt.includes('{') || Math.random() < 0.3
+                  ).length;
+                  results.parametrized_inserted += parametrizedCount;
                 }
               }
 
@@ -443,7 +550,7 @@ async function seedTemplates(grade?: number, domain?: string, count: number = 12
   }
 
   console.log(`\n🎉 Template seeding complete!`);
-  console.log(`📊 Generated: ${results.total_generated}, Inserted: ${results.total_inserted}`);
+  console.log(`📊 Generated: ${results.total_generated}, Inserted: ${results.total_inserted}, Parametrized: ${results.parametrized_inserted}`);
   
   return results;
 }
