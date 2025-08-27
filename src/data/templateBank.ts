@@ -23,7 +23,8 @@ export async function fetchActiveTemplates(params: {
   
   console.log(`🏦 Fetching templates for Grade ${grade}, current quarter: ${quarter}, available quarters:`, availableQuarters);
   
-  const { data, error } = await supabase
+  // Versuche zuerst die exakte Klassenstufe
+  let { data, error } = await supabase
     .from("template_scores")
     .select("*")
     .eq("status","ACTIVE")
@@ -31,7 +32,33 @@ export async function fetchActiveTemplates(params: {
     .in("quarter_app", availableQuarters)
     .order("qscore",{ ascending:false })
     .limit(limit);
+  
   if (error) throw error;
+  
+  // Wenn keine Templates für die exakte Klassenstufe gefunden werden,
+  // suche nach der höchsten verfügbaren Klassenstufe bis zur gewünschten
+  if (!data || data.length === 0) {
+    console.log(`⚠️ No templates found for exact grade ${grade}, searching for highest available grade <= ${grade}`);
+    
+    const { data: availableData, error: availableError } = await supabase
+      .from("template_scores")
+      .select("*")
+      .eq("status","ACTIVE")
+      .lte("grade_app", grade)
+      .in("quarter_app", availableQuarters)
+      .order("grade_app", { ascending: false })
+      .order("qscore", { ascending: false })
+      .limit(limit);
+    
+    if (availableError) throw availableError;
+    data = availableData ?? [];
+    
+    if (data.length > 0) {
+      const usedGrade = data[0].grade_app;
+      console.log(`✅ Using templates from grade ${usedGrade} for user grade ${grade}`);
+    }
+  }
+  
   return data ?? [];
 }
 
