@@ -36,26 +36,30 @@ export async function fetchActiveTemplates(params: {
   if (error) throw error;
   
   // Wenn keine Templates für die exakte Klassenstufe gefunden werden,
-  // suche nach der höchsten verfügbaren Klassenstufe bis zur gewünschten
+  // suche schrittweise nach nächst kleinerer Klassenstufe (Fallback-Strategie)
   if (!data || data.length === 0) {
-    console.log(`⚠️ No templates found for exact grade ${grade}, searching for highest available grade <= ${grade}`);
+    console.log(`⚠️ No templates found for exact grade ${grade}, trying fallback to lower grades`);
     
-    const { data: availableData, error: availableError } = await supabase
-      .from("template_scores")
-      .select("*")
-      .eq("status","ACTIVE")
-      .lte("grade_app", grade)
-      .in("quarter_app", availableQuarters)
-      .order("grade_app", { ascending: false })
-      .order("qscore", { ascending: false })
-      .limit(limit);
-    
-    if (availableError) throw availableError;
-    data = availableData ?? [];
-    
-    if (data.length > 0) {
-      const usedGrade = data[0].grade_app;
-      console.log(`✅ Using templates from grade ${usedGrade} for user grade ${grade}`);
+    // Versuche schrittweise kleinere Klassenstufen (bis hinunter zu Klasse 1)
+    for (let fallbackGrade = grade - 1; fallbackGrade >= 1; fallbackGrade--) {
+      console.log(`🔍 Trying fallback to grade ${fallbackGrade}`);
+      
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("template_scores")
+        .select("*")
+        .eq("status","ACTIVE")
+        .eq("grade_app", fallbackGrade)
+        .in("quarter_app", availableQuarters)
+        .order("qscore", { ascending: false })
+        .limit(limit);
+      
+      if (fallbackError) throw fallbackError;
+      
+      if (fallbackData && fallbackData.length > 0) {
+        console.log(`✅ Using ${fallbackData.length} templates from grade ${fallbackGrade} as fallback for user grade ${grade}`);
+        data = fallbackData;
+        break;
+      }
     }
   }
   

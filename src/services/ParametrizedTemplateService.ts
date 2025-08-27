@@ -213,6 +213,13 @@ export class ParametrizedTemplateService {
 
       const { parameters } = paramResult;
       
+      // Filter out drawing/sketching questions  
+      const prompt = template.student_prompt || "";
+      if (this.containsDrawingInstructions(prompt)) {
+        console.log(`🚫 Filtered parametrized drawing question: ${prompt.substring(0, 50)}...`);
+        return null;
+      }
+
       // Ersetze Platzhalter in Template
       const renderedPrompt = this.replacePlaceholders(template.student_prompt, parameters);
       const renderedSolution = this.replacePlaceholders(template.solution, parameters);
@@ -320,8 +327,20 @@ export class ParametrizedTemplateService {
   }
 
   /**
-   * Reset used combinations für neue Session
+   * Check if question contains drawing/sketching instructions
    */
+  private containsDrawingInstructions(prompt: string): boolean {
+    const drawingKeywords = [
+      'zeichne', 'zeichnet', 'zeichnen',
+      'male', 'malt', 'malen', 
+      'skizziere', 'skizziert', 'skizzieren',
+      'draw', 'drawing', 'sketch',
+      'konstruiere', 'konstruiert', 'konstruieren'
+    ];
+    
+    const lowerPrompt = prompt.toLowerCase();
+    return drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
+  }
   resetSession(): void {
     this.usedCombinations.clear();
   }

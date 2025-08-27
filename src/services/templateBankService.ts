@@ -71,8 +71,10 @@ export class EnhancedTemplateBankService {
         difficulty: undefined // No difficulty filter for now
       });
 
-      // Convert to SelectionQuestion format
-      return sessionTemplates.map(template => this.convertTemplateToQuestion(template));
+      // Convert to SelectionQuestion format and filter out invalid questions
+      return sessionTemplates
+        .map(template => this.convertTemplateToQuestion(template))
+        .filter(question => question !== null);
     } catch (error) {
       console.error('❌ Template-Bank fetch failed:', error);
       return [];
@@ -127,12 +129,19 @@ export class EnhancedTemplateBankService {
    * Convert template to SelectionQuestion format
    */
   private convertTemplateToQuestion(template: any): SelectionQuestion {
+    // Filter out drawing/sketching questions
+    const prompt = template.student_prompt || "";
+    if (this.containsDrawingInstructions(prompt)) {
+      console.log(`🚫 Filtered out drawing question: ${prompt.substring(0, 100)}...`);
+      return null;
+    }
+    
     const questionType = this.mapQuestionType(template.question_type);
     
     if (questionType === 'text-input') {
       return {
         id: parseInt(template.id) || Date.now(),
-        question: template.student_prompt || "Template question",
+        question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'text-input',
         answer: this.extractCorrectAnswer(template),
@@ -141,7 +150,7 @@ export class EnhancedTemplateBankService {
     } else {
       return {
         id: parseInt(template.id) || Date.now(),
-        question: template.student_prompt || "Template question",
+        question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'multiple-choice',
         options: this.extractOptions(template),
@@ -149,6 +158,22 @@ export class EnhancedTemplateBankService {
         explanation: template.explanation_teacher || ""
       } as MultipleChoiceQuestion;
     }
+  }
+
+  /**
+   * Check if question contains drawing/sketching instructions
+   */
+  private containsDrawingInstructions(prompt: string): boolean {
+    const drawingKeywords = [
+      'zeichne', 'zeichnet', 'zeichnen',
+      'male', 'malt', 'malen',
+      'skizziere', 'skizziert', 'skizzieren',
+      'draw', 'drawing', 'sketch',
+      'konstruiere', 'konstruiert', 'konstruieren'
+    ];
+    
+    const lowerPrompt = prompt.toLowerCase();
+    return drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
   }
 
   private extractCorrectAnswer(template: any): string {

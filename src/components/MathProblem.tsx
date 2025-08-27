@@ -350,6 +350,7 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [waitingForNext, setWaitingForNext] = useState(false);
   const [streak, setStreak] = useState(0);
   const [sessionStartTime] = useState(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
@@ -422,6 +423,7 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
       setCorrectAnswers(prev => prev + 1);
       setStreak(prev => prev + 1);
       setFeedback('correct');
+      setWaitingForNext(true);
       
       // Update achievements
       if (userId) {
@@ -450,24 +452,24 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
       }
       
       if (totalQuestions + 1 >= targetQuestions) {
-        // Session beendet
-        setTimeout(async () => {
-          const { netMinutes } = calculateReward();
-          await saveGameSession(netMinutes);
-          onComplete(netMinutes);
-        }, 1500);
+        // Session beendet - sofortiger Abschluss ohne Verzögerung
+        const { netMinutes } = calculateReward();
+        await saveGameSession(netMinutes);
+        onComplete(netMinutes);
         return;
       }
     } else {
       setStreak(0);
       setFeedback('incorrect');
+      setWaitingForNext(true);
     }
+  };
 
-    setTimeout(() => {
-      setFeedback(null);
-      setCurrentProblemIndex(prev => (prev + 1) % problems.length);
-      setUserAnswer('');
-    }, 1500);
+  const handleNext = () => {
+    setFeedback(null);
+    setWaitingForNext(false);
+    setCurrentProblemIndex(prev => (prev + 1) % problems.length);
+    setUserAnswer('');
   };
 
   if (totalQuestions >= targetQuestions) {
@@ -599,15 +601,27 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
                   disabled={feedback !== null}
                 />
                 
-                <Button 
-                  type="submit" 
-                  variant="game" 
-                  size="lg" 
-                  className="w-full h-14 text-lg"
-                  disabled={!userAnswer || feedback !== null}
-                >
-                  Antwort prüfen
-                </Button>
+                 {!waitingForNext ? (
+                   <Button 
+                     type="submit" 
+                     variant="game" 
+                     size="lg" 
+                     className="w-full h-14 text-lg"
+                     disabled={!userAnswer || feedback !== null}
+                   >
+                     Antwort prüfen
+                   </Button>
+                 ) : (
+                   <Button 
+                     type="button"
+                     variant="default" 
+                     size="lg" 
+                     className="w-full h-14 text-lg"
+                     onClick={handleNext}
+                   >
+                     Weiter
+                   </Button>
+                 )}
               </form>
             </div>
 
