@@ -56,10 +56,9 @@ export class EnhancedTemplateBankService {
         return [];
       }
 
-      // Filter by category if specified
+      // Filter by category if specified - Map category to domains
       const categoryTemplates = category.toLowerCase() !== 'general' 
-        ? templates.filter(t => t.domain?.toLowerCase().includes(category.toLowerCase()) || 
-                             t.subcategory?.toLowerCase().includes(category.toLowerCase()))
+        ? templates.filter(t => this.matchesMathCategory(t.domain, category))
         : templates;
 
       console.log(`📚 Found ${categoryTemplates.length} templates for ${category}`);
@@ -198,9 +197,26 @@ export class EnhancedTemplateBankService {
     }
   }
 
+  private matchesMathCategory(domain: string, category: string): boolean {
+    const lowerDomain = domain?.toLowerCase() || '';
+    const lowerCategory = category?.toLowerCase() || '';
+    
+    if (lowerCategory === 'mathematik' || lowerCategory === 'math') {
+      return lowerDomain.includes('zahlen') || 
+             lowerDomain.includes('raum') || 
+             lowerDomain.includes('größen') || 
+             lowerDomain.includes('gleichungen') || 
+             lowerDomain.includes('daten') ||
+             lowerDomain.includes('math') || 
+             lowerDomain.includes('geometrie');
+    }
+    
+    return lowerDomain.includes(lowerCategory);
+  }
+
   private mapDomainToSubject(domain: string): 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin' {
     const lowerDomain = domain?.toLowerCase() || '';
-    if (lowerDomain.includes('zahlen') || lowerDomain.includes('math') || lowerDomain.includes('geometrie')) return 'math';
+    if (lowerDomain.includes('zahlen') || lowerDomain.includes('math') || lowerDomain.includes('geometrie') || lowerDomain.includes('raum') || lowerDomain.includes('größen') || lowerDomain.includes('gleichungen') || lowerDomain.includes('daten')) return 'math';
     if (lowerDomain.includes('deutsch') || lowerDomain.includes('german')) return 'german';
     if (lowerDomain.includes('englisch') || lowerDomain.includes('english')) return 'english';
     if (lowerDomain.includes('geographie') || lowerDomain.includes('geography')) return 'geography';
