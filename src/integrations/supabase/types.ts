@@ -1187,6 +1187,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      trigger_math_curriculum_seeder: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       trigger_template_generation: {
         Args: Record<PropertyKey, never>
         Returns: Json

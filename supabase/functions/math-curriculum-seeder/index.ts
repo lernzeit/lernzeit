@@ -13,49 +13,220 @@ const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-// Math curriculum structure from the provided data
+// Complete Math curriculum structure for grades 1-10
 const MATH_CURRICULUM = {
   "1": {
     "Q1": {
-      "Zahlen & Operationen": ["Zahlen bis 10: zählen, ordnen", "Zerlegen im Zehnerraum"],
-      "Größen & Messen": ["Längen vergleichen", "Uhr: volle Stunden"],
-      "Raum & Form": ["Einfache Formen erkennen", "Muster fortsetzen"],
-      "Daten & Zufall": ["Strichlisten und einfache Häufigkeiten"]
+      "Zahlen & Operationen": ["Zählen bis 10", "Anzahlen vergleichen", "Plus/Minus im ZR 10 ohne Übergang"],
+      "Raum & Form": ["Kreis, Dreieck, Quadrat, Rechteck unterscheiden"],
+      "Größen & Messen": ["Längen schätzen und vergleichen (unstandardisiert)"],
+      "Daten & Zufall": ["Einfache Strichlisten und Bilddiagramme"]
     },
     "Q2": {
-      "Zahlen & Operationen": ["Addition/Subtraktion bis 20 ohne Zehnerübergang"],
-      "Größen & Messen": ["Längen schätzen", "Uhr: halbe Stunden"],
-      "Raum & Form": ["Spiegelachsen einfache Symmetrien"],
-      "Daten & Zufall": ["Einfache Bilddiagramme lesen"]
+      "Zahlen & Operationen": ["Zahlen bis 20 darstellen, ordnen", "Plus/Minus im ZR 20 mit Zehnerübergang (strategisch)"],
+      "Raum & Form": ["rechts/links, oben/unten; Muster fortsetzen"],
+      "Größen & Messen": ["Uhr (volle/halbe Stunde), Münzen bis 2 €"],
+      "Daten & Zufall": ["möglich – sicher – unmöglich"]
     },
     "Q3": {
-      "Zahlen & Operationen": ["Addition/Subtraktion bis 20 mit Zehnerübergang"],
-      "Größen & Messen": ["Geld: Euro/Münzen kennenlernen"],
-      "Raum & Form": ["Formen ordnen nach Eigenschaften"],
-      "Daten & Zufall": ["Daten erheben (Klassenumfrage)"]
+      "Zahlen & Operationen": ["Zahlen bis 100 erkunden, Zehner/Einer", "Halbschriftliche Verfahren im ZR 100 (ohne Übergang)"],
+      "Raum & Form": ["Einfache Achsensymmetrien erkennen"],
+      "Größen & Messen": ["Messen mit Lineal; Einheiten cm/m"]
     },
     "Q4": {
-      "Zahlen & Operationen": ["Zahlen bis 100 kennenlernen", "Erste Multiplikationsvorstellungen"],
-      "Größen & Messen": ["Längen mit Lineal (cm) messen"],
-      "Raum & Form": ["Räumliche Orientierung", "Symmetrische Muster"],
-      "Daten & Zufall": ["Säulendiagramme einfach"]
+      "Zahlen & Operationen": ["Plus/Minus im ZR 100 mit Übergang", "Wiederholtes Addieren/Teilen in gleich große Gruppen"],
+      "Größen & Messen": ["Kalender, Wochentage/Monate, einfache Zeitspannen"],
+      "Raum & Form": ["Flächen legen, einfache Netze (Würfelbilder)"]
     }
   },
-  // Add simplified curriculum for grades 2-10
   "2": {
-    "Q1": {"Zahlen & Operationen": ["ZR 100 Addition/Subtraktion"], "Größen & Messen": ["Geld bis 2€"], "Raum & Form": ["Rechteck/Quadrat"], "Daten & Zufall": ["Kombinatorik"]},
-    "Q2": {"Zahlen & Operationen": ["Einmaleins 2er/5er/10er"], "Größen & Messen": ["cm/m"], "Raum & Form": ["Dreiecke"], "Daten & Zufall": ["Häufigkeiten"]},
-    "Q3": {"Zahlen & Operationen": ["Einmaleins erweitern"], "Größen & Messen": ["g/kg"], "Raum & Form": ["Spiegelungen"], "Daten & Zufall": ["Zufall"]},
-    "Q4": {"Zahlen & Operationen": ["Einmaleins automatisieren"], "Größen & Messen": ["Umrechnen"], "Raum & Form": ["Würfelnetze"], "Daten & Zufall": ["Experimente"]}
+    "Q1": {
+      "Zahlen & Operationen": ["Halbschriftlich & schriftnah mit Übergang", "2er/5er/10er Reihen, Tausch-/Verbundaufgaben"],
+      "Größen & Messen": ["Einkaufssituationen bis 100 € (ohne Komma)"],
+      "Raum & Form": ["Ecken, Kanten, Seiten; Rechteck/Quadrat"]
+    },
+    "Q2": {
+      "Zahlen & Operationen": ["1–10er Reihen (Netz), Umkehraufgaben", "Teilen als Aufteilen/Verteilen"],
+      "Größen & Messen": ["cm–m; min–h; €–Cent (ganzzahlig)"],
+      "Daten & Zufall": ["Säulen-/Bilddiagramme interpretieren"]
+    },
+    "Q3": {
+      "Zahlen & Operationen": ["Standardverfahren (ZR 1000 vorbereiten)", "Kleines Einmaleins sicher anwenden"],
+      "Raum & Form": ["Umfang Rechteck/Quadrat (ganzzahlige Längen)"],
+      "Größen & Messen": ["Addieren/Subtrahieren von Zeiten (ohne Datum)"]
+    },
+    "Q4": {
+      "Zahlen & Operationen": ["Stellenwert bis 1000", "Addition/Subtraktion im ZR 1000"],
+      "Daten & Zufall": ["einfache Experimente; Häufigkeiten"]
+    }
   },
   "3": {
-    "Q1": {"Zahlen & Operationen": ["ZR 1000", "Schriftlich +/-"], "Größen & Messen": ["mm-cm-m"], "Raum & Form": ["Umfang"], "Daten & Zufall": ["Säulendiagramme"]},
-    "Q2": {"Zahlen & Operationen": ["Multiplikation/Division"], "Größen & Messen": ["Gewicht"], "Raum & Form": ["Flächen", "Winkel"], "Daten & Zufall": ["Mittelwert"]},
-    "Q3": {"Zahlen & Operationen": ["Mehrstellige Multiplikation"], "Größen & Messen": ["Fläche/Volumen"], "Raum & Form": ["Netze/Koordinaten"], "Daten & Zufall": ["Diagrammvergleich"]},
-    "Q4": {"Zahlen & Operationen": ["Dezimalzahlen"], "Größen & Messen": ["Zeitpläne"], "Raum & Form": ["Drehungen"], "Daten & Zufall": ["Wahrscheinlichkeit"]}
+    "Q1": {
+      "Zahlen & Operationen": ["Ordnen, Runden, Zahlstrahl", "mit Übergang im ZR 1000", "1×n/ n×1 mit Strategie (ohne Algorithmus)"],
+      "Größen & Messen": ["Formelverständnis U=2(a+b), A=a·b (ganzzahlig)"]
+    },
+    "Q2": {
+      "Zahlen & Operationen": ["Teilen mit Rest; Beziehungen × ÷", "Einstelliger Faktor × mehrstellig"],
+      "Raum & Form": ["Recht-, Spitz-, Stumpfwinkel erkennen"],
+      "Daten & Zufall": ["Mittelwert (einfach), Modus; Säulen-/Liniendiagramm"]
+    },
+    "Q3": {
+      "Zahlen & Operationen": ["Einführung; einfache gleichnamige Vergleiche"],
+      "Größen & Messen": ["Zeitspannen über Tagesgrenzen; Kalender"],
+      "Raum & Form": ["Achsensymmetrie & Parkettierungen"]
+    },
+    "Q4": {
+      "Zahlen & Operationen": ["Einstelliger Divisor", "Komma bei Geld/Messwerten verstehen"],
+      "Daten & Zufall": ["relative Häufigkeit (intuitiv)"]
+    }
   },
   "4": {
-    "Q1": {"Zahlen & Operationen": ["ZR 1.000.000"], "Größen & Messen": ["m-km"], "Raum & Form": ["Winkel messen"], "Daten & Zufall": ["Mittelwert/Spannweite"]}
+    "Q1": {
+      "Zahlen & Operationen": ["Stellenwert, Runden, Zahlbeziehungen", "mehrstellig × mehrstellig"],
+      "Größen & Messen": ["mm–cm–m–km; g–kg; ml–l; € mit Komma"],
+      "Raum & Form": ["Vierecke, Dreiecke klassifizieren"]
+    },
+    "Q2": {
+      "Zahlen & Operationen": ["mehrstelliger Divisor (standard)", "Brüche als Dezimalzahlen (endliche)"],
+      "Größen & Messen": ["Netze, Oberflächen, Volumen (ganzzahlig)"],
+      "Daten & Zufall": ["Mittelwert/Median (einfach), Diagrammwahl"]
+    },
+    "Q3": {
+      "Zahlen & Operationen": ["+ − × ÷ (einfach, sachbezogen)"],
+      "Gleichungen & Funktionen": ["Muster/Regeln; Variable als Platzhalter"],
+      "Raum & Form": ["Punkte lesen/setzen, einfache Wege"]
+    },
+    "Q4": {
+      "Zahlen & Operationen": ["Erweitern/Kürzen, gleichnamig addieren"],
+      "Größen & Messen": ["Vergrößern/Verkleinern"],
+      "Daten & Zufall": ["Baumdiagramm (1 Stufe) vorbereiten"]
+    }
+  },
+  "5": {
+    "Q1": {
+      "Zahlen & Operationen": ["Zahlengerade, Vergleiche, Addition/Subtraktion", "Erweitern/Kürzen, Vergleich; Umwandlung"],
+      "Gleichungen & Funktionen": ["Termwert, einfache Umformungen"],
+      "Raum & Form": ["Konstruktion, Eigenschaften"]
+    },
+    "Q2": {
+      "Zahlen & Operationen": ["Direkt proportional; Skalen", "Sachaufgaben"],
+      "Gleichungen & Funktionen": ["ax+b=c lösen (einfach)"],
+      "Daten & Zufall": ["Mittelwert, Median, Spannweite"]
+    },
+    "Q3": {
+      "Zahlen & Operationen": ["Prozentwert/Grundwert/Prozentsatz (einfach)"],
+      "Gleichungen & Funktionen": ["Tabellen ↔ Graph"],
+      "Raum & Form": ["Umfang/Fläche (einfach)"]
+    },
+    "Q4": {
+      "Zahlen & Operationen": ["gemischte Aufgaben"],
+      "Raum & Form": ["Prismen; Volumen/Netze"],
+      "Daten & Zufall": ["absolute/relative Häufigkeit"]
+    }
+  },
+  "6": {
+    "Q1": {
+      "Zahlen & Operationen": ["Grundaufgaben, bequeme Prozentsätze", "Anteile, Mix-/Mischaufgaben (einfach)"],
+      "Gleichungen & Funktionen": ["äquivalente Umformungen (einfach)"],
+      "Raum & Form": ["Abbildungen"]
+    },
+    "Q2": {
+      "Gleichungen & Funktionen": ["Graphisch & rechnerisch"],
+      "Zahlen & Operationen": ["Quadrat/Kubik; Potenzschreibweise"],
+      "Raum & Form": ["Sachaufgaben, Maßeinheiten"],
+      "Daten & Zufall": ["Kreis-/Säulen-/Liniendiagramm; Median"]
+    },
+    "Q3": {
+      "Gleichungen & Funktionen": ["mit Klammern/Brüchen"],
+      "Raum & Form": ["Oberfläche & Volumen"],
+      "Zahlen & Operationen": ["Rechnen mit Vorzeichen (einfach)"]
+    },
+    "Q4": {
+      "Gleichungen & Funktionen": ["y=mx+b lesen/zeichnen"],
+      "Raum & Form": ["Dreiecks-/Vielfachwinkel"],
+      "Daten & Zufall": ["Einfache Pfadregeln vorbereiten"]
+    }
+  },
+  "7": {
+    "Q1": {
+      "Zahlen & Operationen": ["Zins, Tageszins, Zinseszins (iterativ)"],
+      "Gleichungen & Funktionen": ["Ausklammern, Klammerregeln"],
+      "Raum & Form": ["Eigenschaften/Konstruktionen"]
+    },
+    "Q2": {
+      "Zahlen & Operationen": ["+ − × ÷ mit Brüchen/Dezimalen"],
+      "Gleichungen & Funktionen": ["mit Brüchen/Klammern"],
+      "Daten & Zufall": ["absolute/relative Häufigkeit; Baumdiagramm (1–2 Stufen)"]
+    },
+    "Q3": {
+      "Gleichungen & Funktionen": ["direkt/indirekt proportional; Steigung verstehen"],
+      "Raum & Form": ["Zylinder/Prismen; Netze/Schrägbild"],
+      "Zahlen & Operationen": ["Rabatt/Preiserhöhung"]
+    },
+    "Q4": {
+      "Gleichungen & Funktionen": ["grafisch und rechnerisch (einfach)"],
+      "Raum & Form": ["Verhältnisse, Streckung (einfach)"]
+    }
+  },
+  "8": {
+    "Q1": {
+      "Gleichungen & Funktionen": ["Darstellung/Steigung/Achsabschnitt", "grafisch/Einsetzen/Gleichsetzen"],
+      "Zahlen & Operationen": ["Distributivgesetz etc."]
+    },
+    "Q2": {
+      "Raum & Form": ["Streckung, Verhältnisse, Anwendungen", "Berechnungen/Anwendungen"],
+      "Daten & Zufall": ["Vierfeldertafel, bedingte Häufigkeiten (einfach)"]
+    },
+    "Q3": {
+      "Gleichungen & Funktionen": ["Modellieren mit linearen Funktionen"],
+      "Zahlen & Operationen": ["Tabellenkalkulation für Zinsen"],
+      "Raum & Form": ["Geraden, Parallelität/Orthogonalität"]
+    },
+    "Q4": {
+      "Gleichungen & Funktionen": ["x^2, Parabel-Grundlagen (intuitiv)"],
+      "Raum & Form": ["Rechtwinklige Dreiecke – Motivation"]
+    }
+  },
+  "9": {
+    "Q1": {
+      "Raum & Form": ["Strecken berechnen, Orthogonalität"],
+      "Gleichungen & Funktionen": ["x^2=a; pq-Formel (einfach)"],
+      "Raum & Form": ["Sinus (Basis), Kosinus/Tangens (optional)"]
+    },
+    "Q2": {
+      "Gleichungen & Funktionen": ["Scheitel/Nullstellen, Graphen"],
+      "Raum & Form": ["Kreis, Kreissektor, zusammengesetzte Figuren"],
+      "Daten & Zufall": ["Baumdiagramme (mehrstufig), erwartete Werte (einfach)"]
+    },
+    "Q3": {
+      "Gleichungen & Funktionen": ["Lineare/quadratische Modelle"],
+      "Zahlen & Operationen": ["Wurzelziehen, Potenzgesetze (einfach)"],
+      "Raum & Form": ["Längen (Betrag) mit Pythagoras"]
+    },
+    "Q4": {
+      "Gleichungen & Funktionen": ["Lineare/quadratische Mischaufgaben"],
+      "Daten & Zufall": ["Boxplot/Median/Quartile (einfach); Interpretation"]
+    }
+  },
+  "10": {
+    "Q1": {
+      "Gleichungen & Funktionen": ["Scheitel-/Normalform, Transformationen", "Wachstum (einfach), Parameter deuten"],
+      "Raum & Form": ["Strecken/Winkel berechnen"]
+    },
+    "Q2": {
+      "Gleichungen & Funktionen": ["Lineare/Quadratische Systeme (einfach)"],
+      "Zahlen & Operationen": ["Zinseszins allgemein; Effektivzins (einfach)"],
+      "Daten & Zufall": ["Pfadregeln, einfache Formeln"]
+    },
+    "Q3": {
+      "Raum & Form": ["Komplexere Anwendungen"],
+      "Zahlen & Operationen": ["Definitionsmenge, Bruchgleichungen (einfach)"],
+      "Gleichungen & Funktionen": ["Schnittpunkte/Steigung, Modellwahl"]
+    },
+    "Q4": {
+      "Daten & Zufall": ["Streuungsmaße, Ausreißer, kritische Bewertung"],
+      "Gleichungen & Funktionen": ["pq-/Mitternachtsformel, Faktorisieren (Routine)"]
+    }
   }
 };
 
@@ -150,7 +321,7 @@ async function insertMathTemplates(templates: GeneratedTemplate[]): Promise<void
     question_type: template.question_type,
     student_prompt: template.student_prompt,
     variables: template.variables || {},
-    solution: JSON.stringify(template.solution),
+    solution: template.solution,
     unit: template.unit,
     distractors: template.distractors || [],
     explanation_teacher: template.explanation_teacher,

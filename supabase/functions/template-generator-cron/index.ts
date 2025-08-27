@@ -40,119 +40,43 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
 
-  const requestId = `cron_${Date.now()}_${Math.random()}`;
+  const requestId = `cron_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
   try {
     console.log(`🔄 [${requestId}] Starting template generation cron job`);
     
-    const results = {
-      generated: 0,
-      errors: 0,
-      subjects: [] as string[],
-      duration: 0
-    };
-    
     const startTime = Date.now();
 
-    // Process Math domains systematically based on curriculum
-    for (const domain of MATH_DOMAINS) {
-      console.log(`📐 [${requestId}] Processing Math domain: ${domain}`);
-      
-      for (const grade of GRADES) {
-        try {
-          // Check current template count for this domain/grade in templates table
-          const { data: existingTemplates, error: countError } = await supabase
-            .from('templates')
-            .select('id, quarter_app')
-            .eq('domain', domain)
-            .eq('grade', grade)
-            .eq('status', 'ACTIVE');
-
-          if (countError) {
-            console.error(`❌ [${requestId}] Error counting templates for ${domain} Grade ${grade}:`, countError);
-            results.errors++;
-            continue;
-          }
-
-          const existingCount = existingTemplates?.length || 0;
-          const targetCount = TEMPLATES_PER_DOMAIN_GRADE_QUARTER * QUARTERS.length; // 60 total per domain/grade
-          
-          // Skip if we already have enough templates
-          if (existingCount >= targetCount) {
-            console.log(`✅ [${requestId}] ${domain} Grade ${grade}: ${existingCount} templates already exist, skipping`);
-            continue;
-          }
-
-          const neededTemplates = Math.min(TEMPLATES_PER_DOMAIN_GRADE_QUARTER, targetCount - existingCount);
-          console.log(`🎯 [${requestId}] ${domain} Grade ${grade}: Need ${neededTemplates} templates (${existingCount} existing)`);
-
-          // Use seed_templates function which is designed for systematic generation
-          const response = await supabase.functions.invoke('seed_templates', {
-            body: {
-              grade: grade,
-              domain: domain,
-              n: neededTemplates
-            }
-          });
-
-          if (response.error) {
-            console.error(`❌ [${requestId}] Error generating templates for ${domain} Grade ${grade}:`, response.error);
-            results.errors++;
-            continue;
-          }
-
-          const generatedCount = response.data?.data?.total_inserted || 0;
-          console.log(`✅ [${requestId}] Generated ${generatedCount} templates for ${domain} Grade ${grade}`);
-          
-          results.generated += generatedCount;
-          results.subjects.push(`${domain}-${grade}`);
-
-          // Add diversity factor - don't generate too many similar templates in one batch
-          if (generatedCount > 0) {
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Longer delay for diversity
-          }
-          
-          // Clean up old templates if we have too many
-          if (existingCount + generatedCount > MAX_TEMPLATES_TO_KEEP) {
-            const { error: deleteError } = await supabase
-              .from('templates')
-              .delete()
-              .eq('domain', domain)
-              .eq('grade', grade)
-              .order('created_at', { ascending: true })
-              .limit((existingCount + generatedCount) - MAX_TEMPLATES_TO_KEEP);
-
-            if (deleteError) {
-              console.error(`⚠️ [${requestId}] Error cleaning up old templates for ${domain} Grade ${grade}:`, deleteError);
-            } else {
-              console.log(`🧹 [${requestId}] Cleaned up old templates for ${domain} Grade ${grade}`);
-            }
-          }
-
-          // Add small delay between requests to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-        } catch (error) {
-          console.error(`❌ [${requestId}] Error processing ${domain} Grade ${grade}:`, error);
-          results.errors++;
-        }
+    // Call math-curriculum-seeder to handle systematic curriculum-based generation
+    console.log(`📚 [${requestId}] Invoking math-curriculum-seeder`);
+    const response = await supabase.functions.invoke('math-curriculum-seeder', {
+      body: {
+        trigger: 'cron_job',
+        requestId: requestId
       }
+    });
+
+    if (response.error) {
+      console.error(`❌ [${requestId}] Error from math-curriculum-seeder:`, response.error);
+      throw new Error(`Math curriculum seeder failed: ${response.error.message}`);
     }
 
-    results.duration = Date.now() - startTime;
+    const duration = Date.now() - startTime;
+    const seederResult = response.data?.data || {};
 
     console.log(`🏁 [${requestId}] Cron job completed:`, {
-      generated: results.generated,
-      errors: results.errors,
-      subjects: results.subjects.length,
-      duration: `${results.duration}ms`
+      generated: seederResult.total_inserted || 0,
+      processed: seederResult.processed_combinations || 0,
+      errors: seederResult.errors?.length || 0,
+      duration: `${duration}ms`
     });
 
     return new Response(JSON.stringify({
       success: true,
       requestId,
-      results,
-      message: `Generated ${results.generated} templates across ${results.subjects.length} subject-grade combinations`
+      result: seederResult,
+      duration,
+      message: `Math curriculum seeder completed - Generated ${seederResult.total_inserted || 0} templates`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
