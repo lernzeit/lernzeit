@@ -94,6 +94,10 @@ Erstelle genau **eine** parametrisierte Aufgaben-Vorlage im folgenden JSON-Schem
 3. **Altersgerechte Kontexte**: Wähle Themen, die für die Klassenstufe angemessen sind
 4. **Curriculum-Rules**: Definiere präzise Regeln für jeden Parameter
 5. **Diversität**: Erstelle vielfältige, aber lehrplangerechte Templates
+6. **KRITISCH - Visuelle Beschränkungen**:
+   - **VERBOTEN** (außer Klasse 1 Q1): Zeichne, Male, Konstruiere, Entwirf, Bilder, "Ordne...zu", "Verbinde", Netze, Körper, Diagramme, Graphen, "Welches Bild", "Tabelle passt"
+   - **ERLAUBT nur Klasse 1 Q1**: Einfache Emoji-Fragen wie "Wie viele Äpfel siehst du: 🍏🍎🍏🍎 = ?"
+   - **ERLAUBT allgemein**: Reine Textaufgaben, Rechenaufgaben, Wortprobleme
 
 # AUSGABE
 Liefere **nur das JSON-Template** – keine Kommentare, kein Markdown.

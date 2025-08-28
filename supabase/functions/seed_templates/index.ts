@@ -210,7 +210,10 @@ ${knowledgeContext}
 - Deutsche Sprache, altersgerecht formuliert
 - Vielfältige Zahlenwerte (auch "krumme" Zahlen)
 - WICHTIG: Verwende Platzhalter {variable} für parametrisierbare Werte
-- KRITISCH: Keine visuellen/Zeichenaufgaben! Vermeide: zeichne, male, konstruiere, entwirf, Bilder, Ordne...zu, Verbinde, Netze, Körper, Diagramme, Graphen
+- **VISUELLE BESCHRÄNKUNGEN**:
+  - GENERELL VERBOTEN: zeichne, male, konstruiere, entwirf, Bilder, Ordne...zu, Verbinde, Netze, Körper, Diagramme, Graphen
+  - **AUSNAHME Klasse 1 Q1**: Einfache Emoji-Zählaufgaben erlaubt: "Wie viele Äpfel siehst du: 🍏🍎🍏 = ?"
+  - ERLAUBT: Reine Textaufgaben, Rechenaufgaben, Wortprobleme
 
 **JSON-Ausgabe (Array):**
 [{
@@ -264,7 +267,7 @@ function validateTemplate(template: GeneratedTemplate): { valid: boolean; errors
     }
   }
 
-  // Filter out drawing instructions and visual questions
+  // Filter out drawing instructions and visual questions, but allow emojis for Grade 1 Q1
   const drawingKeywords = [
     'zeichne', 'zeichnet', 'zeichnen', 'male', 'malt', 'malen', 
     'skizziere', 'konstruiere', 'entwirf', 'entwerfen', 'entwirft',
@@ -272,8 +275,15 @@ function validateTemplate(template: GeneratedTemplate): { valid: boolean; errors
     'verbind', 'verbindet', 'verbinden', 'netz', 'netze', 'körper',
     'diagramm', 'graph', 'graphen', 'tabelle passt', 'welches bild'
   ];
+  
   const lowerPrompt = template.student_prompt.toLowerCase();
-  if (drawingKeywords.some(keyword => lowerPrompt.includes(keyword))) {
+  const hasProblematicContent = drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
+  
+  // Special exception: Allow simple emoji counting for Grade 1 Q1
+  const isGrade1Q1 = template.grade_suggestion === 1 && template.quarter_app === 'Q1';
+  const hasSimpleEmojis = /[🍏🍎🐶🐱🏀⚽🌟✨]/.test(template.student_prompt);
+  
+  if (hasProblematicContent && !(isGrade1Q1 && hasSimpleEmojis)) {
     errors.push('Visuelle/Zeichen-Aufgaben sind in der aktuellen UI nicht umsetzbar');
   }
 

@@ -20,6 +20,9 @@ Erstelle genau **eine** Aufgabe im JSON‑Schema:
 - FREETEXT: `data = { "expected":"…", "grading":"exact" }`  
 - Schwierigkeit zur Klassenstufe passend (Bloom Level 2‑3).  
 - Wenn need_image=true nur **eine** knappe Szenenbeschreibung in `body`.
+- **VISUELLE AUFGABEN**: Generell VERMEIDEN! Keine Zeichnungen, Bilder, Konstruktionen
+- **AUSNAHME Klasse 1 Q1**: Einfache Emoji-Zählaufgaben erlaubt (z.B. "🍏🍎🍏🍎 = ?")
+- **VERBOTEN**: "Zeichne", "Male", "Konstruiere", "Entwirf", "Welches Bild", "Ordne...zu", "Verbinde", Netze, Körper, Diagramme
 
 # CONSTRAINTS
 1. Verwende ausschließlich Fakten aus der Knowledge‑Base.  
