@@ -18,47 +18,74 @@ export async function fetchActiveTemplates(params: {
 }) {
   const { grade, quarter = getCurrentSchoolQuarter(), limit = 200 } = params;
   
-  // Quartalslogik: Inhalte aus Q1 werden in Q2 abgefragt, etc.
+  // Quartalslogik: Je nach Quartal, unterschiedliche Ziel-Klassenstufe und -Quartal
   const availableQuarters = getAvailableQuarters(quarter);
+  const targetGrade = quarter === "Q1" ? grade - 1 : grade; // Q1 holt Inhalte aus vorheriger Klasse
   
-  console.log(`🏦 Fetching templates for Grade ${grade}, current quarter: ${quarter}, available quarters:`, availableQuarters);
+  console.log(`🏦 Fetching templates for User Grade ${grade} ${quarter}, targeting Grade ${targetGrade} quarters:`, availableQuarters);
   
-  // Versuche zuerst die exakte Klassenstufe
+  // Versuche zuerst die berechnete Ziel-Klassenstufe und -Quartal
   let { data, error } = await supabase
     .from("template_scores")
     .select("*")
     .eq("status","ACTIVE")
-    .eq("grade_app", grade)
+    .eq("grade_app", targetGrade)
     .in("quarter_app", availableQuarters)
+    // Filtere visuelle/Zeichen-Fragen aus
+    .not("student_prompt", "ilike", "%zeichn%")
+    .not("student_prompt", "ilike", "%mal %")
+    .not("student_prompt", "ilike", "%konstruier%")
+    .not("student_prompt", "ilike", "%entwirf%")
+    .not("student_prompt", "ilike", "%bild%")
+    .not("student_prompt", "ilike", "%ordne%")
+    .not("student_prompt", "ilike", "%verbind%")
     .order("qscore",{ ascending:false })
     .limit(limit);
   
   if (error) throw error;
   
-  // Wenn keine Templates für die exakte Klassenstufe gefunden werden,
-  // suche schrittweise nach nächst kleinerer Klassenstufe (Fallback-Strategie)
+  // Fallback-Strategie: Wenn keine Templates gefunden, suche systematisch
   if (!data || data.length === 0) {
-    console.log(`⚠️ No templates found for exact grade ${grade}, trying fallback to lower grades`);
+    console.log(`⚠️ No templates found for target grade ${targetGrade}, trying systematic fallback`);
     
-    // Versuche schrittweise kleinere Klassenstufen (bis hinunter zu Klasse 1)
-    for (let fallbackGrade = grade - 1; fallbackGrade >= 1; fallbackGrade--) {
-      console.log(`🔍 Trying fallback to grade ${fallbackGrade}`);
-      
+    // Für Q1: Versuche erst vorherige Klasse Q4, dann Q3, dann Q2, dann Q1
+    // Für andere Quartale: Versuche erst kleinere Klassenstufen
+    const fallbackSearch = async (searchGrade: number, searchQuarters: Quarter[]) => {
       const { data: fallbackData, error: fallbackError } = await supabase
         .from("template_scores")
         .select("*")
         .eq("status","ACTIVE")
-        .eq("grade_app", fallbackGrade)
-        .in("quarter_app", availableQuarters)
+        .eq("grade_app", searchGrade)
+        .in("quarter_app", searchQuarters)
+        // Filtere visuelle/Zeichen-Fragen aus
+        .not("student_prompt", "ilike", "%zeichn%")
+        .not("student_prompt", "ilike", "%mal %")
+        .not("student_prompt", "ilike", "%konstruier%")
+        .not("student_prompt", "ilike", "%entwirf%")
+        .not("student_prompt", "ilike", "%bild%")
+        .not("student_prompt", "ilike", "%ordne%")
+        .not("student_prompt", "ilike", "%verbind%")
         .order("qscore", { ascending: false })
         .limit(limit);
       
       if (fallbackError) throw fallbackError;
-      
-      if (fallbackData && fallbackData.length > 0) {
-        console.log(`✅ Using ${fallbackData.length} templates from grade ${fallbackGrade} as fallback for user grade ${grade}`);
-        data = fallbackData;
-        break;
+      return fallbackData;
+    };
+
+    // Erweiterte Fallback-Logik für alle Quartale
+    const allQuarters: Quarter[] = ["Q4", "Q3", "Q2", "Q1"];
+    
+    for (let fallbackGrade = targetGrade; fallbackGrade >= 1; fallbackGrade--) {
+      for (const searchQuarter of allQuarters) {
+        console.log(`🔍 Trying fallback: Grade ${fallbackGrade}, Quarter ${searchQuarter}`);
+        
+        const fallbackData = await fallbackSearch(fallbackGrade, [searchQuarter]);
+        
+        if (fallbackData && fallbackData.length > 0) {
+          console.log(`✅ Using ${fallbackData.length} templates from Grade ${fallbackGrade} ${searchQuarter} for User Grade ${grade} ${quarter}`);
+          data = fallbackData;
+          return data;
+        }
       }
     }
   }
@@ -66,11 +93,17 @@ export async function fetchActiveTemplates(params: {
   return data ?? [];
 }
 
-// Quartalslogik: Q1 Inhalte werden in Q2+ abgefragt
+// Quartalslogik: Inhalte aus der vorherigen Klasse/Quartal werden abgefragt
+// Z.B. Klasse 5 Q1 fragt Klasse 4 Q4 Inhalte ab
 function getAvailableQuarters(currentQuarter: Quarter): Quarter[] {
-  const quarters: Quarter[] = ["Q1", "Q2", "Q3", "Q4"];
-  const currentIndex = qIndex(currentQuarter);
-  return quarters.slice(0, currentIndex + 1); // Q1 ist immer verfügbar, plus alle vorherigen
+  // Für Q1: Hole Q4 Inhalte der vorherigen Klasse
+  if (currentQuarter === "Q1") return ["Q4"];
+  // Für Q2: Hole Q1 Inhalte der aktuellen Klasse
+  if (currentQuarter === "Q2") return ["Q1"]; 
+  // Für Q3: Hole Q2 Inhalte der aktuellen Klasse
+  if (currentQuarter === "Q3") return ["Q2"];
+  // Für Q4: Hole Q3 Inhalte der aktuellen Klasse
+  return ["Q3"];
 }
 
 export function pickSessionTemplates(all: any[], opts: {

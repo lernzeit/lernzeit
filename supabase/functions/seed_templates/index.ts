@@ -210,6 +210,7 @@ ${knowledgeContext}
 - Deutsche Sprache, altersgerecht formuliert
 - Vielfältige Zahlenwerte (auch "krumme" Zahlen)
 - WICHTIG: Verwende Platzhalter {variable} für parametrisierbare Werte
+- KRITISCH: Keine visuellen/Zeichenaufgaben! Vermeide: zeichne, male, konstruiere, entwirf, Bilder, Ordne...zu, Verbinde, Netze, Körper, Diagramme, Graphen
 
 **JSON-Ausgabe (Array):**
 [{
@@ -263,11 +264,17 @@ function validateTemplate(template: GeneratedTemplate): { valid: boolean; errors
     }
   }
 
-  // Filter out drawing instructions
-  const drawingKeywords = ['zeichne', 'zeichnet', 'zeichnen', 'male', 'malt', 'malen', 'skizziere', 'konstruiere'];
+  // Filter out drawing instructions and visual questions
+  const drawingKeywords = [
+    'zeichne', 'zeichnet', 'zeichnen', 'male', 'malt', 'malen', 
+    'skizziere', 'konstruiere', 'entwirf', 'entwerfen', 'entwirft',
+    'bild', 'bilder', 'abbildung', 'ordne', 'ordnet', 'ordnen', 'zuordnen',
+    'verbind', 'verbindet', 'verbinden', 'netz', 'netze', 'körper',
+    'diagramm', 'graph', 'graphen', 'tabelle passt', 'welches bild'
+  ];
   const lowerPrompt = template.student_prompt.toLowerCase();
   if (drawingKeywords.some(keyword => lowerPrompt.includes(keyword))) {
-    errors.push('Zeichnungsaufgaben sind nicht erlaubt');
+    errors.push('Visuelle/Zeichen-Aufgaben sind in der aktuellen UI nicht umsetzbar');
   }
 
   return { valid: errors.length === 0, errors };

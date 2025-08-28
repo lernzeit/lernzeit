@@ -335,7 +335,14 @@ export class ParametrizedTemplateService {
       'male', 'malt', 'malen', 
       'skizziere', 'skizziert', 'skizzieren',
       'draw', 'drawing', 'sketch',
-      'konstruiere', 'konstruiert', 'konstruieren'
+      'konstruiere', 'konstruiert', 'konstruieren',
+      'entwirf', 'entwirft', 'entwerfen',
+      'bild', 'bilder', 'abbildung',
+      'ordne', 'ordnet', 'ordnen', 'zuordnen',
+      'verbind', 'verbindet', 'verbinden',
+      'netz', 'netze', 'körper',
+      'diagramm', 'graph', 'graphen',
+      'tabelle passt', 'welches bild'
     ];
     
     const lowerPrompt = prompt.toLowerCase();
