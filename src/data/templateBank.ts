@@ -25,7 +25,7 @@ export async function fetchActiveTemplates(params: {
   console.log(`🏦 Fetching templates for User Grade ${grade} ${quarter}, targeting Grade ${targetGrade} quarters:`, availableQuarters);
   
   // Versuche zuerst die berechnete Ziel-Klassenstufe und -Quartal
-  let { data, error } = await supabase
+  let query = supabase
     .from("template_scores")
     .select("*")
     .eq("status","ACTIVE")
@@ -38,7 +38,22 @@ export async function fetchActiveTemplates(params: {
     .not("student_prompt", "ilike", "%entwirf%")
     .not("student_prompt", "ilike", "%bild%")
     .not("student_prompt", "ilike", "%ordne%")
-    .not("student_prompt", "ilike", "%verbind%")
+    .not("student_prompt", "ilike", "%verbind%");
+
+  // ✅ KRITISCH: Prozentrechnung erst ab Klasse 5 Q3!
+  // Schüler in Klasse 5 Q1 bekommen Klasse 4 Q4 Inhalte → keine Prozente
+  if (targetGrade < 5 || (targetGrade === 5 && !availableQuarters.includes("Q3") && !availableQuarters.includes("Q4"))) {
+    console.log(`🚫 Excluding percentage questions for Grade ${targetGrade} quarters ${availableQuarters.join(',')}`);
+    query = query
+      .not("student_prompt", "ilike", "%prozent%")
+      .not("student_prompt", "ilike", "%von 15 schülern%")
+      .not("student_prompt", "ilike", "%von 100 kindern%")
+      .not("student_prompt", "ilike", "%von 40 kindern%")
+      .not("student_prompt", "ilike", "%das sind __ %")
+      .not("student_prompt", "ilike", "%wie viel prozent%");
+  }
+
+  let { data, error } = await query
     .order("qscore",{ ascending:false })
     .limit(limit);
   
@@ -51,7 +66,7 @@ export async function fetchActiveTemplates(params: {
     // Für Q1: Versuche erst vorherige Klasse Q4, dann Q3, dann Q2, dann Q1
     // Für andere Quartale: Versuche erst kleinere Klassenstufen
     const fallbackSearch = async (searchGrade: number, searchQuarters: Quarter[]) => {
-      const { data: fallbackData, error: fallbackError } = await supabase
+      let fallbackQuery = supabase
         .from("template_scores")
         .select("*")
         .eq("status","ACTIVE")
@@ -64,7 +79,20 @@ export async function fetchActiveTemplates(params: {
         .not("student_prompt", "ilike", "%entwirf%")
         .not("student_prompt", "ilike", "%bild%")
         .not("student_prompt", "ilike", "%ordne%")
-        .not("student_prompt", "ilike", "%verbind%")
+        .not("student_prompt", "ilike", "%verbind%");
+
+      // ✅ Auch bei Fallback: Prozentrechnung ausschließen wenn zu früh
+      if (searchGrade < 5 || (searchGrade === 5 && !searchQuarters.includes("Q3") && !searchQuarters.includes("Q4"))) {
+        fallbackQuery = fallbackQuery
+          .not("student_prompt", "ilike", "%prozent%")
+          .not("student_prompt", "ilike", "%von 15 schülern%")
+          .not("student_prompt", "ilike", "%von 100 kindern%")
+          .not("student_prompt", "ilike", "%von 40 kindern%")
+          .not("student_prompt", "ilike", "%das sind __ %")
+          .not("student_prompt", "ilike", "%wie viel prozent%");
+      }
+
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery
         .order("qscore", { ascending: false })
         .limit(limit);
       

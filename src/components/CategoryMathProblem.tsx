@@ -72,6 +72,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   const [selectedMultipleChoice, setSelectedMultipleChoice] = useState<number | null>(null);
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
   const [currentPlacements, setCurrentPlacements] = useState<Record<string, string>>({});
+  const [waitingForNext, setWaitingForNext] = useState(false);
   const [sessionStartTime] = useState(Date.now());
   const [sessionEndTime, setSessionEndTime] = useState<number | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
@@ -130,6 +131,21 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     setSelectedMultipleChoice(null);
     setSelectedWords([]);
     setCurrentPlacements({});
+  };
+
+  // ✅ NEW: Handle manual continuation to next question
+  const handleNextQuestion = () => {
+    const isLastQuestion = currentQuestionIndex === problems.length - 1;
+    
+    if (isLastQuestion) {
+      completeGame();
+    } else {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setFeedback(null);
+      setWaitingForNext(false);
+      resetAnswers();
+      setQuestionStartTime(Date.now());
+    }
   };
 
   // Check answer function
@@ -196,18 +212,8 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       }
     }
     
-    setTimeout(() => {
-      const isLastQuestion = currentQuestionIndex === problems.length - 1;
-      
-      if (isLastQuestion) {
-        completeGame();
-      } else {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        setFeedback(null);
-        resetAnswers();
-        setQuestionStartTime(Date.now());
-      }
-    }, 1500);
+    // ✅ FIXED: Set waiting state instead of auto-advancing
+    setWaitingForNext(true);
   };
 
   const completeGame = async () => {
@@ -603,6 +609,28 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                 className="w-full"
               >
                 Antwort abgeben
+              </Button>
+            </div>
+          )}
+
+          {/* ✅ NEW: Manual continue button for after feedback */}
+          {feedback && waitingForNext && (
+            <div className="text-center space-y-4">
+              <div className={`text-lg font-semibold ${
+                feedback === 'correct' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {feedback === 'correct' 
+                  ? '✅ Richtig!' 
+                  : `❌ Falsch!`
+                }
+              </div>
+              <Button 
+                onClick={handleNextQuestion}
+                size="lg"
+                className="w-full"
+                variant="default"
+              >
+                Weiter
               </Button>
             </div>
           )}
