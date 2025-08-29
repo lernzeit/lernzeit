@@ -40,10 +40,12 @@ export async function fetchActiveTemplates(params: {
     .not("student_prompt", "ilike", "%ordne%")
     .not("student_prompt", "ilike", "%verbind%");
 
-  // ✅ KRITISCH: Prozentrechnung erst ab Klasse 5 Q3!
-  // Schüler in Klasse 5 Q1 bekommen Klasse 4 Q4 Inhalte → keine Prozente
+  // ✅ KRITISCH: Curriculum-based filtering
+  console.log(`🎓 Applying curriculum filters for Grade ${targetGrade} quarters ${availableQuarters.join(',')}`);
+  
+  // ❌ EXCLUDE: Prozentrechnung erst ab Klasse 5 Q3!
   if (targetGrade < 5 || (targetGrade === 5 && !availableQuarters.includes("Q3") && !availableQuarters.includes("Q4"))) {
-    console.log(`🚫 Excluding percentage questions for Grade ${targetGrade} quarters ${availableQuarters.join(',')}`);
+    console.log(`🚫 Excluding percentage questions for Grade ${targetGrade}`);
     query = query
       .not("student_prompt", "ilike", "%prozent%")
       .not("student_prompt", "ilike", "%von 15 schülern%")
@@ -51,6 +53,34 @@ export async function fetchActiveTemplates(params: {
       .not("student_prompt", "ilike", "%von 40 kindern%")
       .not("student_prompt", "ilike", "%das sind __ %")
       .not("student_prompt", "ilike", "%wie viel prozent%");
+  }
+  
+  // ❌ EXCLUDE: Algebra/Variables erst ab Klasse 5, advanced algebra ab Klasse 7
+  if (targetGrade < 5) {
+    console.log(`🚫 Excluding algebra for Grade ${targetGrade}`);
+    query = query
+      .not("student_prompt", "ilike", "%variable%")
+      .not("student_prompt", "ilike", "%term%")
+      .not("student_prompt", "ilike", "%gleichung%")
+      .not("student_prompt", "ilike", "%löse%")
+      .not("student_prompt", "ilike", "%x =%")
+      .not("student_prompt", "ilike", "%y =%")
+      .not("student_prompt", "ilike", "%a =%")
+      .not("student_prompt", "ilike", "%b =%")
+      .not("subcategory", "ilike", "%gleichung%")
+      .not("subcategory", "ilike", "%term%");
+  }
+  
+  // ❌ EXCLUDE: Advanced algebra concepts
+  if (targetGrade < 7) {
+    console.log(`🚫 Excluding advanced algebra for Grade ${targetGrade}`);
+    query = query
+      .not("student_prompt", "ilike", "%termwert%")
+      .not("student_prompt", "ilike", "%termumformung%")
+      .not("student_prompt", "ilike", "%lineare gleichung%")
+      .not("student_prompt", "ilike", "%mehreren variablen%")
+      .not("subcategory", "ilike", "%termwert%")
+      .not("subcategory", "ilike", "%termumformung%");
   }
 
   let { data, error } = await query
@@ -81,7 +111,7 @@ export async function fetchActiveTemplates(params: {
         .not("student_prompt", "ilike", "%ordne%")
         .not("student_prompt", "ilike", "%verbind%");
 
-      // ✅ Auch bei Fallback: Prozentrechnung ausschließen wenn zu früh
+      // ✅ Auch bei Fallback: Curriculum-based filtering
       if (searchGrade < 5 || (searchGrade === 5 && !searchQuarters.includes("Q3") && !searchQuarters.includes("Q4"))) {
         fallbackQuery = fallbackQuery
           .not("student_prompt", "ilike", "%prozent%")
@@ -90,6 +120,32 @@ export async function fetchActiveTemplates(params: {
           .not("student_prompt", "ilike", "%von 40 kindern%")
           .not("student_prompt", "ilike", "%das sind __ %")
           .not("student_prompt", "ilike", "%wie viel prozent%");
+      }
+      
+      // ❌ EXCLUDE: Algebra for grades below 5
+      if (searchGrade < 5) {
+        fallbackQuery = fallbackQuery
+          .not("student_prompt", "ilike", "%variable%")
+          .not("student_prompt", "ilike", "%term%")
+          .not("student_prompt", "ilike", "%gleichung%")
+          .not("student_prompt", "ilike", "%löse%")
+          .not("student_prompt", "ilike", "%x =%")
+          .not("student_prompt", "ilike", "%y =%")
+          .not("student_prompt", "ilike", "%a =%")
+          .not("student_prompt", "ilike", "%b =%")
+          .not("subcategory", "ilike", "%gleichung%")
+          .not("subcategory", "ilike", "%term%");
+      }
+      
+      // ❌ EXCLUDE: Advanced algebra for grades below 7
+      if (searchGrade < 7) {
+        fallbackQuery = fallbackQuery
+          .not("student_prompt", "ilike", "%termwert%")
+          .not("student_prompt", "ilike", "%termumformung%")
+          .not("student_prompt", "ilike", "%lineare gleichung%")
+          .not("student_prompt", "ilike", "%mehreren variablen%")
+          .not("subcategory", "ilike", "%termwert%")
+          .not("subcategory", "ilike", "%termumformung%");
       }
 
       const { data: fallbackData, error: fallbackError } = await fallbackQuery

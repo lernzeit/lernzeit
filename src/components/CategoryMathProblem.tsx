@@ -19,7 +19,7 @@ import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
-import { AlertTriangle, RefreshCw, Database, Brain, Archive } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Database, Brain, Archive, Check, X, Flag, ArrowRight } from 'lucide-react';
 import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 
 interface CategoryMathProblemProps {
@@ -148,7 +148,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     }
   };
 
-  // Check answer function
+  // ✅ FIXED: Check answer function with proper multiple-choice validation
   const checkAnswer = (answer: string | number | number[] | Record<string, string>, question: SelectionQuestion): boolean => {
     switch (question.questionType) {
       case 'text-input':
@@ -166,7 +166,36 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         return userInput === correctAnswer;
         
       case 'multiple-choice':
-        return answer === (question as any).correctAnswer;
+        // ✅ FIXED: Handle both correctAnswer index and string matching
+        const mcQuestion = question as any;
+        const selectedIndex = Number(answer);
+        const selectedOption = mcQuestion.options?.[selectedIndex];
+        
+        // Method 1: Check by index (if correctAnswer is a number)
+        if (typeof mcQuestion.correctAnswer === 'number') {
+          return selectedIndex === mcQuestion.correctAnswer;
+        }
+        
+        // Method 2: Check by string matching (if correctAnswer is a string)
+        if (typeof mcQuestion.correctAnswer === 'string') {
+          return selectedOption === mcQuestion.correctAnswer;
+        }
+        
+        // Method 3: Calculate correct answer for math problems if needed
+        if (mcQuestion.question && mcQuestion.options) {
+          // Example: Rectangle perimeter problem
+          if (mcQuestion.question.includes('Umfang') && mcQuestion.question.includes('Rechteck')) {
+            const match = mcQuestion.question.match(/(\d+)cm.*(\d+)cm/);
+            if (match) {
+              const [, perimeter, length] = match;
+              const width = (parseInt(perimeter) / 2) - parseInt(length);
+              const correctAnswer = `${width}cm`;
+              return selectedOption === correctAnswer;
+            }
+          }
+        }
+        
+        return selectedIndex === mcQuestion.correctAnswer;
         
       default:
         return false;
@@ -563,24 +592,98 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             feedback={feedback}
           />
 
-          <GameFeedback 
-            feedback={feedback} 
-            explanation={currentQuestion.explanation}
-            correctAnswer={feedback === 'incorrect' ? 'Siehe Erklärung' : undefined}
-            userAnswer={feedback === 'incorrect' ? userAnswer : undefined}
-            onReportIssue={() => setShowFeedbackDialog(true)}
-            onSkipFeedback={feedback ? () => {
-              const isLastQuestion = currentQuestionIndex === problems.length - 1;
-              if (isLastQuestion) {
-                completeGame();
-              } else {
-                setCurrentQuestionIndex(currentQuestionIndex + 1);
-                setFeedback(null);
-                resetAnswers();
-                setQuestionStartTime(Date.now());
-              }
-            } : undefined}
-          />
+          {/* ✅ FIXED: Single feedback component with correct answer display */}
+          {feedback && (
+            <div className={`p-6 rounded-lg border-2 ${
+              feedback === 'correct' 
+                ? 'bg-green-50 text-green-800 border-green-200' 
+                : 'bg-red-50 text-red-800 border-red-200'
+            }`}>
+              <div className="flex items-center justify-center gap-3 mb-3">
+                {feedback === 'correct' ? (
+                  <Check className="w-8 h-8 text-green-600" />
+                ) : (
+                  <X className="w-8 h-8 text-red-600" />
+                )}
+                <span className="font-bold text-lg">
+                  {feedback === 'correct' ? '🎉 Richtig!' : '❌ Falsch!'}
+                </span>
+              </div>
+              
+              {/* ✅ FIXED: Show actual correct answer for incorrect responses */}
+              {feedback === 'incorrect' && (
+                <div className="mt-3 p-3 bg-white/50 rounded-md border-l-4 border-green-500">
+                  <p className="text-sm font-medium mb-1 text-green-700">Richtige Antwort:</p>
+                  {currentQuestion.questionType === 'multiple-choice' ? (
+                    <p className="text-sm font-semibold text-green-800">
+                      {(() => {
+                        const mcQuestion = currentQuestion as any;
+                        if (mcQuestion.question && mcQuestion.question.includes('Umfang') && mcQuestion.question.includes('Rechteck')) {
+                          const match = mcQuestion.question.match(/(\d+)cm.*(\d+)cm/);
+                          if (match) {
+                            const [, perimeter, length] = match;
+                            const width = (parseInt(perimeter) / 2) - parseInt(length);
+                            return `${width}cm`;
+                          }
+                        }
+                        return mcQuestion.options?.[mcQuestion.correctAnswer] || 'Siehe Erklärung';
+                      })()}
+                    </p>
+                  ) : (
+                    <p className="text-sm font-semibold text-green-800">
+                      {(currentQuestion as any).answer || 'Siehe Erklärung'}
+                    </p>
+                  )}
+                  <p className="text-xs text-red-600 mt-1">
+                    Deine Antwort: {
+                      currentQuestion.questionType === 'multiple-choice' 
+                        ? (currentQuestion as any).options?.[selectedMultipleChoice || 0]
+                        : userAnswer
+                    }
+                  </p>
+                </div>
+              )}
+              
+              {/* Show explanation */}
+              {currentQuestion.explanation && (
+                <div className="mt-3 p-3 bg-white/50 rounded-md">
+                  <p className="text-sm font-medium mb-2">Erklärung:</p>
+                  <div className="text-sm space-y-1">
+                    {currentQuestion.explanation.split('\n').map((line, index) => (
+                      <div key={index}>
+                        {line.trim() ? (
+                          <p>{line}</p>
+                        ) : (
+                          <div className="h-1"></div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 mt-4 justify-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowFeedbackDialog(true)}
+                  className="flex items-center gap-1"
+                >
+                  <Flag className="w-4 h-4" />
+                  Problem melden
+                </Button>
+                
+                <Button 
+                  onClick={handleNextQuestion}
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  Weiter
+                </Button>
+              </div>
+            </div>
+          )}
 
           {!feedback && (
             <div className="text-center">
@@ -609,28 +712,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                 className="w-full"
               >
                 Antwort abgeben
-              </Button>
-            </div>
-          )}
-
-          {/* ✅ NEW: Manual continue button for after feedback */}
-          {feedback && waitingForNext && (
-            <div className="text-center space-y-4">
-              <div className={`text-lg font-semibold ${
-                feedback === 'correct' ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {feedback === 'correct' 
-                  ? '✅ Richtig!' 
-                  : `❌ Falsch!`
-                }
-              </div>
-              <Button 
-                onClick={handleNextQuestion}
-                size="lg"
-                className="w-full"
-                variant="default"
-              >
-                Weiter
               </Button>
             </div>
           )}
