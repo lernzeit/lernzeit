@@ -1,6 +1,6 @@
 /**
  * Step-by-Step Explainer for Math Questions
- * Simplified implementation focused on math problems
+ * Enhanced with parameter-based explanations
  */
 
 import { SelectionQuestion } from '@/types/questionTypes';
@@ -29,8 +29,19 @@ export class StepByStepExplainer {
   ): MathExplanation {
     const questionText = question.question.toLowerCase();
     
-    // Detect operation type
-    if (questionText.includes('+')) {
+    // First try to use provided parameters for better explanations
+    if (params && Object.keys(params).length > 0) {
+      return this.generateParametrizedExplanation(question, answer, grade, params);
+    }
+    
+    // Fallback to text-based detection
+    if (questionText.includes('prozent') || questionText.includes('%')) {
+      return this.explainPercentage(question, answer, grade);
+    } else if (questionText.includes('fläche') || questionText.includes('quadrat')) {
+      return this.explainArea(question, answer, grade);
+    } else if (questionText.includes('umfang')) {
+      return this.explainPerimeter(question, answer, grade);
+    } else if (questionText.includes('+')) {
       return this.explainAddition(question, answer, grade);
     } else if (questionText.includes('-')) {
       return this.explainSubtraction(question, answer, grade);
@@ -38,43 +49,139 @@ export class StepByStepExplainer {
       return this.explainMultiplication(question, answer, grade);
     } else if (questionText.includes('÷') || questionText.includes('/')) {
       return this.explainDivision(question, answer, grade);
-    } else if (questionText.includes('umfang') || questionText.includes('perimeter')) {
-      return this.explainPerimeter(question, answer, grade);
-    } else if (questionText.includes('fläche') || questionText.includes('area')) {
-      return this.explainArea(question, answer, grade);
     }
 
     // Default explanation
+    return this.getDefaultExplanation(answer);
+  }
+
+  /**
+   * Generate explanations using actual parameters from the question
+   */
+  private static generateParametrizedExplanation(
+    question: SelectionQuestion,
+    answer: any,
+    grade: number,
+    params: Record<string, any>
+  ): MathExplanation {
+    const questionText = question.question.toLowerCase();
+    const numbers = Object.values(params).filter(v => typeof v === 'number') as number[];
+    
+    // Percentage calculations
+    if (questionText.includes('prozent') || questionText.includes('%')) {
+      if (numbers.length >= 2) {
+        const [percentage, total] = numbers;
+        return {
+          summary: `${percentage}% von ${total} = ${answer}`,
+          steps: [
+            { step: 1, description: `Gegeben: ${percentage}% von ${total}` },
+            { step: 2, description: `Umwandlung: ${percentage}% = ${percentage/100} = ${percentage/100}` },
+            { step: 3, description: `Berechnung: ${total} × ${percentage/100}`, calculation: `${total} × ${percentage/100} = ${answer}` }
+          ],
+          tips: grade <= 5 ? ['Prozent bedeutet "von hundert"', 'Multipliziere mit dem Dezimalwert'] : []
+        };
+      }
+    }
+    
+    // Area calculations (squares, rectangles)
+    if (questionText.includes('fläche') || questionText.includes('platz')) {
+      if (numbers.length === 1 && questionText.includes('quadrat')) {
+        // Square area
+        const side = numbers[0];
+        return {
+          summary: `Fläche des Quadrats: ${side} × ${side} = ${answer}`,
+          steps: [
+            { step: 1, description: `Seitenlänge des Quadrats: ${side}m` },
+            { step: 2, description: `Formel für Quadratfläche: Seite × Seite` },
+            { step: 3, description: `Berechnung: ${side} × ${side}`, calculation: `${side} × ${side} = ${answer}` }
+          ],
+          tips: grade <= 4 ? ['Ein Quadrat hat alle Seiten gleich lang'] : ['Fläche wird in Quadratmetern (m²) gemessen']
+        };
+      } else if (numbers.length >= 2) {
+        // Rectangle area
+        const [length, width] = numbers;
+        return {
+          summary: `Fläche des Rechtecks: ${length} × ${width} = ${answer}`,
+          steps: [
+            { step: 1, description: `Länge: ${length}m` },
+            { step: 2, description: `Breite: ${width}m` },
+            { step: 3, description: `Formel: Länge × Breite` },
+            { step: 4, description: `Berechnung: ${length} × ${width}`, calculation: `${length} × ${width} = ${answer}` }
+          ],
+          tips: ['Fläche = Länge × Breite']
+        };
+      }
+    }
+    
+    // Basic arithmetic with parameters
+    if (numbers.length >= 2) {
+      const [a, b] = numbers;
+      
+      if (questionText.includes('+') || questionText.includes('plus')) {
+        return this.createArithmeticExplanation('addition', a, b, answer, grade);
+      } else if (questionText.includes('-') || questionText.includes('minus')) {
+        return this.createArithmeticExplanation('subtraction', a, b, answer, grade);
+      } else if (questionText.includes('×') || questionText.includes('mal')) {
+        return this.createArithmeticExplanation('multiplication', a, b, answer, grade);
+      } else if (questionText.includes('÷') || questionText.includes('geteilt')) {
+        return this.createArithmeticExplanation('division', a, b, answer, grade);
+      }
+    }
+    
+    return this.getDefaultExplanation(answer);
+  }
+
+  /**
+   * Create arithmetic explanations with actual numbers
+   */
+  private static createArithmeticExplanation(
+    operation: 'addition' | 'subtraction' | 'multiplication' | 'division',
+    a: number, 
+    b: number, 
+    result: any, 
+    grade: number
+  ): MathExplanation {
+    const operations = {
+      addition: { symbol: '+', word: 'Addiere' },
+      subtraction: { symbol: '-', word: 'Subtrahiere' },
+      multiplication: { symbol: '×', word: 'Multipliziere' },
+      division: { symbol: '÷', word: 'Dividiere' }
+    };
+    
+    const op = operations[operation];
+    
     return {
-      summary: `Die Lösung ist ${answer}.`,
+      summary: `${op.word} ${a} ${op.symbol} ${b} = ${result}`,
       steps: [
-        {
-          step: 1,
-          description: 'Lies die Aufgabe sorgfältig durch'
-        },
-        {
-          step: 2,
-          description: 'Bestimme die gesuchte Größe'
-        },
-        {
-          step: 3,
-          description: `Das Ergebnis ist ${answer}`
-        }
-      ]
+        { step: 1, description: `Erste Zahl: ${a}` },
+        { step: 2, description: `Zweite Zahl: ${b}` },
+        { step: 3, description: `${op.word}: ${a} ${op.symbol} ${b}`, calculation: `${a} ${op.symbol} ${b} = ${result}` }
+      ],
+      tips: this.getGradeTips(operation, grade)
     };
   }
 
-  private static explainAddition(question: SelectionQuestion, answer: any, grade: number, params?: Record<string, any>): MathExplanation {
-    // Use parameters if available, otherwise extract from question
-    let numbers: number[] = [];
+  private static explainPercentage(question: SelectionQuestion, answer: any, grade: number): MathExplanation {
+    const numbers = question.question.match(/\d+/g)?.map(Number) || [];
     
-    if (params) {
-      numbers = Object.values(params).filter(v => typeof v === 'number') as number[];
+    if (numbers.length >= 2) {
+      const [percentage, total] = numbers;
+      return {
+        summary: `${percentage}% von ${total} = ${answer}`,
+        steps: [
+          { step: 1, description: `Gegeben: ${percentage}% von ${total}` },
+          { step: 2, description: `${percentage}% = ${percentage}/100 = ${percentage/100}` },
+          { step: 3, description: `Berechnung: ${total} × ${percentage/100}`, calculation: `${total} × ${percentage/100} = ${answer}` }
+        ],
+        tips: grade <= 5 ? ['Prozent bedeutet "von hundert"'] : []
+      };
     }
-    
-    if (numbers.length === 0) {
-      numbers = question.question.match(/\d+/g)?.map(Number) || [];
-    }
+
+    return this.getDefaultExplanation(answer);
+  }
+
+  private static explainAddition(question: SelectionQuestion, answer: any, grade: number): MathExplanation {
+    const numbers = question.question.match(/\d+/g)?.map(Number) || [];
     
     if (numbers.length >= 2) {
       const [a, b] = numbers;
@@ -180,6 +287,18 @@ export class StepByStepExplainer {
           { step: 4, description: `Berechnung: ${length} × ${width}`, calculation: `${length} × ${width} = ${answer}` }
         ],
         tips: ['Die Fläche wird in Quadrateinheiten gemessen']
+      };
+    } else if (numbers.length === 1 && question.question.toLowerCase().includes('quadrat')) {
+      // Square area with single side length
+      const side = numbers[0];
+      return {
+        summary: `Fläche des Quadrats: ${side} × ${side} = ${answer}`,
+        steps: [
+          { step: 1, description: `Seitenlänge: ${side}m` },
+          { step: 2, description: `Formel: Seite × Seite` },
+          { step: 3, description: `Berechnung: ${side} × ${side}`, calculation: `${side} × ${side} = ${answer}` }
+        ],
+        tips: ['Ein Quadrat hat alle Seiten gleich lang']
       };
     }
 

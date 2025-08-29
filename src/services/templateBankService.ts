@@ -153,13 +153,16 @@ export class EnhancedTemplateBankService {
         explanation: calculatedAnswer.explanation || template.explanation_teacher || ""
       } as TextInputQuestion;
     } else {
+      // 🔧 FIXED: Properly extract options and track correct answer index
+      const optionsData = this.extractOptionsWithCorrectIndex(template);
+      
       return {
         id: parseInt(template.id) || Date.now(),
         question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'multiple-choice',
-        options: this.extractOptions(template),
-        correctAnswer: 0, // First option is correct after shuffle
+        options: optionsData.options,
+        correctAnswer: optionsData.correctIndex, // 🔧 CORRECT INDEX AFTER SHUFFLE
         explanation: template.explanation_teacher || ""
       } as MultipleChoiceQuestion;
     }
@@ -237,10 +240,10 @@ export class EnhancedTemplateBankService {
           answer: String(result.answer),
           explanation: result.calculationSteps?.join(' | ') || undefined
         };
-      } else {
-        console.warn(`⚠️ Dynamic calculation failed, using static fallback:`, result.errors);
-        return this.getStaticFallback(template, question);
-      }
+    } else {
+      console.warn(`⚠️ Dynamic calculation failed, using static fallback:`, result.errors);
+      return this.getStaticFallback(template, question);
+    }
     } catch (error) {
       console.error(`❌ Error in dynamic calculation:`, error);
       return this.getStaticFallback(template, question);
@@ -330,23 +333,68 @@ export class EnhancedTemplateBankService {
     return { answer: "1", explanation: "Standard-Fallback" };
   }
 
-  private extractOptions(template: any): string[] {
-    const correct = this.getStaticFallback(template, '').answer; // Use getStaticFallback instead
+  /**
+   * Extract options and return both options and correct index
+   */
+  private extractOptionsWithCorrectIndex(template: any): { options: string[]; correctIndex: number } {
+    // Calculate the correct answer dynamically
+    const calculatedAnswer = this.calculateDynamicAnswer(template, template.student_prompt || '');
+    const correct = calculatedAnswer.answer;
+    
+    // Start with correct answer as first option
     const options = [correct];
     
     if (template.distractors && Array.isArray(template.distractors)) {
       options.push(...template.distractors.slice(0, 3));
     } else {
       // Generate simple numeric distractors
-      const num = parseInt(correct);
+      const num = parseFloat(correct);
       if (!isNaN(num)) {
-        options.push((num + 1).toString(), (num - 1).toString(), (num + 2).toString());
+        // For math problems, create reasonable distractors
+        if (correct.includes('m²') || correct.includes('cm²')) {
+          // Area problems
+          const baseNum = num;
+          options.push(
+            `${Math.round(baseNum * 1.5)}${correct.includes('m²') ? 'm²' : 'cm²'}`,
+            `${Math.round(baseNum * 0.5)}${correct.includes('m²') ? 'm²' : 'cm²'}`,
+            `${Math.round(baseNum + 2)}${correct.includes('m²') ? 'm²' : 'cm²'}`
+          );
+        } else if (correct.includes('Schüler')) {
+          // Percentage problems
+          const baseNum = num;
+          options.push(`${baseNum * 4} Schüler`, `${Math.round(baseNum * 0.5)} Schüler`, `${Math.round(baseNum * 0.1)} Schüler`);
+        } else {
+          // General numeric problems
+          options.push((num * 2).toString(), (num + 1).toString(), (num - 1).toString());
+        }
       } else {
         options.push("Option B", "Option C", "Option D");
       }
     }
     
-    return this.shuffleArray(options).slice(0, 4);
+    // Shuffle options and track where the correct answer ends up
+    const shuffledOptions = [...options];
+    const correctAnswerText = options[0]; // Store original correct answer
+    
+    // Simple shuffle
+    for (let i = shuffledOptions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+    }
+    
+    // Find where the correct answer ended up after shuffle
+    const correctIndex = shuffledOptions.findIndex(opt => opt === correctAnswerText);
+    
+    console.log(`🎯 Options generated:`, {
+      correct: correctAnswerText,
+      options: shuffledOptions,
+      correctIndex
+    });
+    
+    return {
+      options: shuffledOptions.slice(0, 4),
+      correctIndex: Math.max(0, correctIndex) // Ensure valid index
+    };
   }
 
   private mapQuestionType(dbType: string): 'multiple-choice' | 'text-input' | 'matching' | 'drag-drop' {

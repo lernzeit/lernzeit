@@ -72,20 +72,28 @@ export class AnswerCalculator {
   }
 
   /**
-   * Use existing mature parsers for calculation
+   * Use existing mature parsers for calculation - STUDENT FRIENDLY OUTPUT
    */
   private static calculateUsingParsers(questionText: string): CalculationResult {
     const steps: string[] = [];
     
     try {
-      steps.push('Using ImprovedGermanMathParser');
-      
       // Try improved parser first
       const improvedResult: ParsedMathResult = ImprovedGermanMathParser.parse(questionText);
       
       if (improvedResult.success && improvedResult.answer !== undefined) {
-        steps.push(`Parser successful: ${improvedResult.answer}`);
-        steps.push(...(improvedResult.steps || []));
+        // STUDENT-FRIENDLY steps - NO INTERNAL MESSAGES
+        if (improvedResult.steps && improvedResult.steps.length > 0) {
+          steps.push(...improvedResult.steps.filter(step => 
+            !step.includes('Parser') && 
+            !step.includes('template_') && 
+            !step.includes('Operation:') &&
+            !step.includes('Result:')
+          ));
+        }
+        
+        // Add simple calculation step
+        steps.push(`Lösung: ${improvedResult.answer}`);
         
         return {
           answer: improvedResult.answer,
@@ -98,12 +106,17 @@ export class AnswerCalculator {
       }
 
       // Fallback to basic parser
-      steps.push('Fallback to GermanMathParser');
       const basicResult: MathParseResult = GermanMathParser.parse(questionText);
       
       if (basicResult.success && basicResult.answer !== undefined) {
-        steps.push(`Basic parser successful: ${basicResult.answer}`);
-        steps.push(...(basicResult.steps || []));
+        // STUDENT-FRIENDLY steps only
+        if (basicResult.steps && basicResult.steps.length > 0) {
+          steps.push(...basicResult.steps.filter(step => 
+            !step.includes('Parser') && 
+            !step.includes('Fallback')
+          ));
+        }
+        steps.push(`Ergebnis: ${basicResult.answer}`);
         
         return {
           answer: basicResult.answer,
@@ -118,8 +131,8 @@ export class AnswerCalculator {
       return {
         answer: '',
         isValid: false,
-        errors: ['Parsers could not process the question'],
-        calculationSteps: steps,
+        errors: ['Konnte die Aufgabe nicht lösen'],
+        calculationSteps: ['Aufgabe konnte nicht berechnet werden'],
         confidence: 0
       };
 
@@ -127,22 +140,20 @@ export class AnswerCalculator {
       return {
         answer: '',
         isValid: false,
-        errors: [`Parser error: ${error instanceof Error ? error.message : 'Unknown'}`],
-        calculationSteps: steps,
+        errors: ['Fehler bei der Berechnung'],
+        calculationSteps: ['Berechnungsfehler aufgetreten'],
         confidence: 0
       };
     }
   }
 
   /**
-   * Calculate using template parameters dynamically
+   * Calculate using template parameters - STUDENT FRIENDLY OUTPUT
    */
   private static calculateUsingParameters(template: QuestionTemplate, params: Record<string, any>): CalculationResult {
     const steps: string[] = [];
     
     try {
-      steps.push(`Dynamic parameter calculation for template ${template.id}`);
-      
       // Extract numeric parameters
       const numbers = Object.values(params).filter(v => typeof v === 'number' && !isNaN(v)) as number[];
       
@@ -152,8 +163,27 @@ export class AnswerCalculator {
         const result = this.performOperation(operation, numbers);
         
         if (result !== null) {
-          steps.push(`Operation: ${operation} on ${numbers.slice(0, 2).join(', ')}`);
-          steps.push(`Result: ${result}`);
+          // STUDENT-FRIENDLY STEPS
+          const [a, b] = numbers.slice(0, 2);
+          switch (operation) {
+            case 'addition':
+              steps.push(`Rechne: ${a} + ${b} = ${result}`);
+              break;
+            case 'subtraction':
+              steps.push(`Rechne: ${a} - ${b} = ${result}`);
+              break;
+            case 'multiplication':
+              steps.push(`Rechne: ${a} × ${b} = ${result}`);
+              break;
+            case 'division':
+              steps.push(`Rechne: ${a} ÷ ${b} = ${result}`);
+              break;
+            case 'perimeter':
+              steps.push(`Umfang: 2 × (${a} + ${b}) = ${result}`);
+              break;
+            default:
+              steps.push(`Berechnung: ${result}`);
+          }
           
           return {
             answer: result,
@@ -161,7 +191,7 @@ export class AnswerCalculator {
             errors: [],
             calculationSteps: steps,
             confidence: 0.85,
-            metadata: { operation, operands: numbers.slice(0, 2) }
+            metadata: { operation, operands: [a, b] }
           };
         }
       }
@@ -185,8 +215,8 @@ export class AnswerCalculator {
       return {
         answer: '',
         isValid: false,
-        errors: ['Could not determine calculation method from parameters'],
-        calculationSteps: steps,
+        errors: ['Konnte die Berechnung nicht durchführen'],
+        calculationSteps: ['Keine passende Berechnungsmethode gefunden'],
         confidence: 0
       };
 
@@ -194,8 +224,8 @@ export class AnswerCalculator {
       return {
         answer: '',
         isValid: false,
-        errors: [`Parameter calculation error: ${error instanceof Error ? error.message : 'Unknown'}`],
-        calculationSteps: steps,
+        errors: ['Fehler bei der Parameterberechnung'],
+        calculationSteps: ['Berechnungsfehler aufgetreten'],
         confidence: 0
       };
     }
