@@ -6,6 +6,8 @@ import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory'
 import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion } from '@/types/questionTypes';
 import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
 import { ParametrizedTemplateService } from './ParametrizedTemplateService';
+import { BulletproofAnswerCalculator } from '@/utils/templates/BulletproofAnswerCalculator';
+import { QuestionTemplate } from '@/utils/questionTemplates';
 
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
@@ -139,13 +141,16 @@ export class EnhancedTemplateBankService {
     const questionType = this.mapQuestionType(template.question_type);
     
     if (questionType === 'text-input') {
+      // 🔧 BULLETPROOF CALCULATION: Use BulletproofAnswerCalculator instead of static answers
+      const calculatedAnswer = this.calculateDynamicAnswer(template, prompt);
+      
       return {
         id: parseInt(template.id) || Date.now(),
         question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'text-input',
-        answer: this.extractCorrectAnswer(template),
-        explanation: template.explanation_teacher || ""
+        answer: calculatedAnswer.answer,
+        explanation: calculatedAnswer.explanation || template.explanation_teacher || ""
       } as TextInputQuestion;
     } else {
       return {
@@ -183,17 +188,143 @@ export class EnhancedTemplateBankService {
     return drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
   }
 
-  private extractCorrectAnswer(template: any): string {
-    if (template.solution) {
-      if (typeof template.solution === 'string') return template.solution;
-      if (template.solution.value) return template.solution.value.toString();
-      if (template.solution.answer) return template.solution.answer.toString();
+  /**
+   * 🔧 BULLETPROOF ANSWER CALCULATION
+   * Calculate dynamic answers using BulletproofAnswerCalculator instead of static database values
+   */
+  private calculateDynamicAnswer(template: any, question: string): { answer: string; explanation?: string } {
+    console.log(`🔧 Calculating dynamic answer for template ${template.id}`);
+    
+    try {
+      // Parse parameters from question text
+      const parameters = this.extractParametersFromQuestion(question);
+      
+      // Create a QuestionTemplate-like object with proper interface
+      const questionTemplate: QuestionTemplate = {
+        id: `template_${template.id}`,
+        category: this.mapDomainToSubject(template.domain),
+        grade: template.grade || 5,
+        type: 'text-input',
+        template: question,
+        parameters: Object.keys(parameters).map(key => ({
+          name: key,
+          type: 'number',
+          range: [1, 100]
+        })),
+        difficulty: 'medium',
+        topics: [this.mapDomainToSubject(template.domain)]
+      };
+      
+      // Add calculation logic as extended property
+      (questionTemplate as any).calculationLogic = this.inferCalculationLogic(question, parameters);
+      
+      // Use BulletproofAnswerCalculator
+      const result = BulletproofAnswerCalculator.calculateAnswer(
+        questionTemplate as QuestionTemplate, 
+        parameters
+      );
+      
+      if (result.isValid) {
+        console.log(`✅ Dynamic calculation successful: ${result.answer} (${result.steps?.join(' → ')})`);
+        return {
+          answer: result.answer.toString(),
+          explanation: result.steps?.join(' → ') || 'Dynamisch berechnet'
+        };
+      } else {
+        console.warn(`⚠️ Dynamic calculation failed, using static fallback:`, result.errors);
+        return this.getStaticFallback(template, question);
+      }
+    } catch (error) {
+      console.error(`❌ Error in dynamic calculation:`, error);
+      return this.getStaticFallback(template, question);
     }
-    return "1"; // Default fallback
+  }
+
+  /**
+   * Extract numerical parameters from question text
+   */
+  private extractParametersFromQuestion(question: string): Record<string, number> {
+    const parameters: Record<string, number> = {};
+    
+    // Extract numbers from question
+    const numbers = question.match(/\d+/g);
+    if (numbers && numbers.length > 0) {
+      parameters.a = parseInt(numbers[0]);
+      if (numbers.length > 1) parameters.b = parseInt(numbers[1]);
+      if (numbers.length > 2) parameters.c = parseInt(numbers[2]);
+    }
+    
+    console.log(`📊 Extracted parameters:`, parameters);
+    return parameters;
+  }
+
+  /**
+   * Infer calculation logic from question text
+   */
+  private inferCalculationLogic(question: string, params: Record<string, number>): string {
+    const text = question.toLowerCase();
+    
+    // Garden area calculation
+    if (text.includes('garten') && text.includes('rechteck') && text.includes('ohne weg')) {
+      return 'garden_area_without_path';
+    }
+    
+    // Percentage calculations
+    if (text.includes('prozent') || text.includes('%')) {
+      return 'percentage';
+    }
+    
+    // Rectangle calculations
+    if (text.includes('rechteck') && (text.includes('umfang') || text.includes('fläche'))) {
+      return text.includes('umfang') ? 'rectangle_perimeter' : 'rectangle_area';
+    }
+    
+    // Basic arithmetic
+    if (text.includes('+') || text.includes('plus')) return 'addition';
+    if (text.includes('-') || text.includes('minus')) return 'subtraction';
+    if (text.includes('×') || text.includes('mal')) return 'multiplication';
+    if (text.includes('÷') || text.includes('geteilt')) return 'division';
+    
+    return 'unknown';
+  }
+
+  /**
+   * Get static fallback from database when dynamic calculation fails
+   */
+  private getStaticFallback(template: any, question: string): { answer: string; explanation?: string } {
+    if (template.solution) {
+      if (typeof template.solution === 'string') {
+        return { answer: template.solution, explanation: 'Statische Antwort aus Datenbank' };
+      }
+      if (template.solution.value) {
+        return { 
+          answer: template.solution.value.toString(), 
+          explanation: 'Statische Antwort aus Datenbank' 
+        };
+      }
+      if (template.solution.answer) {
+        return { 
+          answer: template.solution.answer.toString(), 
+          explanation: 'Statische Antwort aus Datenbank' 
+        };
+      }
+    }
+    
+    // Final fallback: Try to extract from explanation
+    const explanation = template.explanation_teacher || template.explanation || '';
+    const numberInExplanation = explanation.match(/\d+/);
+    if (numberInExplanation) {
+      return { 
+        answer: numberInExplanation[0], 
+        explanation: 'Extrahiert aus Erklärung' 
+      };
+    }
+    
+    return { answer: "1", explanation: "Standard-Fallback" };
   }
 
   private extractOptions(template: any): string[] {
-    const correct = this.extractCorrectAnswer(template);
+    const correct = this.getStaticFallback(template, '').answer; // Use getStaticFallback instead
     const options = [correct];
     
     if (template.distractors && Array.isArray(template.distractors)) {
