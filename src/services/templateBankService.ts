@@ -6,7 +6,7 @@ import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory'
 import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion } from '@/types/questionTypes';
 import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
 import { ParametrizedTemplateService } from './ParametrizedTemplateService';
-import { BulletproofAnswerCalculator } from '@/utils/templates/BulletproofAnswerCalculator';
+import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
 
 export interface TemplateBankConfig {
@@ -218,17 +218,24 @@ export class EnhancedTemplateBankService {
       // Add calculation logic as extended property
       (questionTemplate as any).calculationLogic = this.inferCalculationLogic(question, parameters);
       
-      // Use BulletproofAnswerCalculator
-      const result = BulletproofAnswerCalculator.calculateAnswer(
+      // Use unified AnswerCalculator
+      const result = AnswerCalculator.calculateAnswer(
         questionTemplate as QuestionTemplate, 
-        parameters
+        parameters,
+        question
       );
       
-      if (result.isValid) {
-        console.log(`✅ Dynamic calculation successful: ${result.answer} (${result.steps?.join(' → ')})`);
+      if (result.isValid && result.answer) {
+        console.log('🎯 AnswerCalculator result:', {
+          answer: result.answer,
+          confidence: result.confidence,
+          steps: result.calculationSteps,
+          method: 'unified'
+        });
+        
         return {
-          answer: result.answer.toString(),
-          explanation: result.steps?.join(' → ') || 'Dynamisch berechnet'
+          answer: String(result.answer),
+          explanation: result.calculationSteps?.join(' | ') || undefined
         };
       } else {
         console.warn(`⚠️ Dynamic calculation failed, using static fallback:`, result.errors);

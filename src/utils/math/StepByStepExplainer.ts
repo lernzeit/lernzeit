@@ -19,12 +19,13 @@ export interface MathExplanation {
 
 export class StepByStepExplainer {
   /**
-   * Generate explanation for a math question
+   * Generate explanation for a math question with dynamic parameter extraction
    */
   static generateExplanation(
     question: SelectionQuestion,
     answer: any,
-    grade: number
+    grade: number,
+    params?: Record<string, any>
   ): MathExplanation {
     const questionText = question.question.toLowerCase();
     
@@ -63,19 +64,28 @@ export class StepByStepExplainer {
     };
   }
 
-  private static explainAddition(question: SelectionQuestion, answer: any, grade: number): MathExplanation {
-    // Extract numbers from question
-    const numbers = question.question.match(/\d+/g)?.map(Number) || [];
+  private static explainAddition(question: SelectionQuestion, answer: any, grade: number, params?: Record<string, any>): MathExplanation {
+    // Use parameters if available, otherwise extract from question
+    let numbers: number[] = [];
+    
+    if (params) {
+      numbers = Object.values(params).filter(v => typeof v === 'number') as number[];
+    }
+    
+    if (numbers.length === 0) {
+      numbers = question.question.match(/\d+/g)?.map(Number) || [];
+    }
     
     if (numbers.length >= 2) {
+      const [a, b] = numbers;
       return {
-        summary: `Addiere ${numbers[0]} + ${numbers[1]} = ${answer}`,
+        summary: `Addiere ${a} + ${b} = ${answer}`,
         steps: [
-          { step: 1, description: `Erkenne die erste Zahl: ${numbers[0]}` },
-          { step: 2, description: `Erkenne die zweite Zahl: ${numbers[1]}` },
-          { step: 3, description: `Addiere: ${numbers[0]} + ${numbers[1]}`, calculation: `${numbers[0]} + ${numbers[1]} = ${answer}` }
+          { step: 1, description: `Erkenne die erste Zahl: ${a}` },
+          { step: 2, description: `Erkenne die zweite Zahl: ${b}` },
+          { step: 3, description: `Addiere: ${a} + ${b}`, calculation: `${a} + ${b} = ${answer}` }
         ],
-        tips: grade <= 2 ? ['Du kannst auch deine Finger oder Objekte zum Zählen verwenden'] : []
+        tips: this.getGradeTips('addition', grade)
       };
     }
 
@@ -185,5 +195,37 @@ export class StepByStepExplainer {
         { step: 3, description: `Das Ergebnis ist ${answer}` }
       ]
     };
+  }
+
+  /**
+   * Get age-appropriate tips based on grade level and operation
+   */
+  private static getGradeTips(operation: string, grade: number): string[] {
+    const tipMap: Record<string, Record<number, string[]>> = {
+      addition: {
+        1: ['Du kannst deine Finger zum Zählen verwenden', 'Beginne mit der größeren Zahl und zähle weiter'],
+        2: ['Denke an die Zahlenreihe', 'Nutze Hilfsmittel wie Rechensteine'],
+        3: ['Denke in Zehnerschritten', 'Zerlege große Zahlen in kleinere Teile'],
+        4: ['Nutze das Kopfrechnen', 'Erkenne Zahlenmuster']
+      },
+      subtraction: {
+        1: ['Beginne mit der größeren Zahl und zähle rückwärts', 'Nutze Gegenstände zum Wegnehmen'],
+        2: ['Denke an das Ergänzen zur größeren Zahl', 'Nutze die Zahlenreihe rückwärts'],
+        3: ['Nutze den Zehnerübergang', 'Zerlege in einfachere Schritte'],
+        4: ['Prüfe dein Ergebnis durch Addition', 'Nutze Kopfrechentricks']
+      },
+      multiplication: {
+        2: ['Multiplikation ist wiederholte Addition', 'Nutze das kleine Einmaleins'],
+        3: ['Lerne die Einmaleinsreihen auswendig', 'Nutze Kommutativgesetz: 3×4 = 4×3'],
+        4: ['Nutze Zerlegungen: 6×8 = 6×4×2', 'Denke in Quadraten: 5×5 = 25']
+      },
+      division: {
+        3: ['Division ist das Gegenteil der Multiplikation', 'Denke: "Wie oft passt die Zahl hinein?"'],
+        4: ['Nutze das Einmaleins zur Kontrolle', 'Prüfe mit der Umkehraufgabe']
+      }
+    };
+
+    const gradeLevel = Math.max(1, Math.min(4, grade));
+    return tipMap[operation]?.[gradeLevel] || [];
   }
 }

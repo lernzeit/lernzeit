@@ -8,7 +8,7 @@ import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
 import { QuestionGenerationInfo } from '@/components/game/QuestionGenerationInfo';
 import { QuestionFeedbackDialog } from '@/components/game/QuestionFeedbackDialog';
-import { BulletproofAnswerCalculator } from '@/utils/templates/BulletproofAnswerCalculator';
+import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SelectionQuestion } from '@/types/questionTypes';
@@ -189,20 +189,19 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           const questionParams = (question as any).params || {};
           
           if (questionTemplate && Object.keys(questionParams).length > 0) {
-            console.log('🔍 Using BulletproofAnswerCalculator for validation');
-            const calculationResult = BulletproofAnswerCalculator.calculateAnswer(
+            console.log('🔍 Using AnswerCalculator for validation');
+            const calculationResult = AnswerCalculator.calculateAnswer(
               questionTemplate, 
               questionParams, 
               mcQuestion.question
             );
             
-            if (calculationResult.isValid && calculationResult.confidence >= 0.7) {
+            if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
               const calculatedAnswer = String(calculationResult.answer);
-              console.log('🎯 BulletproofAnswerCalculator result:', { 
+              console.log('🎯 AnswerCalculator result:', { 
                 calculated: calculatedAnswer, 
                 selected: selectedOption,
-                confidence: calculationResult.confidence,
-                method: calculationResult.calculationMethod
+                confidence: calculationResult.confidence
               });
               return selectedOption === calculatedAnswer || selectedOption.includes(calculatedAnswer);
             }
@@ -639,16 +638,16 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                        {(() => {
                          const mcQuestion = currentQuestion as any;
                          
-                         // Try BulletproofAnswerCalculator first for reliable calculation
-                         if (mcQuestion.template && mcQuestion.params) {
-                           const calculationResult = BulletproofAnswerCalculator.calculateAnswer(
-                             mcQuestion.template, 
-                             mcQuestion.params, 
+                          // Try AnswerCalculator first for reliable calculation
+                          if (mcQuestion.template && mcQuestion.params) {
+                            const calculationResult = AnswerCalculator.calculateAnswer(
+                              mcQuestion.template, 
+                              mcQuestion.params,
                              mcQuestion.question
                            );
-                           if (calculationResult.isValid && calculationResult.confidence >= 0.7) {
-                             return String(calculationResult.answer);
-                           }
+            if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
+              return String(calculationResult.answer);
+            }
                          }
                          
                          // Fallback to stored answer or options
