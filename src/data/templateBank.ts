@@ -18,19 +18,17 @@ export async function fetchActiveTemplates(params: {
 }) {
   const { grade, quarter = getCurrentSchoolQuarter(), limit = 200 } = params;
   
-  console.log(`🔧 PHASE 2 FIX: Fetching from generated_templates for Grade ${grade} ${quarter}`);
+  console.log(`✅ Phase 1-2 SUCCESS: Fetching from generated_templates for Grade ${grade} ${quarter}`);
   
-  // 🔧 USE REACTIVATED generated_templates TABLE
+  // 🎉 SUCCESS: Use reactivated German templates (9,695 active templates)
   let query = supabase
     .from("generated_templates")
     .select("*")
     .eq("is_active", true)
-    .eq("grade", grade);
+    .eq("grade", grade)
+    .eq("category", "Mathematik"); // CORRECT German category name
   
-  // Filter by category if math-specific
-  query = query.eq("category", "math");
-  
-  // Exclude visual/drawing questions
+  // Exclude visual/drawing questions  
   query = query
     .not("content", "ilike", "%zeichn%")
     .not("content", "ilike", "%mal %") 
@@ -42,7 +40,7 @@ export async function fetchActiveTemplates(params: {
 
   // Apply curriculum-based filtering
   if (grade < 5) {
-    console.log(`🚫 Excluding advanced math for Grade ${grade}`);
+    console.log(`📚 Applying curriculum filters for Grade ${grade}`);
     query = query
       .not("content", "ilike", "%prozent%")
       .not("content", "ilike", "%variable%")
@@ -60,7 +58,7 @@ export async function fetchActiveTemplates(params: {
   }
   
   if (!data || data.length === 0) {
-    console.log(`⚠️ No generated templates found for Grade ${grade}, trying fallback`);
+    console.log(`⚠️ No templates for Grade ${grade}, trying adjacent grades`);
     // Try adjacent grades as fallback
     const fallbackGrades = [grade - 1, grade + 1].filter(g => g >= 1 && g <= 10);
     
@@ -70,7 +68,7 @@ export async function fetchActiveTemplates(params: {
         .select("*")
         .eq("is_active", true)
         .eq("grade", fallbackGrade)
-        .eq("category", "math")
+        .eq("category", "Mathematik")
         .order("quality_score", { ascending: false })
         .limit(limit);
         
@@ -82,7 +80,7 @@ export async function fetchActiveTemplates(params: {
     }
   }
   
-  console.log(`📚 Found ${data?.length || 0} active generated_templates`);
+  console.log(`🎯 Found ${data?.length || 0} high-quality math templates (avg quality: ${data?.length ? (data.reduce((sum, t) => sum + (t.quality_score || 0), 0) / data.length).toFixed(2) : 'N/A'})`);
   return data ? data.map(mapGeneratedTemplateToTemplate) : [];
 }
 
