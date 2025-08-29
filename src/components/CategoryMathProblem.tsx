@@ -8,6 +8,7 @@ import { GameProgress } from '@/components/game/GameProgress';
 import { GameFeedback } from '@/components/game/GameFeedback';
 import { QuestionGenerationInfo } from '@/components/game/QuestionGenerationInfo';
 import { QuestionFeedbackDialog } from '@/components/game/QuestionFeedbackDialog';
+import { BulletproofAnswerCalculator } from '@/utils/templates/BulletproofAnswerCalculator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SelectionQuestion } from '@/types/questionTypes';
@@ -181,9 +182,33 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           return selectedOption === mcQuestion.correctAnswer;
         }
         
-        // Method 3: Calculate correct answer for math problems if needed
+        // Method 3: Use BulletproofAnswerCalculator for reliable calculation
         if (mcQuestion.question && mcQuestion.options) {
-          // Direct comparison with calculated answer if available
+          // Try to get template info for calculation
+          const questionTemplate = (question as any).template;
+          const questionParams = (question as any).params || {};
+          
+          if (questionTemplate && Object.keys(questionParams).length > 0) {
+            console.log('🔍 Using BulletproofAnswerCalculator for validation');
+            const calculationResult = BulletproofAnswerCalculator.calculateAnswer(
+              questionTemplate, 
+              questionParams, 
+              mcQuestion.question
+            );
+            
+            if (calculationResult.isValid && calculationResult.confidence >= 0.7) {
+              const calculatedAnswer = String(calculationResult.answer);
+              console.log('🎯 BulletproofAnswerCalculator result:', { 
+                calculated: calculatedAnswer, 
+                selected: selectedOption,
+                confidence: calculationResult.confidence,
+                method: calculationResult.calculationMethod
+              });
+              return selectedOption === calculatedAnswer || selectedOption.includes(calculatedAnswer);
+            }
+          }
+          
+          // Fallback: Direct comparison with stored answer
           const calculatedAnswer = (question as any).answer;
           if (calculatedAnswer !== undefined) {
             return selectedOption === String(calculatedAnswer) || selectedOption === calculatedAnswer;
@@ -610,9 +635,26 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                 <div className="mt-3 p-3 bg-white/50 rounded-md border-l-4 border-green-500">
                   <p className="text-sm font-medium mb-1 text-green-700">Richtige Antwort:</p>
                   {currentQuestion.questionType === 'multiple-choice' ? (
-                    <p className="text-sm font-semibold text-green-800">
-                      {(currentQuestion as any).options?.[(currentQuestion as any).correctAnswer] || (currentQuestion as any).answer || 'Siehe Erklärung'}
-                    </p>
+                     <p className="text-sm font-semibold text-green-800">
+                       {(() => {
+                         const mcQuestion = currentQuestion as any;
+                         
+                         // Try BulletproofAnswerCalculator first for reliable calculation
+                         if (mcQuestion.template && mcQuestion.params) {
+                           const calculationResult = BulletproofAnswerCalculator.calculateAnswer(
+                             mcQuestion.template, 
+                             mcQuestion.params, 
+                             mcQuestion.question
+                           );
+                           if (calculationResult.isValid && calculationResult.confidence >= 0.7) {
+                             return String(calculationResult.answer);
+                           }
+                         }
+                         
+                         // Fallback to stored answer or options
+                         return mcQuestion.options?.[mcQuestion.correctAnswer] || mcQuestion.answer || 'Siehe Erklärung';
+                       })()}
+                     </p>
                   ) : (
                     <p className="text-sm font-semibold text-green-800">
                       {(currentQuestion as any).answer || 'Siehe Erklärung'}
