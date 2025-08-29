@@ -107,6 +107,18 @@ export class AnswerCalculator {
         answer = 2 * (length + width);
         calculationSteps.push(`Result: ${answer} cm`);
         
+      } else if (template.id.includes('area_square')) {
+        const { side } = params;
+        calculationSteps.push(`Square area calculation: ${side} × ${side}`);
+        answer = side * side;
+        calculationSteps.push(`Result: ${answer} cm²`);
+        
+      } else if (template.id.includes('percentage')) {
+        const { percentage, total } = params;
+        calculationSteps.push(`Percentage calculation: ${percentage}% of ${total}`);
+        answer = Math.round((percentage / 100) * total);
+        calculationSteps.push(`Result: ${answer}`);
+        
       } else if (template.id.includes('area_rectangle')) {
         const { length, width } = params;
         calculationSteps.push(`Area calculation: ${length} × ${width}`);

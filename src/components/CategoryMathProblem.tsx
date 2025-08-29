@@ -183,15 +183,10 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         
         // Method 3: Calculate correct answer for math problems if needed
         if (mcQuestion.question && mcQuestion.options) {
-          // Example: Rectangle perimeter problem
-          if (mcQuestion.question.includes('Umfang') && mcQuestion.question.includes('Rechteck')) {
-            const match = mcQuestion.question.match(/(\d+)cm.*(\d+)cm/);
-            if (match) {
-              const [, perimeter, length] = match;
-              const width = (parseInt(perimeter) / 2) - parseInt(length);
-              const correctAnswer = `${width}cm`;
-              return selectedOption === correctAnswer;
-            }
+          // Direct comparison with calculated answer if available
+          const calculatedAnswer = (question as any).answer;
+          if (calculatedAnswer !== undefined) {
+            return selectedOption === String(calculatedAnswer) || selectedOption === calculatedAnswer;
           }
         }
         
@@ -606,7 +601,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                   <X className="w-8 h-8 text-red-600" />
                 )}
                 <span className="font-bold text-lg">
-                  {feedback === 'correct' ? '🎉 Richtig!' : '❌ Falsch!'}
+                  {feedback === 'correct' ? 'Richtig!' : 'Falsch!'}
                 </span>
               </div>
               
@@ -616,18 +611,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                   <p className="text-sm font-medium mb-1 text-green-700">Richtige Antwort:</p>
                   {currentQuestion.questionType === 'multiple-choice' ? (
                     <p className="text-sm font-semibold text-green-800">
-                      {(() => {
-                        const mcQuestion = currentQuestion as any;
-                        if (mcQuestion.question && mcQuestion.question.includes('Umfang') && mcQuestion.question.includes('Rechteck')) {
-                          const match = mcQuestion.question.match(/(\d+)cm.*(\d+)cm/);
-                          if (match) {
-                            const [, perimeter, length] = match;
-                            const width = (parseInt(perimeter) / 2) - parseInt(length);
-                            return `${width}cm`;
-                          }
-                        }
-                        return mcQuestion.options?.[mcQuestion.correctAnswer] || 'Siehe Erklärung';
-                      })()}
+                      {(currentQuestion as any).options?.[(currentQuestion as any).correctAnswer] || (currentQuestion as any).answer || 'Siehe Erklärung'}
                     </p>
                   ) : (
                     <p className="text-sm font-semibold text-green-800">
