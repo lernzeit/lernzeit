@@ -56,7 +56,7 @@ export class StepByStepExplainer {
   }
 
   /**
-   * Generate explanations using actual parameters from the question
+   * Generate explanations using actual parameters from the question - IMPROVED
    */
   private static generateParametrizedExplanation(
     question: SelectionQuestion,
@@ -67,20 +67,35 @@ export class StepByStepExplainer {
     const questionText = question.question.toLowerCase();
     const numbers = Object.values(params).filter(v => typeof v === 'number') as number[];
     
-    // Percentage calculations
+    // FIXED: Percentage calculations with proper explanations
     if (questionText.includes('prozent') || questionText.includes('%')) {
       if (numbers.length >= 2) {
         const [percentage, total] = numbers;
+        const result = (percentage / 100) * total;
         return {
-          summary: `${percentage}% von ${total} = ${answer}`,
+          summary: `${percentage}% von ${total} = ${Math.round(result)}`,
           steps: [
             { step: 1, description: `Gegeben: ${percentage}% von ${total}` },
-            { step: 2, description: `Umwandlung: ${percentage}% = ${percentage/100} = ${percentage/100}` },
-            { step: 3, description: `Berechnung: ${total} × ${percentage/100}`, calculation: `${total} × ${percentage/100} = ${answer}` }
+            { step: 2, description: `Prozent in Dezimalzahl umwandeln: ${percentage}% = ${percentage}÷100 = ${percentage/100}` },
+            { step: 3, description: `Berechnung: ${total} × ${percentage/100} = ${result}`, calculation: `${total} × ${percentage/100} = ${Math.round(result)}` }
           ],
-          tips: grade <= 5 ? ['Prozent bedeutet "von hundert"', 'Multipliziere mit dem Dezimalwert'] : []
+          tips: grade <= 5 ? ['Prozent bedeutet "von hundert"', 'Teile durch 100 und multipliziere'] : ['Prozent = Teil ÷ Ganzes × 100']
         };
       }
+    }
+
+    // IMPROVED: "pro Stunde" multiplication problems
+    if (questionText.includes('pro stunde') && numbers.length >= 2) {
+      const [rate, hours] = numbers;
+      return {
+        summary: `${rate} pro Stunde × ${hours} Stunden = ${answer}`,
+        steps: [
+          { step: 1, description: `Rate: ${rate} pro Stunde` },
+          { step: 2, description: `Zeit: ${hours} Stunden` },
+          { step: 3, description: `Gesamtmenge: Rate × Zeit = ${rate} × ${hours} = ${answer}` }
+        ],
+        tips: grade <= 4 ? ['Pro Stunde bedeutet: in jeder Stunde', 'Multipliziere Rate × Zeit'] : []
+      };
     }
     
     // Area calculations (squares, rectangles)

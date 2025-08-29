@@ -21,11 +21,9 @@ export interface ParsedMathResult {
 
 export class ImprovedGermanMathParser {
   /**
-   * Enhanced parsing with multiple strategies
+   * Enhanced parsing with multiple strategies - NO DEBUG OUTPUT
    */
   static parse(question: string): ParsedMathResult {
-    console.log('🔍 ImprovedGermanMathParser parsing:', question);
-    
     // First try the existing parser
     const basicResult = GermanMathParser.parse(question);
     
@@ -168,7 +166,7 @@ export class ImprovedGermanMathParser {
   }
 
   /**
-   * Enhanced word problem parsing
+   * Enhanced word problem parsing - FIXED for "pro Stunde" patterns
    */
   private static parseEnhancedWordProblem(text: string): ParsedMathResult {
     // Extract numbers from the text
@@ -180,91 +178,167 @@ export class ImprovedGermanMathParser {
     let operation: string;
     let result: number;
     let steps: string[] = [];
+    let unit = '';
 
+    // Extract unit from text
+    if (text.includes('euro')) unit = ' Euro';
+    if (text.includes('brote') || text.includes('brötchen')) unit = ' Brote';
+    if (text.includes('kekse')) unit = ' Kekse';
+    if (text.includes('äpfel')) unit = ' Äpfel';
+    if (text.includes('meter') || text.includes('cm')) unit = text.includes('cm') ? 'cm' : 'm';
+
+    // FIXED: "pro Stunde" multiplication patterns
+    if (text.includes('pro stunde') && text.includes('stunde')) {
+      const proHourMatch = text.match(/(\d+).*pro stunde.*(\d+).*stunde/i);
+      if (proHourMatch && numbers.length >= 2) {
+        operation = 'multiplication';
+        result = numbers[0] * numbers[1];
+        steps = [`${numbers[0]} pro Stunde × ${numbers[1]} Stunden = ${result}${unit}`];
+        
+        return {
+          success: true,
+          answer: result + unit,
+          questionType: 'word-problem',
+          confidence: 0.95,
+          steps,
+          metadata: {
+            operation,
+            operands: numbers,
+            unit
+          }
+        };
+      }
+    }
+
+    // Other operations
     if (text.includes('zusammen') || text.includes('insgesamt') || text.includes('addier')) {
       operation = 'addition';
       result = numbers.reduce((sum, num) => sum + num, 0);
-      steps = [`${numbers.join(' + ')} = ${result}`];
+      steps = [`${numbers.join(' + ')} = ${result}${unit}`];
     } else if (text.includes('weniger') || text.includes('verliert') || text.includes('subtrah')) {
       operation = 'subtraction';
       result = numbers[0] - numbers[1];
-      steps = [`${numbers[0]} - ${numbers[1]} = ${result}`];
+      steps = [`${numbers[0]} - ${numbers[1]} = ${result}${unit}`];
     } else if (text.includes('mal') || text.includes('multipli') || text.includes('vervielfach')) {
       operation = 'multiplication';
       result = numbers[0] * numbers[1];
-      steps = [`${numbers[0]} × ${numbers[1]} = ${result}`];
+      steps = [`${numbers[0]} × ${numbers[1]} = ${result}${unit}`];
     } else if (text.includes('teil') || text.includes('divid') || text.includes('aufgeteilt')) {
       operation = 'division';
       result = Math.floor(numbers[0] / numbers[1]);
-      steps = [`${numbers[0]} ÷ ${numbers[1]} = ${result}`];
+      steps = [`${numbers[0]} ÷ ${numbers[1]} = ${result}${unit}`];
     } else {
       return { success: false };
     }
 
     return {
       success: true,
-      answer: result,
+      answer: result + unit,
       questionType: 'word-problem',
       confidence: 0.85,
       steps,
       metadata: {
         operation,
-        operands: numbers
+        operands: numbers,
+        unit
       }
     };
   }
 
   /**
-   * Enhanced geometry parsing
+   * Enhanced geometry parsing - FIXED perimeter and area with units
    */
   private static parseEnhancedGeometry(text: string): ParsedMathResult {
     const numbers = text.match(/\d+(?:,\d+)?/g)?.map(n => parseFloat(n.replace(',', '.'))) || [];
     
-    if (numbers.length < 2) return { success: false };
+    if (numbers.length === 0) return { success: false };
 
     let result: number;
     let steps: string[] = [];
     let operation: string;
+    let unit = '';
+
+    // Extract unit
+    if (text.includes('cm')) unit = 'cm';
+    else if (text.includes('m') && !text.includes('cm')) unit = 'm';
 
     if (text.includes('fläche') || text.includes('flächeninhalt')) {
-      if (text.includes('rechteck')) {
+      if (text.includes('rechteck') && numbers.length >= 2) {
         operation = 'rectangle_area';
         result = numbers[0] * numbers[1];
-        steps = [`Fläche = Länge × Breite`, `Fläche = ${numbers[0]} × ${numbers[1]} = ${result}`];
-      } else if (text.includes('quadrat')) {
+        const areaUnit = unit ? unit + '²' : '';
+        steps = [`Fläche = Länge × Breite`, `Fläche = ${numbers[0]} × ${numbers[1]} = ${result}${areaUnit}`];
+        
+        return {
+          success: true,
+          answer: result + areaUnit,
+          questionType: 'geometry',
+          confidence: 0.9,
+          steps,
+          metadata: {
+            operation,
+            operands: numbers,
+            unit: areaUnit
+          }
+        };
+      } else if (text.includes('quadrat') && numbers.length >= 1) {
         operation = 'square_area';
         result = numbers[0] * numbers[0];
-        steps = [`Fläche = Seitenlänge²`, `Fläche = ${numbers[0]}² = ${result}`];
-      } else {
-        return { success: false };
+        const areaUnit = unit ? unit + '²' : '';
+        steps = [`Fläche = Seitenlänge²`, `Fläche = ${numbers[0]}² = ${result}${areaUnit}`];
+        
+        return {
+          success: true,
+          answer: result + areaUnit,
+          questionType: 'geometry',
+          confidence: 0.9,
+          steps,
+          metadata: {
+            operation,
+            operands: [numbers[0]],
+            unit: areaUnit
+          }
+        };
       }
     } else if (text.includes('umfang')) {
-      if (text.includes('rechteck')) {
+      if (text.includes('rechteck') && numbers.length >= 2) {
         operation = 'rectangle_perimeter';
         result = 2 * (numbers[0] + numbers[1]);
-        steps = [`Umfang = 2 × (Länge + Breite)`, `Umfang = 2 × (${numbers[0]} + ${numbers[1]}) = ${result}`];
-      } else if (text.includes('quadrat')) {
+        steps = [`Umfang = 2 × (Länge + Breite)`, `Umfang = 2 × (${numbers[0]} + ${numbers[1]}) = 2 × ${numbers[0] + numbers[1]} = ${result}${unit}`];
+        
+        return {
+          success: true,
+          answer: result + unit,
+          questionType: 'geometry',
+          confidence: 0.9,
+          steps,
+          metadata: {
+            operation,
+            operands: numbers,
+            unit
+          }
+        };
+      } else if (text.includes('quadrat') && numbers.length >= 1) {
         operation = 'square_perimeter';
         result = 4 * numbers[0];
-        steps = [`Umfang = 4 × Seitenlänge`, `Umfang = 4 × ${numbers[0]} = ${result}`];
-      } else {
-        return { success: false };
+        steps = [`Umfang = 4 × Seitenlänge`, `Umfang = 4 × ${numbers[0]} = ${result}${unit}`];
+        
+        return {
+          success: true,
+          answer: result + unit,
+          questionType: 'geometry',
+          confidence: 0.9,
+          steps,
+          metadata: {
+            operation,
+            operands: [numbers[0]],
+            unit
+          }
+        };
       }
-    } else {
-      return { success: false };
     }
 
-    return {
-      success: true,
-      answer: result,
-      questionType: 'geometry',
-      confidence: 0.9,
-      steps,
-      metadata: {
-        operation,
-        operands: numbers
-      }
-    };
+    return { success: false };
   }
 
   /**
@@ -416,16 +490,32 @@ export class ImprovedGermanMathParser {
     const base = parseFloat(baseStr.replace(',', '.'));
     
     const result = (percent / 100) * base;
+    
+    // Handle special cases for common percentage problems
+    let answer = result.toString();
+    let unit = '';
+    
+    // Check for common units in percentage problems
+    if (match.input?.includes('schüler')) {
+      answer = Math.round(result) + ' Schüler';
+      unit = ' Schüler';
+    } else if (match.input?.includes('euro')) {
+      answer = result.toFixed(2) + ' Euro';
+      unit = ' Euro';
+    } else {
+      answer = result % 1 === 0 ? result.toString() : result.toFixed(2);
+    }
 
     return {
       success: true,
-      answer: result,
+      answer: answer,
       questionType: 'arithmetic',
       confidence: 0.9,
-      steps: [`${percent}% von ${base}`, `${percent} ÷ 100 × ${base} = ${result}`],
+      steps: [`${percent}% von ${base}`, `${percent} ÷ 100 × ${base} = ${result}${unit}`],
       metadata: {
         operation: 'percentage',
-        operands: [percent, base]
+        operands: [percent, base],
+        unit
       }
     };
   }

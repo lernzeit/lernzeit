@@ -334,38 +334,61 @@ export class EnhancedTemplateBankService {
   }
 
   /**
-   * Extract options and return both options and correct index
+   * Extract options and return both options and correct index - FIXED units consistency
    */
   private extractOptionsWithCorrectIndex(template: any): { options: string[]; correctIndex: number } {
     // Calculate the correct answer dynamically
     const calculatedAnswer = this.calculateDynamicAnswer(template, template.student_prompt || '');
     const correct = calculatedAnswer.answer;
     
+    // Extract unit from correct answer for consistent option formatting
+    const unit = this.extractUnit(correct);
+    const correctNum = parseFloat(correct);
+    
     // Start with correct answer as first option
     const options = [correct];
     
     if (template.distractors && Array.isArray(template.distractors)) {
-      options.push(...template.distractors.slice(0, 3));
+      // Ensure distractors have consistent units
+      const formattedDistractors = template.distractors.slice(0, 3).map((distractor: string) => {
+        const distractorNum = parseFloat(distractor);
+        return !isNaN(distractorNum) ? distractorNum + unit : distractor;
+      });
+      options.push(...formattedDistractors);
     } else {
-      // Generate simple numeric distractors
-      const num = parseFloat(correct);
-      if (!isNaN(num)) {
-        // For math problems, create reasonable distractors
-        if (correct.includes('m²') || correct.includes('cm²')) {
-          // Area problems
-          const baseNum = num;
+      // Generate mathematically plausible distractors with consistent units
+      if (!isNaN(correctNum)) {
+        if (unit.includes('²')) {
+          // Area problems - common mistakes: wrong formula, calculation errors
+          const baseNum = correctNum;
           options.push(
-            `${Math.round(baseNum * 1.5)}${correct.includes('m²') ? 'm²' : 'cm²'}`,
-            `${Math.round(baseNum * 0.5)}${correct.includes('m²') ? 'm²' : 'cm²'}`,
-            `${Math.round(baseNum + 2)}${correct.includes('m²') ? 'm²' : 'cm²'}`
+            `${Math.round(baseNum * 2)}${unit}`, // Common error: forgot to divide perimeter formula
+            `${Math.round(baseNum * 0.5)}${unit}`, // Division instead of multiplication
+            `${Math.round(baseNum + 10)}${unit}` // Addition instead of multiplication
           );
-        } else if (correct.includes('Schüler')) {
-          // Percentage problems
-          const baseNum = num;
-          options.push(`${baseNum * 4} Schüler`, `${Math.round(baseNum * 0.5)} Schüler`, `${Math.round(baseNum * 0.1)} Schüler`);
+        } else if (unit.includes('Schüler') || unit.includes('Euro') || unit.includes('Brote')) {
+          // Word problem distractors
+          const baseNum = correctNum;
+          options.push(
+            `${Math.round(baseNum * 0.5)}${unit}`, // Division instead of multiplication
+            `${Math.round(baseNum + 5)}${unit}`, // Addition instead of multiplication  
+            `${Math.round(baseNum * 1.5)}${unit}` // Wrong multiplication factor
+          );
+        } else if (unit.includes('cm') || unit.includes('m')) {
+          // Geometry perimeter/length problems
+          const baseNum = correctNum;
+          options.push(
+            `${Math.round(baseNum * 0.5)}${unit}`, // Forgot to double for perimeter
+            `${Math.round(baseNum + 8)}${unit}`, // Addition instead of proper formula
+            `${Math.round(baseNum * 1.5)}${unit}` // Wrong coefficient
+          );
         } else {
-          // General numeric problems
-          options.push((num * 2).toString(), (num + 1).toString(), (num - 1).toString());
+          // General numeric problems with unit preservation
+          options.push(
+            `${correctNum * 2}${unit}`,
+            `${correctNum + 1}${unit}`,
+            `${Math.max(1, correctNum - 1)}${unit}`
+          );
         }
       } else {
         options.push("Option B", "Option C", "Option D");
@@ -376,7 +399,7 @@ export class EnhancedTemplateBankService {
     const shuffledOptions = [...options];
     const correctAnswerText = options[0]; // Store original correct answer
     
-    // Simple shuffle
+    // Simple shuffle algorithm
     for (let i = shuffledOptions.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
@@ -385,16 +408,25 @@ export class EnhancedTemplateBankService {
     // Find where the correct answer ended up after shuffle
     const correctIndex = shuffledOptions.findIndex(opt => opt === correctAnswerText);
     
-    console.log(`🎯 Options generated:`, {
-      correct: correctAnswerText,
-      options: shuffledOptions,
-      correctIndex
-    });
-    
     return {
       options: shuffledOptions.slice(0, 4),
       correctIndex: Math.max(0, correctIndex) // Ensure valid index
     };
+  }
+
+  /**
+   * Extract unit from answer string for consistent formatting
+   */
+  private extractUnit(answer: string): string {
+    const units = ['m²', 'cm²', 'mm²', 'm', 'cm', 'mm', 'Euro', 'Cent', 'Schüler', 'Brote', 'Brötchen', 'Kekse', 'Äpfel', 'Stunden', 'Minuten'];
+    
+    for (const unit of units) {
+      if (answer.includes(unit)) {
+        return ' ' + unit;
+      }
+    }
+    
+    return ''; // No unit found
   }
 
   private mapQuestionType(dbType: string): 'multiple-choice' | 'text-input' | 'matching' | 'drag-drop' {
