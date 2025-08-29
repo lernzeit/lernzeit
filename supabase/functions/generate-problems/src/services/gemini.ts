@@ -46,7 +46,17 @@ export class GeminiService {
             role: "user",
             parts: [
               {
-                text: `${systemPrompt}\n\n${prompt}\n\nErstelle ${request.count} Aufgaben für ${request.category}, Klasse ${request.grade}. Session ID: ${request.sessionId || 'unknown'}`
+                text: `${systemPrompt}\n\n${prompt}\n\nErstelle ${request.count} parametrisierte Aufgaben-Templates für ${request.category}, Klasse ${request.grade}.
+
+ERFORDERLICHE TEMPLATE-AUSGABE pro Aufgabe:
+- student_prompt: Fragetext mit {{parameter}} Platzhaltern
+- parameter_definitions: {"param": {"type": "number|string", "range": [min,max], "values": ["opt1","opt2"]}}
+- calculation_logic: Berechnungsformel (z.B. "{{a}} * {{b}}")  
+- solution: Antwort-Struktur mit Einheiten
+- distractors: Array typischer Schülerfehler
+- explanation: Lösungsweg mit Parameter-Platzhaltern
+
+Session ID: ${request.sessionId || 'unknown'}`
               }
             ]
           }
@@ -178,14 +188,36 @@ export class GeminiService {
                   type: "string",
                   description: "Brief explanation of the correct answer"
                 },
-                // Multiple choice specific
+                // Parametrized template fields
+                student_prompt: {
+                  type: "string",
+                  description: "Question text with {{parameter}} placeholders"
+                },
+                parameter_definitions: {
+                  type: "object",
+                  description: "Parameter definitions with types, ranges, and values"
+                },
+                calculation_logic: {
+                  type: "string",  
+                  description: "Mathematical formula for automatic answer calculation"
+                },
+                solution: {
+                  type: "object",
+                  description: "Expected answer structure with units"
+                },
+                distractors: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Common student errors as incorrect answers"
+                },
+                // Multiple choice specific  
                 options: {
                   type: "array",
                   items: { type: "string" },
-                  description: "Answer options for multiple choice questions"
+                  description: "Answer options for multiple choice questions with units"
                 },
                 correctAnswer: {
-                  type: "integer",
+                  type: "integer", 
                   description: "Index of correct answer for multiple choice (0-based)"
                 },
                 // Word selection specific
@@ -242,7 +274,7 @@ export class GeminiService {
                   description: "Correct answer for text input questions"
                 }
               },
-              required: ["questionType", "question", "explanation"]
+              required: ["questionType", "question", "explanation", "student_prompt", "parameter_definitions", "calculation_logic"]
             }
           }
         },
