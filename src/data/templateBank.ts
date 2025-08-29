@@ -18,176 +18,93 @@ export async function fetchActiveTemplates(params: {
 }) {
   const { grade, quarter = getCurrentSchoolQuarter(), limit = 200 } = params;
   
-  // Quartalslogik: Je nach Quartal, unterschiedliche Ziel-Klassenstufe und -Quartal
-  const availableQuarters = getAvailableQuarters(quarter);
-  const targetGrade = quarter === "Q1" ? grade - 1 : grade; // Q1 holt Inhalte aus vorheriger Klasse
+  console.log(`🔧 PHASE 2 FIX: Fetching from generated_templates for Grade ${grade} ${quarter}`);
   
-  console.log(`🏦 Fetching templates for User Grade ${grade} ${quarter}, targeting Grade ${targetGrade} quarters:`, availableQuarters);
-  
-  // Versuche zuerst die berechnete Ziel-Klassenstufe und -Quartal
+  // 🔧 USE REACTIVATED generated_templates TABLE
   let query = supabase
-    .from("template_scores")
+    .from("generated_templates")
     .select("*")
-    .eq("status","ACTIVE")
-    .eq("grade_app", targetGrade)
-    .in("quarter_app", availableQuarters)
-    // Filtere visuelle/Zeichen-Fragen aus
-    .not("student_prompt", "ilike", "%zeichn%")
-    .not("student_prompt", "ilike", "%mal %")
-    .not("student_prompt", "ilike", "%konstruier%")
-    .not("student_prompt", "ilike", "%entwirf%")
-    .not("student_prompt", "ilike", "%bild%")
-    .not("student_prompt", "ilike", "%ordne%")
-    .not("student_prompt", "ilike", "%verbind%");
+    .eq("is_active", true)
+    .eq("grade", grade);
+  
+  // Filter by category if math-specific
+  query = query.eq("category", "math");
+  
+  // Exclude visual/drawing questions
+  query = query
+    .not("content", "ilike", "%zeichn%")
+    .not("content", "ilike", "%mal %") 
+    .not("content", "ilike", "%konstruier%")
+    .not("content", "ilike", "%entwirf%")
+    .not("content", "ilike", "%bild%")
+    .not("content", "ilike", "%ordne%")
+    .not("content", "ilike", "%verbind%");
 
-  // ✅ KRITISCH: Curriculum-based filtering
-  console.log(`🎓 Applying curriculum filters for Grade ${targetGrade} quarters ${availableQuarters.join(',')}`);
-  
-  // ❌ EXCLUDE: Prozentrechnung erst ab Klasse 5 Q3!
-  if (targetGrade < 5 || (targetGrade === 5 && !availableQuarters.includes("Q3") && !availableQuarters.includes("Q4"))) {
-    console.log(`🚫 Excluding percentage questions for Grade ${targetGrade}`);
+  // Apply curriculum-based filtering
+  if (grade < 5) {
+    console.log(`🚫 Excluding advanced math for Grade ${grade}`);
     query = query
-      .not("student_prompt", "ilike", "%prozent%")
-      .not("student_prompt", "ilike", "%von 15 schülern%")
-      .not("student_prompt", "ilike", "%von 100 kindern%")
-      .not("student_prompt", "ilike", "%von 40 kindern%")
-      .not("student_prompt", "ilike", "%das sind __ %")
-      .not("student_prompt", "ilike", "%wie viel prozent%");
-  }
-  
-  // ❌ EXCLUDE: Algebra/Variables erst ab Klasse 5, advanced algebra ab Klasse 7
-  if (targetGrade < 5) {
-    console.log(`🚫 Excluding algebra for Grade ${targetGrade}`);
-    query = query
-      .not("student_prompt", "ilike", "%variable%")
-      .not("student_prompt", "ilike", "%term%")
-      .not("student_prompt", "ilike", "%gleichung%")
-      .not("student_prompt", "ilike", "%löse%")
-      .not("student_prompt", "ilike", "%x =%")
-      .not("student_prompt", "ilike", "%y =%")
-      .not("student_prompt", "ilike", "%a =%")
-      .not("student_prompt", "ilike", "%b =%")
-      .not("subcategory", "ilike", "%gleichung%")
-      .not("subcategory", "ilike", "%term%");
-  }
-  
-  // ❌ EXCLUDE: Advanced algebra concepts
-  if (targetGrade < 7) {
-    console.log(`🚫 Excluding advanced algebra for Grade ${targetGrade}`);
-    query = query
-      .not("student_prompt", "ilike", "%termwert%")
-      .not("student_prompt", "ilike", "%termumformung%")
-      .not("student_prompt", "ilike", "%lineare gleichung%")
-      .not("student_prompt", "ilike", "%mehreren variablen%")
-      .not("subcategory", "ilike", "%termwert%")
-      .not("subcategory", "ilike", "%termumformung%");
+      .not("content", "ilike", "%prozent%")
+      .not("content", "ilike", "%variable%")
+      .not("content", "ilike", "%gleichung%")
+      .not("content", "ilike", "%term%");
   }
 
   let { data, error } = await query
-    .order("qscore",{ ascending:false })
+    .order("quality_score", { ascending: false })
     .limit(limit);
   
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Generated templates fetch error:', error);
+    return [];
+  }
   
-  // Fallback-Strategie: Wenn keine Templates gefunden, suche systematisch
   if (!data || data.length === 0) {
-    console.log(`⚠️ No templates found for target grade ${targetGrade}, trying systematic fallback`);
+    console.log(`⚠️ No generated templates found for Grade ${grade}, trying fallback`);
+    // Try adjacent grades as fallback
+    const fallbackGrades = [grade - 1, grade + 1].filter(g => g >= 1 && g <= 10);
     
-    // Für Q1: Versuche erst vorherige Klasse Q4, dann Q3, dann Q2, dann Q1
-    // Für andere Quartale: Versuche erst kleinere Klassenstufen
-    const fallbackSearch = async (searchGrade: number, searchQuarters: Quarter[]) => {
-      let fallbackQuery = supabase
-        .from("template_scores")
+    for (const fallbackGrade of fallbackGrades) {
+      const { data: fallbackData } = await supabase
+        .from("generated_templates")
         .select("*")
-        .eq("status","ACTIVE")
-        .eq("grade_app", searchGrade)
-        .in("quarter_app", searchQuarters)
-        // Filtere visuelle/Zeichen-Fragen aus
-        .not("student_prompt", "ilike", "%zeichn%")
-        .not("student_prompt", "ilike", "%mal %")
-        .not("student_prompt", "ilike", "%konstruier%")
-        .not("student_prompt", "ilike", "%entwirf%")
-        .not("student_prompt", "ilike", "%bild%")
-        .not("student_prompt", "ilike", "%ordne%")
-        .not("student_prompt", "ilike", "%verbind%");
-
-      // ✅ Auch bei Fallback: Curriculum-based filtering
-      if (searchGrade < 5 || (searchGrade === 5 && !searchQuarters.includes("Q3") && !searchQuarters.includes("Q4"))) {
-        fallbackQuery = fallbackQuery
-          .not("student_prompt", "ilike", "%prozent%")
-          .not("student_prompt", "ilike", "%von 15 schülern%")
-          .not("student_prompt", "ilike", "%von 100 kindern%")
-          .not("student_prompt", "ilike", "%von 40 kindern%")
-          .not("student_prompt", "ilike", "%das sind __ %")
-          .not("student_prompt", "ilike", "%wie viel prozent%");
-      }
-      
-      // ❌ EXCLUDE: Algebra for grades below 5
-      if (searchGrade < 5) {
-        fallbackQuery = fallbackQuery
-          .not("student_prompt", "ilike", "%variable%")
-          .not("student_prompt", "ilike", "%term%")
-          .not("student_prompt", "ilike", "%gleichung%")
-          .not("student_prompt", "ilike", "%löse%")
-          .not("student_prompt", "ilike", "%x =%")
-          .not("student_prompt", "ilike", "%y =%")
-          .not("student_prompt", "ilike", "%a =%")
-          .not("student_prompt", "ilike", "%b =%")
-          .not("subcategory", "ilike", "%gleichung%")
-          .not("subcategory", "ilike", "%term%");
-      }
-      
-      // ❌ EXCLUDE: Advanced algebra for grades below 7
-      if (searchGrade < 7) {
-        fallbackQuery = fallbackQuery
-          .not("student_prompt", "ilike", "%termwert%")
-          .not("student_prompt", "ilike", "%termumformung%")
-          .not("student_prompt", "ilike", "%lineare gleichung%")
-          .not("student_prompt", "ilike", "%mehreren variablen%")
-          .not("subcategory", "ilike", "%termwert%")
-          .not("subcategory", "ilike", "%termumformung%");
-      }
-
-      const { data: fallbackData, error: fallbackError } = await fallbackQuery
-        .order("qscore", { ascending: false })
+        .eq("is_active", true)
+        .eq("grade", fallbackGrade)
+        .eq("category", "math")
+        .order("quality_score", { ascending: false })
         .limit(limit);
-      
-      if (fallbackError) throw fallbackError;
-      return fallbackData;
-    };
-
-    // Erweiterte Fallback-Logik für alle Quartale
-    const allQuarters: Quarter[] = ["Q4", "Q3", "Q2", "Q1"];
-    
-    for (let fallbackGrade = targetGrade; fallbackGrade >= 1; fallbackGrade--) {
-      for (const searchQuarter of allQuarters) {
-        console.log(`🔍 Trying fallback: Grade ${fallbackGrade}, Quarter ${searchQuarter}`);
         
-        const fallbackData = await fallbackSearch(fallbackGrade, [searchQuarter]);
-        
-        if (fallbackData && fallbackData.length > 0) {
-          console.log(`✅ Using ${fallbackData.length} templates from Grade ${fallbackGrade} ${searchQuarter} for User Grade ${grade} ${quarter}`);
-          data = fallbackData;
-          return data;
-        }
+      if (fallbackData && fallbackData.length > 0) {
+        console.log(`✅ Using ${fallbackData.length} templates from Grade ${fallbackGrade} fallback`);
+        data = fallbackData;
+        break;
       }
     }
   }
   
-  return data ?? [];
+  console.log(`📚 Found ${data?.length || 0} active generated_templates`);
+  return data ? data.map(mapGeneratedTemplateToTemplate) : [];
 }
 
-// Quartalslogik: Inhalte aus der vorherigen Klasse/Quartal werden abgefragt
-// Z.B. Klasse 5 Q1 fragt Klasse 4 Q4 Inhalte ab
-function getAvailableQuarters(currentQuarter: Quarter): Quarter[] {
-  // Für Q1: Hole Q4 Inhalte der vorherigen Klasse
-  if (currentQuarter === "Q1") return ["Q4"];
-  // Für Q2: Hole Q1 Inhalte der aktuellen Klasse
-  if (currentQuarter === "Q2") return ["Q1"]; 
-  // Für Q3: Hole Q2 Inhalte der aktuellen Klasse
-  if (currentQuarter === "Q3") return ["Q2"];
-  // Für Q4: Hole Q3 Inhalte der aktuellen Klasse
-  return ["Q3"];
+// 🔧 PHASE 2 FIX: Map from generated_templates to Template interface
+function mapGeneratedTemplateToTemplate(template: any): any {
+  return {
+    id: template.id,
+    grade: template.grade,
+    domain: template.category || 'math',
+    subcategory: template.question_type || 'basic', 
+    difficulty: 'medium', // Default difficulty
+    question_type: template.question_type || 'multiple-choice',
+    student_prompt: template.content || 'Keine Aufgabe definiert',
+    solution: { value: 1 }, // Will be calculated dynamically
+    distractors: [],
+    variables: {},
+    explanation_teacher: '',
+    tags: [],
+    quarter_app: 'Q1', // Default quarter
+    qscore: template.quality_score || 0.5, // Map quality_score to qscore for compatibility
+    status: template.is_active ? 'ACTIVE' : 'INACTIVE'
+  };
 }
 
 export function pickSessionTemplates(all: any[], opts: {
