@@ -4,10 +4,6 @@ import { CategorySelector } from '@/components/CategorySelector';
 import { CategoryMathProblem as CategoryLearningProblem } from '@/components/CategoryMathProblem';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
-import { TemplateSystemTest } from '@/components/debug/TemplateSystemTest';
-import { TemplateExpansionTest } from '@/components/debug/TemplateExpansionTest';
-import { VisualTemplateCleanup } from '@/components/debug/VisualTemplateCleanup';
-import { TemplateGenerator } from '@/components/TemplateGenerator';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -276,14 +272,6 @@ const Index = () => {
             <Shield className="w-4 h-4" />
             Sicher, lehrreich und motivierend für alle Klassenstufen
           </p>
-        </div>
-        
-        {/* Developer Debug Section */}
-        <div className="mt-12 pt-8 border-t border-muted/20 space-y-6">
-          <TemplateGenerator />
-          <TemplateSystemTest />
-          <VisualTemplateCleanup />
-          <TemplateExpansionTest />
         </div>
       </div>
     </div>
