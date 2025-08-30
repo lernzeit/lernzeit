@@ -18,42 +18,41 @@ export async function fetchActiveTemplates(params: {
 }) {
   const { grade, quarter = getCurrentSchoolQuarter(), limit = 200 } = params;
   
-  console.log(`✅ Phase 1-2 SUCCESS: Fetching from generated_templates for Grade ${grade} ${quarter}`);
+  console.log(`🎯 PHASE 1: Fetching from high-quality TEMPLATES table for Grade ${grade} ${quarter}`);
   
-  // 🎉 SUCCESS: Use reactivated German templates (9,695 active templates)
+  // ✅ PHASE 1: Use high-quality templates table (659 premium templates)
   let query = supabase
-    .from("generated_templates")
+    .from("templates")
     .select("*")
-    .eq("is_active", true)
+    .eq("status", "ACTIVE")
     .eq("grade", grade)
-    .eq("category", "Mathematik"); // CORRECT German category name
   
-  // Exclude visual/drawing questions  
+  // Exclude visual/drawing questions from student_prompt
   query = query
-    .not("content", "ilike", "%zeichn%")
-    .not("content", "ilike", "%mal %") 
-    .not("content", "ilike", "%konstruier%")
-    .not("content", "ilike", "%entwirf%")
-    .not("content", "ilike", "%bild%")
-    .not("content", "ilike", "%ordne%")
-    .not("content", "ilike", "%verbind%");
+    .not("student_prompt", "ilike", "%zeichn%")
+    .not("student_prompt", "ilike", "%mal %") 
+    .not("student_prompt", "ilike", "%konstruier%")
+    .not("student_prompt", "ilike", "%entwirf%")
+    .not("student_prompt", "ilike", "%bild%")
+    .not("student_prompt", "ilike", "%ordne%")
+    .not("student_prompt", "ilike", "%verbind%");
 
-  // Apply curriculum-based filtering
+  // Apply curriculum-based filtering for lower grades
   if (grade < 5) {
     console.log(`📚 Applying curriculum filters for Grade ${grade}`);
     query = query
-      .not("content", "ilike", "%prozent%")
-      .not("content", "ilike", "%variable%")
-      .not("content", "ilike", "%gleichung%")
-      .not("content", "ilike", "%term%");
+      .not("student_prompt", "ilike", "%prozent%")
+      .not("student_prompt", "ilike", "%variable%")
+      .not("student_prompt", "ilike", "%gleichung%")
+      .not("student_prompt", "ilike", "%term%");
   }
 
   let { data, error } = await query
-    .order("quality_score", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(limit);
   
   if (error) {
-    console.error('❌ Generated templates fetch error:', error);
+    console.error('❌ Templates fetch error:', error);
     return [];
   }
   
@@ -64,12 +63,11 @@ export async function fetchActiveTemplates(params: {
     
     for (const fallbackGrade of fallbackGrades) {
       const { data: fallbackData } = await supabase
-        .from("generated_templates")
+        .from("templates")
         .select("*")
-        .eq("is_active", true)
+        .eq("status", "ACTIVE")
         .eq("grade", fallbackGrade)
-        .eq("category", "Mathematik")
-        .order("quality_score", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(limit);
         
       if (fallbackData && fallbackData.length > 0) {
@@ -80,28 +78,28 @@ export async function fetchActiveTemplates(params: {
     }
   }
   
-  console.log(`🎯 Found ${data?.length || 0} high-quality math templates (avg quality: ${data?.length ? (data.reduce((sum, t) => sum + (t.quality_score || 0), 0) / data.length).toFixed(2) : 'N/A'})`);
-  return data ? data.map(mapGeneratedTemplateToTemplate) : [];
+  console.log(`🎯 Found ${data?.length || 0} high-quality templates from TEMPLATES table`);
+  return data ? data.map(mapTemplateToInterface) : [];
 }
 
-// 🔧 PHASE 2 FIX: Map from generated_templates to Template interface
-function mapGeneratedTemplateToTemplate(template: any): any {
+// ✅ PHASE 1: Direct mapping from templates table (no conversion needed)
+function mapTemplateToInterface(template: any): any {
   return {
     id: template.id,
     grade: template.grade,
-    domain: template.category || 'math',
-    subcategory: template.question_type || 'basic', 
-    difficulty: 'medium', // Default difficulty
-    question_type: template.question_type || 'multiple-choice',
-    student_prompt: template.content || 'Keine Aufgabe definiert',
-    solution: { value: 1 }, // Will be calculated dynamically
-    distractors: [],
-    variables: {},
-    explanation_teacher: '',
-    tags: [],
-    quarter_app: 'Q1', // Default quarter
-    qscore: template.quality_score || 0.5, // Map quality_score to qscore for compatibility
-    status: template.is_active ? 'ACTIVE' : 'INACTIVE'
+    domain: template.domain,
+    subcategory: template.subcategory,
+    difficulty: template.difficulty,
+    question_type: template.question_type,
+    student_prompt: template.student_prompt,
+    solution: template.solution || { value: 1 },
+    distractors: template.distractors || [],
+    variables: template.variables || {},
+    explanation_teacher: template.explanation_teacher || '',
+    tags: template.tags || [],
+    quarter_app: template.quarter_app,
+    qscore: 0.8, // High quality score for premium templates
+    status: template.status
   };
 }
 

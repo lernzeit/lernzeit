@@ -5,6 +5,7 @@ import { CategoryMathProblem as CategoryLearningProblem } from '@/components/Cat
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { TemplateSystemTest } from '@/components/debug/TemplateSystemTest';
+import { TemplateExpansionTest } from '@/components/debug/TemplateExpansionTest';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -276,8 +277,9 @@ const Index = () => {
         </div>
         
         {/* Developer Debug Section */}
-        <div className="mt-12 pt-8 border-t border-muted/20">
+        <div className="mt-12 pt-8 border-t border-muted/20 space-y-6">
           <TemplateSystemTest />
+          <TemplateExpansionTest />
         </div>
       </div>
     </div>
