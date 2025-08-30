@@ -117,7 +117,7 @@ serve(async (req) => {
         solution: template.solution || { value: template.answer || 1 },
         distractors: template.distractors || [],
         variables: template.variables || {},
-        explanation_teacher: template.explanation_teacher || '',
+        explanation: template.explanation || '',
         tags: template.tags || [],
         quarter_app: template.quarter_app || quarter,
         grade_app: template.grade_app || grade,
@@ -192,13 +192,25 @@ ${curriculumInfo}
     "solution": {"value": "Korrekte Antwort"},
     "distractors": ["Falsche Option 1", "Falsche Option 2", "Falsche Option 3"],
     "variables": {},
-    "explanation_teacher": "Kurze Erklärung für Lehrer",
+    "explanation": "Um diese Aufgabe zu lösen, [Schritt-für-Schritt mit konkreten Zahlen]. Das Ergebnis ist [Antwort], weil [kurze Begründung].",
     "tags": ["tag1", "tag2"],
     "quarter_app": "${quarter}",
     "grade_app": ${grade},
     "unit": "Einheit falls numerisch"
   }
 ]
+
+**EXPLANATION Anforderungen:**
+- Direkte Schüler-Ansprache: "Um diese Aufgabe zu lösen..."
+- Konkrete Zahlen aus der Frage verwenden
+- Altersgerechte Sprache für Klassenstufe ${grade}
+- 2-3 kurze, ermutigende Sätze
+- Erkläre WARUM die Lösung richtig ist
+- Positiver, motivierender Ton
+- Bei Rechenaufgaben: Klaren Rechenweg zeigen
+- Bei Textaufgaben: Logik erklären
+
+Beispiel Erklärung: "Um 15 + 8 zu rechnen, fängst du bei 15 an und zählst 8 weiter: 16, 17, 18, 19, 20, 21, 22, 23. Das Ergebnis ist 23!"
 
 **Qualitätsanforderungen:**
 - Altersgerecht und verständlich

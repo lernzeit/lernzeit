@@ -150,7 +150,7 @@ export class EnhancedTemplateBankService {
         type: this.mapDomainToSubject(template.domain),
         questionType: 'text-input',
         answer: calculatedAnswer.answer,
-        explanation: calculatedAnswer.explanation || template.explanation_teacher || ""
+        explanation: calculatedAnswer.explanation || template.explanation || ""
       } as TextInputQuestion;
     } else {
       // 🔧 FIXED: Properly extract options and track correct answer index
@@ -163,7 +163,7 @@ export class EnhancedTemplateBankService {
         questionType: 'multiple-choice',
         options: optionsData.options,
         correctAnswer: optionsData.correctIndex, // 🔧 CORRECT INDEX AFTER SHUFFLE
-        explanation: template.explanation_teacher || ""
+        explanation: template.explanation || ""
       } as MultipleChoiceQuestion;
     }
   }
@@ -321,7 +321,7 @@ export class EnhancedTemplateBankService {
     }
     
     // Final fallback: Try to extract from explanation
-    const explanation = template.explanation_teacher || template.explanation || '';
+    const explanation = template.explanation || '';
     const numberInExplanation = explanation.match(/\d+/);
     if (numberInExplanation) {
       return { 

@@ -102,7 +102,7 @@ function mapTemplateToInterface(template: any): any {
     solution: template.solution || { value: 1 },
     distractors: template.distractors || [],
     variables: template.variables || {},
-    explanation_teacher: template.explanation_teacher || '',
+    explanation: template.explanation || '',
     tags: template.tags || [],
     quarter_app: template.quarter_app,
     qscore: 0.8, // High quality score for premium templates

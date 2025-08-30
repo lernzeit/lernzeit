@@ -8,7 +8,7 @@ interface TemplateWithParameters {
   student_prompt: string;
   solution: string;
   distractors: any; // JSON array from Supabase
-  explanation_teacher: string;
+  explanation: string;
   question_type: string;
   domain: string;
   subcategory: string;
@@ -169,7 +169,7 @@ export class ParametrizedTemplateService {
         student_prompt: String(t.student_prompt || ''),
         solution: String(t.solution || ''),
         distractors: Array.isArray(t.distractors) ? t.distractors : [],
-        explanation_teacher: String(t.explanation_teacher || ''),
+        explanation: String(t.explanation || ''),
         question_type: String(t.question_type || 'multiple-choice'),
         domain: String(t.domain || ''),
         subcategory: String(t.subcategory || ''),
@@ -231,7 +231,7 @@ export class ParametrizedTemplateService {
         id: Date.now() + Math.random(),
         question: renderedPrompt,
         type: this.mapDomainToSubject(template.domain),
-        explanation: template.explanation_teacher || ""
+        explanation: template.explanation || ""
       };
 
       if (template.question_type === 'text-input') {

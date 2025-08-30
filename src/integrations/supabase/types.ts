@@ -901,7 +901,7 @@ export type Database = {
           difficulty: string
           distractors: Json | null
           domain: string
-          explanation_teacher: string | null
+          explanation: string | null
           grade: number
           grade_app: number
           id: string
@@ -930,7 +930,7 @@ export type Database = {
           difficulty: string
           distractors?: Json | null
           domain: string
-          explanation_teacher?: string | null
+          explanation?: string | null
           grade: number
           grade_app: number
           id?: string
@@ -959,7 +959,7 @@ export type Database = {
           difficulty?: string
           distractors?: Json | null
           domain?: string
-          explanation_teacher?: string | null
+          explanation?: string | null
           grade?: number
           grade_app?: number
           id?: string
@@ -1120,7 +1120,7 @@ export type Database = {
           difficulty: string | null
           distractors: Json | null
           domain: string | null
-          explanation_teacher: string | null
+          explanation: string | null
           grade: number | null
           grade_app: number | null
           id: string | null
@@ -1150,7 +1150,7 @@ export type Database = {
           difficulty?: string | null
           distractors?: Json | null
           domain?: string | null
-          explanation_teacher?: string | null
+          explanation?: string | null
           grade?: number | null
           grade_app?: number | null
           id?: string | null
@@ -1180,7 +1180,7 @@ export type Database = {
           difficulty?: string | null
           distractors?: Json | null
           domain?: string | null
-          explanation_teacher?: string | null
+          explanation?: string | null
           grade?: number | null
           grade_app?: number | null
           id?: string | null
