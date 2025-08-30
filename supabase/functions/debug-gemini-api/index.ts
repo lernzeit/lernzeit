@@ -34,17 +34,18 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
     
-    // Test 1: Check generated_templates count
+    // Test 1: Check templates count
     const { data: templates, error: templatesError } = await supabase
-      .from('generated_templates')
-      .select('id, category, grade, is_active, quality_score')
-      .eq('category', 'math')
+      .from('templates')
+      .select('id, domain, grade, status, qscore')
+      .eq('domain', 'Zahlen & Operationen')
+      .eq('status', 'ACTIVE')
       .limit(10);
       
     console.log('📊 Template Status Check:', {
       total: templates?.length || 0,
-      active: templates?.filter(t => t.is_active).length || 0,
-      high_quality: templates?.filter(t => t.quality_score > 0.7).length || 0
+      active: templates?.filter(t => t.status === 'ACTIVE').length || 0,
+      high_quality: templates?.filter(t => (t.qscore || 0) > 0.7).length || 0
     });
     
     // Test 2: Call Gemini API directly
@@ -100,17 +101,22 @@ serve(async (req) => {
     
     // Test 3: Try to insert a test template
     const testTemplate = {
-      category: 'math',
+      domain: 'Zahlen & Operationen',
       grade: 1,
-      question_type: 'multiple-choice',
-      content: 'Test question: What is 2 + 2?',
-      quality_score: 0.8,
-      is_active: true,
-      content_hash: 'test_hash_' + Date.now()
+      grade_app: 1,
+      quarter_app: 'Q1',
+      question_type: 'MultipleChoice',
+      student_prompt: 'Test question: What is 2 + 2?',
+      difficulty: 'AFB I',
+      qscore: 0.8,
+      status: 'ACTIVE',
+      variables: {},
+      solution: { correct_answer: '4' },
+      distractors: { options: ['2', '3', '4', '5'] }
     };
     
     const { data: insertedTemplate, error: insertError } = await supabase
-      .from('generated_templates')
+      .from('templates')
       .insert(testTemplate)
       .select()
       .single();
@@ -138,7 +144,7 @@ serve(async (req) => {
         gemini_api_key: !!geminiApiKey,
         gemini_api_call: geminiResponse.ok,
         template_count: templates?.length || 0,
-        active_templates: templates?.filter(t => t.is_active).length || 0,
+        active_templates: templates?.filter(t => t.status === 'ACTIVE').length || 0,
         template_insertion: !insertError,
         function_call: !functionError
       },
@@ -146,7 +152,7 @@ serve(async (req) => {
       recommendations: [
         !geminiApiKey ? 'Configure GEMINI_API_KEY' : null,
         !geminiResponse.ok ? 'Fix Gemini API authentication' : null,
-        (templates?.filter(t => t.is_active).length || 0) === 0 ? 'No active templates found' : null,
+        (templates?.filter(t => t.status === 'ACTIVE').length || 0) === 0 ? 'No active templates found' : null,
         insertError ? 'Database insertion failed' : null,
         functionError ? 'Edge function not working' : null
       ].filter(Boolean)
