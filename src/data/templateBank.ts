@@ -27,15 +27,22 @@ export async function fetchActiveTemplates(params: {
     .eq("status", "ACTIVE")
     .eq("grade", grade)
   
-  // Exclude visual/drawing questions from student_prompt
+  // ✅ STRICT: Exclude ALL visual/drawing questions from student_prompt
   query = query
     .not("student_prompt", "ilike", "%zeichn%")
+    .not("student_prompt", "ilike", "%zeich%")
     .not("student_prompt", "ilike", "%mal %") 
     .not("student_prompt", "ilike", "%konstruier%")
     .not("student_prompt", "ilike", "%entwirf%")
     .not("student_prompt", "ilike", "%bild%")
     .not("student_prompt", "ilike", "%ordne%")
-    .not("student_prompt", "ilike", "%verbind%");
+    .not("student_prompt", "ilike", "%verbind%")
+    .not("student_prompt", "ilike", "%diagramm%")
+    .not("student_prompt", "ilike", "%grafik%")
+    .not("student_prompt", "ilike", "%skizz%")
+    .not("student_prompt", "ilike", "%netz%")
+    .not("student_prompt", "ilike", "%draw%")
+    .not("student_prompt", "ilike", "%paint%");
 
   // Apply curriculum-based filtering for lower grades
   if (grade < 5) {

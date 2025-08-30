@@ -205,8 +205,16 @@ ${curriculumInfo}
 - Lehrplankonform
 - Realitätsbezug wo möglich
 - Verschiedene Schwierigkeitsnuancen
-- Keine visuellen Elemente (Zeichnungen, Bilder)
+- KEINE VISUELLEN AUFGABEN: Absolut keine Zeichnungen, Bilder, Konstruktionen, Diagramme, Verbindungsaufgaben
 - Deutsche Sprache, korrekte Fachbegriffe
+- Nur text-basierte Fragen ohne visuelle Hilfen
+
+**STRIKT VERBOTEN:**
+- "Zeichne", "Male", "Konstruiere", "Entwirf" 
+- "Welches Bild", "Ordne...zu", "Verbinde"
+- "Diagramm", "Grafik", "Skizze", "Figur zeichnen"
+- Aufgaben die visuelle Darstellungen erfordern
+- Alle Formen von visueller Interaktion
 
 Generiere NUR das JSON-Array, keine zusätzlichen Erklärungen.`;
 }
