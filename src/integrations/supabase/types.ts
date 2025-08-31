@@ -906,8 +906,10 @@ export type Database = {
           grade_app: number
           id: string
           is_parametrized: boolean | null
+          last_validated: string | null
           parameter_definitions: Json | null
           plays: number
+          quality_score: number | null
           quarter_app: string
           question_type: string
           rating_count: number
@@ -921,6 +923,7 @@ export type Database = {
           tags: string[]
           unit: string | null
           updated_at: string | null
+          validation_status: string | null
           variables: Json
         }
         Insert: {
@@ -935,8 +938,10 @@ export type Database = {
           grade_app: number
           id?: string
           is_parametrized?: boolean | null
+          last_validated?: string | null
           parameter_definitions?: Json | null
           plays?: number
+          quality_score?: number | null
           quarter_app: string
           question_type: string
           rating_count?: number
@@ -950,6 +955,7 @@ export type Database = {
           tags?: string[]
           unit?: string | null
           updated_at?: string | null
+          validation_status?: string | null
           variables?: Json
         }
         Update: {
@@ -964,8 +970,10 @@ export type Database = {
           grade_app?: number
           id?: string
           is_parametrized?: boolean | null
+          last_validated?: string | null
           parameter_definitions?: Json | null
           plays?: number
+          quality_score?: number | null
           quarter_app?: string
           question_type?: string
           rating_count?: number
@@ -979,6 +987,7 @@ export type Database = {
           tags?: string[]
           unit?: string | null
           updated_at?: string | null
+          validation_status?: string | null
           variables?: Json
         }
         Relationships: []
@@ -1207,6 +1216,15 @@ export type Database = {
       }
     }
     Functions: {
+      analyze_template_solutions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          count: number
+          example_prompt: string
+          example_solution: string
+          solution_format: string
+        }[]
+      }
       apply_template_rating: {
         Args: { stars: number; tid: string }
         Returns: undefined
@@ -1250,6 +1268,10 @@ export type Database = {
           p_type: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      validate_template_solution: {
+        Args: { current_solution: Json; prompt: string; template_id: string }
         Returns: Json
       }
     }
