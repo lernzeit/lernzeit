@@ -222,7 +222,7 @@ export class ParametrizedTemplateService {
 
       // Ersetze Platzhalter in Template
       const renderedPrompt = this.replacePlaceholders(template.student_prompt, parameters);
-      const renderedSolution = this.replacePlaceholders(template.solution, parameters);
+      const renderedSolution = this.extractSolutionValue(template.solution, parameters);
       const distractors = Array.isArray(template.distractors) ? template.distractors.map(d => String(d)) : [];
       const renderedDistractors = distractors.map(d => this.replacePlaceholders(d, parameters));
 
@@ -257,6 +257,51 @@ export class ParametrizedTemplateService {
       console.error(`❌ Fehler beim Rendern von Template ${template.id}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Extrahiere korrekten Lösungswert aus verschiedenen Formaten
+   */
+  private extractSolutionValue(solution: any, parameters: Record<string, any>): string {
+    console.log('🔍 Extracting solution from:', solution, typeof solution);
+    
+    // Falls solution bereits ein String ist
+    if (typeof solution === 'string') {
+      // Prüfe ob es ein "map[value:...]" Format ist
+      const mapMatch = solution.match(/map\[value:(.+?)\]/);
+      if (mapMatch) {
+        const extractedValue = mapMatch[1];
+        console.log('✅ Extracted value from map format:', extractedValue);
+        return this.replacePlaceholders(extractedValue, parameters);
+      }
+      // Ansonsten normal Platzhalter ersetzen
+      return this.replacePlaceholders(solution, parameters);
+    }
+    
+    // Falls solution ein Objekt ist
+    if (typeof solution === 'object' && solution !== null) {
+      // Prüfe verschiedene mögliche Strukturen
+      if (solution.value !== undefined) {
+        console.log('✅ Found solution.value:', solution.value);
+        return this.replacePlaceholders(String(solution.value), parameters);
+      }
+      
+      // Falls es direkt die Antwort ist
+      if (typeof solution === 'number') {
+        return String(solution);
+      }
+      
+      // Fallback: JSON stringify
+      return JSON.stringify(solution);
+    }
+    
+    // Direkte Zahl
+    if (typeof solution === 'number') {
+      return String(solution);
+    }
+    
+    console.warn('⚠️ Unknown solution format:', solution);
+    return String(solution || '');
   }
 
   /**
