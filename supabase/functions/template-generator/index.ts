@@ -164,7 +164,14 @@ serve(async (req) => {
 function buildMathPrompt(grade: number, domain: string, quarter: string, difficulty: string, count: number): string {
   const curriculumInfo = getCurriculumInfo(grade, domain, quarter);
   
-  return `Du bist ein Experte für deutsche Mathematik-Lehrpläne. Erstelle ${count} hochwertige Mathematikaufgaben im JSON-Format.
+  return `Du bist ein Experte für deutsche Mathematik-Lehrpläne und mathematische Korrektheit. Erstelle ${count} MATHEMATISCH KORREKTE Aufgaben im JSON-Format.
+
+**KRITISCHE VORGABE: MATHEMATISCHE KORREKTHEIT**
+- JEDE Lösung MUSS mathematisch exakt sein
+- Deutsche Dezimalzahlen: Komma statt Punkt (3,75 nicht 3.75)
+- Brüche in korrekter Form: "7/6" oder "1 1/6"
+- Bei Textaufgaben: Lösung MUSS zur Fragestellung passen
+- "Subtrahiere A von B" bedeutet B - A (NICHT A + B!)
 
 **Vorgaben:**
 - Klassenstufe: ${grade}
@@ -175,11 +182,6 @@ function buildMathPrompt(grade: number, domain: string, quarter: string, difficu
 **Curriculum-Kontext:**
 ${curriculumInfo}
 
-**Aufgabentypen (variieren):**
-- multiple-choice: 4 Antwortoptionen
-- text-input: Freitext-Eingabe
-- matching: Zuordnungsaufgaben
-
 **JSON-Format (Array von Objekten):**
 [
   {
@@ -187,48 +189,51 @@ ${curriculumInfo}
     "domain": "${domain}",
     "subcategory": "Spezifische Unterkategorie",
     "difficulty": "${difficulty}",
-    "question_type": "multiple-choice|text-input|matching",
-    "student_prompt": "Klare, altersgerechte Fragestellung",
-    "solution": {"value": "Korrekte Antwort"},
-    "distractors": ["Falsche Option 1", "Falsche Option 2", "Falsche Option 3"],
+    "question_type": "multiple-choice|text-input",
+    "student_prompt": "Mathematisch präzise Fragestellung",
+    "solution": {"value": "EXAKT KORREKTE ANTWORT"},
+    "distractors": ["Mathematisch plausible falsche Antwort 1", "Falsche Antwort 2", "Falsche Antwort 3"],
     "variables": {},
-    "explanation": "Um diese Aufgabe zu lösen, [Schritt-für-Schritt mit konkreten Zahlen]. Das Ergebnis ist [Antwort], weil [kurze Begründung].",
-    "tags": ["tag1", "tag2"],
+    "explanation": "Um diese Aufgabe zu lösen, [präziser Rechenweg]. Das Ergebnis ist [korrekte Antwort], weil [mathematische Begründung].",
+    "tags": ["mathematik", "rechnen"],
     "quarter_app": "${quarter}",
     "grade_app": ${grade},
-    "unit": "Einheit falls numerisch"
+    "unit": ""
   }
 ]
 
+**BEISPIELE KORREKTER LÖSUNGEN:**
+- "Berechne: 2,75 + 3,8" → solution: {"value": "6,55"}
+- "Subtrahiere 1,25 von 5" → solution: {"value": "3,75"} (5 - 1,25 = 3,75!)
+- "Berechne: 5 + (-3)" → solution: {"value": "2"}
+- "Berechne: 1/2 + 2/3" → solution: {"value": "7/6"}
+
 **EXPLANATION Anforderungen:**
-- Direkte Schüler-Ansprache: "Um diese Aufgabe zu lösen..."
-- Konkrete Zahlen aus der Frage verwenden
-- Altersgerechte Sprache für Klassenstufe ${grade}
-- 2-3 kurze, ermutigende Sätze
-- Erkläre WARUM die Lösung richtig ist
-- Positiver, motivierender Ton
-- Bei Rechenaufgaben: Klaren Rechenweg zeigen
-- Bei Textaufgaben: Logik erklären
+- Schritt-für-Schritt Rechenweg mit konkreten Zahlen
+- "Um diese Aufgabe zu lösen, rechnest du: [Zahlen einsetzen]"
+- Altersgerecht für Klassenstufe ${grade}
+- 2-3 kurze Sätze
+- Ermutigender Ton
+- KONKRETE Zahlen aus der Aufgabe verwenden
 
-Beispiel Erklärung: "Um 15 + 8 zu rechnen, fängst du bei 15 an und zählst 8 weiter: 16, 17, 18, 19, 20, 21, 22, 23. Das Ergebnis ist 23!"
+**DISTRACTORS (falsche Antworten):**
+- Mathematisch plausible Fehler (z.B. falsche Vorzeichen, Rechenfehler)  
+- NICHT völlig willkürliche Zahlen
+- Bei Klasse ${grade} angemessene Größenordnung
 
-**Qualitätsanforderungen:**
-- Altersgerecht und verständlich
-- Lehrplankonform
-- Realitätsbezug wo möglich
-- Verschiedene Schwierigkeitsnuancen
-- KEINE VISUELLEN AUFGABEN: Absolut keine Zeichnungen, Bilder, Konstruktionen, Diagramme, Verbindungsaufgaben
-- Deutsche Sprache, korrekte Fachbegriffe
-- Nur text-basierte Fragen ohne visuelle Hilfen
+**QUALITÄTS-VALIDIERUNG:**
+1. Rechne jede Lösung mental nach
+2. Prüfe deutsche Dezimalschreibweise (Komma!)
+3. Textaufgaben: Passt die Antwort zur Frage?
+4. Distractors: Sind es realistische Fehler?
 
-**STRIKT VERBOTEN:**
-- "Zeichne", "Male", "Konstruiere", "Entwirf" 
-- "Welches Bild", "Ordne...zu", "Verbinde"
-- "Diagramm", "Grafik", "Skizze", "Figur zeichnen"
-- Aufgaben die visuelle Darstellungen erfordern
-- Alle Formen von visueller Interaktion
+**VERBOTEN:**
+- Visuelle Aufgaben jeder Art
+- "Zeichne", "Male", "Konstruiere"
+- Diagramme, Grafiken, Bilder
+- "Ordne zu", "Verbinde"
 
-Generiere NUR das JSON-Array, keine zusätzlichen Erklärungen.`;
+Generiere NUR das mathematisch korrekte JSON-Array ohne weitere Erklärungen.`;
 }
 
 function getCurriculumInfo(grade: number, domain: string, quarter: string): string {
