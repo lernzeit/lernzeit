@@ -166,10 +166,50 @@ export class ImprovedGermanMathParser {
   }
 
   /**
-   * Enhanced word problem parsing - FIXED for "pro Stunde" patterns
+   * Enhanced word problem parsing - FIXED for "Subtrahiere A von B" and negative numbers
    */
   private static parseEnhancedWordProblem(text: string): ParsedMathResult {
-    // Extract numbers from the text
+    // CRITICAL FIX: Handle "Subtrahiere A von B" = B - A
+    const subtractFromMatch = text.match(/subtrahiere\s+(\d+(?:,\d+)?)\s+von\s+(\d+(?:,\d+)?)/i);
+    if (subtractFromMatch) {
+      const subtrahend = parseFloat(subtractFromMatch[1].replace(',', '.')); // A
+      const minuend = parseFloat(subtractFromMatch[2].replace(',', '.'));    // B
+      const result = minuend - subtrahend; // B - A
+      
+      return {
+        success: true,
+        answer: result.toString().replace('.', ','),
+        questionType: 'word-problem',
+        confidence: 0.98,
+        steps: [`Subtrahiere ${subtrahend} von ${minuend}`, `${minuend} - ${subtrahend} = ${result}`],
+        metadata: {
+          operation: 'subtraction_from',
+          operands: [minuend, subtrahend]
+        }
+      };
+    }
+
+    // Handle negative number addition: "Berechne 5 + (-3)"
+    const negativeMatch = text.match(/berechne\s+(\d+(?:,\d+)?)\s*\+\s*\(\s*-\s*(\d+(?:,\d+)?)\s*\)/i);
+    if (negativeMatch) {
+      const num1 = parseFloat(negativeMatch[1].replace(',', '.'));
+      const num2 = parseFloat(negativeMatch[2].replace(',', '.'));
+      const result = num1 - num2; // 5 + (-3) = 5 - 3
+      
+      return {
+        success: true,
+        answer: result.toString().replace('.', ','),
+        questionType: 'arithmetic',
+        confidence: 0.95,
+        steps: [`${num1} + (-${num2}) = ${num1} - ${num2} = ${result}`],
+        metadata: {
+          operation: 'negative_addition',
+          operands: [num1, -num2]
+        }
+      };
+    }
+
+    // Extract numbers from the text for other operations
     const numbers = text.match(/\d+(?:,\d+)?/g)?.map(n => parseFloat(n.replace(',', '.'))) || [];
     
     if (numbers.length < 2) return { success: false };

@@ -253,6 +253,43 @@ export class GermanMathParser {
    * Parse word problems with math operations
    */
   private static parseWordProblem(content: string): MathParseResult {
+    // CRITICAL FIX: "Subtrahiere A von B" = B - A (subtract A FROM B)
+    const subtractFromMatch = content.match(/Subtrahiere\s+(\d+(?:[,\.]\d+)?)\s+von\s+(\d+(?:[,\.]\d+)?)/i);
+    if (subtractFromMatch) {
+      const subtrahend = this.parseGermanNumber(subtractFromMatch[1]); // A (what to subtract)
+      const minuend = this.parseGermanNumber(subtractFromMatch[2]);    // B (subtract from)
+      if (subtrahend !== null && minuend !== null) {
+        const result = minuend - subtrahend; // B - A
+        console.log('🔍 Subtraction FROM parsing:', { 
+          subtrahend, 
+          minuend, 
+          result, 
+          expression: `${minuend} - ${subtrahend}` 
+        });
+        return {
+          success: true,
+          answer: this.formatGermanNumber(result),
+          expression: `${minuend} - ${subtrahend}` // B - A
+        };
+      }
+    }
+
+    // Addition with negative numbers: "Berechne 5 + (-3)"
+    const negativeAddMatch = content.match(/Berechne\s+(\d+(?:[,\.]\d+)?)\s*\+\s*\(\s*-\s*(\d+(?:[,\.]\d+)?)\s*\)/i);
+    if (negativeAddMatch) {
+      const num1 = this.parseGermanNumber(negativeAddMatch[1]);
+      const num2 = this.parseGermanNumber(negativeAddMatch[2]);
+      if (num1 !== null && num2 !== null) {
+        const result = num1 + (-num2); // 5 + (-3) = 5 - 3
+        console.log('🔍 Negative addition parsing:', { num1, num2: -num2, result });
+        return {
+          success: true,
+          answer: this.formatGermanNumber(result),
+          expression: `${num1} + (-${num2})`
+        };
+      }
+    }
+
     // Money problems: "Anna hat 15 Euro und bekommt 8 Euro dazu"
     const moneyAddMatch = content.match(/(\d+(?:[,\.]\d+)?)\s*Euro.*?(?:bekommt|erhält).*?(\d+(?:[,\.]\d+)?)\s*Euro/i);
     if (moneyAddMatch) {

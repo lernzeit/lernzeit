@@ -260,7 +260,7 @@ export class ParametrizedTemplateService {
   }
 
   /**
-   * Extrahiere korrekten Lösungswert aus verschiedenen Formaten
+   * Extrahiere korrekten Lösungswert aus verschiedenen Formaten - FIXED
    */
   private extractSolutionValue(solution: any, parameters: Record<string, any>): string {
     console.log('🔍 Extracting solution from:', solution, typeof solution);
@@ -270,8 +270,16 @@ export class ParametrizedTemplateService {
       // Prüfe ob es ein "map[value:...]" Format ist
       const mapMatch = solution.match(/map\[value:(.+?)\]/);
       if (mapMatch) {
-        const extractedValue = mapMatch[1];
+        let extractedValue = mapMatch[1];
         console.log('✅ Extracted value from map format:', extractedValue);
+        
+        // CRITICAL FIX: Handle German decimal format in solutions
+        if (extractedValue.includes(',')) {
+          // Keep German decimal format for final answer
+          console.log('✅ Keeping German decimal format:', extractedValue);
+          return extractedValue;
+        }
+        
         return this.replacePlaceholders(extractedValue, parameters);
       }
       // Ansonsten normal Platzhalter ersetzen
@@ -283,7 +291,15 @@ export class ParametrizedTemplateService {
       // Prüfe verschiedene mögliche Strukturen
       if (solution.value !== undefined) {
         console.log('✅ Found solution.value:', solution.value);
-        return this.replacePlaceholders(String(solution.value), parameters);
+        let value = String(solution.value);
+        
+        // CRITICAL FIX: Handle German decimal format
+        if (value.includes(',')) {
+          console.log('✅ Keeping German decimal format in object:', value);
+          return value;
+        }
+        
+        return this.replacePlaceholders(value, parameters);
       }
       
       // Falls es direkt die Antwort ist
