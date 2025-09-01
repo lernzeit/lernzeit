@@ -6,7 +6,7 @@ import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion } from '@/
 interface TemplateWithParameters {
   id: string;
   student_prompt: string;
-  solution: string;
+  solution: any; // Can be string, object, or map format
   distractors: any; // JSON array from Supabase
   explanation: string;
   question_type: string;
@@ -53,14 +53,19 @@ export class ParametrizedTemplateService {
     userId?: string
   ): Promise<ParametrizedQuestionResult> {
     const sessionId = `pts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`🎯 Generiere ${totalQuestions} parametrisierte Fragen für ${category} Klasse ${grade} ${quarter}`);
+    
+    // FIXED: Korrekte Quartal-/Grade-Berechnung
+    const targetGrade = grade - 1; // G5Q1 User soll G4Q4 Inhalte bekommen
+    const targetQuarter = this.getPreviousQuarter(quarter); // Q1 -> Q4 vom Vorjahr
+    
+    console.log(`🎯 Generiere ${totalQuestions} Fragen: User G${grade}${quarter} -> Ziel G${targetGrade}${targetQuarter}`);
 
     try {
-      // 1. Lade parametrisierte Templates aus Datenbank
-      const templates = await this.fetchParametrizedTemplates(category, grade, quarter);
+      // 1. Lade Templates aus ALLEN Domänen für Diversität
+      const allTemplates = await this.fetchDiverseTemplates(targetGrade, targetQuarter);
       
-      if (templates.length === 0) {
-        console.warn(`⚠️ Keine parametrisierten Templates für ${category} Klasse ${grade} ${quarter} gefunden`);
+      if (allTemplates.length === 0) {
+        console.warn(`⚠️ Keine Templates für G${targetGrade}${targetQuarter} gefunden`);
         return {
           questions: [],
           source: 'fallback',
@@ -73,22 +78,33 @@ export class ParametrizedTemplateService {
         };
       }
 
-      console.log(`📚 Gefunden: ${templates.length} parametrisierte Templates`);
+      console.log(`📚 Gefunden: ${allTemplates.length} Templates aus verschiedenen Domänen`);
 
-      // 2. Generiere Fragen aus Templates
+      // 2. Generiere diverse Fragen
       const questions: SelectionQuestion[] = [];
+      const usedDomains = new Set<string>();
       let parametrizedCount = 0;
       let curriculumCompliantCount = 0;
 
-      for (let i = 0; i < totalQuestions && templates.length > 0; i++) {
-        // Round-robin durch Templates für Diversität
-        const template = templates[i % templates.length];
+      // Durchmische Templates für maximale Diversität
+      const shuffledTemplates = this.shuffleArray([...allTemplates]);
+
+      for (let i = 0; i < totalQuestions && shuffledTemplates.length > 0; i++) {
+        // Priorisiere neue Domänen für Abwechslung
+        let selectedTemplate = shuffledTemplates[i % shuffledTemplates.length];
         
-        const question = await this.renderParametrizedTemplate(template, grade, quarter);
+        // Versuche eine andere Domäne zu finden falls möglich
+        if (usedDomains.has(selectedTemplate.domain) && shuffledTemplates.length > usedDomains.size) {
+          const unusedTemplate = shuffledTemplates.find(t => !usedDomains.has(t.domain));
+          if (unusedTemplate) selectedTemplate = unusedTemplate;
+        }
+        
+        const question = await this.renderTemplate(selectedTemplate, targetGrade, targetQuarter);
         if (question) {
           questions.push(question);
+          usedDomains.add(selectedTemplate.domain);
           parametrizedCount++;
-          curriculumCompliantCount++; // Parametrisierte Templates sind per Definition curriculum-compliant
+          curriculumCompliantCount++;
         }
       }
 
@@ -124,50 +140,47 @@ export class ParametrizedTemplateService {
   }
 
   /**
-   * Lade parametrisierte Templates aus Datenbank
+   * Lade diverse Templates aus ALLEN Domänen für Abwechslung
    */
-  private async fetchParametrizedTemplates(
-    category: string,
+  private async fetchDiverseTemplates(
     grade: number,
     quarter: string
   ): Promise<TemplateWithParameters[]> {
     try {
-      let query = supabase
+      // Hole alle Templates für das Ziel-Grade/Quarter
+      const query = supabase
         .from('templates')
         .select('*')
-        .eq('is_parametrized', true)
+        .eq('grade', grade)
+        .eq('quarter_app', quarter) 
         .eq('status', 'ACTIVE')
-        .gte('grade', Math.max(1, grade - 1))
-        .lte('grade', Math.min(10, grade + 1))
         .order('created_at', { ascending: false })
-        .limit(50);
-
-      // Filter nach Kategorie (Domain-Mapping)
-      if (category.toLowerCase() !== 'general') {
-        const domainFilters = this.getCategoryDomainFilters(category);
-        if (domainFilters.length > 0) {
-          query = query.in('domain', domainFilters);
-        }
-      }
+        .limit(100);
 
       const { data, error } = await query;
-
       if (error) throw error;
 
-      const templates = (data || []).filter((template: any) => {
-        // Zusätzliche Validierung für Parametrisierung
-        return template.parameter_definitions && 
-               typeof template.parameter_definitions === 'object' &&
-               template.curriculum_rules &&
-               typeof template.curriculum_rules === 'object' &&
-               template.student_prompt?.includes('{');
+      // Gruppiere nach Domänen für Diversität
+      const domainGroups: Record<string, any[]> = {};
+      (data || []).forEach((template: any) => {
+        const domain = template.domain || 'Allgemein';
+        if (!domainGroups[domain]) domainGroups[domain] = [];
+        domainGroups[domain].push(template);
       });
 
-      console.log(`📊 Gefiltert: ${templates.length} parametrisierte Templates`);
-      return templates.map(t => ({
+      // Nehme max 3 Templates pro Domäne für Balance
+      const balancedTemplates: any[] = [];
+      Object.entries(domainGroups).forEach(([domain, templates]) => {
+        console.log(`📊 Domäne ${domain}: ${templates.length} Templates verfügbar`);
+        balancedTemplates.push(...templates.slice(0, 3));
+      });
+
+      console.log(`📊 Ausgewählt: ${balancedTemplates.length} Templates aus ${Object.keys(domainGroups).length} Domänen`);
+      
+      return balancedTemplates.map(t => ({
         id: t.id,
         student_prompt: String(t.student_prompt || ''),
-        solution: String(t.solution || ''),
+        solution: t.solution, // FIXED: Behalte Original-Objekt-Struktur
         distractors: Array.isArray(t.distractors) ? t.distractors : [],
         explanation: String(t.explanation || ''),
         question_type: String(t.question_type || 'multiple-choice'),
@@ -181,50 +194,62 @@ export class ParametrizedTemplateService {
         curriculum_rules: typeof t.curriculum_rules === 'object' ? t.curriculum_rules : {}
       } as TemplateWithParameters));
     } catch (error) {
-      console.error('❌ Fehler beim Laden parametrisierter Templates:', error);
+      console.error('❌ Fehler beim Laden diverser Templates:', error);
       return [];
     }
   }
 
   /**
-   * Rendere Template mit generierten Parametern
+   * Rendere Template (parametrisiert oder normal)
    */
-  private async renderParametrizedTemplate(
+  private async renderTemplate(
     template: TemplateWithParameters,
     grade: number,
     quarter: string
   ): Promise<SelectionQuestion | null> {
     try {
-      // Generiere Parameter basierend auf Curriculum
-      const paramResult = await CurriculumParameterGenerator.generateCurriculumParameters(
-        {
-          parameter_definitions: template.parameter_definitions || {},
-          curriculum_rules: template.curriculum_rules || {}
-        },
-        grade,
-        quarter,
-        this.usedCombinations
-      );
-
-      if (!paramResult.isValid || !paramResult.curriculumCompliant) {
-        console.warn(`⚠️ Parameter-Generation für Template ${template.id} fehlgeschlagen:`, paramResult.errors);
-        return null;
-      }
-
-      const { parameters } = paramResult;
-      
       // Filter out drawing/sketching questions  
       const prompt = template.student_prompt || "";
       if (this.containsDrawingInstructions(prompt)) {
-        console.log(`🚫 Filtered parametrized drawing question: ${prompt.substring(0, 50)}...`);
+        console.log(`🚫 Filtered drawing question: ${prompt.substring(0, 50)}...`);
         return null;
       }
 
-      // Ersetze Platzhalter in Template
-      const renderedPrompt = this.replacePlaceholders(template.student_prompt, parameters);
-      const renderedSolution = this.extractSolutionValue(template.solution, parameters);
-      const distractors = Array.isArray(template.distractors) ? template.distractors.map(d => String(d)) : [];
-      const renderedDistractors = distractors.map(d => this.replacePlaceholders(d, parameters));
+      let renderedPrompt = template.student_prompt;
+      let renderedSolution = template.solution;
+      let renderedDistractors: string[] = [];
+
+      // Falls parametrisiertes Template
+      if (template.is_parametrized && template.parameter_definitions && Object.keys(template.parameter_definitions).length > 0) {
+        // Generiere Parameter basierend auf Curriculum
+        const paramResult = await CurriculumParameterGenerator.generateCurriculumParameters(
+          {
+            parameter_definitions: template.parameter_definitions || {},
+            curriculum_rules: template.curriculum_rules || {}
+          },
+          grade,
+          quarter,
+          this.usedCombinations
+        );
+
+        if (!paramResult.isValid || !paramResult.curriculumCompliant) {
+          console.warn(`⚠️ Parameter-Generation für Template ${template.id} fehlgeschlagen:`, paramResult.errors);
+          return null;
+        }
+
+        const { parameters } = paramResult;
+        
+        // Ersetze Platzhalter mit Parametern
+        renderedPrompt = this.replacePlaceholders(template.student_prompt, parameters);
+        renderedSolution = this.extractSolutionValue(template.solution, parameters);
+        
+        const distractors = Array.isArray(template.distractors) ? template.distractors.map(d => String(d)) : [];
+        renderedDistractors = distractors.map(d => this.replacePlaceholders(d, parameters));
+      } else {
+        // Normales Template - extrahiere Lösung direkt
+        renderedSolution = this.extractSolutionValue(template.solution, {});
+        renderedDistractors = Array.isArray(template.distractors) ? template.distractors.map(d => String(d)) : [];
+      }
 
       // Erstelle Question basierend auf Typ
       const baseQuestion = {
@@ -241,7 +266,7 @@ export class ParametrizedTemplateService {
           answer: renderedSolution
         } as TextInputQuestion;
       } else {
-        // Multiple Choice mit gerenderter Lösung und Distractors
+        // Multiple Choice mit korrekter Lösung und Distractors
         const allOptions = [renderedSolution, ...renderedDistractors.slice(0, 3)];
         const shuffledOptions = this.shuffleArray(allOptions);
         const correctIndex = shuffledOptions.indexOf(renderedSolution);
@@ -267,37 +292,23 @@ export class ParametrizedTemplateService {
     
     // Falls solution bereits ein String ist
     if (typeof solution === 'string') {
-      // Prüfe ob es ein "map[value:...]" Format ist
+      // CRITICAL FIX: Prüfe auf "map[value:...]" Format aus der Datenbank
       const mapMatch = solution.match(/map\[value:(.+?)\]/);
       if (mapMatch) {
         let extractedValue = mapMatch[1];
         console.log('✅ Extracted value from map format:', extractedValue);
-        return extractedValue;
+        return this.replacePlaceholders(extractedValue, parameters);
       }
       // Ansonsten normal Platzhalter ersetzen
       return this.replacePlaceholders(solution, parameters);
     }
     
-    // Falls solution ein Objekt ist (CRITICAL: This is the main case!)
+    // Falls solution ein Objekt ist
     if (typeof solution === 'object' && solution !== null) {
-      // Standard format: {"value": "3,75"}
+      // Standard format: {"value": "6,25"}
       if (solution.value !== undefined) {
         let value = String(solution.value);
         console.log('✅ PHASE 3: Extracted solution.value:', value);
-        
-        // German decimal format handling - keep as-is
-        if (value.includes(',')) {
-          console.log('✅ German decimal preserved:', value);
-          return value;
-        }
-        
-        // Handle fraction format like "7/6"
-        if (value.includes('/')) {
-          console.log('✅ Fraction format preserved:', value);
-          return value;
-        }
-        
-        // Replace parameters if any
         return this.replacePlaceholders(value, parameters);
       }
       
@@ -306,16 +317,14 @@ export class ParametrizedTemplateService {
         return String(solution);
       }
       
-      // Fallback for unknown object structure
+      // Fallback für unbekannte Objekt-Struktur - prüfe alle Keys
       console.warn('⚠️ Unknown object solution structure:', solution);
-      
-      // Try to find any numeric-looking value in the object
       const keys = Object.keys(solution);
       for (const key of keys) {
         const val = solution[key];
         if (typeof val === 'string' || typeof val === 'number') {
           console.log('✅ Found fallback value in key', key, ':', val);
-          return String(val);
+          return this.replacePlaceholders(String(val), parameters);
         }
       }
       
@@ -328,14 +337,6 @@ export class ParametrizedTemplateService {
     }
     
     console.error('❌ PHASE 3: Failed to extract solution from:', solution, typeof solution);
-    
-    // CRITICAL FALLBACK: Use German Math Parser as last resort
-    if (parameters && Object.keys(parameters).length > 0) {
-      console.log('🔄 PHASE 3: Attempting parser fallback with template solution');
-      // This would need integration with the German Math Parser
-      // For now, return a safe fallback
-    }
-    
     return String(solution || '0');
   }
 
@@ -428,6 +429,19 @@ export class ParametrizedTemplateService {
     const lowerPrompt = prompt.toLowerCase();
     return drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
   }
+  /**
+   * Berechne vorheriges Quartal (Q1 -> Q4, Q2 -> Q1, etc.)
+   */
+  private getPreviousQuarter(quarter: string): string {
+    const quarterMap: Record<string, string> = {
+      'Q1': 'Q4',
+      'Q2': 'Q1', 
+      'Q3': 'Q2',
+      'Q4': 'Q3'
+    };
+    return quarterMap[quarter] || 'Q4';
+  }
+
   resetSession(): void {
     this.usedCombinations.clear();
   }
