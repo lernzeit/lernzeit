@@ -147,37 +147,76 @@ export class ParametrizedTemplateService {
     quarter: string
   ): Promise<TemplateWithParameters[]> {
     try {
-      // Hole alle Templates für das Ziel-Grade/Quarter
-      const query = supabase
-        .from('templates')
-        .select('*')
-        .eq('grade', grade)
-        .eq('quarter_app', quarter) 
-        .eq('status', 'ACTIVE')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Gruppiere nach Domänen für Diversität
-      const domainGroups: Record<string, any[]> = {};
-      (data || []).forEach((template: any) => {
-        const domain = template.domain || 'Allgemein';
-        if (!domainGroups[domain]) domainGroups[domain] = [];
-        domainGroups[domain].push(template);
-      });
-
-      // Nehme max 3 Templates pro Domäne für Balance
-      const balancedTemplates: any[] = [];
-      Object.entries(domainGroups).forEach(([domain, templates]) => {
-        console.log(`📊 Domäne ${domain}: ${templates.length} Templates verfügbar`);
-        balancedTemplates.push(...templates.slice(0, 3));
-      });
-
-      console.log(`📊 Ausgewählt: ${balancedTemplates.length} Templates aus ${Object.keys(domainGroups).length} Domänen`);
+      console.log(`🎯 Fetching diverse templates for Grade ${grade} ${quarter}`);
       
-      return balancedTemplates.map(t => ({
+      // Define domains and their target counts for balanced selection
+      const domainTargets = [
+        { domain: 'Zahlen & Operationen', count: 4 },
+        { domain: 'Raum & Form', count: 3 },
+        { domain: 'Größen & Messen', count: 3 },
+        { domain: 'Daten & Zufall', count: 2 }
+      ];
+      
+      const allTemplates: any[] = [];
+      let totalFetched = 0;
+      
+      // First, try to get templates from each domain
+      for (const { domain, count } of domainTargets) {
+        const { data: domainTemplates, error } = await supabase
+          .from('templates')
+          .select('*')
+          .eq('grade', grade)
+          .eq('quarter_app', quarter)
+          .eq('domain', domain)
+          .eq('status', 'ACTIVE')
+          .limit(count);
+
+        if (error) {
+          console.error(`Error fetching templates for domain ${domain}:`, error);
+          continue;
+        }
+
+        if (domainTemplates && domainTemplates.length > 0) {
+          console.log(`✅ Found ${domainTemplates.length} templates for domain: ${domain}`);
+          allTemplates.push(...domainTemplates);
+          totalFetched += domainTemplates.length;
+        } else {
+          console.log(`⚠️ No templates found for domain: ${domain}`);
+        }
+      }
+
+      // If we don't have enough templates, fetch more without domain restriction
+      if (totalFetched < 8) {
+        console.log(`🔄 Need more templates (have ${totalFetched}), fetching additional without domain filter...`);
+        
+        const { data: additionalTemplates, error } = await supabase
+          .from('templates')
+          .select('*')
+          .eq('grade', grade)
+          .eq('quarter_app', quarter)
+          .eq('status', 'ACTIVE')
+          .limit(12 - totalFetched);
+
+        if (additionalTemplates && !error) {
+          // Filter out duplicates
+          const existingIds = new Set(allTemplates.map(t => t.id));
+          const newTemplates = additionalTemplates.filter(t => !existingIds.has(t.id));
+          allTemplates.push(...newTemplates);
+          console.log(`✅ Added ${newTemplates.length} additional templates`);
+        }
+      }
+
+      console.log(`📊 Total templates fetched: ${allTemplates.length}`);
+      
+      // Log domain distribution for debugging
+      const domainCounts = allTemplates.reduce((acc, template) => {
+        acc[template.domain] = (acc[template.domain] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log('🏷️ Domain distribution:', domainCounts);
+      
+      return allTemplates.map(t => ({
         id: t.id,
         student_prompt: String(t.student_prompt || ''),
         solution: t.solution, // FIXED: Behalte Original-Objekt-Struktur

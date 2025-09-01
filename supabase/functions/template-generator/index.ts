@@ -57,7 +57,7 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY not configured');
     }
     
-    const prompt = buildMathPrompt(grade, domain, quarter, difficulty, Math.min(needed, count));
+    const prompt = await buildMathPrompt(grade, domain, quarter, difficulty, Math.min(needed, count));
     
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -107,6 +107,29 @@ serve(async (req) => {
     // Insert templates into database
     const insertedTemplates = [];
     for (const template of templates.slice(0, needed)) {
+      // Generate AI explanation if none provided
+      let finalExplanation = template.explanation || '';
+      if (!finalExplanation && template.student_prompt && template.solution?.value) {
+        try {
+          const explanationResponse = await supabase.functions.invoke('explain-answer', {
+            body: {
+              question: template.student_prompt,
+              answer: template.solution.value,
+              grade: grade,
+              subject: 'mathematik'
+            }
+          });
+          
+          if (explanationResponse.data?.explanation) {
+            finalExplanation = explanationResponse.data.explanation;
+            console.log(`✅ Generated AI explanation for template: ${finalExplanation.substring(0, 50)}...`);
+          }
+        } catch (explainError) {
+          console.log('Could not generate AI explanation:', explainError);
+          finalExplanation = `Das Ergebnis ist ${template.solution.value}. Rechne Schritt für Schritt und kontrolliere dein Ergebnis!`;
+        }
+      }
+
       const templateData = {
         grade: template.grade || grade,
         domain: template.domain || domain,
@@ -117,7 +140,7 @@ serve(async (req) => {
         solution: template.solution || { value: template.answer || 1 },
         distractors: template.distractors || [],
         variables: template.variables || {},
-        explanation: template.explanation || '',
+        explanation: finalExplanation,
         tags: template.tags || [],
         quarter_app: template.quarter_app || quarter,
         grade_app: template.grade_app || grade,
@@ -161,8 +184,8 @@ serve(async (req) => {
   }
 });
 
-function buildMathPrompt(grade: number, domain: string, quarter: string, difficulty: string, count: number): string {
-  const curriculumInfo = getCurriculumInfo(grade, domain, quarter);
+async function buildMathPrompt(grade: number, domain: string, quarter: string, difficulty: string, count: number): Promise<string> {
+  const curriculumInfo = await getCurriculumInfo(grade, domain, quarter);
   
   return `Du bist ein Experte für deutsche Mathematik-Lehrpläne und mathematische Korrektheit. Erstelle ${count} MATHEMATISCH KORREKTE Aufgaben im JSON-Format.
 
@@ -236,57 +259,82 @@ ${curriculumInfo}
 Generiere NUR das mathematisch korrekte JSON-Array ohne weitere Erklärungen.`;
 }
 
-function getCurriculumInfo(grade: number, domain: string, quarter: string): string {
-  const curriculum: Record<string, Record<string, string>> = {
-    "Zahlen & Operationen": {
-      "1": "Zahlen bis 20, Addition/Subtraktion ohne Übergang, Zahlvorstellung",
-      "2": "Zahlen bis 100, Einmaleins (2er, 5er, 10er), schriftliche Addition",
-      "3": "Zahlen bis 1000, Einmaleins vollständig, schriftliche Subtraktion",
-      "4": "Zahlen bis 1 Million, schriftliche Multiplikation/Division",
-      "5": "Brüche, Dezimalzahlen, negative Zahlen",
-      "6": "Bruchrechnung, Prozentrechnung Grundlagen",
-      "7": "Prozent- und Zinsrechnung, rationale Zahlen",
-      "8": "Terme und Gleichungen, Funktionen",
-      "9": "Quadratische Funktionen, Potenzen",
-      "10": "Exponentialfunktionen, Logarithmen"
+async function getCurriculumInfo(grade: number, domain: string, quarter: string): Promise<string> {
+  try {
+    // Fetch real curriculum data from the JSON file
+    const curriculumResponse = await fetch('https://fsmgynpdfxkaiiuguqyr.supabase.co/storage/v1/object/public/curriculum/math_curriculum_1-10.json');
+    if (!curriculumResponse.ok) {
+      // Fallback to embedded curriculum data
+      return getRealCurriculumData(grade, domain, quarter);
+    }
+    
+    const curriculumData = await curriculumResponse.json();
+    const gradeData = curriculumData[grade.toString()];
+    
+    if (!gradeData || !gradeData[quarter] || !gradeData[quarter][domain]) {
+      return getRealCurriculumData(grade, domain, quarter);
+    }
+    
+    const topics = gradeData[quarter][domain];
+    return Array.isArray(topics) ? topics.join(', ') : topics;
+    
+  } catch (error) {
+    console.log('Using fallback curriculum data:', error);
+    return getRealCurriculumData(grade, domain, quarter);
+  }
+}
+
+function getRealCurriculumData(grade: number, domain: string, quarter: string): string {
+  // Real curriculum data based on the math_curriculum_1-10.json structure
+  const realCurriculum: Record<number, Record<string, Record<string, string[]>>> = {
+    1: {
+      Q1: {
+        "Zahlen & Operationen": ["Zahlen bis 10: zählen, ordnen", "Zerlegen im Zehnerraum"],
+        "Größen & Messen": ["Längen vergleichen", "Uhr: volle Stunden"],
+        "Raum & Form": ["Einfache Formen erkennen", "Muster fortsetzen"],
+        "Daten & Zufall": ["Strichlisten und einfache Häufigkeiten"]
+      },
+      Q4: {
+        "Zahlen & Operationen": ["Zahlen bis 100 kennenlernen", "Erste Multiplikationsvorstellungen"],
+        "Größen & Messen": ["Längen mit Lineal (cm) messen"],
+        "Raum & Form": ["Räumliche Orientierung", "Symmetrische Muster"],
+        "Daten & Zufall": ["Säulendiagramme einfach"]
+      }
     },
-    "Raum & Form": {
-      "1": "Grundformen erkennen, Symmetrie einfach",
-      "2": "Flächen und Körper, Umfang berechnen",
-      "3": "Geometrische Figuren, Flächeninhalt",
-      "4": "Koordinatensystem, geometrische Konstruktionen",
-      "5": "Dreiecke und Vierecke, Volumenberechnung",
-      "6": "Kreis, Prisma und Zylinder",
-      "7": "Strahlensätze, Ähnlichkeit",
-      "8": "Pythagoras, Trigonometrie Grundlagen",
-      "9": "Trigonometrie erweitert, Kreisgeometrie",
-      "10": "Analytische Geometrie, Vektoren"
+    2: {
+      Q4: {
+        "Zahlen & Operationen": ["Einmaleins automatisieren", "Rechentricks"],
+        "Größen & Messen": ["Längen umrechnen cm↔m"],
+        "Raum & Form": ["Würfelnetze"],
+        "Daten & Zufall": ["Zufallsexperimente"]
+      }
     },
-    "Größen & Messen": {
-      "1": "Längen, Zeit (Stunden), Geld bis 2€",
-      "2": "Einheiten cm/m, min/h, Euro/Cent",
-      "3": "Gewicht, Volumen, Zeitspannen",
-      "4": "Maßeinheiten umrechnen, Maßstab",
-      "5": "Flächeneinheiten, Volumeneinheiten",
-      "6": "Zeit, Geschwindigkeit, Dichte",
-      "7": "Verhältnisse und Proportionen",
-      "8": "Wachstum und Abnahme",
-      "9": "Exponentielles Wachstum",
-      "10": "Logarithmische Skalen"
+    3: {
+      Q4: {
+        "Zahlen & Operationen": ["Dezimalzahlen (Geld)", "Zahlendarstellung erweitern"],
+        "Größen & Messen": ["Zeitpläne lesen", "Temperaturen ablesen"],
+        "Raum & Form": ["Spiegelungen/Drehungen", "Gitterkoordinaten nutzen"],
+        "Daten & Zufall": ["Wahrscheinlichkeit als Häufigkeit"]
+      }
     },
-    "Daten & Zufall": {
-      "1": "Strichlisten, einfache Diagramme",
-      "2": "Säulendiagramme, Häufigkeiten",
-      "3": "Mittelwert, Wahrscheinlichkeit begrifflich",
-      "4": "Zufall und Wahrscheinlichkeit",
-      "5": "Statistische Erhebungen, relative Häufigkeit",
-      "6": "Kreisdiagramme, Median",
-      "7": "Baumdiagramme, Pfadregeln",
-      "8": "Vierfeldertafel, bedingte Wahrscheinlichkeit",
-      "9": "Normalverteilung, Konfidenzintervalle",
-      "10": "Hypothesentests, Regression"
+    4: {
+      Q4: {
+        // CRITICAL: Grade 4 Q4 real curriculum - NO FRACTIONS!
+        "Zahlen & Operationen": ["Dezimalzahlen (Geld)", "Zahlendarstellung erweitern"],
+        "Größen & Messen": ["Zeitpläne lesen", "Temperaturen ablesen"],
+        "Raum & Form": ["Spiegelungen/Drehungen", "Gitterkoordinaten nutzen"],
+        "Daten & Zufall": ["Wahrscheinlichkeit als Häufigkeit"]
+      }
     }
   };
   
-  return curriculum[domain]?.[grade.toString()] || `Allgemeine Mathematik Klassenstufe ${grade}`;
+  const quarterData = realCurriculum[grade]?.[quarter as keyof typeof realCurriculum[number]];
+  const topics = quarterData?.[domain];
+  
+  if (topics && Array.isArray(topics)) {
+    return topics.join(', ');
+  }
+  
+  // Final fallback for missing data
+  return `${domain} Klassenstufe ${grade} ${quarter}`;
 }
