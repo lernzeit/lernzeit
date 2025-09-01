@@ -1249,6 +1249,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      trigger_curriculum_template_generation: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       trigger_grade_upgrade: {
         Args: Record<PropertyKey, never>
         Returns: Json
