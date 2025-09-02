@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Star, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
+import { useTemplateBankGeneration, Quarter } from '@/hooks/useTemplateBankGeneration';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
 
 interface Problem {
+  id: number;
   question: string;
-  answer: number;
+  answer: string;
+  explanation: string;
   type: string;
+  questionType: 'text-input' | 'multiple-choice' | 'word-selection' | 'matching' | 'drag-drop';
+  options?: string[];
+  correctAnswer?: number;
 }
 
 interface MathProblemProps {

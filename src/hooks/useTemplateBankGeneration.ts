@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SelectionQuestion } from '@/types/questionTypes';
 import { EnhancedTemplateBankService, TemplateBankResult } from '@/services/templateBankService';
-import type { Quarter } from '@/data/templateBank';
+export type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
 
 interface TemplateBankGenerationOptions {
   enableQualityControl?: boolean;
