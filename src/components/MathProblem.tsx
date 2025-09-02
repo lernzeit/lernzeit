@@ -157,25 +157,26 @@ const generateProblem = (grade: number): Problem => {
       }
     }
     case 5: {
-      // Klasse 5: Dezimalzahlen, Prozente, größere Operationen
-      const operations = ['add', 'subtract', 'multiply', 'divide', 'decimal'];
+      // CURRICULUM-COMPLIANT: Grade 5 Q1 focuses on negative numbers, NOT fractions!
+      // Fractions only come in Grade 5 Q2!
+      const operations = ['add', 'subtract', 'multiply', 'divide', 'negative'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
-      if (operation === 'decimal') {
+      if (operation === 'negative') {
         const isAddition = Math.random() > 0.5;
-        const a = Math.round((Math.random() * 50 + 10) * 10) / 10; // 1.0-60.0
-        const b = Math.round((Math.random() * 20 + 5) * 10) / 10;  // 0.5-25.0
+        const a = Math.floor(Math.random() * 10) - 5; // -5 bis 4
+        const b = Math.floor(Math.random() * 8) - 4; // -4 bis 3
         if (isAddition) {
           return {
             question: `${a} + ${b} = ?`,
-            answer: Math.round((a + b) * 10) / 10,
-            type: 'Dezimal-Addition'
+            answer: a + b,
+            type: 'Negative Zahlen Addition'
           };
         } else {
           return {
-            question: `${a} - ${b} = ?`,
-            answer: Math.round((a - b) * 10) / 10,
-            type: 'Dezimal-Subtraktion'
+            question: `${a} - (${b}) = ?`,
+            answer: a - b,
+            type: 'Negative Zahlen Subtraktion'
           };
         }
       } else if (operation === 'multiply') {
@@ -217,34 +218,25 @@ const generateProblem = (grade: number): Problem => {
       // Klasse 6: Negative Zahlen, Brüche, Algebra-Basics
       const operations = ['add', 'subtract', 'multiply', 'divide', 'negative', 'fraction'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
-      
+      // PHASE 4: Remove curriculum-inappropriate content for Grade 5
+      // Grade 5 Q1 should focus on negative numbers, NOT fractions 
       if (operation === 'negative') {
         const isAddition = Math.random() > 0.5;
-        const a = Math.floor(Math.random() * 30) - 15; // -15 bis 14
-        const b = Math.floor(Math.random() * 20) - 10; // -10 bis 9
+        const a = Math.floor(Math.random() * 10) - 5; // -5 bis 4
+        const b = Math.floor(Math.random() * 8) - 4; // -4 bis 3
         if (isAddition) {
           return {
-            question: `${a} + (${b}) = ?`,
+            question: `${a} + ${b} = ?`,
             answer: a + b,
-            type: 'Negative Zahlen'
+            type: 'Negative Zahlen Addition'
           };
         } else {
           return {
             question: `${a} - (${b}) = ?`,
             answer: a - b,
-            type: 'Negative Zahlen'
+            type: 'Negative Zahlen Subtraktion'
           };
         }
-      } else if (operation === 'fraction') {
-        // Einfache Bruchaddition mit gleichem Nenner
-        const denominator = [2, 3, 4, 5, 6, 8, 10][Math.floor(Math.random() * 7)];
-        const a = Math.floor(Math.random() * (denominator - 1)) + 1;
-        const b = Math.floor(Math.random() * (denominator - a)) + 1;
-        return {
-          question: `${a}/${denominator} + ${b}/${denominator} = ? (als Dezimal)`,
-          answer: Math.round(((a + b) / denominator) * 100) / 100,
-          type: 'Bruchrechnung'
-        };
       } else if (operation === 'multiply') {
         const a = Math.floor(Math.random() * 80) + 40; // 40-119
         const b = Math.floor(Math.random() * 40) + 20; // 20-59
@@ -357,6 +349,36 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   const [totalTimeSpent, setTotalTimeSpent] = useState(0);
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [explanation, setExplanation] = useState<string>('');
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  const fetchExplanation = async (problem: Problem) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('explain-answer', {
+        body: {
+          question: problem.question,
+          answer: problem.answer.toString(),
+          grade: grade,
+          subject: 'mathematik'
+        }
+      });
+      
+      if (data?.explanation) {
+        setExplanation(data.explanation);
+      } else {
+        setExplanation(`Super! Die richtige Antwort ist ${problem.answer}. ${
+          grade <= 2 
+            ? 'Du kannst dir die Zahlen vorstellen oder an den Fingern abzählen.' 
+            : grade <= 4 
+            ? 'Bei solchen Aufgaben gehst du Schritt für Schritt vor und rechnest sorgfältig.' 
+            : 'Du findest das Ergebnis, indem du die Aufgabe strukturiert angehst.'
+        }`);
+      }
+    } catch (error) {
+      console.error('Error fetching explanation:', error);
+      setExplanation(`Richtig! Das Ergebnis ist ${problem.answer}. Gut gemacht!`);
+    }
+  };
 
   const targetQuestions = 5;
   const currentProblem = problems[currentProblemIndex];
@@ -425,6 +447,10 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
       setFeedback('correct');
       setWaitingForNext(true);
       
+      // PHASE 4: Fetch AI explanation for correct answers
+      await fetchExplanation(currentProblem);
+      setShowExplanation(true);
+      
       // Update achievements
       if (userId) {
         try {
@@ -470,6 +496,8 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
     setWaitingForNext(false);
     setCurrentProblemIndex(prev => (prev + 1) % problems.length);
     setUserAnswer('');
+    setShowExplanation(false);
+    setExplanation('');
   };
 
   if (totalQuestions >= targetQuestions) {
@@ -624,6 +652,13 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
                  )}
               </form>
             </div>
+
+            {showExplanation && explanation && (
+              <div className="mt-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                <h3 className="font-semibold text-primary mb-2">Erklärung:</h3>
+                <p className="text-sm leading-relaxed">{explanation}</p>
+              </div>
+            )}
 
             {/* Feedback */}
             {feedback && (

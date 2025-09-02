@@ -319,11 +319,19 @@ function getRealCurriculumData(grade: number, domain: string, quarter: string): 
     },
     4: {
       Q4: {
-        // CRITICAL: Grade 4 Q4 real curriculum - NO FRACTIONS!
-        "Zahlen & Operationen": ["Dezimalzahlen (Geld)", "Zahlendarstellung erweitern"],
-        "Größen & Messen": ["Zeitpläne lesen", "Temperaturen ablesen"],
-        "Raum & Form": ["Spiegelungen/Drehungen", "Gitterkoordinaten nutzen"],
-        "Daten & Zufall": ["Wahrscheinlichkeit als Häufigkeit"]
+        "Zahlen & Operationen": ["Dezimalzahlen (Geld): Komma verstehen", "Bruchverständnis vertiefen: Erweitern/Kürzen"],
+        "Größen & Messen": ["Skalen/Maßstab: Vergrößern/Verkleinern", "Zeit addieren/subtrahieren"],
+        "Raum & Form": ["Figuren legen/Netze: Flächen legen, Würfelbilder", "Koordinatensystem: 1. Quadrant einfach"],
+        "Daten & Zufall": ["Zufall/Experimente: Baumdiagramm 1-stufig vorbereiten", "Wahrscheinlichkeit als Häufigkeit"]
+      }
+    },
+    5: {
+      Q1: {
+        "Zahlen & Operationen": ["Negative Zahlen: Zahlengerade, Vergleiche", "Addition/Subtraktion negativer Zahlen"],
+        "Größen & Messen": ["Dezimalzahlen: Stellenwerte, Vergleichen", "Umrechnung: mm-cm-m-km"],
+        "Raum & Form": ["Dreiecke: Arten, Konstruktion", "Vierecke: Eigenschaften"],
+        "Gleichungen & Funktionen": ["Terme: Variablen, Termwerte", "Einfache Umformungen"],
+        "Daten & Zufall": ["Mittelwert, Median berechnen", "Spannweite bestimmen"]
       }
     }
   };
