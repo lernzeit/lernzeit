@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Star, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useTemplateBankGeneration, Quarter } from '@/hooks/useTemplateBankGeneration';
@@ -31,293 +32,279 @@ interface MathProblemProps {
 const generateProblem = (grade: number): Problem => {
   switch (grade) {
     case 1: {
-      // Klasse 1: Zahlen 1-20, Addition und Subtraktion
       const a = Math.floor(Math.random() * 10) + 1;
       const b = Math.floor(Math.random() * 10) + 1;
-      const isAddition = Math.random() > 0.3; // Mehr Addition für Anfänger
+      const isAddition = Math.random() > 0.3;
       if (isAddition && a + b <= 20) {
         return {
+          id: 1,
           question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'Addition'
+          answer: String(a + b),
+          explanation: `Du addierst ${a} und ${b}`,
+          type: 'Addition',
+          questionType: 'text-input'
         };
       } else {
         const larger = Math.max(a, b);
         const smaller = Math.min(a, b);
         return {
+          id: 2,
           question: `${larger} - ${smaller} = ?`,
-          answer: larger - smaller,
-          type: 'Subtraktion'
+          answer: String(larger - smaller),
+          explanation: `Du subtrahierst ${smaller} von ${larger}`,
+          type: 'Subtraktion',
+          questionType: 'text-input'
         };
       }
     }
     case 2: {
-      // Klasse 2: Zahlen 1-100, Einmaleins 1x1 bis 5x5
       const operations = ['add', 'subtract', 'multiply'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
       if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 5) + 1; // 1-5
-        const b = Math.floor(Math.random() * 5) + 1; // 1-5
+        const a = Math.floor(Math.random() * 5) + 1;
+        const b = Math.floor(Math.random() * 5) + 1;
         return {
+          id: 3,
           question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
+          answer: String(a * b),
+          explanation: `${a} mal ${b} ist ${a * b}`,
+          type: 'Multiplikation',
+          questionType: 'text-input'
         };
       } else if (operation === 'add') {
-        const a = Math.floor(Math.random() * 50) + 10; // 10-59
-        const b = Math.floor(Math.random() * 30) + 5;  // 5-34
+        const a = Math.floor(Math.random() * 50) + 10;
+        const b = Math.floor(Math.random() * 30) + 5;
         return {
+          id: 4,
           question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'Addition'
+          answer: String(a + b),
+          explanation: `Du addierst ${a} und ${b}`,
+          type: 'Addition',
+          questionType: 'text-input'
         };
       } else {
-        const a = Math.floor(Math.random() * 80) + 20; // 20-99
-        const b = Math.floor(Math.random() * 20) + 5;  // 5-24
+        const a = Math.floor(Math.random() * 80) + 20;
+        const b = Math.floor(Math.random() * 20) + 5;
         return {
+          id: 5,
           question: `${a} - ${b} = ?`,
-          answer: a - b,
-          type: 'Subtraktion'
+          answer: String(a - b),
+          explanation: `Du subtrahierst ${b} von ${a}`,
+          type: 'Subtraktion',
+          questionType: 'text-input'
         };
       }
     }
     case 3: {
-      // Klasse 3: Einmaleins bis 10x10, Division, größere Zahlen
       const operations = ['add', 'subtract', 'multiply', 'divide'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
       if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 10) + 1; // 1-10
-        const b = Math.floor(Math.random() * 10) + 1; // 1-10
+        const a = Math.floor(Math.random() * 10) + 1;
+        const b = Math.floor(Math.random() * 10) + 1;
         return {
+          id: 6,
           question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
+          answer: String(a * b),
+          explanation: `${a} mal ${b} ist ${a * b}`,
+          type: 'Multiplikation',
+          questionType: 'text-input'
         };
       } else if (operation === 'divide') {
-        const answer = Math.floor(Math.random() * 10) + 1; // 1-10
-        const divisor = Math.floor(Math.random() * 9) + 2; // 2-10
+        const answer = Math.floor(Math.random() * 10) + 1;
+        const divisor = Math.floor(Math.random() * 9) + 2;
         return {
+          id: 7,
           question: `${answer * divisor} ÷ ${divisor} = ?`,
-          answer: answer,
-          type: 'Division'
+          answer: String(answer),
+          explanation: `${answer * divisor} geteilt durch ${divisor} ist ${answer}`,
+          type: 'Division',
+          questionType: 'text-input'
         };
       } else if (operation === 'add') {
-        const a = Math.floor(Math.random() * 400) + 100; // 100-499
-        const b = Math.floor(Math.random() * 200) + 50;  // 50-249
+        const a = Math.floor(Math.random() * 400) + 100;
+        const b = Math.floor(Math.random() * 200) + 50;
         return {
+          id: 8,
           question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'Addition'
+          answer: String(a + b),
+          explanation: `Du addierst ${a} und ${b}`,
+          type: 'Addition',
+          questionType: 'text-input'
         };
       } else {
-        const a = Math.floor(Math.random() * 500) + 200; // 200-699
-        const b = Math.floor(Math.random() * 150) + 25;  // 25-174
+        const a = Math.floor(Math.random() * 500) + 200;
+        const b = Math.floor(Math.random() * 150) + 25;
         return {
+          id: 9,
           question: `${a} - ${b} = ?`,
-          answer: a - b,
-          type: 'Subtraktion'
+          answer: String(a - b),
+          explanation: `Du subtrahierst ${b} von ${a}`,
+          type: 'Subtraktion',
+          questionType: 'text-input'
         };
       }
     }
     case 4: {
-      // Klasse 4: Große Zahlen, schwierigere Multiplikation/Division, Brucheinführung
       const operations = ['add', 'subtract', 'multiply', 'divide'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
       if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 25) + 10; // 10-34
-        const b = Math.floor(Math.random() * 20) + 5;  // 5-24
+        const a = Math.floor(Math.random() * 25) + 10;
+        const b = Math.floor(Math.random() * 20) + 5;
         return {
+          id: 10,
           question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
+          answer: String(a * b),
+          explanation: `${a} mal ${b} ist ${a * b}`,
+          type: 'Multiplikation',
+          questionType: 'text-input'
         };
       } else if (operation === 'divide') {
         const divisors = [5, 10, 25, 50, 100];
         const divisor = divisors[Math.floor(Math.random() * divisors.length)];
-        const answer = Math.floor(Math.random() * 20) + 5; // 5-24
+        const answer = Math.floor(Math.random() * 20) + 5;
         return {
+          id: 11,
           question: `${answer * divisor} ÷ ${divisor} = ?`,
-          answer: answer,
-          type: 'Division'
+          answer: String(answer),
+          explanation: `${answer * divisor} geteilt durch ${divisor} ist ${answer}`,
+          type: 'Division',
+          questionType: 'text-input'
         };
       } else if (operation === 'add') {
-        const a = Math.floor(Math.random() * 5000) + 1000; // 1000-5999
-        const b = Math.floor(Math.random() * 3000) + 500;  // 500-3499
+        const a = Math.floor(Math.random() * 5000) + 1000;
+        const b = Math.floor(Math.random() * 3000) + 500;
         return {
+          id: 12,
           question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'Addition'
+          answer: String(a + b),
+          explanation: `Du addierst ${a} und ${b}`,
+          type: 'Addition',
+          questionType: 'text-input'
         };
       } else {
-        const a = Math.floor(Math.random() * 8000) + 2000; // 2000-9999
-        const b = Math.floor(Math.random() * 1500) + 200;  // 200-1699
+        const a = Math.floor(Math.random() * 8000) + 2000;
+        const b = Math.floor(Math.random() * 1500) + 200;
         return {
+          id: 13,
           question: `${a} - ${b} = ?`,
-          answer: a - b,
-          type: 'Subtraktion'
+          answer: String(a - b),
+          explanation: `Du subtrahierst ${b} von ${a}`,
+          type: 'Subtraktion',
+          questionType: 'text-input'
         };
       }
     }
     case 5: {
-      // CURRICULUM-COMPLIANT: Grade 5 Q1 focuses on negative numbers, NOT fractions!
-      // Fractions only come in Grade 5 Q2!
+      // Template-Bank Integration wird verwendet
       const operations = ['add', 'subtract', 'multiply', 'divide', 'negative'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
       if (operation === 'negative') {
         const isAddition = Math.random() > 0.5;
-        const a = Math.floor(Math.random() * 10) - 5; // -5 bis 4
-        const b = Math.floor(Math.random() * 8) - 4; // -4 bis 3
+        const a = Math.floor(Math.random() * 10) - 5;
+        const b = Math.floor(Math.random() * 8) - 4;
         if (isAddition) {
           return {
+            id: 14,
             question: `${a} + ${b} = ?`,
-            answer: a + b,
-            type: 'Negative Zahlen Addition'
+            answer: String(a + b),
+            explanation: `Du addierst ${a} und ${b}`,
+            type: 'Negative Zahlen Addition',
+            questionType: 'text-input'
           };
         } else {
           return {
+            id: 15,
             question: `${a} - (${b}) = ?`,
-            answer: a - b,
-            type: 'Negative Zahlen Subtraktion'
+            answer: String(a - b),
+            explanation: `Du subtrahierst ${b} von ${a}`,
+            type: 'Negative Zahlen Subtraktion',
+            questionType: 'text-input'
           };
         }
-      } else if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 50) + 20; // 20-69
-        const b = Math.floor(Math.random() * 30) + 10; // 10-39
-        return {
-          question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
-        };
-      } else if (operation === 'divide') {
-        const divisors = [10, 20, 25, 50, 100];
-        const divisor = divisors[Math.floor(Math.random() * divisors.length)];
-        const answer = Math.floor(Math.random() * 50) + 10; // 10-59
-        return {
-          question: `${answer * divisor} ÷ ${divisor} = ?`,
-          answer: answer,
-          type: 'Division'
-        };
-      } else if (operation === 'add') {
-        const a = Math.floor(Math.random() * 50000) + 10000; // 10000-59999
-        const b = Math.floor(Math.random() * 20000) + 5000;  // 5000-24999
-        return {
-          question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'Addition'
-        };
       } else {
-        const a = Math.floor(Math.random() * 80000) + 20000; // 20000-99999
-        const b = Math.floor(Math.random() * 15000) + 2000;  // 2000-16999
+        // Fallback für andere Operationen
+        const a = Math.floor(Math.random() * 50) + 10;
+        const b = Math.floor(Math.random() * 30) + 5;
         return {
-          question: `${a} - ${b} = ?`,
-          answer: a - b,
-          type: 'Subtraktion'
-        };
-      }
-    }
-    case 6: {
-      // Klasse 6: Negative Zahlen, Brüche, Algebra-Basics
-      const operations = ['add', 'subtract', 'multiply', 'divide', 'negative', 'fraction'];
-      const operation = operations[Math.floor(Math.random() * operations.length)];
-      // PHASE 4: Remove curriculum-inappropriate content for Grade 5
-      // Grade 5 Q1 should focus on negative numbers, NOT fractions 
-      if (operation === 'negative') {
-        const isAddition = Math.random() > 0.5;
-        const a = Math.floor(Math.random() * 10) - 5; // -5 bis 4
-        const b = Math.floor(Math.random() * 8) - 4; // -4 bis 3
-        if (isAddition) {
-          return {
-            question: `${a} + ${b} = ?`,
-            answer: a + b,
-            type: 'Negative Zahlen Addition'
-          };
-        } else {
-          return {
-            question: `${a} - (${b}) = ?`,
-            answer: a - b,
-            type: 'Negative Zahlen Subtraktion'
-          };
-        }
-      } else if (operation === 'multiply') {
-        const a = Math.floor(Math.random() * 80) + 40; // 40-119
-        const b = Math.floor(Math.random() * 40) + 20; // 20-59
-        return {
-          question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
-        };
-      } else if (operation === 'divide') {
-        const divisors = [12, 15, 20, 24, 30, 40, 50];
-        const divisor = divisors[Math.floor(Math.random() * divisors.length)];
-        const answer = Math.floor(Math.random() * 25) + 15; // 15-39
-        return {
-          question: `${answer * divisor} ÷ ${divisor} = ?`,
-          answer: answer,
-          type: 'Division'
-        };
-      } else if (operation === 'add') {
-        const a = Math.floor(Math.random() * 100000) + 50000; // 50000-149999
-        const b = Math.floor(Math.random() * 50000) + 10000;  // 10000-59999
-        return {
+          id: 16,
           question: `${a} + ${b} = ?`,
-          answer: a + b,
-          type: 'Addition'
-        };
-      } else {
-        const a = Math.floor(Math.random() * 150000) + 50000; // 50000-199999
-        const b = Math.floor(Math.random() * 30000) + 5000;   // 5000-34999
-        return {
-          question: `${a} - ${b} = ?`,
-          answer: a - b,
-          type: 'Subtraktion'
+          answer: String(a + b),
+          explanation: `Du addierst ${a} und ${b}`,
+          type: 'Addition',
+          questionType: 'text-input'
         };
       }
     }
     default: {
-      // Klasse 7+: Erweiterte Algebra, Gleichungen, Geometrie
       const operations = ['algebra', 'multiply', 'square', 'percentage'];
       const operation = operations[Math.floor(Math.random() * operations.length)];
       
       if (operation === 'algebra') {
-        // Einfache Gleichungen: x + a = b
-        const a = Math.floor(Math.random() * 50) + 10; // 10-59
-        const x = Math.floor(Math.random() * 30) + 5;  // 5-34
+        const a = Math.floor(Math.random() * 50) + 10;
+        const x = Math.floor(Math.random() * 30) + 5;
         const b = x + a;
         return {
+          id: 17,
           question: `x + ${a} = ${b}, x = ?`,
-          answer: x,
-          type: 'Algebra'
+          answer: String(x),
+          explanation: `Um x zu finden, rechnest du ${b} - ${a} = ${x}`,
+          type: 'Algebra',
+          questionType: 'text-input'
         };
       } else if (operation === 'square') {
-        const base = Math.floor(Math.random() * 15) + 5; // 5-19
+        const base = Math.floor(Math.random() * 15) + 5;
         return {
+          id: 18,
           question: `${base}² = ?`,
-          answer: base * base,
-          type: 'Quadratzahl'
+          answer: String(base * base),
+          explanation: `${base} hoch 2 ist ${base} × ${base} = ${base * base}`,
+          type: 'Quadratzahl',
+          questionType: 'text-input'
         };
       } else if (operation === 'percentage') {
         const base = [100, 200, 500, 1000][Math.floor(Math.random() * 4)];
         const percent = [10, 20, 25, 50, 75][Math.floor(Math.random() * 5)];
+        const result = (base * percent) / 100;
         return {
+          id: 19,
           question: `${percent}% von ${base} = ?`,
-          answer: (base * percent) / 100,
-          type: 'Prozentrechnung'
+          answer: String(result),
+          explanation: `${percent}% von ${base} ist (${base} × ${percent}) ÷ 100 = ${result}`,
+          type: 'Prozentrechnung',
+          questionType: 'text-input'
         };
       } else {
-        const a = Math.floor(Math.random() * 200) + 50; // 50-249
-        const b = Math.floor(Math.random() * 100) + 25; // 25-124
+        const a = Math.floor(Math.random() * 200) + 50;
+        const b = Math.floor(Math.random() * 100) + 25;
         return {
+          id: 20,
           question: `${a} × ${b} = ?`,
-          answer: a * b,
-          type: 'Multiplikation'
+          answer: String(a * b),
+          explanation: `${a} mal ${b} ist ${a * b}`,
+          type: 'Multiplikation',
+          questionType: 'text-input'
         };
       }
     }
   }
+};
+
+// PHASE 3: Template-Bank Integration
+const convertTemplateToProblems = (templates: any[]): Problem[] => {
+  return templates.map((template, index) => ({
+    id: template.id || index + 1000,
+    question: template.question_text || 'Frage lädt...',
+    answer: template.solution?.value || '0',
+    explanation: template.explanation || 'Erklärung wird geladen...',
+    type: template.domain || 'Mathematik',
+    questionType: 'text-input' as const,
+    options: template.options || undefined,
+    correctAnswer: template.correct_answer || undefined
+  }));
 };
 
 const generateUniqueProblems = (grade: number, count: number = 10): Problem[] => {
@@ -341,7 +328,35 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   const { settings } = useChildSettings(userId || '');
   const { updateProgress } = useAchievements(userId, { suppressToast: true });
   
-  const [problems] = useState<Problem[]>(() => generateUniqueProblems(grade, 10));
+  // PHASE 3: Template-Bank Integration
+  const getCurrentQuarter = (): Quarter => {
+    const month = new Date().getMonth() + 1;
+    if (month >= 9 || month <= 1) return 'Q1';
+    if (month >= 2 && month <= 4) return 'Q2';
+    if (month >= 5 && month <= 7) return 'Q3';
+    return 'Q4';
+  };
+
+  const { 
+    problems: templateProblems,
+    generateProblems, 
+    isGenerating: isTemplateLoading, 
+    error: templateError,
+    hasProblems 
+  } = useTemplateBankGeneration(
+    'Mathematik',
+    grade,
+    userId || 'anonymous',
+    10,
+    getCurrentQuarter(),
+    {
+      enableQualityControl: true,
+      fallbackToLegacy: true
+    }
+  );
+
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [isLoadingProblems, setIsLoadingProblems] = useState(true);
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [correctAnswers, setCorrectAnswers] = useState(0);
@@ -357,33 +372,46 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   const [explanation, setExplanation] = useState<string>('');
   const [showExplanation, setShowExplanation] = useState(false);
 
-  const fetchExplanation = async (problem: Problem) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('explain-answer', {
-        body: {
-          question: problem.question,
-          answer: problem.answer.toString(),
-          grade: grade,
-          subject: 'mathematik'
+  // PHASE 3: Load problems from Template-Bank on component mount
+  useEffect(() => {
+    const loadProblems = async () => {
+      try {
+        setIsLoadingProblems(true);
+        console.log('🎯 Loading problems from Template-Bank for Grade', grade, 'Quarter', getCurrentQuarter());
+        
+        // Check if template problems are already loaded
+        if (hasProblems && templateProblems.length > 0) {
+          console.log('✅ Template-Bank loaded', templateProblems.length, 'questions');
+          const convertedProblems = convertTemplateToProblems(templateProblems);
+          setProblems(convertedProblems);
+          setIsLoadingProblems(false);
+          return;
         }
-      });
-      
-      if (data?.explanation) {
-        setExplanation(data.explanation);
-      } else {
-        setExplanation(`Super! Die richtige Antwort ist ${problem.answer}. ${
-          grade <= 2 
-            ? 'Du kannst dir die Zahlen vorstellen oder an den Fingern abzählen.' 
-            : grade <= 4 
-            ? 'Bei solchen Aufgaben gehst du Schritt für Schritt vor und rechnest sorgfältig.' 
-            : 'Du findest das Ergebnis, indem du die Aufgabe strukturiert angehst.'
-        }`);
+
+        // If no template problems, generate them
+        if (!isTemplateLoading && templateProblems.length === 0) {
+          await generateProblems();
+        }
+      } catch (error) {
+        console.error('❌ Error loading template problems:', error);
+        const fallbackProblems = generateUniqueProblems(grade, 10);
+        setProblems(fallbackProblems);
+        setIsLoadingProblems(false);
       }
-    } catch (error) {
-      console.error('Error fetching explanation:', error);
-      setExplanation(`Richtig! Das Ergebnis ist ${problem.answer}. Gut gemacht!`);
+    };
+
+    loadProblems();
+  }, [grade, generateProblems, hasProblems, templateProblems, isTemplateLoading]);
+
+  // Auto-convert template problems when they're loaded
+  useEffect(() => {
+    if (hasProblems && templateProblems.length > 0 && problems.length === 0) {
+      console.log('🔄 Converting template problems to local format');
+      const convertedProblems = convertTemplateToProblems(templateProblems);
+      setProblems(convertedProblems);
+      setIsLoadingProblems(false);
     }
-  };
+  }, [hasProblems, templateProblems, problems.length]);
 
   const targetQuestions = 5;
   const currentProblem = problems[currentProblemIndex];
@@ -395,17 +423,16 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
   }, [currentProblemIndex]);
 
   const calculateReward = () => {
-    // Calculate based on child settings for math
     let earnedSeconds = 0;
     if (settings) {
       earnedSeconds = correctAnswers * settings.math_seconds_per_task;
     } else {
-      earnedSeconds = correctAnswers * 30; // fallback
+      earnedSeconds = correctAnswers * 30;
     }
     
     const earnedMinutes = Math.round(earnedSeconds / 60 * 100) / 100;
     const timeSpentMinutes = Math.ceil(totalTimeSpent / 60);
-    const netMinutes = Math.floor(earnedSeconds / 60); // Store whole minutes only
+    const netMinutes = Math.floor(earnedSeconds / 60);
     
     return { 
       earnedMinutes, 
@@ -436,7 +463,6 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Support both comma and dot as decimal separator
     const normalizedAnswer = userAnswer.replace(',', '.');
     const answer = parseFloat(normalizedAnswer);
     
@@ -446,32 +472,30 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
     setTotalTimeSpent(prev => prev + questionTime);
     setTotalQuestions(prev => prev + 1);
     
-    if (answer === currentProblem.answer) {
+    // PHASE 1: Use answer directly from template (string comparison)
+    const isCorrect = normalizedAnswer === currentProblem.answer || 
+                     answer.toString() === currentProblem.answer ||
+                     Math.abs(answer - parseFloat(currentProblem.answer)) < 0.001;
+    
+    if (isCorrect) {
       setCorrectAnswers(prev => prev + 1);
       setStreak(prev => prev + 1);
       setFeedback('correct');
       setWaitingForNext(true);
       
-      // PHASE 4: Fetch AI explanation for correct answers
-      await fetchExplanation(currentProblem);
-      setShowExplanation(true);
+      // PHASE 1: Use explanation directly from template
+      if (currentProblem.explanation) {
+        setExplanation(currentProblem.explanation);
+        setShowExplanation(true);
+      }
       
-      // Update achievements
       if (userId) {
         try {
-          console.log('🎯 Calling updateProgress with:', {
-            category: 'math',
-            type: 'questions_solved',
-            increment: 1
-          });
-          
           const achievementResult = await updateProgress(
             'math',
             'questions_solved', 
             1
           );
-          
-          console.log('🏆 Achievement result:', achievementResult);
           
           if (achievementResult && achievementResult.length > 0) {
             setNewAchievements(achievementResult);
@@ -483,7 +507,6 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
       }
       
       if (totalQuestions + 1 >= targetQuestions) {
-        // Session beendet - sofortiger Abschluss ohne Verzögerung
         const { netMinutes } = calculateReward();
         await saveGameSession(netMinutes);
         onComplete(netMinutes);
@@ -504,6 +527,23 @@ export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemPr
     setShowExplanation(false);
     setExplanation('');
   };
+
+  // Loading state
+  if (isLoadingProblems || problems.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+        <Card className="max-w-md w-full shadow-card">
+          <CardContent className="p-8 text-center">
+            <div className="text-4xl mb-4">📚</div>
+            <h2 className="text-xl font-bold mb-4">Lade Aufgaben...</h2>
+            <p className="text-muted-foreground">
+              Template-Bank wird abgerufen für Klasse {grade}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (totalQuestions >= targetQuestions) {
     const { earnedMinutes, timeSpentMinutes, netMinutes, earnedSeconds } = calculateReward();
