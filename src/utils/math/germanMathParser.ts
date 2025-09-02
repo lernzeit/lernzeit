@@ -71,11 +71,14 @@ export class GermanMathParser {
   }
   
   /**
-   * Parse direct equations like "6 × 6 = ?" or "2,5 + 1,8 = ?"
+   * Parse direct equations like "6 × 6 = ?" or "2,5 + 1,8 = ?" or "-5 + 3 = ?"
    */
   private static parseDirectEquation(content: string): MathParseResult {
-    // Enhanced pattern to catch German decimal format and various operators
+    // Enhanced pattern to catch German decimal format, negative numbers, and various operators
     const patterns = [
+      // CRITICAL FIX: Negative numbers pattern (must come first!)
+      /(-?\d+(?:[,\.]\d+)?)\s*([+\-×÷*/:×])\s*(-?\d+(?:[,\.]\d+)?)\s*=\s*\?/,
+      /(-?\d+(?:[,\.]\d+)?)\s*([+\-×÷*/:×])\s*(-?\d+(?:[,\.]\d+)?)/,
       // Order of operations patterns: addition/subtraction with multiplication/division
       /(\d+(?:[,\.]\d+)?)\s*([+\-])\s*(\d+(?:[,\.]\d+)?)\s*([×÷*/:×])\s*(\d+(?:[,\.]\d+)?)\s*=\s*\?/,
       /(\d+(?:[,\.]\d+)?)\s*([×÷*/:×])\s*(\d+(?:[,\.]\d+)?)\s*([+\-])\s*(\d+(?:[,\.]\d+)?)\s*=\s*\?/,
@@ -363,14 +366,19 @@ export class GermanMathParser {
   }
   
   /**
-   * Parse German number format (comma as decimal separator)
+   * Parse German number format (comma as decimal separator, including negative numbers)
    */
   private static parseGermanNumber(numStr: string): number | null {
     if (!numStr) return null;
     
+    // CRITICAL FIX: Handle negative numbers properly
+    const trimmed = numStr.trim();
+    
     // Handle German decimal format (comma) and international format (dot)
-    const normalized = numStr.replace(',', '.');
+    const normalized = trimmed.replace(',', '.');
     const parsed = parseFloat(normalized);
+    
+    console.log('🔍 parseGermanNumber:', { input: numStr, trimmed, normalized, parsed });
     
     return isNaN(parsed) ? null : parsed;
   }
