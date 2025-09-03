@@ -1,476 +1,371 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-// Complete Math curriculum structure for grades 1-10
-const MATH_CURRICULUM = {
-  "1": {
-    "Q1": {
-      "Zahlen & Operationen": ["Zählen bis 10", "Anzahlen vergleichen", "Plus/Minus im ZR 10 ohne Übergang"],
-      "Raum & Form": ["Kreis, Dreieck, Quadrat, Rechteck unterscheiden"],
-      "Größen & Messen": ["Längen schätzen und vergleichen (unstandardisiert)"],
-      "Daten & Zufall": ["Einfache Strichlisten und Bilddiagramme"]
-    },
-    "Q2": {
-      "Zahlen & Operationen": ["Zahlen bis 20 darstellen, ordnen", "Plus/Minus im ZR 20 mit Zehnerübergang (strategisch)"],
-      "Raum & Form": ["rechts/links, oben/unten; Muster fortsetzen"],
-      "Größen & Messen": ["Uhr (volle/halbe Stunde), Münzen bis 2 €"],
-      "Daten & Zufall": ["möglich – sicher – unmöglich"]
-    },
-    "Q3": {
-      "Zahlen & Operationen": ["Zahlen bis 100 erkunden, Zehner/Einer", "Halbschriftliche Verfahren im ZR 100 (ohne Übergang)"],
-      "Raum & Form": ["Einfache Achsensymmetrien erkennen"],
-      "Größen & Messen": ["Messen mit Lineal; Einheiten cm/m"]
-    },
-    "Q4": {
-      "Zahlen & Operationen": ["Plus/Minus im ZR 100 mit Übergang", "Wiederholtes Addieren/Teilen in gleich große Gruppen"],
-      "Größen & Messen": ["Kalender, Wochentage/Monate, einfache Zeitspannen"],
-      "Raum & Form": ["Flächen legen, einfache Netze (Würfelbilder)"]
-    }
-  },
-  "2": {
-    "Q1": {
-      "Zahlen & Operationen": ["Halbschriftlich & schriftnah mit Übergang", "2er/5er/10er Reihen, Tausch-/Verbundaufgaben"],
-      "Größen & Messen": ["Einkaufssituationen bis 100 € (ohne Komma)"],
-      "Raum & Form": ["Ecken, Kanten, Seiten; Rechteck/Quadrat"]
-    },
-    "Q2": {
-      "Zahlen & Operationen": ["1–10er Reihen (Netz), Umkehraufgaben", "Teilen als Aufteilen/Verteilen"],
-      "Größen & Messen": ["cm–m; min–h; €–Cent (ganzzahlig)"],
-      "Daten & Zufall": ["Säulen-/Bilddiagramme interpretieren"]
-    },
-    "Q3": {
-      "Zahlen & Operationen": ["Standardverfahren (ZR 1000 vorbereiten)", "Kleines Einmaleins sicher anwenden"],
-      "Raum & Form": ["Umfang Rechteck/Quadrat (ganzzahlige Längen)"],
-      "Größen & Messen": ["Addieren/Subtrahieren von Zeiten (ohne Datum)"]
-    },
-    "Q4": {
-      "Zahlen & Operationen": ["Stellenwert bis 1000", "Addition/Subtraktion im ZR 1000"],
-      "Daten & Zufall": ["einfache Experimente; Häufigkeiten"]
-    }
-  },
-  "3": {
-    "Q1": {
-      "Zahlen & Operationen": ["Ordnen, Runden, Zahlstrahl", "mit Übergang im ZR 1000", "1×n/ n×1 mit Strategie (ohne Algorithmus)"],
-      "Größen & Messen": ["Formelverständnis U=2(a+b), A=a·b (ganzzahlig)"]
-    },
-    "Q2": {
-      "Zahlen & Operationen": ["Teilen mit Rest; Beziehungen × ÷", "Einstelliger Faktor × mehrstellig"],
-      "Raum & Form": ["Recht-, Spitz-, Stumpfwinkel erkennen"],
-      "Daten & Zufall": ["Mittelwert (einfach), Modus; Säulen-/Liniendiagramm"]
-    },
-    "Q3": {
-      "Zahlen & Operationen": ["Einführung; einfache gleichnamige Vergleiche"],
-      "Größen & Messen": ["Zeitspannen über Tagesgrenzen; Kalender"],
-      "Raum & Form": ["Achsensymmetrie & Parkettierungen"]
-    },
-    "Q4": {
-      "Zahlen & Operationen": ["Einstelliger Divisor", "Komma bei Geld/Messwerten verstehen"],
-      "Daten & Zufall": ["relative Häufigkeit (intuitiv)"]
-    }
-  },
-  "4": {
-    "Q1": {
-      "Zahlen & Operationen": ["Stellenwert, Runden, Zahlbeziehungen", "mehrstellig × mehrstellig"],
-      "Größen & Messen": ["mm–cm–m–km; g–kg; ml–l; € mit Komma"],
-      "Raum & Form": ["Vierecke, Dreiecke klassifizieren"]
-    },
-    "Q2": {
-      "Zahlen & Operationen": ["mehrstelliger Divisor (standard)", "Brüche als Dezimalzahlen (endliche)"],
-      "Größen & Messen": ["Netze, Oberflächen, Volumen (ganzzahlig)"],
-      "Daten & Zufall": ["Mittelwert/Median (einfach), Diagrammwahl"]
-    },
-    "Q3": {
-      "Zahlen & Operationen": ["+ − × ÷ (einfach, sachbezogen)"],
-      "Gleichungen & Funktionen": ["Muster/Regeln; Variable als Platzhalter"],
-      "Raum & Form": ["Punkte lesen/setzen, einfache Wege"]
-    },
-    "Q4": {
-      "Zahlen & Operationen": ["Erweitern/Kürzen, gleichnamig addieren"],
-      "Größen & Messen": ["Vergrößern/Verkleinern"],
-      "Daten & Zufall": ["Baumdiagramm (1 Stufe) vorbereiten"]
-    }
-  },
-  "5": {
-    "Q1": {
-      "Zahlen & Operationen": ["Zahlengerade, Vergleiche, Addition/Subtraktion", "Erweitern/Kürzen, Vergleich; Umwandlung"],
-      "Gleichungen & Funktionen": ["Termwert, einfache Umformungen"],
-      "Raum & Form": ["Konstruktion, Eigenschaften"]
-    },
-    "Q2": {
-      "Zahlen & Operationen": ["Direkt proportional; Skalen", "Sachaufgaben"],
-      "Gleichungen & Funktionen": ["ax+b=c lösen (einfach)"],
-      "Daten & Zufall": ["Mittelwert, Median, Spannweite"]
-    },
-    "Q3": {
-      "Zahlen & Operationen": ["Prozentwert/Grundwert/Prozentsatz (einfach)"],
-      "Gleichungen & Funktionen": ["Tabellen ↔ Graph"],
-      "Raum & Form": ["Umfang/Fläche (einfach)"]
-    },
-    "Q4": {
-      "Zahlen & Operationen": ["gemischte Aufgaben"],
-      "Raum & Form": ["Prismen; Volumen/Netze"],
-      "Daten & Zufall": ["absolute/relative Häufigkeit"]
-    }
-  },
-  "6": {
-    "Q1": {
-      "Zahlen & Operationen": ["Grundaufgaben, bequeme Prozentsätze", "Anteile, Mix-/Mischaufgaben (einfach)"],
-      "Gleichungen & Funktionen": ["äquivalente Umformungen (einfach)"],
-      "Raum & Form": ["Abbildungen"]
-    },
-    "Q2": {
-      "Gleichungen & Funktionen": ["Graphisch & rechnerisch"],
-      "Zahlen & Operationen": ["Quadrat/Kubik; Potenzschreibweise"],
-      "Raum & Form": ["Sachaufgaben, Maßeinheiten"],
-      "Daten & Zufall": ["Kreis-/Säulen-/Liniendiagramm; Median"]
-    },
-    "Q3": {
-      "Gleichungen & Funktionen": ["mit Klammern/Brüchen"],
-      "Raum & Form": ["Oberfläche & Volumen"],
-      "Zahlen & Operationen": ["Rechnen mit Vorzeichen (einfach)"]
-    },
-    "Q4": {
-      "Gleichungen & Funktionen": ["y=mx+b lesen/zeichnen"],
-      "Raum & Form": ["Dreiecks-/Vielfachwinkel"],
-      "Daten & Zufall": ["Einfache Pfadregeln vorbereiten"]
-    }
-  },
-  "7": {
-    "Q1": {
-      "Zahlen & Operationen": ["Zins, Tageszins, Zinseszins (iterativ)"],
-      "Gleichungen & Funktionen": ["Ausklammern, Klammerregeln"],
-      "Raum & Form": ["Eigenschaften/Konstruktionen"]
-    },
-    "Q2": {
-      "Zahlen & Operationen": ["+ − × ÷ mit Brüchen/Dezimalen"],
-      "Gleichungen & Funktionen": ["mit Brüchen/Klammern"],
-      "Daten & Zufall": ["absolute/relative Häufigkeit; Baumdiagramm (1–2 Stufen)"]
-    },
-    "Q3": {
-      "Gleichungen & Funktionen": ["direkt/indirekt proportional; Steigung verstehen"],
-      "Raum & Form": ["Zylinder/Prismen; Netze/Schrägbild"],
-      "Zahlen & Operationen": ["Rabatt/Preiserhöhung"]
-    },
-    "Q4": {
-      "Gleichungen & Funktionen": ["grafisch und rechnerisch (einfach)"],
-      "Raum & Form": ["Verhältnisse, Streckung (einfach)"]
-    }
-  },
-  "8": {
-    "Q1": {
-      "Gleichungen & Funktionen": ["Darstellung/Steigung/Achsabschnitt", "grafisch/Einsetzen/Gleichsetzen"],
-      "Zahlen & Operationen": ["Distributivgesetz etc."]
-    },
-    "Q2": {
-      "Raum & Form": ["Streckung, Verhältnisse, Anwendungen", "Berechnungen/Anwendungen"],
-      "Daten & Zufall": ["Vierfeldertafel, bedingte Häufigkeiten (einfach)"]
-    },
-    "Q3": {
-      "Gleichungen & Funktionen": ["Modellieren mit linearen Funktionen"],
-      "Zahlen & Operationen": ["Tabellenkalkulation für Zinsen"],
-      "Raum & Form": ["Geraden, Parallelität/Orthogonalität"]
-    },
-    "Q4": {
-      "Gleichungen & Funktionen": ["x^2, Parabel-Grundlagen (intuitiv)"],
-      "Raum & Form": ["Rechtwinklige Dreiecke – Motivation"]
-    }
-  },
-  "9": {
-    "Q1": {
-      "Raum & Form": ["Strecken berechnen, Orthogonalität"],
-      "Gleichungen & Funktionen": ["x^2=a; pq-Formel (einfach)"],
-      "Raum & Form": ["Sinus (Basis), Kosinus/Tangens (optional)"]
-    },
-    "Q2": {
-      "Gleichungen & Funktionen": ["Scheitel/Nullstellen, Graphen"],
-      "Raum & Form": ["Kreis, Kreissektor, zusammengesetzte Figuren"],
-      "Daten & Zufall": ["Baumdiagramme (mehrstufig), erwartete Werte (einfach)"]
-    },
-    "Q3": {
-      "Gleichungen & Funktionen": ["Lineare/quadratische Modelle"],
-      "Zahlen & Operationen": ["Wurzelziehen, Potenzgesetze (einfach)"],
-      "Raum & Form": ["Längen (Betrag) mit Pythagoras"]
-    },
-    "Q4": {
-      "Gleichungen & Funktionen": ["Lineare/quadratische Mischaufgaben"],
-      "Daten & Zufall": ["Boxplot/Median/Quartile (einfach); Interpretation"]
-    }
-  },
-  "10": {
-    "Q1": {
-      "Gleichungen & Funktionen": ["Scheitel-/Normalform, Transformationen", "Wachstum (einfach), Parameter deuten"],
-      "Raum & Form": ["Strecken/Winkel berechnen"]
-    },
-    "Q2": {
-      "Gleichungen & Funktionen": ["Lineare/Quadratische Systeme (einfach)"],
-      "Zahlen & Operationen": ["Zinseszins allgemein; Effektivzins (einfach)"],
-      "Daten & Zufall": ["Pfadregeln, einfache Formeln"]
-    },
-    "Q3": {
-      "Raum & Form": ["Komplexere Anwendungen"],
-      "Zahlen & Operationen": ["Definitionsmenge, Bruchgleichungen (einfach)"],
-      "Gleichungen & Funktionen": ["Schnittpunkte/Steigung, Modellwahl"]
-    },
-    "Q4": {
-      "Daten & Zufall": ["Streuungsmaße, Ausreißer, kritische Bewertung"],
-      "Gleichungen & Funktionen": ["pq-/Mitternachtsformel, Faktorisieren (Routine)"]
-    }
-  }
-};
-
-interface GeneratedTemplate {
-  grade: number;
-  quarter_app: string;
-  domain: string;
-  subcategory: string;
-  difficulty: string;
-  question_type: string;
-  student_prompt: string;
-  variables: Record<string, any>;
-  solution: string;
-  unit?: string;
-  distractors: string[];
-  explanation_teacher: string;
-  tags: string[];
-}
-
-async function generateWithGemini(prompt: string): Promise<any> {
-  if (!geminiApiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
-  }
-
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (!content) {
-    throw new Error('No content generated by Gemini');
-  }
-
-  console.log('🔍 Raw Gemini response:', content.substring(0, 200) + '...');
-  
-  try {
-    // Extract JSON from markdown code blocks if present
-    let jsonContent = content;
-    
-    // Check if the response contains markdown code blocks
-    const jsonBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonBlockMatch) {
-      jsonContent = jsonBlockMatch[1].trim();
-      console.log('📋 Extracted JSON from markdown block');
-    }
-    
-    // Remove any potential leading/trailing whitespace or unwanted characters
-    jsonContent = jsonContent.trim();
-    
-    return JSON.parse(jsonContent);
-  } catch (error) {
-    console.error('❌ Failed to parse Gemini response as JSON:', error);
-    console.error('📄 Full response content:', content);
-    
-    // Try to find and extract JSON array manually
-    const arrayMatch = content.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-    if (arrayMatch) {
-      try {
-        console.log('🔧 Attempting manual JSON array extraction...');
-        return JSON.parse(arrayMatch[0]);
-      } catch (manualError) {
-        console.error('❌ Manual extraction also failed:', manualError);
-      }
-    }
-    
-    throw error;
-  }
-}
-
-function buildCurriculumPrompt(grade: number, quarter: string, domain: string, topics: string[], count: number = 12): string {
-  return `Du bist ein Experte für deutsche Mathematik-Lehrpläne. Erstelle EXAKT ${count} Mathematikaufgaben.
-
-**Lehrplan-Kontext:**
-- Klasse: ${grade}
-- Quartal: ${quarter} 
-- Domäne: ${domain}
-- Themen: ${topics.join(', ')}
-
-**KRITISCHE FORMAT-REGEL:**
-Antworte AUSSCHLIESSLICH mit einem JSON-Array. KEINE Markdown-Blöcke, KEINE Erklärungen, KEINE zusätzlichen Zeichen.
-
-**JSON-Format (GENAU befolgen):**
-[
-  {
-    "grade": ${grade},
-    "quarter_app": "${quarter}",
-    "domain": "${domain}",
-    "subcategory": "Unterkategorie hier",
-    "difficulty": "AFB I",
-    "question_type": "multiple-choice",
-    "student_prompt": "Klare Aufgabenstellung (max 200 Zeichen für Klasse ${grade})",
-    "variables": {},
-    "solution": "Korrekte Antwort",
-    "unit": "Einheit falls nötig",
-    "distractors": ["Falsche Antwort 1", "Falsche Antwort 2", "Falsche Antwort 3"],
-    "explanation_teacher": "Kurze Erklärung für Lehrkraft",
-    "tags": ["tag1", "tag2"]
-  }
-]
-
-**Anforderungen:**
-- Schwierigkeit: 60% AFB I, 30% AFB II, 10% AFB III
-- Itemtypen: 50% multiple-choice, 30% text-input, 20% matching
-- Deutsche Sprache, altersgerecht für Klasse ${grade}
-- Realistische Alltagskontexte
-
-STARTE DEINE ANTWORT SOFORT MIT [ UND ENDE MIT ]`;
-}
-
-async function insertMathTemplates(templates: GeneratedTemplate[]): Promise<void> {
-  const dbTemplates = templates.map(template => ({
-    grade: template.grade,
-    grade_app: template.grade,
-    quarter_app: template.quarter_app,
-    domain: template.domain,
-    subcategory: template.subcategory,
-    difficulty: template.difficulty,
-    question_type: template.question_type,
-    student_prompt: template.student_prompt,
-    variables: template.variables || {},
-    solution: template.solution,
-    unit: template.unit,
-    distractors: template.distractors || [],
-    explanation_teacher: template.explanation_teacher,
-    source_skill_id: `curriculum_${template.grade}_${template.quarter_app}_${template.domain.replace(/\s+/g, '_')}`,
-    tags: template.tags || [],
-    seed: Math.floor(Math.random() * 1000000),
-    status: 'ACTIVE'
-  }));
-
-  const { error } = await supabase
-    .from('templates')
-    .insert(dbTemplates);
-
-  if (error) {
-    console.error('Error inserting templates:', error);
-    throw error;
-  }
-
-  console.log(`✅ Inserted ${dbTemplates.length} math templates`);
-}
-
-async function seedMathCurriculum(): Promise<any> {
-  console.log('🏫 Starting systematic math curriculum seeding');
-  
-  const results = {
-    total_generated: 0,
-    total_inserted: 0,
-    processed_combinations: 0,
-    errors: [] as string[]
-  };
-
-  // Process each grade, quarter, and domain combination
-  for (const [grade, quarters] of Object.entries(MATH_CURRICULUM)) {
-    const gradeNum = parseInt(grade);
-    
-    for (const [quarter, domains] of Object.entries(quarters)) {
-      for (const [domain, topics] of Object.entries(domains)) {
-        try {
-          console.log(`\n📚 Processing: Grade ${gradeNum}, ${quarter}, ${domain}`);
-          
-          // Check existing count
-          const { data: existing } = await supabase
-            .from('templates')
-            .select('id')
-            .eq('grade', gradeNum)
-            .eq('quarter_app', quarter)
-            .eq('domain', domain)
-            .eq('status', 'ACTIVE');
-
-          const existingCount = existing?.length || 0;
-          
-          if (existingCount >= 12) {
-            console.log(`✅ Skipping - already has ${existingCount} templates`);
-            continue;
-          }
-
-          const neededCount = 12 - existingCount;
-          
-          // Generate templates based on curriculum
-          const prompt = buildCurriculumPrompt(gradeNum, quarter, domain, topics, neededCount);
-          const generated = await generateWithGemini(prompt);
-          const templates = Array.isArray(generated) ? generated : [generated];
-          
-          if (templates.length > 0) {
-            await insertMathTemplates(templates);
-            results.total_inserted += templates.length;
-          }
-          
-          results.total_generated += templates.length;
-          results.processed_combinations++;
-          
-          // Delay to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-        } catch (error) {
-          console.error(`❌ Error processing ${grade}-${quarter}-${domain}:`, error);
-          results.errors.push(`${grade}-${quarter}-${domain}: ${error.message}`);
-        }
-      }
-    }
-  }
-
-  console.log(`\n🎉 Math curriculum seeding complete!`);
-  console.log(`📊 Processed: ${results.processed_combinations} combinations`);
-  console.log(`📊 Generated: ${results.total_generated}, Inserted: ${results.total_inserted}`);
-  
-  return results;
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🚀 Math curriculum seeder started');
+    console.log('🌱 Math Curriculum Seeder starting...');
     
-    const result = await seedMathCurriculum();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { trigger, specificGrade, specificQuarter, specificDomain } = await req.json();
+    
+    console.log('📚 Seeder triggered:', { trigger, specificGrade, specificQuarter, specificDomain });
+
+    // Updated comprehensive math curriculum for grades 1-10 - CORRECTED VERSION  
+    const MATH_CURRICULUM = {
+      1: {
+        "Q1": {
+          "Zahlen & Operationen": "Zahlen bis 10, Zahlzerlegung, Verdoppeln/Halbieren, Zahlen erkennen (mit Emojis symbolisieren)",
+          "Größen & Messen": "Vergleiche (größer/kleiner, schwerer/leichter), Uhr volle Stunden"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Add./Subtraktion bis 20 (ohne Übergang), Rechenstrategien, Verdoppeln/Halbieren",
+          "Größen & Messen": "Längen vergleichen mit Zahlen, Uhr halbe Stunden", 
+          "Daten & Zufall": "Bilddiagramme in Textform beschreiben"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Add./Subtraktion mit Übergang, 10er Freunde, erste Multiplikation als wiederholte Addition",
+          "Größen & Messen": "Geld kennenlernen, Uhr Viertelstunden"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Zahlen bis 100, erste Multiplikation (gleich große Gruppen), Rechentricks",
+          "Größen & Messen": "Längen in cm messen, Uhr volle/halbe/viertel Stunden sicher"
+        }
+      },
+      2: {
+        "Q1": {
+          "Zahlen & Operationen": "Zahlen bis 100 sicher ordnen, Add./Subtraktion mit Übergang, Rechentricks, Umkehraufgaben",
+          "Größen & Messen": "Geldrechnen bis 2 €, Uhr Minuten genau",
+          "Daten & Zufall": "Einfache Kombinatorik"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Einmaleins 2er/5er/10er, Malnehmen/Teilen als Umkehr, Add./Subtraktion festigen",
+          "Größen & Messen": "Längen cm/m, Zeitdauern berechnen"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Einmaleins 3er/4er/6er, Division als Aufteilen, Rechenstrategien (Tauschgesetz), Schlüsselaufgaben",
+          "Größen & Messen": "Masse g/kg, Kalenderrechnen",
+          "Daten & Zufall": "Zufallsbegriffe möglich/unmöglich/sicher, einfache Experimente"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Einmaleins automatisieren, Rechentricks, Sachaufgaben Mal/Teilen",
+          "Größen & Messen": "Längen umrechnen cm↔m, Geldrechnen bis 10 €",
+          "Daten & Zufall": "Zufallsexperimente protokollieren"
+        }
+      },
+      3: {
+        "Q1": {
+          "Zahlen & Operationen": "Zahlenraum 1000, Schriftliche Add./Sub.",
+          "Größen & Messen": "Längen mm–cm–m, Zeitspannen"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Multiplikation/Division, Stellenwert festigen",
+          "Größen & Messen": "Gewicht g–kg, Geld (Wechselgeld)"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Multiplikation mehrstellig, Division mit Rest",
+          "Größen & Messen": "Flächenrechteck berechnen, Volumen Würfel/Quader (rechnen)"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Dezimalzahlen (Geld), Stellenwertsystem",
+          "Größen & Messen": "Zeitpläne lesen, Temperaturen in Zahlen"
+        }
+      },
+      4: {
+        "Q1": {
+          "Zahlen & Operationen": "Zahlenraum bis 1 Mio, Schriftliche Add./Sub.",
+          "Größen & Messen": "Einheiten m–km, g–kg; Zeitrechnen",
+          "Daten & Zufall": "Mittelwert, Spannweite"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Multiplikation/Division schriftlich",
+          "Größen & Messen": "Volumen Quader, Flächen verschiedener Figuren"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Dezimalzahlen (Zehntel/Hundertstel), Brüche als Anteile",
+          "Größen & Messen": "Geld mit Dezimalzahlen, Geschwindigkeit (km/h)"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Rechenstrategien reflektieren, kombinierte Aufgaben mit Klammern, Punkt- und Strichrechnung",
+          "Größen & Messen": "Umrechnungen in Sachaufgaben, Maßstäbe (Textbasiert)",
+          "Daten & Zufall": "Zufallsversuche, Baumskizzen textbasiert"
+        }
+      },
+      5: {
+        "Q1": {
+          "Zahlen & Operationen": "Potenzen",
+          "Größen & Messen": "Flächen zusammengesetzter Figuren, Volumen Quader",
+          "Daten & Zufall": "Datenerhebung, Mittelwert"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Dezimalzahlen, Brüche vergleichen",
+          "Größen & Messen": "Einheiten systematisch, Skalen",
+          "Gleichungen & Funktionen": "Vierecke in Rechenaufgaben",
+          "Daten & Zufall": "Relative Häufigkeiten"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Brüche addieren, Dezimal↔Bruch",
+          "Größen & Messen": "Kreisumfang/Fläche berechnen, Maßstab rechnen",
+          "Daten & Zufall": "Streuungsmaße, Quartile in Zahlen"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Brüche multiplizieren/dividieren, Dreisatz einfach",
+          "Größen & Messen": "Volumen Zylinder",
+          "Gleichungen & Funktionen": "Lineare Gleichungen",
+          "Daten & Zufall": "Diagrammvergleich"
+        }
+      },
+      6: {
+        "Q1": {
+          "Zahlen & Operationen": "Rationale Zahlen, Proportionalität",
+          "Größen & Messen": "Prozentrechnung Grundbegriffe",
+          "Gleichungen & Funktionen": "Lineare Gleichungen, Koordinaten",
+          "Daten & Zufall": "Baumdiagramm (textuell)"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Proportionalität ↔ Funktion, Prozentanwendungen",
+          "Größen & Messen": "Kreisberechnungen (Umfang/Fläche)",
+          "Gleichungen & Funktionen": "Lineare Gleichungen mit Klammern/Brüchen",
+          "Daten & Zufall": "Mittelwert/Median/Modus"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Potenzgesetze, Terme umformen",
+          "Größen & Messen": "Prozent Zuwachs/Abnahme, Zinsrechnung",
+          "Gleichungen & Funktionen": "Lineare Funktionen y=mx+n, LGS grafisch",
+          "Daten & Zufall": "Baumdiagramme mehrstufig"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Terme mit Brüchen/Klammern",
+          "Größen & Messen": "Volumen zusammengesetzter Körper",
+          "Gleichungen & Funktionen": "Funktionen vergleichen",
+          "Daten & Zufall": "Diagrammkritik"
+        }
+      },
+      7: {
+        "Q1": {
+          "Zahlen & Operationen": "Rationale Zahlen, Potenzen, Prozent",
+          "Gleichungen & Funktionen": "Lineare Gleichungssysteme",
+          "Daten & Zufall": "Mehrstufige Zufallsversuche"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Zins/Zinseszins, Skalierungen",
+          "Gleichungen & Funktionen": "Lineare Modelle, Schnittpunkte",
+          "Daten & Zufall": "Boxplot (nur numerische Werte, keine Zeichnung)"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Terme umformen, Ungleichungen",
+          "Gleichungen & Funktionen": "Lineare Funktionen systematisch, LGS",
+          "Daten & Zufall": "Wahrscheinlichkeiten rechnen"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Prozentketten, Exponentialbegriffe",
+          "Gleichungen & Funktionen": "Lineare Modellierung, Funktionsterm ↔ Wertepaare",
+          "Daten & Zufall": "Stichprobe vs. Grundgesamtheit"
+        }
+      },
+      8: {
+        "Q1": {
+          "Zahlen & Operationen": "Terme Grad 1/2, Wurzeln",
+          "Gleichungen & Funktionen": "Quadratische Gleichungen, Parabeln (textuelle Analyse)",
+          "Daten & Zufall": "Boxplots (numerisch)"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Exponentialbegriffe, Potenzgesetze",
+          "Gleichungen & Funktionen": "Quadratische Funktionen (Scheitel, Nullstellen in Zahlen)",
+          "Daten & Zufall": "Kombinatorik einführend"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Terme mit Wurzeln, wissenschaftliche Notation",
+          "Gleichungen & Funktionen": "Quadratische Gleichungen lösen, Funktionsscharen qualitativ",
+          "Daten & Zufall": "Bedingte Wahrscheinlichkeiten"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Logarithmen vorbereiten",
+          "Gleichungen & Funktionen": "Quadratische Modelle, Schnittpunkte",
+          "Daten & Zufall": "Datenkritik"
+        }
+      },
+      9: {
+        "Q1": {
+          "Zahlen & Operationen": "Wurzeln, Exponenten, Terme mit Variablen",
+          "Gleichungen & Funktionen": "Quadratische Funktionen vollständig analysieren",
+          "Daten & Zufall": "Mehrstufige Zufallsrechnungen"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Exponentialfunktionen, Zinseszins",
+          "Gleichungen & Funktionen": "LGS 2×2/3×3",
+          "Daten & Zufall": "Stichproben, Schätzungen"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Exponential-/Wurzelgleichungen",
+          "Gleichungen & Funktionen": "Funktionsscharen, quadratische Gleichungen",
+          "Daten & Zufall": "Boxplot, Median"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Logarithmen einführen",
+          "Gleichungen & Funktionen": "Schnittpunkte, Gleichungssysteme Anwendungen",
+          "Daten & Zufall": "Kombinatorik"
+        }
+      },
+      10: {
+        "Q1": {
+          "Zahlen & Operationen": "Logarithmen, Exponentialfunktionen",
+          "Gleichungen & Funktionen": "Quadratische Funktionen, Wurfparabeln (Berechnungen)",
+          "Daten & Zufall": "Wahrscheinlichkeiten, Unabhängigkeit"
+        },
+        "Q2": {
+          "Zahlen & Operationen": "Exponential-/Logarithmusgleichungen, Prozentanwendungen komplex",
+          "Gleichungen & Funktionen": "Optimierung quadratischer Funktionen",
+          "Daten & Zufall": "Stichprobendesign, Verzerrung"
+        },
+        "Q3": {
+          "Zahlen & Operationen": "Binomische Formeln, Wurzelausdrücke",
+          "Gleichungen & Funktionen": "Modellierungen, Gleichungssysteme",
+          "Daten & Zufall": "Kombinatorik vertieft"
+        },
+        "Q4": {
+          "Zahlen & Operationen": "Gesamtüberblick Exponential/Logarithmus",
+          "Gleichungen & Funktionen": "Funktionenfamilien vergleichen",
+          "Daten & Zufall": "Statistikprojekt (Daten interpretieren, keine Visualisierung nötig)"
+        }
+      }
+    };
+
+    // Determine which combinations to generate templates for
+    let generationTargets = [];
+    
+    if (specificGrade && specificQuarter && specificDomain) {
+      // Specific target requested
+      generationTargets.push({ grade: specificGrade, quarter: specificQuarter, domain: specificDomain });
+    } else {
+      // Generate for all combinations
+      for (let grade = 1; grade <= 10; grade++) {
+        const gradeData = MATH_CURRICULUM[grade as keyof typeof MATH_CURRICULUM];
+        if (!gradeData) continue;
+        
+        for (const quarter of ['Q1', 'Q2', 'Q3', 'Q4']) {
+          const quarterData = gradeData[quarter as keyof typeof gradeData];
+          if (!quarterData) continue;
+          
+          for (const domain of Object.keys(quarterData)) {
+            generationTargets.push({ grade, quarter, domain });
+          }
+        }
+      }
+    }
+
+    console.log(`🎯 Generation targets: ${generationTargets.length} combinations`);
+    
+    const results = [];
+    let totalTemplatesGenerated = 0;
+
+    // Generate templates for each target (20 per difficulty level = 60 total per combination)
+    for (const target of generationTargets) {
+      const { grade, quarter, domain } = target;
+      const curriculumContent = MATH_CURRICULUM[grade as keyof typeof MATH_CURRICULUM]?.[quarter as keyof any]?.[domain];
+      
+      if (!curriculumContent) {
+        console.log(`❌ No curriculum content for Grade ${grade} ${quarter} ${domain}`);
+        continue;
+      }
+
+      console.log(`📝 Generating templates for Grade ${grade} ${quarter} ${domain}...`);
+      
+      // Generate 20 templates per difficulty level (AFB I, AFB II, AFB III)
+      const difficulties = ['AFB I', 'AFB II', 'AFB III'];
+      const templatesPerDifficulty = 20;
+      
+      for (const difficulty of difficulties) {
+        try {
+          const response = await supabase.functions.invoke('template-generator', {
+            body: { 
+              grade,
+              quarter, 
+              domain,
+              difficulty,
+              templatesCount: templatesPerDifficulty,
+              curriculumContent,
+              enhancedQuality: true,  // Enable high-quality explanations
+              questionTypeRotation: true, // Enable question type rotation
+              antiVisualConstraints: true // Enable anti-visual constraints
+            }
+          });
+
+          if (response.error) {
+            console.error(`❌ Error generating templates for ${grade}-${quarter}-${domain}-${difficulty}:`, response.error);
+            results.push({ 
+              target: `${grade}-${quarter}-${domain}-${difficulty}`, 
+              success: false, 
+              error: response.error.message,
+              templatesGenerated: 0
+            });
+          } else {
+            const templatesGenerated = response.data?.templatesGenerated || 0;
+            totalTemplatesGenerated += templatesGenerated;
+            results.push({ 
+              target: `${grade}-${quarter}-${domain}-${difficulty}`, 
+              success: true, 
+              templatesGenerated 
+            });
+            console.log(`✅ Generated ${templatesGenerated} templates for ${grade}-${quarter}-${domain}-${difficulty}`);
+          }
+        } catch (error) {
+          console.error(`❌ Exception for ${grade}-${quarter}-${domain}-${difficulty}:`, error);
+          results.push({ 
+            target: `${grade}-${quarter}-${domain}-${difficulty}`, 
+            success: false, 
+            error: error.message,
+            templatesGenerated: 0
+          });
+        }
+        
+        // Small delay between requests to prevent API overload
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    // Summary statistics
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+    
+    console.log(`📊 Mass Generation Complete:`);
+    console.log(`   ✅ Successful: ${successCount}`);
+    console.log(`   ❌ Failed: ${failureCount}`);
+    console.log(`   🎯 Total Templates: ${totalTemplatesGenerated}`);
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Math curriculum seeding completed',
-      data: result
+      message: `Math curriculum seeder completed - Generated ${totalTemplatesGenerated} high-quality templates`,
+      summary: {
+        totalCombinations: generationTargets.length,
+        totalTemplatesGenerated,
+        successfulGenerations: successCount,
+        failedGenerations: failureCount
+      },
+      detailedResults: results,
+      trigger: trigger || 'manual'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('❌ Error in math curriculum seeder:', error);
+    console.error('❌ Math curriculum seeder error:', error);
     return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message 
+      success: false, 
+      error: error.message,
+      details: 'Failed to seed math curriculum templates'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
