@@ -40,3 +40,6 @@ verify_jwt = false
 
 [functions.controller]
 verify_jwt = false
+
+[functions.auto-question-generator]
+verify_jwt = false
