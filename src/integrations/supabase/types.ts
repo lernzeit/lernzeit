@@ -825,6 +825,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      trigger_auto_question_generation: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      trigger_batch_generation: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       trigger_curriculum_template_generation: {
         Args: Record<PropertyKey, never>
         Returns: Json
