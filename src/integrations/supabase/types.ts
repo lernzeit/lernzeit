@@ -741,94 +741,52 @@ export type Database = {
     Views: {
       template_scores: {
         Row: {
+          average_rating: number | null
           correct: number | null
-          correct_rate_bayes: number | null
           created_at: string | null
           difficulty: string | null
-          distractors: Json | null
           domain: string | null
-          explanation: string | null
           grade: number | null
-          grade_app: number | null
           id: string | null
-          novelty: number | null
           plays: number | null
-          qscore: number | null
           quarter_app: string | null
-          question_type: string | null
           rating_count: number | null
-          rating_norm_bayes: number | null
           rating_sum: number | null
-          seed: number | null
-          solution: Json | null
-          source_skill_id: string | null
-          status: string | null
           student_prompt: string | null
           subcategory: string | null
-          tags: string[] | null
-          unit: string | null
-          updated_at: string | null
-          variables: Json | null
+          success_rate: number | null
         }
         Insert: {
+          average_rating?: never
           correct?: number | null
-          correct_rate_bayes?: never
           created_at?: string | null
           difficulty?: string | null
-          distractors?: Json | null
           domain?: string | null
-          explanation?: string | null
           grade?: number | null
-          grade_app?: number | null
           id?: string | null
-          novelty?: never
           plays?: number | null
-          qscore?: never
           quarter_app?: string | null
-          question_type?: string | null
           rating_count?: number | null
-          rating_norm_bayes?: never
           rating_sum?: number | null
-          seed?: number | null
-          solution?: Json | null
-          source_skill_id?: string | null
-          status?: string | null
           student_prompt?: string | null
           subcategory?: string | null
-          tags?: string[] | null
-          unit?: string | null
-          updated_at?: string | null
-          variables?: Json | null
+          success_rate?: never
         }
         Update: {
+          average_rating?: never
           correct?: number | null
-          correct_rate_bayes?: never
           created_at?: string | null
           difficulty?: string | null
-          distractors?: Json | null
           domain?: string | null
-          explanation?: string | null
           grade?: number | null
-          grade_app?: number | null
           id?: string | null
-          novelty?: never
           plays?: number | null
-          qscore?: never
           quarter_app?: string | null
-          question_type?: string | null
           rating_count?: number | null
-          rating_norm_bayes?: never
           rating_sum?: number | null
-          seed?: number | null
-          solution?: Json | null
-          source_skill_id?: string | null
-          status?: string | null
           student_prompt?: string | null
           subcategory?: string | null
-          tags?: string[] | null
-          unit?: string | null
-          updated_at?: string | null
-          variables?: Json | null
+          success_rate?: never
         }
         Relationships: []
       }

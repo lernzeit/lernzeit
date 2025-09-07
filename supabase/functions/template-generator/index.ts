@@ -13,11 +13,22 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🔧 Enhanced Template Generator starting...');
+    console.log('🔧 REPARIERTE Template Generator starting... 🔧');
+    console.log('Timestamp:', new Date().toISOString());
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    
+    console.log('Environment check:', {
+      supabaseUrl: supabaseUrl ? 'SET' : 'MISSING',
+      supabaseServiceKey: supabaseServiceKey ? 'SET' : 'MISSING', 
+      geminiApiKey: geminiApiKey ? 'SET' : 'MISSING'
+    });
+    
+    if (!supabaseUrl || !supabaseServiceKey || !geminiApiKey) {
+      throw new Error('Missing required environment variables');
+    }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
