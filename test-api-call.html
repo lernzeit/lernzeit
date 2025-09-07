@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edge Function API Test</title>
+</head>
+<body>
+    <h1>Testing Edge Functions</h1>
+    <button onclick="testTemplateGenerator()">Test Template Generator</button>
+    <button onclick="testGenerateProblems()">Test Generate Problems</button>
+    <button onclick="testGenerate()">Test Generate Function</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function logResult(message, data) {
+            const results = document.getElementById('results');
+            results.innerHTML += `<div><strong>${message}</strong><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+        }
+
+        async function testTemplateGenerator() {
+            try {
+                console.log('Testing template generator...');
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/template-generator`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        grade: 3,
+                        quarter: 'Q1',
+                        domain: 'Zahlen & Operationen',
+                        templatesCount: 1
+                    })
+                });
+                
+                const data = await response.json();
+                logResult(`Template Generator - Status: ${response.status}`, data);
+            } catch (error) {
+                logResult('Template Generator Error', error.message);
+            }
+        }
+
+        async function testGenerateProblems() {
+            try {
+                console.log('Testing generate problems...');
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-problems`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        grade: 3,
+                        subject: 'mathematik',
+                        count: 1
+                    })
+                });
+                
+                const data = await response.json();
+                logResult(`Generate Problems - Status: ${response.status}`, data);
+            } catch (error) {
+                logResult('Generate Problems Error', error.message);
+            }
+        }
+
+        async function testGenerate() {
+            try {
+                console.log('Testing generate function...');
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        id: "test-" + Date.now(),
+                        grade: 3,
+                        subject: "mathematik",
+                        variant: "MULTIPLE_CHOICE",
+                        body: "Was ist 2 + 2?",
+                        explanation: "Einfache Addition",
+                        verifier_score: 0.8,
+                        data: {
+                            options: ["3", "4", "5", "6"],
+                            correct_idx: 1
+                        },
+                        created_at: new Date().toISOString()
+                    })
+                });
+                
+                const data = await response.json();
+                logResult(`Generate Function - Status: ${response.status}`, data);
+            } catch (error) {
+                logResult('Generate Function Error', error.message);
+            }
+        }
+    </script>
+</body>
+</html>
