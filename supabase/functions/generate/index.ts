@@ -100,16 +100,24 @@ async function insertQuestionWithRetry(supabase: any, question: Question, maxRet
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const { data, error } = await supabase
-        .from('questions')
+        .from('templates')
         .insert([{
           id: question.id,
           grade: question.grade,
-          subject: question.subject,
-          variant: question.variant,
-          body: question.body,
+          quarter_app: 'Q1', // Default quarter
+          domain: question.subject,
+          subcategory: 'Generated',
+          difficulty: 'AFB I',
+          question_type: question.variant.toLowerCase().replace('_', '-'),
+          student_prompt: question.body,
+          variables: question.data,
+          solution: { value: 'auto-generated' },
+          unit: '',
+          distractors: [],
           explanation: question.explanation || '',
-          verifier_score: question.verifier_score,
-          data: question.data,
+          source_skill_id: `generated_${question.grade}_${question.subject}`,
+          tags: [question.subject],
+          seed: Math.floor(Math.random() * 1000000).toString(),
           created_at: question.created_at || new Date().toISOString()
         }])
         .select('id')
