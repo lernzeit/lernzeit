@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Batch Question Generation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .progress { background: #f0f0f0; border-radius: 5px; overflow: hidden; margin: 10px 0; }
+        .progress-bar { background: #4CAF50; height: 20px; transition: width 0.3s; }
+        .results { margin-top: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>Batch Question Generation</h1>
+    <p>Erstellt systematisch 5 Fragen für Klassen 1-3, alle Quartale und Domänen</p>
+    
+    <button id="startBtn" onclick="startBatchGeneration()">Start Batch Generation</button>
+    
+    <div class="progress">
+        <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+    </div>
+    <div id="status"></div>
+    
+    <div id="results" class="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = message;
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        function logResult(message, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const className = isError ? 'error' : 'success';
+            resultsDiv.innerHTML += `<div class="${className}">${message}</div>`;
+        }
+
+        async function startBatchGeneration() {
+            const startBtn = document.getElementById('startBtn');
+            startBtn.disabled = true;
+            startBtn.textContent = 'Generiere...';
+            
+            document.getElementById('results').innerHTML = '';
+            updateProgress(0);
+            updateStatus('🚀 Starte Batch-Generierung...');
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/batch-generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                updateProgress(100);
+                
+                if (result.success) {
+                    updateStatus(`✅ Batch-Generierung abgeschlossen!`);
+                    logResult(`📊 Gesamt: ${result.totalGenerated} Fragen generiert`);
+                    logResult(`📈 Kombinationen: ${result.totalCombinations} (${result.questionsPerCombination} Fragen je Kombination)`);
+                    logResult(`❌ Fehler: ${result.totalErrors}`);
+                    
+                    // Show detailed results
+                    if (result.results) {
+                        logResult(`<h3>Detaillierte Ergebnisse:</h3>`);
+                        result.results.forEach(r => {
+                            if (r.status === 'success') {
+                                logResult(`✅ Klasse ${r.grade}, ${r.quarter}, ${r.domain}: ${r.generated} Fragen`);
+                            } else {
+                                logResult(`❌ Klasse ${r.grade}, ${r.quarter}, ${r.domain}: ${r.error}`, true);
+                            }
+                        });
+                    }
+                } else {
+                    updateStatus('❌ Batch-Generierung fehlgeschlagen');
+                    logResult(`Fehler: ${result.error}`, true);
+                }
+                
+            } catch (error) {
+                updateStatus('❌ Netzwerkfehler');
+                logResult(`Fehler: ${error.message}`, true);
+            } finally {
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start Batch Generation';
+            }
+        }
+    </script>
+</body>
+</html>

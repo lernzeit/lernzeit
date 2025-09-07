@@ -189,15 +189,68 @@ function getCurriculumContent(grade: number, quarter: string, domain: string): s
       "Q3": {
         "Zahlen & Operationen": "Zahlen bis 100 erkunden, Zehner/Einheiten",
         "Größen & Messen": "Messen mit Lineal; Einheiten cm/m",
-        "Raum & Form": "Einfache Achsensymmetrien erkennen"
+        "Raum & Form": "Einfache Achsensymmetrien erkennen",
+        "Daten & Zufall": "Einfache Experimente"
       },
       "Q4": {
         "Zahlen & Operationen": "Plus/Minus im ZR 100 mit Übergang, Grundideen für Multiplikation/Division",
         "Größen & Messen": "Kalender, Wochentage/Monate, einfache Zeitspannen",
-        "Raum & Form": "Flächen legen, einfache Netze (Würfelbilder)"
+        "Raum & Form": "Flächen legen, einfache Netze (Würfelbilder)",
+        "Daten & Zufall": "Experimente und Häufigkeiten"
+      }
+    },
+    "2": {
+      "Q1": {
+        "Zahlen & Operationen": "Halbschriftlich & schriftnah mit Übergang im ZR 100, 2er/5er/10er Reihen",
+        "Größen & Messen": "Einkaufssituationen bis 100 € (ohne Komma)",
+        "Raum & Form": "Ecken, Kanten, Seiten; Rechteck/Quadrat",
+        "Daten & Zufall": "Säulen-/Bilddiagramme interpretieren"
+      },
+      "Q2": {
+        "Zahlen & Operationen": "1–10er Reihen (Netz), Teilen als Aufteilen/Verteilen",
+        "Größen & Messen": "cm–m; min–h; €–Cent (ganzzahlig)",
+        "Raum & Form": "Geometrische Grundbegriffe",
+        "Daten & Zufall": "Säulen-/Bilddiagramme interpretieren"
+      },
+      "Q3": {
+        "Zahlen & Operationen": "Standardverfahren (ZR 1000 vorbereiten), Kleines Einmaleins sicher",
+        "Größen & Messen": "Addieren/Subtrahieren von Zeiten (ohne Datum)",
+        "Raum & Form": "Umfang Rechteck/Quadrat (ganzzahlige Längen)",
+        "Daten & Zufall": "Diagramme erstellen und lesen"
+      },
+      "Q4": {
+        "Zahlen & Operationen": "Stellenwert bis 1000, Addition/Subtraktion im ZR 1000",
+        "Größen & Messen": "Einheiten und Umrechnungen",
+        "Raum & Form": "Körper und Netze",
+        "Daten & Zufall": "Einfache Experimente; Häufigkeiten"
+      }
+    },
+    "3": {
+      "Q1": {
+        "Zahlen & Operationen": "Ordnen, Runden, Zahlstrahl im ZR 1000, schriftliche Add/Sub mit Übergang",
+        "Größen & Messen": "Formelverständnis U=2(a+b), A=a·b (ganzzahlig)",
+        "Raum & Form": "Geometrische Konstruktionen",
+        "Daten & Zufall": "Mittelwert (einfach), Modus; Säulen-/Liniendiagramm"
+      },
+      "Q2": {
+        "Zahlen & Operationen": "Teilen mit Rest, schriftliche Multiplikation (einstelliger Faktor)",
+        "Größen & Messen": "Flächen und Umfang berechnen",
+        "Raum & Form": "Recht-, Spitz-, Stumpfwinkel erkennen",
+        "Daten & Zufall": "Mittelwert (einfach), Modus; Säulen-/Liniendiagramm"
+      },
+      "Q3": {
+        "Zahlen & Operationen": "Brüche (Teile vom Ganzen), einfache gleichnamige Vergleiche",
+        "Größen & Messen": "Zeitspannen über Tagesgrenzen; Kalender",
+        "Raum & Form": "Achsensymmetrie & Parkettierungen",
+        "Daten & Zufall": "Datenerhebung und Auswertung"
+      },
+      "Q4": {
+        "Zahlen & Operationen": "Schriftliche Division (einstelliger Divisor), Komma bei Geld/Messwerten",
+        "Größen & Messen": "Verschiedene Einheiten umrechnen",
+        "Raum & Form": "Körper und Netze erweitert",
+        "Daten & Zufall": "Relative Häufigkeit (intuitiv)"
       }
     }
-    // ... weitere Grade würden hier folgen basierend auf custom instructions
   };
 
   return curriculum[grade.toString()]?.[quarter]?.[domain] || null;
