@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Status Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>API Status Tests</h1>
+    
+    <button onclick="testGenerateQuestions()">Test Generate Questions API</button>
+    <button onclick="testBatchGenerate()">Test Batch Generate API</button>
+    <button onclick="checkOpenAIKey()">Check OpenAI Key</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function logResult(testName, data, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const className = isError ? 'test error' : 'test success';
+            resultsDiv.innerHTML += `
+                <div class="${className}">
+                    <h3>${testName}</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        async function testGenerateQuestions() {
+            try {
+                logResult('🔄 Testing Generate Questions API...', { 
+                    url: `${SUPABASE_URL}/functions/v1/generate-questions`,
+                    testing: 'single question generation'
+                });
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        grade: 1,
+                        quarter: "Q1",
+                        domain: "Zahlen & Operationen",
+                        count: 1,
+                        difficulty: "AFB I"
+                    })
+                });
+
+                const result = await response.json();
+                
+                logResult('Generate Questions Result', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    result
+                }, !response.ok);
+                
+            } catch (error) {
+                logResult('Generate Questions Error', { 
+                    error: error.message,
+                    stack: error.stack 
+                }, true);
+            }
+        }
+
+        async function testBatchGenerate() {
+            try {
+                logResult('🔄 Testing Batch Generate API...', { 
+                    url: `${SUPABASE_URL}/functions/v1/batch-generate-questions`,
+                    testing: 'batch generation endpoint'
+                });
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/batch-generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const result = await response.json();
+                
+                logResult('Batch Generate Result', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    result
+                }, !response.ok);
+                
+            } catch (error) {
+                logResult('Batch Generate Error', { 
+                    error: error.message,
+                    stack: error.stack 
+                }, true);
+            }
+        }
+
+        async function checkOpenAIKey() {
+            try {
+                logResult('🔄 Testing OpenAI Key via Edge Function...', { 
+                    testing: 'OpenAI API key configuration'
+                });
+
+                // Test a simple OpenAI call via the generate-questions endpoint
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        grade: 1,
+                        quarter: "Q1",
+                        domain: "Zahlen & Operationen",
+                        count: 1,
+                        difficulty: "AFB I"
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.error && result.error.includes('OpenAI')) {
+                    logResult('OpenAI Key Status', {
+                        status: 'ERROR',
+                        message: 'OpenAI API key issue detected',
+                        error: result.error
+                    }, true);
+                } else if (result.success) {
+                    logResult('OpenAI Key Status', {
+                        status: 'OK',
+                        message: 'OpenAI API key appears to be working'
+                    });
+                } else {
+                    logResult('OpenAI Key Status', {
+                        status: 'UNKNOWN', 
+                        message: 'Unable to determine OpenAI key status',
+                        result
+                    });
+                }
+                
+            } catch (error) {
+                logResult('OpenAI Key Check Error', { 
+                    error: error.message
+                }, true);
+            }
+        }
+    </script>
+</body>
+</html>

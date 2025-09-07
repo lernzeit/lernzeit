@@ -23,8 +23,10 @@ serve(async (req) => {
   try {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
+      console.error('❌ OpenAI API key not found in environment');
       throw new Error('OpenAI API key not configured');
     }
+    console.log('✅ OpenAI API key found');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -106,13 +108,19 @@ WICHTIG: Gib NUR das JSON-Array zurück, keine zusätzlichen Kommentare!`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 4000,
-        temperature: 0.7,
+        max_completion_tokens: 4000,
+        // Note: temperature not supported for GPT-4.1+
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ OpenAI API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
