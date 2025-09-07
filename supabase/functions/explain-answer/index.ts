@@ -21,42 +21,41 @@ serve(async (req) => {
   try {
     const { question, answer, grade, subject = 'mathematik' }: ExplanationRequest = await req.json();
     
-    console.log(`🎯 PHASE 4: Generating explanation for Grade ${grade} ${subject}`);
+    console.log(`🎯 Generating explanation for Grade ${grade} ${subject}`);
     console.log(`Question: ${question}`);
     console.log(`Answer: ${answer}`);
     
-    // Get Gemini API key
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not configured');
+    // Get OpenAI API key
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not configured');
     }
     
     const prompt = buildExplanationPrompt(question, answer, grade, subject);
     
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.3, // Lower temperature for more consistent explanations
-          topK: 20,
-          topP: 0.8,
-          maxOutputTokens: 512,
-        }
-      })
+        model: 'gpt-4.1-2025-04-14',
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: `Erkläre diese Aufgabe kindgerecht: "${question}" mit der richtigen Antwort "${answer}"` }
+        ],
+        max_tokens: 400,
+        temperature: 0.3,
+      }),
     });
     
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
     
     const result = await response.json();
-    const explanation = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    const explanation = result.choices[0].message.content;
     
     if (!explanation) {
       throw new Error('No explanation generated');
