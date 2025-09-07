@@ -17,28 +17,28 @@ export function QualityDashboardModal({ isOpen, onOpenChange, userId }: QualityD
   useEffect(() => {
     const loadQuestions = async () => {
       const { data, error } = await supabase
-        .from('questions')
-        .select('id, body, variant, data, explanation, grade, subject, created_at')
+        .from('templates')
+        .select('id, student_prompt, question_type, domain, explanation, grade, distractors, solution')
+        .eq('status', 'ACTIVE')
         .order('created_at', { ascending: false })
         .limit(20);
 
       if (error) {
-        console.warn('❗️Fehler beim Laden der Fragen:', error);
+        console.warn('❗️Fehler beim Laden der Templates:', error);
         return;
       }
 
-      const mapped: SelectionQuestion[] = (data || []).map((q: any, idx: number) => {
-        const variant = (q.variant || 'MULTIPLE_CHOICE').toString();
-        const questionType = variant === 'MULTIPLE_CHOICE' ? 'multiple-choice' : 'text-input';
-        const options = q?.data?.options?.map((o: any) => String(o));
-        const correctAnswer = q?.data?.correctIndex;
-        const questionText = q.body || q?.data?.prompt || '';
+      const mapped: SelectionQuestion[] = (data || []).map((t: any, idx: number) => {
+        const questionType = t.question_type || 'multiple-choice';
+        const options = t.distractors ? Object.values(t.distractors) as string[] : [];
+        const correctAnswer = t.solution?.value || t.solution;
+        const questionText = t.student_prompt || '';
         return {
           id: idx + 1, // Dashboard erwartet numerische IDs
           question: questionText,
           questionType,
-          type: (q.subject || 'general').toLowerCase(),
-          explanation: q.explanation || '',
+          type: (t.domain || 'general').toLowerCase(),
+          explanation: t.explanation || '',
           options,
           correctAnswer,
         } as SelectionQuestion;

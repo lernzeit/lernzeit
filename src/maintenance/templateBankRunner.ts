@@ -16,11 +16,11 @@ async function countActiveByGradeDomain(grade: number, domain: string) {
 export async function pruneOldBad() {
   const { data, error } = await supabase
     .from("template_scores")
-    .select("id, rating_norm_bayes, correct_rate_bayes, plays")
-    .eq("status","ACTIVE");
+    .select("id, average_rating, success_rate, plays")
+    .gte("plays", 30);
   if (error) throw error;
   const toArchive = (data ?? []).filter(t =>
-    (t.plays ?? 0) >= 30 && (t.rating_norm_bayes < (2.8/5) || (1 - t.correct_rate_bayes) > 0.50)
+    (t.plays ?? 0) >= 30 && ((t.average_rating ?? 0) < 2.8 || (t.success_rate ?? 0) < 0.50)
   ).map(t => t.id);
   if (toArchive.length) {
     await supabase.from("templates").update({ status:"ARCHIVED" }).in("id", toArchive);
