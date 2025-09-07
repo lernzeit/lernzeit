@@ -13,6 +13,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Starting batch generation...');
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -32,15 +34,14 @@ serve(async (req) => {
     let totalErrors = 0;
     const results: any[] = [];
 
-    console.log(`🚀 Starting batch generation for ${grades.length} grades × ${quarters.length} quarters × ${domains.length} domains × ${questionsPerCombination} questions`);
+    console.log(`📊 Total combinations: ${grades.length * quarters.length * domains.length} × ${questionsPerCombination} questions each`);
 
     for (const grade of grades) {
       for (const quarter of quarters) {
         for (const domain of domains) {
           try {
-            console.log(`📝 Generating questions for Grade ${grade}, ${quarter}, ${domain}`);
+            console.log(`📝 Grade ${grade}, ${quarter}, ${domain}...`);
             
-            // Call the generate-questions function
             const { data, error } = await supabase.functions.invoke('generate-questions', {
               body: {
                 grade,
@@ -51,49 +52,37 @@ serve(async (req) => {
               }
             });
 
-            if (error) throw error;
+            if (error) {
+              console.error(`❌ Error for ${grade}/${quarter}/${domain}:`, error);
+              totalErrors++;
+              results.push({ grade, quarter, domain, status: 'error', error: error.message });
+              continue;
+            }
 
             if (data?.success) {
               totalGenerated += data.generated || 0;
-              results.push({
-                grade,
-                quarter, 
-                domain,
-                generated: data.generated,
-                status: 'success'
-              });
-              console.log(`✅ Generated ${data.generated} questions for Grade ${grade}, ${quarter}, ${domain}`);
+              results.push({ grade, quarter, domain, status: 'success', generated: data.generated });
+              console.log(`✅ ${grade}/${quarter}/${domain}: ${data.generated} questions`);
             } else {
               totalErrors++;
-              results.push({
-                grade,
-                quarter,
-                domain, 
-                error: data?.error || 'Unknown error',
-                status: 'error'
-              });
-              console.log(`❌ Failed for Grade ${grade}, ${quarter}, ${domain}: ${data?.error}`);
+              results.push({ grade, quarter, domain, status: 'error', error: data?.error || 'Unknown error' });
+              console.log(`❌ ${grade}/${quarter}/${domain}: Failed`);
             }
 
-            // Small delay to avoid overwhelming the API
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Small delay
+            await new Promise(resolve => setTimeout(resolve, 500));
 
           } catch (error) {
+            console.error(`💥 Exception for ${grade}/${quarter}/${domain}:`, error);
             totalErrors++;
-            results.push({
-              grade,
-              quarter,
-              domain,
-              error: error.message,
-              status: 'error'
-            });
-            console.error(`❌ Error for Grade ${grade}, ${quarter}, ${domain}:`, error);
+            results.push({ grade, quarter, domain, status: 'error', error: error.message });
           }
         }
       }
     }
 
-    console.log(`🎯 Batch generation completed: ${totalGenerated} questions generated, ${totalErrors} errors`);
+    const totalExpected = grades.length * quarters.length * domains.length * questionsPerCombination;
+    console.log(`🏁 Batch completed: ${totalGenerated}/${totalExpected} questions generated, ${totalErrors} errors`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -101,13 +90,15 @@ serve(async (req) => {
       totalErrors,
       totalCombinations: grades.length * quarters.length * domains.length,
       questionsPerCombination,
+      totalExpected,
+      successRate: ((totalGenerated / totalExpected) * 100).toFixed(1) + '%',
       results
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Batch generation error:', error);
+    console.error('💥 Batch generation failed:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
       success: false 

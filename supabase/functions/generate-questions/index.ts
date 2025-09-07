@@ -7,23 +7,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface QuestionRequest {
-  grade: number;
-  quarter: string;
-  domain: string;
-  count?: number;
-  difficulty?: string;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🎯 Starting question generation...');
+    
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
-      console.error('❌ OpenAI API key not found in environment');
+      console.error('❌ OpenAI API key not found');
       throw new Error('OpenAI API key not configured');
     }
     console.log('✅ OpenAI API key found');
@@ -32,70 +26,49 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+    console.log('✅ Supabase client created');
 
-    const { grade, quarter, domain, count = 5, difficulty = 'AFB I' }: QuestionRequest = await req.json();
-    
-    console.log(`🎯 Generating ${count} questions for Grade ${grade} ${quarter} ${domain} (${difficulty})`);
+    const { grade, quarter, domain, count = 5, difficulty = 'AFB I' } = await req.json();
+    console.log(`📝 Generating ${count} questions for Grade ${grade} ${quarter} ${domain} (${difficulty})`);
 
-    // Get curriculum content from custom instructions based on grade/quarter/domain
-    const curriculumMap = getCurriculumContent(grade, quarter, domain);
-    
-    if (!curriculumMap) {
-      throw new Error(`No curriculum content found for Grade ${grade} ${quarter} ${domain}`);
-    }
-
+    // Simplified curriculum content
     const systemPrompt = `Du bist Experte für deutsche Schulaufgaben (${grade}. Klasse, ${quarter}, ${domain}).
 
-CURRICULUM KONTEXT:
-${curriculumMap}
-
-SCHWIERIGKEITSGRAD: ${difficulty}
-${difficulty === 'AFB I' ? '- Reproduktion: Direkte Anwendung gelernter Verfahren' : 
-  difficulty === 'AFB II' ? '- Reorganisation: Zusammenhänge herstellen, übertragen' : 
-  '- Reflexion: Begründen, bewerten, verallgemeinern'}
-
-AUFGABEN-TYPEN (rotierend verwenden):
-1. MULTIPLE_CHOICE: 4 Optionen, 1 richtig
-2. FREETEXT: Offene Rechenantwort 
-3. SORT: Items ordnen
-4. MATCH: Zuordnungsaufgabe
-
-ANTI-VISUAL REGEL: 
-❌ KEINE Aufgaben mit: "zeichne", "male", "konstruiere", "welches Bild"
-✅ NUR textbasierte/numerische Aufgaben
-
-QUALITÄTSKRITERIEN:
+Erstelle Mathematikaufgaben für Grundschüler mit folgenden Eigenschaften:
 - Altersgerecht für ${grade}. Klasse
-- Lehrplan-konform
-- Erklärung: 80-200 Zeichen, ermutigend, Schritt-für-Schritt
-- Deutsche Sprache, keine Anglizismen`;
+- Domain: ${domain}
+- Schwierigkeitsgrad: ${difficulty}
+- Nur textbasierte Aufgaben (keine Bilder/Zeichnungen)
+- Mit korrekten Lösungen und kindgerechten Erklärungen`;
 
-    const userPrompt = `Erstelle genau ${count} verschiedene Mathematikaufgaben als JSON-Array:
-
+    const userPrompt = `Erstelle genau ${count} verschiedene Mathematikaufgaben als JSON-Array. 
+    
+Beispiel-Format:
 [
   {
     "grade": ${grade},
     "grade_app": ${grade},
     "quarter_app": "${quarter}",
     "domain": "${domain}",
-    "subcategory": "[Spezifische Unterkategorie]",
+    "subcategory": "Grundrechenarten",
     "difficulty": "${difficulty}",
-    "question_type": "[multiple-choice|freetext|sort|match]",
-    "student_prompt": "[Klare Aufgabenstellung ohne visuelle Elemente]",
+    "question_type": "freetext",
+    "student_prompt": "Berechne: 3 + 4 = ?",
     "variables": {},
-    "solution": {"value": "[Exakte Antwort]"},
-    "unit": "[Einheit falls nötig, sonst leer]",
-    "distractors": ["[Falsche Antwort 1]", "[Falsche Antwort 2]", "[Falsche Antwort 3]"],
-    "explanation": "[Schritt-für-Schritt Erklärung für Kinder, 80-200 Zeichen]",
-    "source_skill_id": "curriculum_${grade}_${quarter}_${domain}",
-    "tags": ["${domain.toLowerCase()}", "${quarter.toLowerCase()}"],
-    "seed": [Zufallszahl 6-stellig]
+    "solution": {"value": "7"},
+    "unit": "",
+    "distractors": ["5", "6", "8"],
+    "explanation": "3 + 4: Zähle 3 und dann 4 dazu. Das ergibt 7.",
+    "source_skill_id": "math_${grade}_${quarter}",
+    "tags": ["addition"],
+    "seed": 123456
   }
 ]
 
-WICHTIG: Gib NUR das JSON-Array zurück, keine zusätzlichen Kommentare!`;
+Gib NUR das JSON-Array zurück, keine anderen Texte!`;
 
-    // Call OpenAI API
+    console.log('🤖 Calling OpenAI API...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -103,39 +76,43 @@ WICHTIG: Gib NUR das JSON-Array zurück, keine zusätzlichen Kommentare!`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_completion_tokens: 4000,
-        // Note: temperature not supported for GPT-4.1+
+        max_tokens: 2000,
+        temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ OpenAI API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText
-      });
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      console.error('❌ OpenAI API Error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
+    console.log('✅ OpenAI API responded successfully');
     const result = await response.json();
     const generatedContent = result.choices[0].message.content;
+    
+    console.log('📄 Generated content length:', generatedContent.length);
     
     // Parse JSON from response
     const jsonMatch = generatedContent.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
+      console.error('❌ No valid JSON found in response');
       throw new Error('No valid JSON array found in response');
     }
 
     const questions = JSON.parse(jsonMatch[0]);
+    console.log(`✅ Parsed ${questions.length} questions`);
     
     // Insert questions into templates table
-    const insertPromises = questions.map(async (question: any) => {
+    let successful = 0;
+    const insertResults = [];
+    
+    for (const question of questions) {
       try {
         const { data, error } = await supabase
           .from('templates')
@@ -144,17 +121,16 @@ WICHTIG: Gib NUR das JSON-Array zurück, keine zusätzlichen Kommentare!`;
           .single();
 
         if (error) throw error;
-        return { success: true, id: data.id };
+        successful++;
+        insertResults.push({ success: true, id: data.id });
+        console.log(`✅ Inserted question ${successful}/${questions.length}`);
       } catch (error) {
-        console.error('Insert error:', error);
-        return { success: false, error: error.message };
+        console.error('❌ Insert error:', error.message);
+        insertResults.push({ success: false, error: error.message });
       }
-    });
+    }
 
-    const insertResults = await Promise.all(insertPromises);
-    const successful = insertResults.filter(r => r.success).length;
-
-    console.log(`✅ Successfully generated and saved ${successful}/${count} questions`);
+    console.log(`🎉 Successfully generated and saved ${successful}/${count} questions`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -167,7 +143,7 @@ WICHTIG: Gib NUR das JSON-Array zurück, keine zusätzlichen Kommentare!`;
     });
 
   } catch (error) {
-    console.error('Question generation error:', error);
+    console.error('💥 Question generation error:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
       success: false 
@@ -177,89 +153,3 @@ WICHTIG: Gib NUR das JSON-Array zurück, keine zusätzlichen Kommentare!`;
     });
   }
 });
-
-// Curriculum content mapping based on custom instructions
-function getCurriculumContent(grade: number, quarter: string, domain: string): string | null {
-  const curriculum: Record<string, Record<string, Record<string, string>>> = {
-    "1": {
-      "Q1": {
-        "Zahlen & Operationen": "Zählen bis 10, Anzahlen vergleichen. Fingerübungen, Emoji-Zählung",
-        "Größen & Messen": "Längen schätzen/vergleichen (unstandardisiert), erste Zeitbegriffe",
-        "Raum & Form": "Kreis, Dreieck, Quadrat, Rechteck unterscheiden",
-        "Daten & Zufall": "Einfache Strichlisten und Bilddiagramme"
-      },
-      "Q2": {
-        "Zahlen & Operationen": "Zahlen bis 20 darstellen, ordnen",
-        "Größen & Messen": "Uhr (volle/halbe Stunde), Münzen bis 2 €", 
-        "Raum & Form": "rechts/links, oben/unten; Muster fortsetzen",
-        "Daten & Zufall": "möglich – sicher – unmöglich"
-      },
-      "Q3": {
-        "Zahlen & Operationen": "Zahlen bis 100 erkunden, Zehner/Einheiten",
-        "Größen & Messen": "Messen mit Lineal; Einheiten cm/m",
-        "Raum & Form": "Einfache Achsensymmetrien erkennen",
-        "Daten & Zufall": "Einfache Experimente"
-      },
-      "Q4": {
-        "Zahlen & Operationen": "Plus/Minus im ZR 100 mit Übergang, Grundideen für Multiplikation/Division",
-        "Größen & Messen": "Kalender, Wochentage/Monate, einfache Zeitspannen",
-        "Raum & Form": "Flächen legen, einfache Netze (Würfelbilder)",
-        "Daten & Zufall": "Experimente und Häufigkeiten"
-      }
-    },
-    "2": {
-      "Q1": {
-        "Zahlen & Operationen": "Halbschriftlich & schriftnah mit Übergang im ZR 100, 2er/5er/10er Reihen",
-        "Größen & Messen": "Einkaufssituationen bis 100 € (ohne Komma)",
-        "Raum & Form": "Ecken, Kanten, Seiten; Rechteck/Quadrat",
-        "Daten & Zufall": "Säulen-/Bilddiagramme interpretieren"
-      },
-      "Q2": {
-        "Zahlen & Operationen": "1–10er Reihen (Netz), Teilen als Aufteilen/Verteilen",
-        "Größen & Messen": "cm–m; min–h; €–Cent (ganzzahlig)",
-        "Raum & Form": "Geometrische Grundbegriffe",
-        "Daten & Zufall": "Säulen-/Bilddiagramme interpretieren"
-      },
-      "Q3": {
-        "Zahlen & Operationen": "Standardverfahren (ZR 1000 vorbereiten), Kleines Einmaleins sicher",
-        "Größen & Messen": "Addieren/Subtrahieren von Zeiten (ohne Datum)",
-        "Raum & Form": "Umfang Rechteck/Quadrat (ganzzahlige Längen)",
-        "Daten & Zufall": "Diagramme erstellen und lesen"
-      },
-      "Q4": {
-        "Zahlen & Operationen": "Stellenwert bis 1000, Addition/Subtraktion im ZR 1000",
-        "Größen & Messen": "Einheiten und Umrechnungen",
-        "Raum & Form": "Körper und Netze",
-        "Daten & Zufall": "Einfache Experimente; Häufigkeiten"
-      }
-    },
-    "3": {
-      "Q1": {
-        "Zahlen & Operationen": "Ordnen, Runden, Zahlstrahl im ZR 1000, schriftliche Add/Sub mit Übergang",
-        "Größen & Messen": "Formelverständnis U=2(a+b), A=a·b (ganzzahlig)",
-        "Raum & Form": "Geometrische Konstruktionen",
-        "Daten & Zufall": "Mittelwert (einfach), Modus; Säulen-/Liniendiagramm"
-      },
-      "Q2": {
-        "Zahlen & Operationen": "Teilen mit Rest, schriftliche Multiplikation (einstelliger Faktor)",
-        "Größen & Messen": "Flächen und Umfang berechnen",
-        "Raum & Form": "Recht-, Spitz-, Stumpfwinkel erkennen",
-        "Daten & Zufall": "Mittelwert (einfach), Modus; Säulen-/Liniendiagramm"
-      },
-      "Q3": {
-        "Zahlen & Operationen": "Brüche (Teile vom Ganzen), einfache gleichnamige Vergleiche",
-        "Größen & Messen": "Zeitspannen über Tagesgrenzen; Kalender",
-        "Raum & Form": "Achsensymmetrie & Parkettierungen",
-        "Daten & Zufall": "Datenerhebung und Auswertung"
-      },
-      "Q4": {
-        "Zahlen & Operationen": "Schriftliche Division (einstelliger Divisor), Komma bei Geld/Messwerten",
-        "Größen & Messen": "Verschiedene Einheiten umrechnen",
-        "Raum & Form": "Körper und Netze erweitert",
-        "Daten & Zufall": "Relative Häufigkeit (intuitiv)"
-      }
-    }
-  };
-
-  return curriculum[grade.toString()]?.[quarter]?.[domain] || null;
-}
