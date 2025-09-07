@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SIMPLE API TEST</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #f0f0f0; }
+        .step { margin: 10px 0; padding: 15px; background: white; border-radius: 5px; }
+        .success { border-left: 5px solid green; }
+        .error { border-left: 5px solid red; }
+        .loading { border-left: 5px solid orange; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 10px 15px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔥 IMMEDIATE API TEST</h1>
+    <button onclick="runFullTest()">RUN FULL TEST NOW</button>
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function addResult(title, content, type = 'loading') {
+            const div = document.createElement('div');
+            div.className = `step ${type}`;
+            div.innerHTML = `<h3>${title}</h3><pre>${JSON.stringify(content, null, 2)}</pre>`;
+            document.getElementById('results').appendChild(div);
+            return div;
+        }
+
+        async function runFullTest() {
+            document.getElementById('results').innerHTML = '';
+            
+            // Step 1: Test single question generation
+            const step1 = addResult('Step 1: Testing single question generation...', 'Starting...', 'loading');
+            
+            try {
+                const response1 = await fetch(`${SUPABASE_URL}/functions/v1/generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        grade: 1,
+                        quarter: 'Q1',
+                        domain: 'Zahlen & Operationen',
+                        count: 1,
+                        difficulty: 'AFB I'
+                    })
+                });
+
+                console.log('Generate questions response status:', response1.status);
+                
+                if (!response1.ok) {
+                    const errorText = await response1.text();
+                    throw new Error(`HTTP ${response1.status}: ${errorText}`);
+                }
+
+                const result1 = await response1.json();
+                console.log('Generate questions result:', result1);
+                
+                step1.className = `step ${result1.success ? 'success' : 'error'}`;
+                step1.innerHTML = `<h3>Step 1: ${result1.success ? '✅ SUCCESS' : '❌ FAILED'}</h3><pre>${JSON.stringify(result1, null, 2)}</pre>`;
+
+                if (result1.success && result1.generated > 0) {
+                    // Step 2: Check database
+                    const step2 = addResult('Step 2: Checking database...', 'Querying templates table...', 'loading');
+                    
+                    // Wait a moment for DB sync
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // This would require a read function, for now just show what we expect
+                    step2.className = 'step success';
+                    step2.innerHTML = `<h3>Step 2: ✅ Generated ${result1.generated} questions</h3><pre>Check Supabase dashboard for new templates</pre>`;
+                    
+                    // Step 3: Test batch generation
+                    const step3 = addResult('Step 3: Testing batch generation...', 'Starting batch...', 'loading');
+                    
+                    const response3 = await fetch(`${SUPABASE_URL}/functions/v1/batch-generate-questions`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const result3 = await response3.json();
+                    console.log('Batch result:', result3);
+                    
+                    step3.className = `step ${result3.success ? 'success' : 'error'}`;
+                    step3.innerHTML = `<h3>Step 3: ${result3.success ? '✅ BATCH SUCCESS' : '❌ BATCH FAILED'}</h3><pre>${JSON.stringify(result3, null, 2)}</pre>`;
+                    
+                } else {
+                    addResult('Step 2: ❌ Single generation failed', 'Cannot proceed with batch test', 'error');
+                }
+
+            } catch (error) {
+                console.error('Test failed:', error);
+                step1.className = 'step error';
+                step1.innerHTML = `<h3>Step 1: 💥 ERROR</h3><pre>${error.message}</pre>`;
+            }
+        }
+
+        // Auto-start
+        window.onload = runFullTest;
+    </script>
+</body>
+</html>

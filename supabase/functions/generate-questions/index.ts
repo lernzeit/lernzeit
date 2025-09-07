@@ -86,46 +86,67 @@ Gib NUR das JSON-Array zurück, keine anderen Texte!`;
       }),
     });
 
+    console.log('📡 OpenAI API response status:', response.status);
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ OpenAI API Error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     console.log('✅ OpenAI API responded successfully');
     const result = await response.json();
-    const generatedContent = result.choices[0].message.content;
     
-    console.log('📄 Generated content length:', generatedContent.length);
+    if (!result.choices || !result.choices[0] || !result.choices[0].message) {
+      console.error('❌ Unexpected OpenAI response structure:', result);
+      throw new Error('Invalid OpenAI response structure');
+    }
+    
+    const generatedContent = result.choices[0].message.content;
+    console.log('📄 Generated content preview:', generatedContent.substring(0, 200) + '...');
     
     // Parse JSON from response
     const jsonMatch = generatedContent.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      console.error('❌ No valid JSON found in response');
+      console.error('❌ No valid JSON found in response. Content:', generatedContent);
       throw new Error('No valid JSON array found in response');
     }
 
-    const questions = JSON.parse(jsonMatch[0]);
-    console.log(`✅ Parsed ${questions.length} questions`);
+    let questions;
+    try {
+      questions = JSON.parse(jsonMatch[0]);
+      console.log(`✅ Parsed ${questions.length} questions`);
+    } catch (parseError) {
+      console.error('❌ JSON parse error:', parseError.message);
+      console.error('❌ JSON content:', jsonMatch[0]);
+      throw new Error(`JSON parse failed: ${parseError.message}`);
+    }
     
     // Insert questions into templates table
     let successful = 0;
     const insertResults = [];
     
-    for (const question of questions) {
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
       try {
+        console.log(`📥 Inserting question ${i+1}/${questions.length}:`, question.student_prompt?.substring(0, 50) + '...');
+        
         const { data, error } = await supabase
           .from('templates')
           .insert([question])
           .select('id')
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error(`❌ Insert error for question ${i+1}:`, error);
+          throw error;
+        }
+        
         successful++;
         insertResults.push({ success: true, id: data.id });
-        console.log(`✅ Inserted question ${successful}/${questions.length}`);
+        console.log(`✅ Inserted question ${successful}/${questions.length} with ID: ${data.id}`);
       } catch (error) {
-        console.error('❌ Insert error:', error.message);
+        console.error(`❌ Insert error for question ${i+1}:`, error.message);
         insertResults.push({ success: false, error: error.message });
       }
     }
@@ -133,11 +154,12 @@ Gib NUR das JSON-Array zurück, keine anderen Texte!`;
     console.log(`🎉 Successfully generated and saved ${successful}/${count} questions`);
 
     return new Response(JSON.stringify({
-      success: true,
+      success: successful > 0,
       generated: successful,
       requested: count,
       questions: questions.length,
-      insertResults: insertResults
+      insertResults: insertResults,
+      message: `Generated ${successful} out of ${questions.length} questions successfully`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -146,7 +168,9 @@ Gib NUR das JSON-Array zurück, keine anderen Texte!`;
     console.error('💥 Question generation error:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
-      success: false 
+      success: false,
+      generated: 0,
+      message: `Generation failed: ${error.message}`
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

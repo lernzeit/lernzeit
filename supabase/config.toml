@@ -38,6 +38,9 @@ verify_jwt = false
 [functions.annual-grade-upgrade]
 verify_jwt = false
 
+[functions.test-api]
+verify_jwt = false
+
 [functions.controller]
 verify_jwt = false
 
