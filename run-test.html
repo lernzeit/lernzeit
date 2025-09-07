@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Automatischer Test Runner</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .loading { text-align: center; padding: 40px; }
+        .spinner { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #3498db; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 2s linear infinite; 
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result { 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            border-left: 5px solid #007bff;
+        }
+        .success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .error { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+            white-space: pre-wrap;
+        }
+        .test-badge { 
+            display: inline-block; 
+            padding: 3px 8px; 
+            margin: 2px; 
+            border-radius: 12px; 
+            font-size: 12px; 
+            font-weight: bold;
+        }
+        .test-pass { background: #28a745; color: white; }
+        .test-fail { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Automatischer API Test & Batch-Generierung</h1>
+    
+    <div class="loading" id="loadingDiv">
+        <div class="spinner"></div>
+        <p>Führe automatische Tests durch...</p>
+        <p id="statusText">Initialisiere Tests...</p>
+    </div>
+    
+    <div id="results" style="display: none;"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function updateStatus(message) {
+            document.getElementById('statusText').textContent = message;
+        }
+
+        function showResult(result, isError = false) {
+            const loadingDiv = document.getElementById('loadingDiv');
+            const resultsDiv = document.getElementById('results');
+            
+            loadingDiv.style.display = 'none';
+            resultsDiv.style.display = 'block';
+            
+            const className = isError ? 'result error' : 'result success';
+            const icon = isError ? '❌' : '✅';
+            
+            let testsHtml = '';
+            if (result.tests) {
+                testsHtml = '<h3>Test Ergebnisse:</h3>';
+                Object.entries(result.tests).forEach(([test, status]) => {
+                    const badge = status.includes('✅') ? 'test-pass' : 'test-fail';
+                    testsHtml += `<span class="test-badge ${badge}">${test}: ${status}</span>`;
+                });
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="${className}">
+                    <h2>${icon} Test Ergebnis</h2>
+                    ${testsHtml}
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        async function runTests() {
+            try {
+                updateStatus('🔧 Starte Test-Runner...');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/test-runner`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                updateStatus('📊 Analysiere Ergebnisse...');
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStatus('✅ Alle Tests bestanden!');
+                    showResult(result, false);
+                } else {
+                    updateStatus('❌ Tests fehlgeschlagen!');
+                    showResult(result, true);
+                }
+                
+            } catch (error) {
+                updateStatus('💥 Kritischer Fehler!');
+                showResult({
+                    success: false,
+                    error: error.message,
+                    stack: error.stack,
+                    message: 'Test-Runner konnte nicht ausgeführt werden'
+                }, true);
+            }
+        }
+
+        // Starte Tests automatisch
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 1000);
+        });
+    </script>
+</body>
+</html>

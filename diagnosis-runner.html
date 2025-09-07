@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🔍 System Diagnosis</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 8px; font-weight: bold; }
+        .ready { background: #d4edda; border: 2px solid #28a745; color: #155724; }
+        .issues { background: #f8d7da; border: 2px solid #dc3545; color: #721c24; }
+        .test-section { background: #f8f9fa; padding: 15px; margin: 15px 0; border-radius: 5px; border-left: 4px solid #007bff; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        pre { background: #ffffff; padding: 10px; border: 1px solid #dee2e6; border-radius: 3px; overflow-x: auto; }
+        .loading { text-align: center; padding: 30px; }
+        button { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        .spinner { 
+            border: 3px solid #f3f3f3; 
+            border-top: 3px solid #3498db; 
+            border-radius: 50%; 
+            width: 30px; 
+            height: 30px; 
+            animation: spin 1s linear infinite; 
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>🔍 System Diagnosis & API Test</h1>
+    <p>Überprüft OpenAI API, Datenbank-Zugang und führt bei Erfolg die Batch-Generierung durch</p>
+    
+    <button onclick="runDiagnosis()" id="diagBtn">Diagnose starten</button>
+    
+    <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <p>Führe Systemdiagnose durch...</p>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        async function runDiagnosis() {
+            const diagBtn = document.getElementById('diagBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            diagBtn.disabled = true;
+            loading.style.display = 'block';
+            results.innerHTML = '';
+
+            try {
+                // Step 1: Run diagnosis
+                const diagResponse = await fetch(`${SUPABASE_URL}/functions/v1/diagnose`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const diagResult = await diagResponse.json();
+                
+                // Display diagnosis results
+                results.innerHTML = `
+                    <div class="status ${diagResult.summary?.readyForGeneration ? 'ready' : 'issues'}">
+                        <h2>${diagResult.summary?.readyForGeneration ? '✅ System Ready!' : '❌ Issues Found'}</h2>
+                        <p>Status: ${diagResult.summary?.status}</p>
+                        ${diagResult.summary?.issues?.length ? `<p>Issues: ${diagResult.summary.issues.join(', ')}</p>` : ''}
+                    </div>
+                    
+                    <div class="test-section">
+                        <h3>🌍 Environment</h3>
+                        <p class="${diagResult.environment?.hasOpenAIKey ? 'success' : 'error'}">
+                            OpenAI API Key: ${diagResult.environment?.hasOpenAIKey ? '✅ Present' : '❌ Missing'}
+                            ${diagResult.environment?.openAIKeyLength ? ` (${diagResult.environment.openAIKeyLength} chars)` : ''}
+                        </p>
+                        <p class="${diagResult.environment?.hasSupabaseUrl ? 'success' : 'error'}">
+                            Supabase URL: ${diagResult.environment?.hasSupabaseUrl ? '✅ Present' : '❌ Missing'}
+                        </p>
+                    </div>
+                    
+                    <div class="test-section">
+                        <h3>🤖 OpenAI API Test</h3>
+                        <p class="${diagResult.apiTest?.ok ? 'success' : 'error'}">
+                            Status: ${diagResult.apiTest?.status} ${diagResult.apiTest?.ok ? '✅' : '❌'}
+                        </p>
+                        <p>Response: ${diagResult.apiTest?.message || diagResult.apiTest?.error || 'No response'}</p>
+                    </div>
+                    
+                    <div class="test-section">
+                        <h3>💾 Database Test</h3>
+                        <p class="${diagResult.databaseTest?.canRead ? 'success' : 'error'}">
+                            Read: ${diagResult.databaseTest?.canRead ? '✅' : '❌'}
+                        </p>
+                        <p class="${diagResult.databaseTest?.canWrite ? 'success' : 'error'}">
+                            Write: ${diagResult.databaseTest?.canWrite ? '✅' : '❌'}
+                        </p>
+                        <p class="${diagResult.databaseTest?.canDelete ? 'success' : 'error'}">
+                            Delete: ${diagResult.databaseTest?.canDelete ? '✅' : '❌'}
+                        </p>
+                        ${diagResult.databaseTest?.error ? `<p class="error">Error: ${diagResult.databaseTest.error}</p>` : ''}
+                    </div>
+                `;
+
+                // If everything is ready, start batch generation
+                if (diagResult.summary?.readyForGeneration) {
+                    results.innerHTML += `
+                        <div class="status ready">
+                            <h3>🚀 Starting Batch Generation...</h3>
+                            <p>All systems operational. Generating 240 questions now.</p>
+                        </div>
+                    `;
+
+                    // Start batch generation
+                    const batchResponse = await fetch(`${SUPABASE_URL}/functions/v1/batch-generate-questions`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const batchResult = await batchResponse.json();
+                    
+                    if (batchResult.success) {
+                        results.innerHTML += `
+                            <div class="status ready">
+                                <h2>🎉 Batch Generation Complete!</h2>
+                                <p><strong>Generated:</strong> ${batchResult.totalGenerated} questions</p>
+                                <p><strong>Errors:</strong> ${batchResult.totalErrors}</p>
+                                <p><strong>Success Rate:</strong> ${((batchResult.totalGenerated / (batchResult.totalCombinations * batchResult.questionsPerCombination)) * 100).toFixed(1)}%</p>
+                            </div>
+                        `;
+                    } else {
+                        results.innerHTML += `
+                            <div class="status issues">
+                                <h3>❌ Batch Generation Failed</h3>
+                                <p>Error: ${batchResult.error}</p>
+                                <pre>${JSON.stringify(batchResult, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                }
+
+                results.innerHTML += `
+                    <div class="test-section">
+                        <h3>📋 Full Diagnosis Data</h3>
+                        <pre>${JSON.stringify(diagResult, null, 2)}</pre>
+                    </div>
+                `;
+
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status issues">
+                        <h2>💥 Diagnosis Failed</h2>
+                        <p>Error: ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                diagBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

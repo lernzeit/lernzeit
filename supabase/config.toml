@@ -26,6 +26,12 @@ verify_jwt = false
 [functions.batch-generate-questions]
 verify_jwt = false
 
+[functions.test-runner]
+verify_jwt = false
+
+[functions.diagnose]
+verify_jwt = false
+
 [functions.explain-answer]
 verify_jwt = false
 

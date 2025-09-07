@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct API Test</title>
+</head>
+<body>
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        async function runDirectTest() {
+            console.log('🧪 Starting direct API test...');
+            document.body.innerHTML = '<h1>Running Tests...</h1><div id="output"></div>';
+            const output = document.getElementById('output');
+            
+            try {
+                // Test 1: Single Question
+                output.innerHTML += '<p>📝 Test 1: Generating single question...</p>';
+                
+                const singleResponse = await fetch(`${SUPABASE_URL}/functions/v1/generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        grade: 1,
+                        quarter: "Q1",
+                        domain: "Zahlen & Operationen",
+                        count: 1,
+                        difficulty: "AFB I"
+                    })
+                });
+
+                const singleResult = await singleResponse.json();
+                
+                if (singleResponse.ok && singleResult.success) {
+                    output.innerHTML += `<p style="color:green">✅ Single question test PASSED! Generated: ${singleResult.generated}</p>`;
+                    
+                    // Wait a moment then start batch
+                    output.innerHTML += '<p>⏳ Starting batch generation in 3 seconds...</p>';
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    
+                    // Test 2: Batch Generation
+                    output.innerHTML += '<p>🚀 Test 2: Starting batch generation...</p>';
+                    
+                    const batchResponse = await fetch(`${SUPABASE_URL}/functions/v1/batch-generate-questions`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const batchResult = await batchResponse.json();
+                    
+                    if (batchResponse.ok && batchResult.success) {
+                        output.innerHTML += `
+                            <h2 style="color:green">🎉 ALL TESTS PASSED!</h2>
+                            <p><strong>Single Test:</strong> ✅ Generated ${singleResult.generated} question</p>
+                            <p><strong>Batch Test:</strong> ✅ Generated ${batchResult.totalGenerated} questions total</p>
+                            <p><strong>Success Rate:</strong> ${((batchResult.totalGenerated / (batchResult.totalCombinations * batchResult.questionsPerCombination)) * 100).toFixed(1)}%</p>
+                            <p><strong>Errors:</strong> ${batchResult.totalErrors}</p>
+                        `;
+                    } else {
+                        output.innerHTML += `<p style="color:red">❌ Batch generation FAILED: ${JSON.stringify(batchResult)}</p>`;
+                    }
+                    
+                } else {
+                    output.innerHTML += `<p style="color:red">❌ Single question test FAILED: ${JSON.stringify(singleResult)}</p>`;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<p style="color:red">💥 ERROR: ${error.message}</p>`;
+            }
+        }
+
+        // Start test immediately
+        runDirectTest();
+    </script>
+</body>
+</html>
