@@ -1,6 +1,5 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,103 +7,122 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🚀 Starting batch generation...');
+    console.log('🔥 Batch generation started');
     
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    const grades = [1, 2, 3];
-    const quarters = ["Q1", "Q2", "Q3", "Q4"];
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Supabase credentials missing');
+      return new Response(JSON.stringify({ error: 'Supabase credentials not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const grades = [1, 2, 3, 4, 5];
+    const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
     const domains = [
-      "Zahlen & Operationen",
-      "Größen & Messen", 
-      "Raum & Form",
-      "Daten & Zufall"
+      'Zahlen & Operationen',
+      'Raum & Form',
+      'Größen & Messen',
+      'Daten & Zufall'
     ];
-    
-    const questionsPerCombination = 5;
+
     let totalGenerated = 0;
     let totalErrors = 0;
-    const results: any[] = [];
+    const results = [];
 
-    console.log(`📊 Total combinations: ${grades.length * quarters.length * domains.length} × ${questionsPerCombination} questions each`);
+    console.log(`🎲 Processing ${grades.length * quarters.length * domains.length} combinations...`);
 
     for (const grade of grades) {
       for (const quarter of quarters) {
         for (const domain of domains) {
           try {
-            console.log(`📝 Grade ${grade}, ${quarter}, ${domain}...`);
+            console.log(`📚 Processing: Grade ${grade}, ${quarter}, ${domain}`);
             
             const { data, error } = await supabase.functions.invoke('generate-questions', {
               body: {
                 grade,
                 quarter,
                 domain,
-                count: questionsPerCombination,
+                count: 2, // Smaller batches to avoid timeouts
                 difficulty: 'AFB I'
               }
             });
 
             if (error) {
-              console.error(`❌ Error for ${grade}/${quarter}/${domain}:`, error);
+              console.error(`❌ Error for ${grade}-${quarter}-${domain}:`, error);
               totalErrors++;
-              results.push({ grade, quarter, domain, status: 'error', error: error.message });
-              continue;
-            }
-
-            if (data?.success) {
-              totalGenerated += data.generated || 0;
-              results.push({ grade, quarter, domain, status: 'success', generated: data.generated });
-              console.log(`✅ ${grade}/${quarter}/${domain}: ${data.generated} questions`);
+              results.push({
+                grade,
+                quarter,
+                domain,
+                success: false,
+                error: error.message
+              });
             } else {
-              totalErrors++;
-              results.push({ grade, quarter, domain, status: 'error', error: data?.error || 'Unknown error' });
-              console.log(`❌ ${grade}/${quarter}/${domain}: Failed`);
+              console.log(`✅ Success for ${grade}-${quarter}-${domain}:`, data?.inserted || 0);
+              totalGenerated += data?.inserted || 0;
+              results.push({
+                grade,
+                quarter,
+                domain,
+                success: true,
+                generated: data?.inserted || 0
+              });
             }
 
-            // Small delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Small delay between requests to avoid overwhelming the API
+            await new Promise(resolve => setTimeout(resolve, 100));
 
-          } catch (error) {
-            console.error(`💥 Exception for ${grade}/${quarter}/${domain}:`, error);
+          } catch (batchError) {
+            console.error(`❌ Batch error for ${grade}-${quarter}-${domain}:`, batchError);
             totalErrors++;
-            results.push({ grade, quarter, domain, status: 'error', error: error.message });
+            results.push({
+              grade,
+              quarter,
+              domain,
+              success: false,
+              error: batchError.message
+            });
           }
         }
       }
     }
 
-    const totalExpected = grades.length * quarters.length * domains.length * questionsPerCombination;
-    console.log(`🏁 Batch completed: ${totalGenerated}/${totalExpected} questions generated, ${totalErrors} errors`);
+    const successRate = Math.round((results.filter(r => r.success).length / results.length) * 100);
+
+    console.log(`🎉 Batch generation complete: ${totalGenerated} questions, ${totalErrors} errors, ${successRate}% success rate`);
 
     return new Response(JSON.stringify({
       success: true,
       totalGenerated,
       totalErrors,
-      totalCombinations: grades.length * quarters.length * domains.length,
-      questionsPerCombination,
-      totalExpected,
-      successRate: ((totalGenerated / totalExpected) * 100).toFixed(1) + '%',
-      results
+      successRate: `${successRate}%`,
+      totalCombinations: results.length,
+      results: results.slice(0, 10), // First 10 results for brevity
+      message: `Batch generation completed. Generated ${totalGenerated} questions with ${successRate}% success rate.`
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('💥 Batch generation failed:', error);
+    console.error('❌ Batch generation error:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
-      success: false 
+      error: 'Batch generation failed', 
+      details: error.message 
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

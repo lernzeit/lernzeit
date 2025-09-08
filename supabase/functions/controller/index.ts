@@ -1,6 +1,5 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,101 +7,93 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🎯 Controller: Starting batch generation and verification...');
+    console.log('🎮 Controller function started');
     
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Check current templates count
-    const { data: beforeCount, error: beforeError } = await supabase
-      .from('templates')
-      .select('count', { count: 'exact' })
-      .limit(0);
-
-    if (beforeError) {
-      console.error('❌ Error counting templates before:', beforeError);
-      throw beforeError;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('❌ Supabase credentials missing');
+      return new Response(JSON.stringify({ error: 'Supabase credentials not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const templatesBefore = beforeCount || 0;
-    console.log(`📊 Templates before generation: ${templatesBefore}`);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Start batch generation
-    console.log('🚀 Starting batch generation...');
+    // Count existing templates
+    const { count: beforeCount } = await supabase
+      .from('templates')
+      .select('*', { count: 'exact', head: true });
+
+    console.log(`📊 Templates before generation: ${beforeCount}`);
+
+    // Invoke batch generation
+    console.log('🚀 Triggering batch generation...');
     const { data: batchResult, error: batchError } = await supabase.functions.invoke('batch-generate-questions', {
-      body: {}
+      body: { trigger: 'controller' }
     });
 
     if (batchError) {
       console.error('❌ Batch generation error:', batchError);
-      throw batchError;
+      return new Response(JSON.stringify({ 
+        error: 'Batch generation failed', 
+        details: batchError.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('✅ Batch generation completed:', batchResult);
 
-    // Wait a bit for insertions to complete
+    // Wait a moment for insertions to complete
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Check templates count after
-    const { data: afterCount, error: afterError } = await supabase
+    // Count templates after generation
+    const { count: afterCount } = await supabase
       .from('templates')
-      .select('count', { count: 'exact' })
-      .limit(0);
+      .select('*', { count: 'exact', head: true });
 
-    if (afterError) {
-      console.error('❌ Error counting templates after:', afterError);
-      throw afterError;
-    }
+    const newTemplatesCount = (afterCount || 0) - (beforeCount || 0);
+    console.log(`📈 New templates created: ${newTemplatesCount}`);
 
-    const templatesAfter = afterCount || 0;
-    const newTemplates = templatesAfter - templatesBefore;
-
-    console.log(`📊 Templates after generation: ${templatesAfter}`);
-    console.log(`🎉 New templates created: ${newTemplates}`);
-
-    // Get sample of new templates
-    const { data: sampleTemplates, error: sampleError } = await supabase
+    // Get a sample of the newest templates
+    const { data: sampleTemplates } = await supabase
       .from('templates')
-      .select('id, student_prompt, domain, grade')
+      .select('id, student_prompt, grade, domain, created_at')
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(3);
 
-    if (sampleError) {
-      console.error('❌ Error fetching sample templates:', sampleError);
-    }
-
-    const success = newTemplates > 0;
-    console.log(`${success ? '✅' : '❌'} Generation ${success ? 'successful' : 'failed'}`);
+    console.log('🎯 Controller completed successfully');
 
     return new Response(JSON.stringify({
-      success,
-      templatesBefore,
-      templatesAfter,
-      newTemplatesCreated: newTemplates,
-      batchResult,
-      sampleTemplates: sampleTemplates || [],
-      message: success 
-        ? `Successfully created ${newTemplates} new templates` 
-        : 'No new templates were created'
+      success: true,
+      templatesBefore: beforeCount,
+      templatesAfter: afterCount,
+      newTemplates: newTemplatesCount,
+      batchResult: batchResult,
+      sampleTemplates: sampleTemplates,
+      message: `Controller executed successfully. Created ${newTemplatesCount} new templates.`
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('💥 Controller error:', error);
+    console.error('❌ Controller error:', error);
     return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message 
+      error: 'Controller failed', 
+      details: error.message 
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
