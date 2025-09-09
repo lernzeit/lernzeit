@@ -28,21 +28,16 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const grades = [1, 2, 3, 4, 5];
+    // Define the combinations to generate
+    const grades = [1, 2, 3, 4];
     const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
-    const domains = [
-      'Zahlen & Operationen',
-      'Raum & Form',
-      'Größen & Messen',
-      'Daten & Zufall'
-    ];
-
+    const domains = ['Zahlen & Operationen', 'Raum & Form', 'Größen & Messen', 'Daten & Zufall'];
+    
     let totalGenerated = 0;
     let totalErrors = 0;
     const results = [];
 
-    console.log(`🎲 Processing ${grades.length * quarters.length * domains.length} combinations...`);
-
+    // Process each combination
     for (const grade of grades) {
       for (const quarter of quarters) {
         for (const domain of domains) {
@@ -54,8 +49,8 @@ serve(async (req) => {
                 grade,
                 quarter,
                 domain,
-                count: 2, // Smaller batches to avoid timeouts
-                difficulty: 'AFB I'
+                count: 2,
+                difficulty: 'medium'
               }
             });
 
@@ -70,47 +65,48 @@ serve(async (req) => {
                 error: error.message
               });
             } else {
-              console.log(`✅ Success for ${grade}-${quarter}-${domain}:`, data?.inserted || 0);
+              console.log(`✅ Success for ${grade}-${quarter}-${domain}:`, data);
               totalGenerated += data?.inserted || 0;
               results.push({
                 grade,
                 quarter,
                 domain,
                 success: true,
-                generated: data?.inserted || 0
+                generated: data?.generated || 0,
+                inserted: data?.inserted || 0
               });
             }
 
-            // Small delay between requests to avoid overwhelming the API
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Small delay between requests to avoid overwhelming the system
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-          } catch (batchError) {
-            console.error(`❌ Batch error for ${grade}-${quarter}-${domain}:`, batchError);
+          } catch (err) {
+            console.error(`❌ Exception for ${grade}-${quarter}-${domain}:`, err);
             totalErrors++;
             results.push({
               grade,
               quarter,
               domain,
               success: false,
-              error: batchError.message
+              error: err.message
             });
           }
         }
       }
     }
 
-    const successRate = Math.round((results.filter(r => r.success).length / results.length) * 100);
+    const successRate = totalGenerated + totalErrors > 0 ? 
+      `${Math.round((totalGenerated / (totalGenerated + totalErrors)) * 100)}%` : '0%';
 
-    console.log(`🎉 Batch generation complete: ${totalGenerated} questions, ${totalErrors} errors, ${successRate}% success rate`);
+    console.log(`🎯 Batch generation completed: ${totalGenerated} generated, ${totalErrors} errors`);
 
     return new Response(JSON.stringify({
       success: true,
       totalGenerated,
       totalErrors,
-      successRate: `${successRate}%`,
-      totalCombinations: results.length,
-      results: results.slice(0, 10), // First 10 results for brevity
-      message: `Batch generation completed. Generated ${totalGenerated} questions with ${successRate}% success rate.`
+      successRate,
+      results,
+      message: `Batch generation completed. Generated ${totalGenerated} questions with ${totalErrors} errors.`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

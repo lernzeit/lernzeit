@@ -6,63 +6,61 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🧪 TEST API FUNCTION CALLED!');
-    console.log('Method:', req.method);
-    console.log('URL:', req.url);
+    console.log(`🔍 Test API called: ${req.method} ${req.url}`);
     
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    // Get environment variables
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    console.log('🔑 OpenAI Key present:', !!openaiKey);
-    console.log('🔑 Supabase URL present:', !!supabaseUrl);
-    console.log('🔑 Service Key present:', !!supabaseServiceKey);
+    console.log('🔑 OpenAI API Key:', openaiApiKey ? `${openaiApiKey.substring(0, 10)}...` : 'NOT SET');
     
-    if (openaiKey) {
-      console.log('🔑 OpenAI Key starts with:', openaiKey.substring(0, 10) + '...');
+    // Parse request body
+    let requestBody = {};
+    try {
+      requestBody = await req.json();
+    } catch {
+      // Ignore JSON parse errors for test endpoint
     }
-    
-    const body = await req.json().catch(() => ({}));
-    console.log('📥 Request body:', body);
-    
+
     const testResult = {
       success: true,
-      message: 'Test API function is working!',
+      message: 'Test API is working correctly',
       timestamp: new Date().toISOString(),
       environment: {
-        openaiKeyPresent: !!openaiKey,
-        openaiKeyPreview: openaiKey ? openaiKey.substring(0, 10) + '...' : 'NOT SET',
-        supabaseUrlPresent: !!supabaseUrl,
-        supabaseServiceKeyPresent: !!supabaseServiceKey
+        openaiApiKey: !!openaiApiKey,
+        supabaseUrl: !!supabaseUrl,
+        supabaseServiceKey: !!supabaseServiceKey,
       },
-      requestInfo: {
+      request: {
         method: req.method,
         url: req.url,
-        body: body
+        body: requestBody,
       }
     };
 
     console.log('✅ Test completed successfully');
-    console.log('📋 Result:', testResult);
 
     return new Response(JSON.stringify(testResult), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('💥 Test API error:', error);
+    console.error('❌ Test API error:', error);
     return new Response(JSON.stringify({ 
       success: false,
-      error: error.message,
-      message: 'Test API function failed!'
+      error: 'Test API failed', 
+      details: error.message,
+      timestamp: new Date().toISOString()
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
