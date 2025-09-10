@@ -55,3 +55,12 @@ verify_jwt = false
 
 [functions.template-mass-generator]
 verify_jwt = false
+
+[functions.test-openai-connection]
+verify_jwt = false
+
+[functions.openai-proxy]
+verify_jwt = false
+
+[functions.direct-template-generator]
+verify_jwt = false
