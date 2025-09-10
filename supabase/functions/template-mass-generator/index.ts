@@ -275,7 +275,7 @@ async function generateTemplatesForGap(gap: any, apiKey: string, count: number =
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You are an expert mathematics curriculum designer creating German curriculum-compliant educational templates.' },
           { role: 'user', content: prompt }

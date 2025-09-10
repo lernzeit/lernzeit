@@ -63,7 +63,7 @@ Erstelle genau ${count} Templates im JSON-Array Format:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_completion_tokens: 2000,
       }),

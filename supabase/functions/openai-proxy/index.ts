@@ -29,12 +29,12 @@ serve(async (req) => {
 
     // Build request body based on model
     const requestBody: any = {
-      model: model || 'gpt-5-2025-08-07',
+      model: model || 'gpt-4o-mini',
       messages: messages || []
     };
 
     // Use appropriate token parameter based on model
-    if (model && model.startsWith('gpt-5') || model && model.startsWith('gpt-4.1') || model && model.startsWith('o3') || model && model.startsWith('o4')) {
+    if (model && model.startsWith('gpt-5') || model && model.startsWith('gpt-40') || model && model.startsWith('o3') || model && model.startsWith('o4')) {
       // Newer models use max_completion_tokens
       if (max_completion_tokens) {
         requestBody.max_completion_tokens = max_completion_tokens;
