@@ -304,59 +304,6 @@ export function MathProblemOptimized({ grade, onBack, onComplete, userId }: Math
     setTimeout(() => {
       nextQuestion();
     }, 3000);
-      if (isCorrect) {
-        handleCorrectAnswer();
-      } else {
-        handleIncorrectAnswer(`Die richtige Antwort ist: ${currentProblem.answer}`);
-      }
-    }
-  };
-
-  const handleCorrectAnswer = async () => {
-    setCorrectAnswers(prev => prev + 1);
-    setStreak(prev => prev + 1);
-    setFeedback('correct');
-    setWaitingForNext(true);
-    
-    // Use AI-generated explanation directly
-    if (currentProblem.explanation) {
-      setExplanation(currentProblem.explanation);
-      setShowExplanation(true);
-    }
-    
-    if (userId) {
-      try {
-        const achievementResult = await updateProgress(
-          'math',
-          'questions_solved', 
-          1
-        );
-        
-        if (achievementResult && Array.isArray(achievementResult) && achievementResult.length > 0) {
-          setNewAchievements(achievementResult);
-        }
-      } catch (error) {
-        console.error('Achievement update failed:', error);
-      }
-    }
-    
-    setTimeout(() => {
-      nextQuestion();
-    }, 2000);
-  };
-
-  const handleIncorrectAnswer = (correctAnswerText: string) => {
-    setFeedback('incorrect');
-    setStreak(0);
-    setWaitingForNext(true);
-    
-    // Show correct answer with AI explanation
-    setExplanation(`${correctAnswerText}. ${currentProblem.explanation}`);
-    setShowExplanation(true);
-    
-    setTimeout(() => {
-      nextQuestion();
-    }, 3000);
   };
 
   const nextQuestion = () => {
