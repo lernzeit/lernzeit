@@ -54,18 +54,41 @@ export class EnhancedTemplateBankService {
       const selectionResult = await smartTemplateSelector.selectTemplates(selectionRequest);
       
       // Convert templates to SelectionQuestion format
-      const questions: SelectionQuestion[] = selectionResult.templates.map(template => ({
-        id: template.id || `template_${Date.now()}_${Math.random()}`,
-        question: template.student_prompt,
-        type: this.mapQuestionType(template.question_type),
-        options: this.extractOptions(template),
-        correctAnswer: this.extractCorrectAnswer(template),
-        explanation: template.explanation || 'Keine Erklärung verfügbar.',
-        difficulty: template.difficulty,
-        category: template.domain,
-        grade: template.grade,
-        timeLimit: this.calculateTimeLimit(template.grade, template.difficulty)
-      }));
+      const questions: SelectionQuestion[] = selectionResult.templates.map(template => {
+        const baseQuestion = {
+          id: parseInt(template.id) || Date.now(),
+          question: template.student_prompt,
+          type: 'math' as const,
+          explanation: template.explanation || 'Keine Erklärung verfügbar.'
+        };
+
+        const questionType = this.mapQuestionType(template.question_type);
+        
+        if (questionType === 'multiple-choice') {
+          const options = this.extractOptions(template) || [];
+          const correctAnswer = this.findCorrectIndex(options, this.extractCorrectAnswer(template));
+          return {
+            ...baseQuestion,
+            questionType: 'multiple-choice' as const,
+            options,
+            correctAnswer
+          };
+        } else if (questionType === 'text-input') {
+          return {
+            ...baseQuestion,
+            questionType: 'text-input' as const,
+            answer: this.extractCorrectAnswer(template)
+          };
+        } else {
+          // Default to multiple choice for other types
+          return {
+            ...baseQuestion,
+            questionType: 'multiple-choice' as const,
+            options: ['Option A', 'Option B'],
+            correctAnswer: 0
+          };
+        }
+      });
 
       return {
         questions,
@@ -83,14 +106,15 @@ export class EnhancedTemplateBankService {
     }
   }
 
-  private mapQuestionType(templateType: string): 'multiple-choice' | 'text-input' | 'word-selection' | 'matching' {
-    const typeMap: Record<string, any> = {
-      'multiple-choice': 'multiple-choice',
-      'text-input': 'text-input', 
-      'sort': 'word-selection',
-      'match': 'matching'
-    };
-    return typeMap[templateType] || 'multiple-choice';
+  private mapQuestionType(templateType: string): 'multiple-choice' | 'text-input' {
+    return templateType === 'text-input' ? 'text-input' : 'multiple-choice';
+  }
+
+  private findCorrectIndex(options: string[], correctAnswer: any): number {
+    if (!correctAnswer || !options.length) return 0;
+    const correctStr = String(correctAnswer);
+    const index = options.findIndex(option => String(option) === correctStr);
+    return index >= 0 ? index : 0;
   }
 
   private extractOptions(template: any): string[] | undefined {
@@ -143,4 +167,3 @@ export class EnhancedTemplateBankService {
   }
 }
 
-export { EnhancedTemplateBankService };
