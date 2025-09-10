@@ -1,4 +1,220 @@
 {
+  "1": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Zählen bis 10: Vorwärts und rückwärts",
+        "Anzahlen vergleichen: mehr, weniger, gleich viel",
+        "Plus/Minus im ZR 10 ohne Übergang",
+        "Zahlzerlegung bis 10"
+      ],
+      "Raum & Form": [
+        "Kreis, Dreieck, Quadrat, Rechteck unterscheiden",
+        "Formen in der Umwelt erkennen",
+        "Eigenschaften einfacher Formen"
+      ],
+      "Größen & Messen": [
+        "Längen schätzen und vergleichen (unstandardisiert)",
+        "Größenvergleiche: groß-klein, lang-kurz",
+        "Einfache Messungen mit Körpermaßen"
+      ],
+      "Daten & Zufall": [
+        "Einfache Strichlisten und Bilddiagramme",
+        "Daten sammeln und darstellen",
+        "Häufigkeiten zählen"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Zahlen bis 20 darstellen, ordnen",
+        "Plus/Minus im ZR 20 mit Zehnerübergang (strategisch)",
+        "Verdoppeln und Halbieren im ZR 20",
+        "Stellenwert verstehen: Zehner und Einer"
+      ],
+      "Raum & Form": [
+        "rechts/links, oben/unten bestimmen",
+        "Muster fortsetzen und erkennen",
+        "Einfache Lagebeziehungen beschreiben"
+      ],
+      "Größen & Messen": [
+        "Uhr (volle/halbe Stunde) lesen",
+        "Münzen bis 2 € erkennen und verwenden",
+        "Zeit: gestern, heute, morgen"
+      ],
+      "Daten & Zufall": [
+        "möglich – sicher – unmöglich unterscheiden",
+        "Einfache Zufallsexperimente",
+        "Wahrscheinlichkeitssprache verwenden"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Zahlen bis 100 erkunden, Zehner/Einheiten",
+        "Halbschriftliche Verfahren im ZR 100 (ohne Übergang)",
+        "Addition und Subtraktion mit Zehnerzahlen",
+        "Zahlenmuster erkennen und fortsetzen"
+      ],
+      "Raum & Form": [
+        "Einfache Achsensymmetrien erkennen",
+        "Geometrische Muster legen und fortsetzen",
+        "Spiegelungen an Gegenständen entdecken"
+      ],
+      "Größen & Messen": [
+        "Messen mit Lineal; Einheiten cm/m",
+        "Standardisierte und nicht-standardisierte Maße",
+        "Längenvergleiche mit Maßband"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Plus/Minus im ZR 100 mit Übergang",
+        "Wiederholtes Addieren/Teilen in gleich große Gruppen",
+        "Grundideen × ÷ (vorbereiten)",
+        "Malreihen 2, 5, 10 entdecken"
+      ],
+      "Raum & Form": [
+        "Flächen legen, einfache Netze (Würfelbilder)",
+        "Körper und Flächen unterscheiden",
+        "Geometrische Formen in Netzen erkennen"
+      ],
+      "Größen & Messen": [
+        "Kalender, Wochentage/Monate verstehen",
+        "einfache Zeitspannen berechnen",
+        "Jahreszeiten und Monate zuordnen"
+      ]
+    }
+  },
+  "2": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Halbschriftlich & schriftnah mit Übergang im ZR 100",
+        "2er/5er/10er Reihen, Tausch-/Verbundaufgaben",
+        "Einmaleins (Aufbau): Grundverständnis",
+        "Strategien für Addition und Subtraktion"
+      ],
+      "Raum & Form": [
+        "Ecken, Kanten, Seiten unterscheiden",
+        "Rechteck/Quadrat: Eigenschaften erkennen",
+        "Geometrische Grundbegriffe anwenden"
+      ],
+      "Größen & Messen": [
+        "Einkaufssituationen bis 100 € (ohne Komma)",
+        "Geld zählen und wechseln",
+        "Preise vergleichen und berechnen"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "1–10er Reihen (Netz), Umkehraufgaben",
+        "Teilen als Aufteilen/Verteilen verstehen",
+        "Division (einführend): Grundvorstellungen",
+        "Einmaleins (sichern): Automatisierung"
+      ],
+      "Größen & Messen": [
+        "cm–m; min–h; €–Cent (ganzzahlig) umrechnen",
+        "Einheiten und einfache Umrechnungen",
+        "Zeitspannen in verschiedenen Einheiten"
+      ],
+      "Daten & Zufall": [
+        "Säulen-/Bilddiagramme interpretieren",
+        "Diagramme lesen und verstehen",
+        "Daten aus Diagrammen entnehmen"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Standardverfahren (ZR 1000 vorbereiten)",
+        "Kleines Einmaleins sicher anwenden",
+        "Schriftliche Addition/Subtraktion einführen",
+        "Malnehmen/Teilen (Automatisierung)"
+      ],
+      "Raum & Form": [
+        "Umfang Rechteck/Quadrat (ganzzahlige Längen)",
+        "Flächen/Umfang (einfach) berechnen",
+        "Geometrische Messungen durchführen"
+      ],
+      "Größen & Messen": [
+        "Addieren/Subtrahieren von Zeiten (ohne Datum)",
+        "Zeitspannen berechnen und vergleichen",
+        "Zeitrechnungen in Alltagssituationen"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Stellenwert bis 1000 verstehen",
+        "Addition/Subtraktion im ZR 1000",
+        "ZR 1000 (E/T/H): Zahlverständnis",
+        "Schriftliche Rechenarten (festigen)"
+      ],
+      "Daten & Zufall": [
+        "einfache Experimente; Häufigkeiten",
+        "Zufallssituationen untersuchen",
+        "Wahrscheinlichkeit als Häufigkeit"
+      ]
+    }
+  },
+  "3": {
+    "Q1": {
+      "Zahlen & Operationen": [
+        "Ordnen, Runden, Zahlstrahl im ZR 1000",
+        "mit Übergang im ZR 1000 (schriftlich)",
+        "1×n/ n×1 mit Strategie (ohne Algorithmus)",
+        "Multiplikation (mehrstellig) verstehen"
+      ],
+      "Größen & Messen": [
+        "Formelverständnis U=2(a+b), A=a·b (ganzzahlig)",
+        "Fläche/Umfang Rechteck berechnen",
+        "Geometrische Formeln anwenden"
+      ]
+    },
+    "Q2": {
+      "Zahlen & Operationen": [
+        "Teilen mit Rest; Beziehungen × ÷",
+        "Einstelliger Faktor × mehrstellig",
+        "Division (einführend): Strategien entwickeln",
+        "Schriftliche Multiplikation (einfach)"
+      ],
+      "Raum & Form": [
+        "Recht-, Spitz-, Stumpfwinkel erkennen",
+        "Winkel (einfach) unterscheiden und messen",
+        "Geometrische Eigenschaften bestimmen"
+      ],
+      "Daten & Zufall": [
+        "Mittelwert (einfach), Modus bestimmen",
+        "Säulen-/Liniendiagramm erstellen",
+        "Daten erheben/auswerten: Grundlagen"
+      ]
+    },
+    "Q3": {
+      "Zahlen & Operationen": [
+        "Einführung; einfache gleichnamige Vergleiche",
+        "Brüche (Teile vom Ganzen) verstehen",
+        "Bruchvorstellungen entwickeln"
+      ],
+      "Größen & Messen": [
+        "Zeitspannen über Tagesgrenzen; Kalender",
+        "Zeit/Termine planen und berechnen",
+        "Komplexere Zeitrechnungen"
+      ],
+      "Raum & Form": [
+        "Achsensymmetrie & Parkettierungen",
+        "Symmetrie/Muster erkennen und erstellen",
+        "Geometrische Transformationen"
+      ]
+    },
+    "Q4": {
+      "Zahlen & Operationen": [
+        "Einstelliger Divisor (schriftlich)",
+        "Komma bei Geld/Messwerten verstehen",
+        "Schriftliche Division (einfach)",
+        "Dezimalzahlen (Vorschule): Grundlagen"
+      ],
+      "Daten & Zufall": [
+        "relative Häufigkeit (intuitiv)",
+        "Experimente durchführen und auswerten",
+        "Wahrscheinlichkeitsverständnis entwickeln"
+      ]
+    }
+  },
   "4": {
     "Q4": {
       "Zahlen & Operationen": [
