@@ -80,7 +80,7 @@ serve(async (req) => {
         quarter_app: "Q4",
         domain: "Zahlen & Operationen",
         subcategory: "Test",
-        difficulty: "AFB I", 
+        difficulty: "easy", 
         question_type: "multiple-choice",
         student_prompt: "Diagnostic Test: Was ist 2 + 2?",
         variables: {"options": ["3", "4", "5", "6"], "correct_idx": 1},

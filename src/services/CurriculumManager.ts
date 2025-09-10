@@ -270,7 +270,7 @@ class CurriculumManager {
   };
 
   private questionTypes: string[] = ['multiple-choice', 'text-input', 'sort', 'match'];
-  private difficulties: string[] = ['AFB I', 'AFB II', 'AFB III'];
+  private difficulties: string[] = ['easy', 'medium', 'hard'];
   private targetTemplatesPerCombination = 8; // Target: 8 templates per unique combination
 
   /**

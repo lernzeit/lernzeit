@@ -71,7 +71,7 @@ serve(async (req) => {
         quarter: randomQuarter,
         domain: randomDomain,
         count: 10,
-        difficulty: 'AFB I'
+        difficulty: 'easy'
       }
     });
 

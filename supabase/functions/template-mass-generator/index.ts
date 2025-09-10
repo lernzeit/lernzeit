@@ -46,7 +46,7 @@ const MATH_CURRICULUM: MathCurriculumItem[] = [
   { id: "G5-Q1-ZA-1", grade: 5, grade_app: 5, quarter_teach: "Q1", quarter_app: "Q2", domain: "Zahlen & Operationen", subcategory: "Negative Zahlen", skill: "Zahlengerade, Vergleiche, Addition/Subtraktion", tags: ["Rationale", "Negative"] }
 ];
 
-const DIFFICULTY_LEVELS = ["AFB I", "AFB II", "AFB III"];
+const DIFFICULTY_LEVELS = ["easy", "medium", "hard"];
 const QUESTION_TYPES = ["multiple-choice", "text-input"];
 
 serve(async (req) => {
@@ -251,8 +251,8 @@ function calculatePriority(grade: number, quarter: string, domain: string, diffi
   if (domain === "Größen & Messen") priority += 30;
   
   // Higher priority for basic difficulties
-  if (difficulty === "AFB I") priority += 30;
-  if (difficulty === "AFB II") priority += 20;
+  if (difficulty === "easy") priority += 30;
+  if (difficulty === "medium") priority += 20;
   
   // Higher priority for earlier quarters
   const quarterPriority = { "Q1": 40, "Q2": 30, "Q3": 20, "Q4": 10 };
@@ -326,9 +326,9 @@ Du bist ein Experte für deutsches Curriculum und mathematische Didaktik.
 ### 3. CURRICULUM-KONFORMITÄT
 - Exakt passend für deutsche Lehrpläne Klasse ${gap.grade}
 - Schwierigkeitsgrad ${gap.difficulty} einhalten:
-  - AFB I: Reproduktion, direkte Anwendung von Formeln
-  - AFB II: Zusammenhänge erkennen, Verfahren anwenden
-  - AFB III: Bewerten, Verallgemeinern, komplexe Probleme
+  - easy: Grundwissen abrufen, einfache Rechnungen und bekannte Verfahren anwenden
+  - medium: Gelerntes auf neue Situationen übertragen, Zusammenhänge erkennen und anwenden
+  - hard: Problemlösung und Transfer, unbekannte Situationen analysieren und kreative Lösungswege finden
 
 ### 4. ANTI-VISUAL DESIGN
 - KEINE Diagramme, Grafiken, Zeichnungen

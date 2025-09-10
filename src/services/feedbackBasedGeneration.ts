@@ -15,7 +15,7 @@ interface CurriculumGuidelines {
   grade: number;
   appropriateSkills: string[];
   inappropriateSkills: string[];
-  recommendedDifficulty: "AFB I" | "AFB II" | "AFB III";
+  recommendedDifficulty: "easy" | "medium" | "hard";
   numberRange?: string;
   operations?: string[];
   topics?: string[];
@@ -132,7 +132,7 @@ export class FeedbackBasedGenerationService {
           "Brüche",
           "Flächenberechnung"
         ],
-        recommendedDifficulty: "AFB I",
+        recommendedDifficulty: "easy",
         numberRange: "ZR_10",
         operations: ["Addition", "Subtraktion"],
         topics: ["Zählen", "Grundformen", "Längenvergleich"]
@@ -153,7 +153,7 @@ export class FeedbackBasedGenerationService {
           "Dezimalzahlen",
           "Negative Zahlen"
         ],
-        recommendedDifficulty: "AFB I",
+        recommendedDifficulty: "easy",
         numberRange: "ZR_100",
         operations: ["Addition", "Subtraktion", "Einmaleins"],
         topics: ["Halbschriftliche Verfahren", "Zeit", "Geld"]
@@ -174,7 +174,7 @@ export class FeedbackBasedGenerationService {
           "Lineare Gleichungen",
           "Prozentrechnung"
         ],
-        recommendedDifficulty: "AFB I",
+        recommendedDifficulty: "easy",
         numberRange: "ZR_1000",
         operations: ["Schriftliche Verfahren", "Division", "Brüche"],
         topics: ["Geometrie", "Zeitspannen"]
@@ -195,7 +195,7 @@ export class FeedbackBasedGenerationService {
           "Funktionen",
           "Prozentrechnung komplex"
         ],
-        recommendedDifficulty: "AFB II",
+        recommendedDifficulty: "medium",
         numberRange: "ZR_1000000",
         operations: ["Schriftliche Verfahren", "Brüche", "Dezimalzahlen"],
         topics: ["Einheiten", "Volumen", "Koordinaten"]
@@ -216,7 +216,7 @@ export class FeedbackBasedGenerationService {
           "Einfache Addition/Subtraktion",
           "Zählen bis 10"
         ],
-        recommendedDifficulty: "AFB II",
+        recommendedDifficulty: "medium",
         numberRange: "Rationale Zahlen",
         operations: ["Bruchrechnen", "Gleichungen", "Prozent"],
         topics: ["Negative Zahlen", "Terme", "Zuordnungen"]

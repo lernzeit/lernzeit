@@ -28,7 +28,7 @@ serve(async (req) => {
         quarter: "Q1",
         domain: "Zahlen & Operationen",
         count: 1,
-        difficulty: "AFB I"
+        difficulty: "easy"
       }
     });
 

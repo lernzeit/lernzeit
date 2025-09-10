@@ -111,7 +111,7 @@ function mapTemplateToInterface(template: any): any {
 }
 
 export function pickSessionTemplates(all: any[], opts: {
-  count: number; minDistinctDomains: number; difficulty?: "AFB I"|"AFB II"|"AFB III";
+  count: number; minDistinctDomains: number; difficulty?: "easy"|"medium"|"hard";
 }) {
   const { count, minDistinctDomains, difficulty } = opts;
   const pool = difficulty ? all.filter(t => t.difficulty === difficulty) : all.slice();

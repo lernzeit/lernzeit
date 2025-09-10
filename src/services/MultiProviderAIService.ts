@@ -19,7 +19,7 @@ export interface TemplateGenerationRequest {
   subcategory: string;
   grade: number;
   quarter: string;
-  difficulty: 'AFB I' | 'AFB II' | 'AFB III';
+  difficulty: 'easy' | 'medium' | 'hard';
   questionType: 'multiple-choice' | 'text-input' | 'sort' | 'match';
   count?: number;
 }

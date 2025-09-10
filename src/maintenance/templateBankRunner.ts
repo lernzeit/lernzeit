@@ -47,7 +47,7 @@ export async function topUpBank(grade: number, quarter: "Q1"|"Q2"|"Q3"|"Q4", gen
     if (!pool.length) continue;
 
     const bp = (blueprints as any[]).find(b => b.domain === domain) ?? (blueprints as any[])[0];
-    const user = buildUserPrompt({ blueprint: bp, difficulty:"AFB I", n: generatePerDomain, knowledge: pool.slice(0,5) });
+    const user = buildUserPrompt({ blueprint: bp, difficulty:"easy", n: generatePerDomain, knowledge: pool.slice(0,5) });
 
     // const json = await generateWithLLM("gemini", [{role:"system",content:SYSTEM_PROMPT},{role:"user",content:user}]);
     // const variants = JSON.parse(json);

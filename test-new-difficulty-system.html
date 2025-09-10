@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Test: easy/medium/hard System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { background-color: #e8f5e9; }
+        .error { background-color: #ffebee; }
+        .info { background-color: #e3f2fd; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .result { margin-top: 10px; padding: 10px; background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Test: easy/medium/hard System</h1>
+    
+    <div class="test-section info">
+        <h3>📋 System-Status Test</h3>
+        <button onclick="testDatabaseConstraints()">DB-Constraints prüfen</button>
+        <button onclick="testTemplateGeneration()">Template Generation testen</button>
+        <button onclick="testBatchGeneration()">Batch Generation testen</button>
+        <button onclick="runAllTests()">🚀 ALLE TESTS STARTEN</button>
+        <div id="systemStatus" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>✅ Tests durchführen</h3>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            console.log(`[${timestamp}] ${message}`);
+            
+            const testResults = document.getElementById('testResults');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            testResults.appendChild(div);
+            testResults.scrollTop = testResults.scrollHeight;
+        }
+
+        async function testDatabaseConstraints() {
+            log('🔍 Testing database constraints...', 'info');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/templates?select=difficulty&limit=5`, {
+                    headers: {
+                        'apikey': ANON_KEY,
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const templates = await response.json();
+                    const difficulties = [...new Set(templates.map(t => t.difficulty))];
+                    log(`✅ DB-Constraints OK! Difficulties found: ${difficulties.join(', ')}`, 'success');
+                    return true;
+                } else {
+                    log(`❌ DB-Constraint Error: ${response.status}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ DB-Constraint Test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testTemplateGeneration() {
+            log('🤖 Testing single template generation...', 'info');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        grade: 1,
+                        quarter: 'Q1',
+                        domain: 'Zahlen & Operationen',
+                        count: 1
+                    })
+                });
+
+                const result = await response.json();
+                if (result.generated > 0 && result.inserted > 0) {
+                    log(`✅ Single Generation SUCCESS! Generated: ${result.generated}, Inserted: ${result.inserted}`, 'success');
+                    return true;
+                } else {
+                    log(`⚠️ Single Generation: Generated ${result.generated}, Inserted ${result.inserted}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Single Generation failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testBatchGeneration() {
+            log('📦 Testing batch generation...', 'info');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/batch-question-generator`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        totalQuestions: 5,
+                        provider: 'gemini'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.summary && result.summary.totalInserted > 0) {
+                    log(`✅ Batch Generation SUCCESS! Generated: ${result.summary.totalGenerated}, Inserted: ${result.summary.totalInserted}`, 'success');
+                    return true;
+                } else {
+                    log(`⚠️ Batch Generation: Generated ${result.summary?.totalGenerated || 0}, Inserted ${result.summary?.totalInserted || 0}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Batch Generation failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function runAllTests() {
+            log('🚀 Starting comprehensive system test...', 'info');
+            
+            let allPassed = true;
+            
+            // Test 1: Database constraints
+            const dbTest = await testDatabaseConstraints();
+            allPassed = allPassed && dbTest;
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Test 2: Single generation
+            const singleTest = await testTemplateGeneration();
+            allPassed = allPassed && singleTest;
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Test 3: Batch generation
+            const batchTest = await testBatchGeneration();
+            allPassed = allPassed && batchTest;
+            
+            // Final result
+            if (allPassed) {
+                log('🎉 ALL TESTS PASSED! The easy/medium/hard system is working correctly!', 'success');
+                document.getElementById('systemStatus').innerHTML = '✅ System Status: FULLY OPERATIONAL';
+                document.getElementById('systemStatus').className = 'result success';
+            } else {
+                log('❌ Some tests failed. Check the logs above.', 'error');
+                document.getElementById('systemStatus').innerHTML = '⚠️ System Status: NEEDS ATTENTION';
+                document.getElementById('systemStatus').className = 'result error';
+            }
+        }
+
+        // Auto-run on page load
+        window.onload = () => {
+            log('🎯 easy/medium/hard System Tester ready!', 'info');
+            document.getElementById('systemStatus').innerHTML = '⏳ System Status: Ready for testing';
+        };
+    </script>
+</body>
+</html>

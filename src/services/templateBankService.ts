@@ -12,7 +12,7 @@ import { QuestionTemplate } from '@/utils/questionTemplates';
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
   minQualityThreshold: number;
-  preferredDifficulty?: "AFB I" | "AFB II" | "AFB III";
+  preferredDifficulty?: "easy" | "medium" | "hard";
   diversityWeight: number;
   fallbackToLegacy: boolean;
 }

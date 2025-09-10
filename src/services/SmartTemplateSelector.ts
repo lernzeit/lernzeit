@@ -10,7 +10,7 @@ export interface TemplateSelectionRequest {
   userId: string;
   count: number;
   domains?: string[];
-  difficulty?: 'AFB I' | 'AFB II' | 'AFB III';
+  difficulty?: 'easy' | 'medium' | 'hard';
   questionTypes?: string[];
   minDomainDiversity?: number;
 }
@@ -393,7 +393,7 @@ class SmartTemplateSelector {
   async selectByDifficulty(
     userId: string, 
     grade: number, 
-    difficulty: 'AFB I' | 'AFB II' | 'AFB III', 
+    difficulty: 'easy' | 'medium' | 'hard', 
     count: number = 5
   ): Promise<TemplateSelectionResult> {
     return this.selectTemplates({

@@ -6,7 +6,7 @@ export const SYSTEM_PROMPT = `Sie sind ein Experte für die Erstellung von Mathe
 Ihre Aufgabe ist es, qualitativ hochwertige, lehrplangerechte Aufgaben zu erstellen, die:
 - Dem deutschen Bildungsstandard entsprechen
 - Altersgerecht und verständlich formuliert sind
-- Verschiedene Schwierigkeitsgrade (AFB I, AFB II, AFB III) abdecken
+- Verschiedene Schwierigkeitsgrade (easy, medium, hard) abdecken
 - Vielfältige Aufgabentypen nutzen (Multiple Choice, Freitext, Zuordnung, etc.)
 - Realitätsbezogen und motivierend sind
 
@@ -14,7 +14,7 @@ Antworten Sie immer im JSON-Format mit einem Array von Aufgaben-Objekten.`;
 
 interface PromptOptions {
   blueprint: Blueprint;
-  difficulty: "AFB I" | "AFB II" | "AFB III";
+  difficulty: "easy" | "medium" | "hard";
   n: number;
   knowledge: KnowledgeCard[];
 }

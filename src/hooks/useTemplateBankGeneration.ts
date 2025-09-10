@@ -7,7 +7,7 @@ export type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
 interface TemplateBankGenerationOptions {
   enableQualityControl?: boolean;
   minQualityThreshold?: number;
-  preferredDifficulty?: "AFB I" | "AFB II" | "AFB III";
+  preferredDifficulty?: "easy" | "medium" | "hard";
   diversityWeight?: number;
   fallbackToLegacy?: boolean;
 }

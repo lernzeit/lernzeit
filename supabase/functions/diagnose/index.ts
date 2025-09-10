@@ -100,7 +100,7 @@ serve(async (req) => {
         quarter_app: "Q1",
         domain: "Test",
         subcategory: "Diagnosis",
-        difficulty: "AFB I",
+        difficulty: "easy",
         question_type: "freetext",
         student_prompt: "Test diagnosis question",
         variables: {},

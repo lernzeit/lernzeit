@@ -225,7 +225,7 @@ export class ParametrizedTemplateService {
         question_type: String(t.question_type || 'multiple-choice'),
         domain: String(t.domain || ''),
         subcategory: String(t.subcategory || ''),
-        difficulty: String(t.difficulty || 'AFB I'),
+        difficulty: String(t.difficulty || 'easy'),
         grade: Number(t.grade || 1),
         quarter_app: String(t.quarter_app || 'Q1'),
         is_parametrized: Boolean(t.is_parametrized),
