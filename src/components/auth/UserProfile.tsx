@@ -499,25 +499,26 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   }
 
   // Parent Dashboard
-  return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-primary-foreground" />
+  if (profile?.role === 'parent') {
+    return (
+      <div className="min-h-screen bg-gradient-bg p-4">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Header */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">
+                      Willkommen, {profile?.name || 'Nutzer'}!
+                    </CardTitle>
+                    <Badge variant="secondary">Elternteil</Badge>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-xl">
-                    Willkommen, {profile?.name || 'Nutzer'}!
-                  </CardTitle>
-                  <Badge variant="secondary">Elternteil</Badge>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -541,4 +542,27 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
       </div>
     </div>
   );
+  }
+
+  // Admin Dashboard
+  if (profile?.role === 'admin') {
+    const AdminDashboard = React.lazy(() => import('@/components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+    
+    return (
+      <React.Suspense fallback={
+        <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-card">
+            <CardContent className="p-8 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Admin Panel wird geladen...</p>
+            </CardContent>
+          </Card>
+        </div>
+      }>
+        <AdminDashboard />
+      </React.Suspense>
+    );
+  }
+
+  return null;
 }
