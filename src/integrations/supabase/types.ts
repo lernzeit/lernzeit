@@ -825,6 +825,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      set_user_admin: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
       trigger_auto_question_generation: {
         Args: Record<PropertyKey, never>
         Returns: Json
