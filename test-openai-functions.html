@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔥 OpenAI Functions Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-step { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .loading { background: #fef3c7; border-left: 4px solid #f59e0b; }
+        .success { background: #d1fae5; border-left: 4px solid #10b981; }
+        .error { background: #fee2e2; border-left: 4px solid #ef4444; }
+        .result { background: #f3f4f6; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        code { font-family: 'Courier New', monospace; background: #1f2937; color: #f9fafb; padding: 2px 4px; border-radius: 3px; }
+        pre { background: #1f2937; color: #f9fafb; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        button { background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <h1>🔥 OpenAI Functions Test</h1>
+    <button onclick="testGenerateQuestions()">Test Generate Questions</button>
+    <button onclick="testDebugGeneration()">Test Debug Generation</button>
+    <button onclick="testBatchGeneration()">Test Batch Generation</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        function addResult(title, content, type = 'result') {
+            const div = document.createElement('div');
+            div.className = `test-step ${type}`;
+            div.innerHTML = `<h3>${title}</h3><div class="result">${content}</div>`;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testGenerateQuestions() {
+            addResult('🚀 Testing Generate Questions', 'Sending request...', 'loading');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-questions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        grade: 1,
+                        quarter: 'Q1',
+                        domain: 'Zahlen & Operationen',
+                        count: 1
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ Generate Questions Success', 
+                        `<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                } else {
+                    addResult('❌ Generate Questions Error', 
+                        `Status: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Generate Questions Error', 
+                    `Network error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDebugGeneration() {
+            addResult('🔍 Testing Debug Generation', 'Sending request...', 'loading');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/debug-generation`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ Debug Generation Success', 
+                        `<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                } else {
+                    addResult('❌ Debug Generation Error', 
+                        `Status: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Debug Generation Error', 
+                    `Network error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBatchGeneration() {
+            addResult('📚 Testing Batch Generation', 'Sending request...', 'loading');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/controller`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ trigger: 'test' })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('✅ Batch Generation Success', 
+                        `<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+                } else {
+                    addResult('❌ Batch Generation Error', 
+                        `Status: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Batch Generation Error', 
+                    `Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-start comprehensive test
+        window.onload = function() {
+            addResult('🔄 Starting comprehensive test...', 'Testing all functions', 'loading');
+            setTimeout(() => {
+                testDebugGeneration();
+                setTimeout(() => testGenerateQuestions(), 2000);
+                setTimeout(() => testBatchGeneration(), 4000);
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
