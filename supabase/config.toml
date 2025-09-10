@@ -52,3 +52,6 @@ verify_jwt = false
 
 [functions.test-basic]
 verify_jwt = false
+
+[functions.template-mass-generator]
+verify_jwt = false
