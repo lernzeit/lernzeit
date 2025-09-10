@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🚀 Executing Mass Generation</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.1); 
+            padding: 30px; 
+            border-radius: 15px; 
+            backdrop-filter: blur(10px);
+        }
+        .log { 
+            background: rgba(0,0,0,0.3); 
+            color: #00ff41; 
+            padding: 20px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            max-height: 500px; 
+            overflow-y: auto; 
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin: 20px 0;
+        }
+        .result { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.1);
+        }
+        .success { background: rgba(40, 167, 69, 0.3); border-left: 5px solid #28a745; }
+        .error { background: rgba(220, 53, 69, 0.3); border-left: 5px solid #dc3545; }
+        .progress { 
+            background: rgba(255,255,255,0.2); 
+            height: 30px; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            margin: 20px 0;
+        }
+        .progress-fill { 
+            background: linear-gradient(90deg, #28a745, #20c997); 
+            height: 100%; 
+            transition: width 0.5s; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        button { 
+            padding: 15px 30px; 
+            margin: 10px; 
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 Template-Bank Mass Generation</h1>
+        <p>Automatische Erstellung von curriculum-konformen Math-Templates</p>
+        
+        <div class="progress">
+            <div class="progress-fill" id="progress" style="width: 0%">Initialisierung...</div>
+        </div>
+
+        <div class="log" id="log">
+🚀 Template Mass Generator wird gestartet...\n
+📊 Ziel: 6.000+ Templates für Klassen 1-10\n
+🎯 Priorität: Zahlen & Operationen, AFB I-III\n
+⚡ Batch-Size: 100 Templates pro Durchgang\n
+\n
+        </div>
+
+        <div id="results"></div>
+        
+        <button onclick="startBigGeneration()" id="startBtn">🚀 Start MEGA Generation (500 Templates)</button>
+        <button onclick="startSmallGeneration()" id="startSmallBtn">⚡ Start Test Generation (50 Templates)</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        let generationStartTime = null;
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logEl.innerHTML += `${prefix} [${timestamp}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateProgress(percent, text) {
+            const progressEl = document.getElementById('progress');
+            progressEl.style.width = `${percent}%`;
+            progressEl.textContent = text;
+        }
+
+        async function executeGeneration(targetCount) {
+            const startBtn = document.getElementById('startBtn');
+            const smallBtn = document.getElementById('startSmallBtn');
+            
+            startBtn.disabled = true;
+            smallBtn.disabled = true;
+            
+            generationStartTime = Date.now();
+            
+            try {
+                log(`🚀 Starting mass generation with target: ${targetCount} templates`, 'info');
+                updateProgress(10, 'Analysiere Curriculum-Lücken...');
+                
+                const request = {
+                    targetCount: targetCount,
+                    forceRegenerate: false
+                };
+                
+                log(`📊 Request parameters: ${JSON.stringify(request)}`, 'info');
+                updateProgress(20, 'Rufe AI Template Generator auf...');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/template-mass-generator`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                
+                updateProgress(50, 'Warte auf AI-Generierung...');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                updateProgress(90, 'Verarbeite Ergebnisse...');
+                
+                if (result.success) {
+                    const duration = ((Date.now() - generationStartTime) / 1000).toFixed(1);
+                    
+                    log(`✅ MASS GENERATION ERFOLGREICH!`, 'success');
+                    log(`📈 Generiert: ${result.totalGenerated} Templates`, 'success');
+                    log(`💾 Gespeichert: ${result.successCount} Templates`, 'success');
+                    log(`🎯 Success Rate: ${result.processingStats?.successRate || 'N/A'}`, 'success');
+                    log(`⏱️ Dauer: ${duration}s`, 'info');
+                    log(`🏆 Coverage-Verbesserung: +${result.coverageImprovement} Templates`, 'success');
+                    
+                    updateProgress(100, `✅ ${result.successCount} Templates erstellt!`);
+                    
+                    showResults(result, 'success');
+                    
+                    // Show detailed breakdown
+                    if (result.processingStats) {
+                        log(`📊 Lücken gefunden: ${result.processingStats.gapsFound}`, 'info');
+                        log(`🔄 Lücken bearbeitet: ${result.processingStats.gapsProcessed}`, 'info');
+                    }
+                    
+                } else {
+                    log(`❌ GENERATION FEHLGESCHLAGEN: ${result.error}`, 'error');
+                    updateProgress(0, '❌ Generation fehlgeschlagen');
+                    showResults(result, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ NETZWERK-FEHLER: ${error.message}`, 'error');
+                updateProgress(0, '❌ Verbindungsfehler');
+                showResults({ error: error.message }, 'error');
+            } finally {
+                startBtn.disabled = false;
+                smallBtn.disabled = false;
+            }
+        }
+
+        async function startBigGeneration() {
+            log('🚀 MEGA GENERATION GESTARTET - 500 Templates', 'info');
+            await executeGeneration(500);
+        }
+
+        async function startSmallGeneration() {
+            log('⚡ TEST GENERATION GESTARTET - 50 Templates', 'info');
+            await executeGeneration(50);
+        }
+
+        function showResults(result, type) {
+            const resultsDiv = document.getElementById('results');
+            const resultClass = type === 'success' ? 'success' : 'error';
+            
+            resultsDiv.innerHTML = `
+                <div class="result ${resultClass}">
+                    <h2>${type === 'success' ? '🎉 Generation Erfolgreich!' : '💥 Generation Fehlgeschlagen'}</h2>
+                    
+                    ${type === 'success' ? `
+                        <h3>📊 Statistiken:</h3>
+                        <ul>
+                            <li><strong>Templates generiert:</strong> ${result.totalGenerated || 0}</li>
+                            <li><strong>Erfolgreich gespeichert:</strong> ${result.successCount || 0}</li>
+                            <li><strong>Fehler:</strong> ${result.errorCount || 0}</li>
+                            <li><strong>Success Rate:</strong> ${result.processingStats?.successRate || 'N/A'}</li>
+                            <li><strong>Coverage-Verbesserung:</strong> +${result.coverageImprovement || 0} Templates</li>
+                        </ul>
+                        
+                        <h3>🎯 Verarbeitung:</h3>
+                        <ul>
+                            <li><strong>Angefordert:</strong> ${result.processingStats?.requestedCount || 0}</li>
+                            <li><strong>Lücken gefunden:</strong> ${result.processingStats?.gapsFound || 0}</li>
+                            <li><strong>Lücken bearbeitet:</strong> ${result.processingStats?.gapsProcessed || 0}</li>
+                        </ul>
+                        
+                        ${result.errors && result.errors.length > 0 ? `
+                            <h3>⚠️ Warnungen:</h3>
+                            <ul>
+                                ${result.errors.slice(0, 5).map(err => `<li>${err}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        
+                    ` : `
+                        <h3>❌ Fehler Details:</h3>
+                        <p><strong>Grund:</strong> ${result.error}</p>
+                    `}
+                    
+                    <details>
+                        <summary>🔍 Vollständige Antwort anzeigen</summary>
+                        <pre style="color: #00ff41; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 5px; overflow-x: auto;">${JSON.stringify(result, null, 2)}</pre>
+                    </details>
+                </div>
+            `;
+        }
+
+        // Auto-start small generation when page loads
+        window.addEventListener('load', () => {
+            log('🏦 Template Mass Generator bereit!', 'info');
+            log('💡 Empfehlung: Starte mit Test Generation (50 Templates)', 'warning');
+            
+            // Auto-start after 2 seconds
+            setTimeout(() => {
+                log('⚡ Auto-Starting Test Generation in 3 seconds...', 'warning');
+                setTimeout(() => {
+                    startSmallGeneration();
+                }, 3000);
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

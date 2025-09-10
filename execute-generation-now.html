@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🚀 LIVE Generation</title>
+    <script>
+        console.log('🚀 Starting Template Mass Generation NOW!');
+        
+        const SUPABASE_URL = 'https://fsmgynpdfxkaiiuguqyr.supabase.co';
+        const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q';
+
+        async function startGenerationNow() {
+            console.log('📊 Calling template-mass-generator...');
+            
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/template-mass-generator`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        targetCount: 100,
+                        grade: 1, // Start with Grade 1 for testing
+                        difficulty: "AFB I" // Start with basic level
+                    })
+                });
+                
+                console.log('📡 Response received:', response.status);
+                
+                const result = await response.json();
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                
+                console.log('🎯 Generation Result:', result);
+                console.log(`⏱️ Duration: ${duration}s`);
+                
+                if (result.success) {
+                    console.log(`✅ SUCCESS: Generated ${result.totalGenerated} templates!`);
+                    console.log(`💾 Saved: ${result.successCount} templates`);
+                    console.log(`🎯 Success Rate: ${result.processingStats?.successRate || 'N/A'}`);
+                    
+                    document.body.innerHTML = `
+                        <h1 style="color: green;">✅ GENERATION SUCCESSFUL!</h1>
+                        <p><strong>Generated:</strong> ${result.totalGenerated} templates</p>
+                        <p><strong>Saved:</strong> ${result.successCount} templates</p>
+                        <p><strong>Success Rate:</strong> ${result.processingStats?.successRate || 'N/A'}</p>
+                        <p><strong>Duration:</strong> ${duration}s</p>
+                        <p><strong>Coverage Improvement:</strong> +${result.coverageImprovement} templates</p>
+                        <details>
+                            <summary>Full Result</summary>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    console.error('❌ GENERATION FAILED:', result.error);
+                    
+                    document.body.innerHTML = `
+                        <h1 style="color: red;">❌ GENERATION FAILED</h1>
+                        <p><strong>Error:</strong> ${result.error}</p>
+                        <p><strong>Duration:</strong> ${duration}s</p>
+                        <details>
+                            <summary>Full Error</summary>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </details>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('💥 NETWORK ERROR:', error);
+                
+                document.body.innerHTML = `
+                    <h1 style="color: red;">💥 NETWORK ERROR</h1>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Check console for details</p>
+                `;
+            }
+        }
+
+        // Auto-start generation when page loads
+        window.addEventListener('load', () => {
+            document.body.innerHTML = `
+                <h1>🚀 Template Mass Generation</h1>
+                <p>⏳ Starting generation for Grade 1, AFB I templates...</p>
+                <p>📊 Target: 100 templates</p>
+                <div id="status">Initializing...</div>
+            `;
+            
+            startGenerationNow();
+        });
+    </script>
+</head>
+<body>
+    <h1>🚀 Initializing Template Generation...</h1>
+    <p>Loading...</p>
+</body>
+</html>
