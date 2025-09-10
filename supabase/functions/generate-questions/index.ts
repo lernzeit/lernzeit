@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0';
 
@@ -8,67 +7,49 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🎯 Starting question generation...');
+    console.log('🚀 GENERATE-QUESTIONS STARTING...');
     
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    console.log('ENV CHECK:', {
+      openai: !!openaiApiKey,
+      supabase_url: !!supabaseUrl,
+      service_key: !!supabaseServiceKey
+    });
+
     if (!openaiApiKey) {
-      console.error('❌ OpenAI API key not found');
-      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
+      console.error('❌ NO OPENAI KEY');
+      return new Response(JSON.stringify({ error: 'OpenAI API key missing' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Supabase credentials missing');
-      return new Response(JSON.stringify({ error: 'Supabase credentials not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Parse request body
     const body = await req.json();
-    const { grade = 1, quarter = 'Q1', domain = 'Zahlen & Operationen', count = 2, difficulty = 'medium' } = body;
+    const { grade = 1, quarter = 'Q1', domain = 'Zahlen & Operationen', count = 1 } = body;
 
-    console.log(`📚 Generating ${count} questions for Grade ${grade}, ${quarter}, ${domain}`);
+    console.log(`🎯 GENERATING ${count} questions for Grade ${grade}, ${quarter}, ${domain}`);
 
-    // Construct prompt for OpenAI
-    const prompt = `Du bist ein deutscher Grundschullehrer und erstellst mathematische Aufgaben.
+    const prompt = `Erstelle genau ${count} mathematische Aufgabe für Klasse ${grade}, Quartal ${quarter}, Bereich ${domain}.
 
-Erstelle genau ${count} verschiedene Aufgaben für:
-- Klassenstufe: ${grade}
-- Quartal: ${quarter} 
-- Bereich: ${domain}
-- Schwierigkeit: ${difficulty}
-
-Jede Aufgabe soll als JSON-Objekt formatiert sein mit:
-{
-  "student_prompt": "Die Aufgabenstellung für Schüler",
-  "solution": {"value": "Die korrekte Antwort"},
-  "explanation": "Kurze Erklärung der Lösung",
+Antworte nur mit diesem JSON Format:
+[{
+  "student_prompt": "Aufgabentext",
+  "solution": {"value": "42"},
+  "explanation": "Kurze Erklärung",
   "question_type": "FREETEXT",
-  "distractors": null,
-  "variables": {},
-  "tags": ["passende", "tags"]
-}
+  "tags": ["math"]
+}]`;
 
-Antworte NUR mit einem JSON-Array der Aufgaben, ohne zusätzlichen Text.`;
+    console.log('🤖 CALLING OPENAI API...');
 
-    console.log('🤖 Calling OpenAI API...');
-
-    // Call OpenAI API with modern model and parameters
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -76,127 +57,101 @@ Antworte NUR mit einem JSON-Array der Aufgaben, ohne zusätzlichen Text.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: 'Du bist ein Experte für deutsche Grundschulmathematik.' },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 2000,
-        temperature: 0.7,
+        model: 'gpt-4.1-2025-04-14',
+        messages: [{ role: 'user', content: prompt }],
+        max_completion_tokens: 1000
       }),
     });
 
+    console.log(`🔍 OPENAI RESPONSE STATUS: ${openaiResponse.status}`);
+
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error(`❌ OpenAI API error: ${openaiResponse.status} ${errorText}`);
-      console.error('❌ Request details:', {
-        model: 'gpt-4o',
-        prompt: prompt.substring(0, 200) + '...',
-        headers: 'Bearer ***'
-      });
+      console.error(`❌ OPENAI ERROR: ${openaiResponse.status} - ${errorText}`);
       return new Response(JSON.stringify({ 
-        error: 'OpenAI API request failed', 
+        error: 'OpenAI failed',
         status: openaiResponse.status,
-        details: errorText,
-        model: 'gpt-4o'
+        details: errorText
       }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     const openaiData = await openaiResponse.json();
-    const generatedContent = openaiData.choices[0]?.message?.content;
+    const content = openaiData.choices[0]?.message?.content;
+    console.log('✅ OPENAI CONTENT RECEIVED:', content?.substring(0, 100));
 
-    if (!generatedContent) {
-      console.error('❌ No content generated from OpenAI');
-      return new Response(JSON.stringify({ error: 'No content generated' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log('✅ OpenAI response received, parsing questions...');
-
-    // Parse the generated questions
     let questions;
     try {
-      questions = JSON.parse(generatedContent);
-      if (!Array.isArray(questions)) {
-        questions = [questions];
-      }
-    } catch (parseError) {
-      console.error('❌ Failed to parse OpenAI response:', parseError);
-      return new Response(JSON.stringify({ error: 'Failed to parse generated questions' }), {
+      questions = JSON.parse(content);
+      if (!Array.isArray(questions)) questions = [questions];
+    } catch (e) {
+      console.error('❌ PARSE ERROR:', e.message);
+      return new Response(JSON.stringify({ error: 'Parse failed' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`📝 Parsed ${questions.length} questions, inserting into database...`);
+    console.log(`📝 PARSED ${questions.length} QUESTIONS, INSERTING...`);
 
-    // Insert questions into database
-    const insertPromises = questions.map(async (question, index) => {
-      try {
-        const templateData = {
-          student_prompt: question.student_prompt || `Generated question ${index + 1}`,
-          solution: question.solution || { value: "1" },
-          explanation: question.explanation || "Automatisch generierte Erklärung",
-          question_type: question.question_type || 'FREETEXT',
-          distractors: question.distractors,
-          variables: question.variables || {},
-          tags: question.tags || [],
-          grade: parseInt(grade),
-          grade_app: parseInt(grade),
-          quarter_app: quarter,
-          domain: domain,
-          subcategory: 'Generated',
-          difficulty: difficulty,
-          status: 'ACTIVE'
-        };
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const insertResults = [];
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      
+      const templateData = {
+        student_prompt: question.student_prompt || `Generated question ${i + 1}`,
+        solution: question.solution || { value: "1" },
+        explanation: question.explanation || "Auto-generated",
+        question_type: question.question_type || 'FREETEXT',
+        variables: question.variables || {},
+        tags: question.tags || [],
+        grade: parseInt(grade),
+        grade_app: parseInt(grade),
+        quarter_app: quarter,
+        domain: domain,
+        subcategory: 'AI-Generated',
+        difficulty: 'medium',
+        status: 'ACTIVE'
+      };
 
-        const { data, error } = await supabase
-          .from('templates')
-          .insert(templateData)
-          .select();
+      const { data, error } = await supabase
+        .from('templates')
+        .insert(templateData)
+        .select();
 
-        if (error) {
-          console.error(`❌ Database insert error for question ${index + 1}:`, error);
-          return { success: false, error: error.message };
-        }
-
-        console.log(`✅ Question ${index + 1} inserted successfully`);
-        return { success: true, data };
-      } catch (err) {
-        console.error(`❌ Exception inserting question ${index + 1}:`, err);
-        return { success: false, error: err.message };
+      if (error) {
+        console.error(`❌ INSERT ERROR ${i}:`, error.message);
+        insertResults.push({ success: false, error: error.message });
+      } else {
+        console.log(`✅ INSERTED QUESTION ${i + 1}`);
+        insertResults.push({ success: true, data });
       }
-    });
+    }
 
-    const results = await Promise.all(insertPromises);
-    const successCount = results.filter(r => r.success).length;
-    const errorCount = results.filter(r => !r.success).length;
-
-    console.log(`📊 Insertion completed: ${successCount} successful, ${errorCount} failed`);
+    const successCount = insertResults.filter(r => r.success).length;
+    console.log(`🎯 COMPLETED: ${successCount}/${questions.length} successful`);
 
     return new Response(JSON.stringify({
       success: true,
       generated: questions.length,
       inserted: successCount,
-      errors: errorCount,
-      message: `Generated ${questions.length} questions, inserted ${successCount} successfully`
+      message: `Generated ${questions.length}, inserted ${successCount}`
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('❌ Generate questions error:', error);
+    console.error('❌ CRITICAL ERROR:', error.message);
     return new Response(JSON.stringify({ 
-      error: 'Function failed', 
-      details: error.message 
+      error: 'Function failed',
+      details: error.message
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
