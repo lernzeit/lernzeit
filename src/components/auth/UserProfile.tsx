@@ -51,53 +51,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     profile?.role === 'child' ? user?.id || '' : ''
   );
   
-  // Calculate earned time from sessions for today's display
-  const [todayEarnedMinutes, setTodayEarnedMinutes] = useState(0);
-  
-  useEffect(() => {
-    const loadTodayEarned = async () => {
-      if (!user?.id || profile?.role !== 'child') return;
-      
-      try {
-        // Get today's start and end
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-
-        // Load earned time from today's sessions
-        const [gameSessionsRes, learningSessionsRes] = await Promise.all([
-          supabase
-            .from('game_sessions')
-            .select('time_earned')
-            .eq('user_id', user.id)
-            .gte('session_date', startOfDay.toISOString())
-            .lt('session_date', endOfDay.toISOString()),
-          supabase
-            .from('learning_sessions')
-            .select('time_earned')
-            .eq('user_id', user.id)
-            .gte('session_date', startOfDay.toISOString())
-            .lt('session_date', endOfDay.toISOString())
-        ]);
-
-        let totalMinutesEarned = 0;
-
-        if (gameSessionsRes.data) {
-          totalMinutesEarned += gameSessionsRes.data.reduce((sum, session) => sum + session.time_earned, 0);
-        }
-
-        if (learningSessionsRes.data) {
-          totalMinutesEarned += learningSessionsRes.data.reduce((sum, session) => sum + session.time_earned, 0);
-        }
-
-        setTodayEarnedMinutes(totalMinutesEarned);
-      } catch (error) {
-        console.error('Error loading today\'s earned time:', error);
-      }
-    };
-    
-    loadTodayEarned();
-  }, [user?.id, profile?.role]);
+  // Use the earned time from the useScreenTimeLimit hook (no duplicate logic needed)
 
   // Use streak hook for children
   const { streak, loading: streakLoading } = useStreak(
@@ -394,7 +348,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                   <div className="text-center">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-blue-700">Heute verdient:</span>
-                      <span className="font-bold text-blue-800">{todayEarnedMinutes} Min.</span>
+                      <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-700">Noch verfügbar:</span>
