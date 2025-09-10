@@ -64,3 +64,6 @@ verify_jwt = false
 
 [functions.direct-template-generator]
 verify_jwt = false
+
+[functions.batch-question-generator]
+verify_jwt = false
