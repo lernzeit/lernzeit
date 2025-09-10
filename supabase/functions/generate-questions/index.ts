@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.0.0';
 
@@ -67,7 +68,7 @@ Antworte NUR mit einem JSON-Array der Aufgaben, ohne zusätzlichen Text.`;
 
     console.log('🤖 Calling OpenAI API...');
 
-    // Call OpenAI API
+    // Call OpenAI API with modern model and parameters
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -75,7 +76,7 @@ Antworte NUR mit einem JSON-Array der Aufgaben, ohne zusätzlichen Text.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: 'Du bist ein Experte für deutsche Grundschulmathematik.' },
           { role: 'user', content: prompt }
@@ -88,10 +89,16 @@ Antworte NUR mit einem JSON-Array der Aufgaben, ohne zusätzlichen Text.`;
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
       console.error(`❌ OpenAI API error: ${openaiResponse.status} ${errorText}`);
+      console.error('❌ Request details:', {
+        model: 'gpt-4o',
+        prompt: prompt.substring(0, 200) + '...',
+        headers: 'Bearer ***'
+      });
       return new Response(JSON.stringify({ 
         error: 'OpenAI API request failed', 
         status: openaiResponse.status,
-        details: errorText 
+        details: errorText,
+        model: 'gpt-4o'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
