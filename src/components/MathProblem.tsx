@@ -324,6 +324,8 @@ const generateUniqueProblems = (grade: number, count: number = 10): Problem[] =>
   return problems;
 };
 
+// DEPRECATED: Use MathProblemOptimized instead!
+// This component will be phased out in favor of pure AI-generated questions
 export function MathProblem({ grade, onBack, onComplete, userId }: MathProblemProps) {
   const { settings } = useChildSettings(userId || '');
   const { updateProgress } = useAchievements(userId, { suppressToast: true });

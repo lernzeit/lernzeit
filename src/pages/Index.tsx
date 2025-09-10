@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
 import { CategoryMathProblem as CategoryLearningProblem } from '@/components/CategoryMathProblem';
+import { MathProblemOptimized } from '@/components/MathProblemOptimized';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
 

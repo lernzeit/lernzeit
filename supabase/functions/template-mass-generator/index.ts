@@ -301,41 +301,62 @@ async function generateTemplatesForGap(gap: any, apiKey: string, count: number =
 
 function buildMathGenerationPrompt(gap: any): string {
   return `
-Erstelle ${5} verschiedene Mathematik-Aufgaben für das deutsche Schulsystem:
+# HOCHQUALITATIVE MATHEMATIK-AUFGABEN GENERATOR
+Du bist ein Experte für deutsches Curriculum und mathematische Didaktik.
 
-**Zielgruppe:** Klasse ${gap.grade}, ${gap.quarter}
-**Bereich:** ${gap.domain}
-**Schwierigkeit:** ${gap.difficulty}
+**AUFTRAG:** Erstelle ${5} perfekte Mathematik-Aufgaben
 
-**Anforderungen:**
-1. **Curriculum-Konform:** Genau passend für deutsche Lehrpläne Klasse ${gap.grade}
-2. **Anti-Visual:** KEINE Diagramme, Grafiken oder Bilder (außer bei Klasse 1 einfache Emojis: 🍎🍌)
-3. **Schwierigkeitsgrad ${gap.difficulty}:**
-   - AFB I: Reproduktion, einfache Anwendung
-   - AFB II: Zusammenhänge erkennen, Methoden anwenden
-   - AFB III: Verallgemeinern, Bewerten, komplexe Probleme
-4. **Deutsche Sprache:** Vollständig auf Deutsch
-5. **Präzise Lösungen:** Eindeutige, berechenbare Antworten
+**ZIELGRUPPE:** Klasse ${gap.grade}, ${gap.quarter}
+**BEREICH:** ${gap.domain}  
+**SCHWIERIGKEIT:** ${gap.difficulty}
 
-**Format pro Aufgabe:**
+## QUALITÄTSANFORDERUNGEN (KRITISCH!)
+
+### 1. MATHEMATISCHE PRÄZISION
+- ALLE Berechnungen müssen 100% korrekt sein
+- Lösungen müssen eindeutig und nachvollziehbar sein
+- Keine Rundungsfehler oder Ungenauigkeiten
+
+### 2. KINDGERECHTE ERKLÄRUNGEN
+- Erklärungen in einfacher, altersgerechter Sprache
+- Schritt-für-Schritt Aufbau ("Zuerst...", "Dann...", "Das Ergebnis ist...")
+- Positive, ermutigende Formulierung
+- Konkrete Beispiele für Klasse ${gap.grade}
+
+### 3. CURRICULUM-KONFORMITÄT
+- Exakt passend für deutsche Lehrpläne Klasse ${gap.grade}
+- Schwierigkeitsgrad ${gap.difficulty} einhalten:
+  - AFB I: Reproduktion, direkte Anwendung von Formeln
+  - AFB II: Zusammenhänge erkennen, Verfahren anwenden
+  - AFB III: Bewerten, Verallgemeinern, komplexe Probleme
+
+### 4. ANTI-VISUAL DESIGN
+- KEINE Diagramme, Grafiken, Zeichnungen
+- NUR bei Klasse 1: Einfache Emojis erlaubt (🍎🍌🎈)
+- Rein textbasierte Aufgaben
+
+## PRÄZISES JSON-FORMAT:
 \`\`\`json
 {
-  "student_prompt": "Die vollständige Aufgabenstellung auf Deutsch",
-  "solution": {"value": "Die exakte Lösung"},
-  "explanation": "Detaillierte Schritt-für-Schritt Erklärung",
-  "question_type": "multiple-choice" oder "text-input",
-  "distractors": ["Falsche Antwort 1", "Falsche Antwort 2", "Falsche Antwort 3"],
-  "tags": ["passende", "curriculum", "tags"],
-  "subcategory": "Spezifische Unterkategorie",
+  "student_prompt": "Vollständige, verständliche Aufgabe auf Deutsch",
+  "solution": {"value": "EXAKTE_LÖSUNG_ALS_STRING"},
+  "explanation": "Kindgerechte Schritt-für-Schritt Erklärung mit positiver Formulierung",
+  "question_type": "text-input",
+  "distractors": ["Plausible falsche Antwort 1", "Plausible falsche Antwort 2", "Plausible falsche Antwort 3"],
+  "tags": ["curriculum-tag1", "curriculum-tag2"],
+  "subcategory": "Genaue Unterkategorie",
   "variables": {}
 }
 \`\`\`
 
-**Domain-spezifische Anforderungen für "${gap.domain}":**
+## DOMAIN-EXPERTISE für "${gap.domain}":
 ${getDomainSpecificRequirements(gap.domain, gap.grade)}
 
-Erstelle jetzt ${5} vollständige, curriculum-konforme Aufgaben im JSON-Format:
-`;
+## BEISPIEL KINDGERECHTE ERKLÄRUNG:
+Statt: "Verwende die Formel A = l × b"
+Besser: "Um die Fläche zu berechnen, multiplizierst du die Länge mit der Breite. 6 × 4 = 24. Die Fläche ist 24 cm²."
+
+**ERSTELLE JETZT ${5} PERFEKTE AUFGABEN IM JSON-FORMAT:**`;
 }
 
 function getDomainSpecificRequirements(domain: string, grade: number): string {
@@ -388,18 +409,48 @@ function parseGeneratedTemplates(content: string, expectedCount: number): any[] 
         const jsonStr = block.replace(/```json\s*/, '').replace(/\s*```/, '');
         const parsed = JSON.parse(jsonStr);
         
-        // Validate required fields
+        // Enhanced validation with quality checks
         if (parsed.student_prompt && parsed.solution && parsed.explanation) {
+          // Quality validation
+          let qualityScore = 0.8;
+          const prompt = parsed.student_prompt.toLowerCase();
+          const explanation = parsed.explanation.toLowerCase();
+          
+          // Boost score for high-quality indicators
+          if (explanation.includes('schritt') || explanation.includes('zuerst') || explanation.includes('dann')) {
+            qualityScore += 0.1; // Step-by-step explanations
+          }
+          if (explanation.length > 50) {
+            qualityScore += 0.05; // Detailed explanations
+          }
+          if (!prompt.includes('zeichn') && !prompt.includes('mal') && !prompt.includes('konstruier')) {
+            qualityScore += 0.05; // Non-visual tasks
+          }
+          
+          // Ensure solution has proper format
+          let solution = parsed.solution;
+          if (typeof solution === 'string' || typeof solution === 'number') {
+            solution = { value: solution.toString() };
+          }
+          
           templates.push({
             student_prompt: parsed.student_prompt,
-            solution: parsed.solution,
+            solution: solution,
             explanation: parsed.explanation,
             question_type: parsed.question_type || 'text-input',
             distractors: parsed.distractors || [],
             tags: parsed.tags || [],
             subcategory: parsed.subcategory || '',
             variables: parsed.variables || {},
-            quality_score: 0.8 // High quality from AI generation
+            quality_score: Math.min(1.0, qualityScore) // Cap at 1.0
+          });
+          
+          console.log(`✅ Validated template with quality score: ${Math.min(1.0, qualityScore)}`);
+        } else {
+          console.warn('❌ Template validation failed:', { 
+            hasPrompt: !!parsed.student_prompt,
+            hasSolution: !!parsed.solution, 
+            hasExplanation: !!parsed.explanation 
           });
         }
       } catch (parseError) {
