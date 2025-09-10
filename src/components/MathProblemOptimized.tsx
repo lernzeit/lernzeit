@@ -29,29 +29,49 @@ interface MathProblemOptimizedProps {
   userId?: string;
 }
 
-// PHASE 3: Pure Template-Bank Integration (NO PARSER!)
-const convertTemplateToProblems = (templates: any[]): Problem[] => {
-  return templates.map((template, index) => {
-    // Extract answer directly from template solution (AI-generated, always correct!)
-    let answer = '';
-    if (template.solution && typeof template.solution === 'object' && template.solution.value) {
-      answer = template.solution.value.toString();
-    } else if (template.solution) {
-      answer = template.solution.toString();
-    }
+  // PHASE 1: Enhanced Template-to-Problems Conversion with Multiple Choice Fix
+  const convertTemplateToProblems = (templates: any[]): Problem[] => {
+    return templates.map((template, index) => {
+      // Extract answer directly from template solution
+      let answer = '';
+      if (template.solution && typeof template.solution === 'object' && template.solution.value) {
+        answer = template.solution.value.toString();
+      } else if (template.solution) {
+        answer = template.solution.toString();
+      }
 
-    return {
-      id: template.id || index + 1000,
-      question: template.student_prompt || template.question_text || 'Frage lädt...',
-      answer: answer,
-      explanation: template.explanation || 'Diese Aufgabe wurde von der KI erstellt und ist mathematisch korrekt.',
-      type: template.domain || 'Mathematik',
-      questionType: template.question_type === 'multiple-choice' ? 'multiple-choice' : 'text-input',
-      options: template.distractors || undefined,
-      correctAnswer: template.correct_answer || 0
-    };
-  });
-};
+      // PHASE 1 FIX: Proper Multiple Choice Options Handling
+      let options: string[] | undefined;
+      let correctAnswer: number | undefined;
+      let questionType: 'text-input' | 'multiple-choice' | 'word-selection' | 'matching' | 'drag-drop' = 'text-input';
+
+      if (template.question_type === 'multiple-choice' || template.variant === 'MULTIPLE_CHOICE') {
+        questionType = 'multiple-choice';
+        
+        // Create 4 options: 3 distractors + 1 correct answer
+        const distractors = template.distractors || [];
+        options = [...distractors, answer];
+        
+        // Shuffle options and find correct index
+        const shuffledOptions = [...options].sort(() => Math.random() - 0.5);
+        correctAnswer = shuffledOptions.indexOf(answer);
+        options = shuffledOptions;
+        
+        console.log(`🎯 Multiple Choice created: ${options.length} options, correct at index ${correctAnswer}`);
+      }
+
+      return {
+        id: template.id || index + 1000,
+        question: template.student_prompt || template.question_text || 'Frage lädt...',
+        answer: answer,
+        explanation: template.explanation || 'Diese Aufgabe wurde von der KI erstellt und ist mathematisch korrekt.',
+        type: template.domain || 'Mathematik',
+        questionType,
+        options,
+        correctAnswer
+      };
+    });
+  };
 
 export function MathProblemOptimized({ grade, onBack, onComplete, userId }: MathProblemOptimizedProps) {
   const { settings } = useChildSettings(userId || '');
@@ -196,63 +216,147 @@ export function MathProblemOptimized({ grade, onBack, onComplete, userId }: Math
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizedAnswer = userAnswer.replace(',', '.');
     
-    if (!normalizedAnswer.trim()) return;
-    
-    const questionTime = (Date.now() - questionStartTime) / 1000;
-    setTotalTimeSpent(prev => prev + questionTime);
-    setTotalQuestions(prev => prev + 1);
-    
-    // DIRECT AI ANSWER COMPARISON (no parser needed!)
-    const isCorrect = normalizedAnswer === currentProblem.answer || 
-                     normalizedAnswer.toLowerCase() === currentProblem.answer.toLowerCase() ||
-                     parseFloat(normalizedAnswer) === parseFloat(currentProblem.answer);
-    
-    if (isCorrect) {
-      setCorrectAnswers(prev => prev + 1);
-      setStreak(prev => prev + 1);
-      setFeedback('correct');
-      setWaitingForNext(true);
-      
-      // Use AI-generated explanation directly
-      if (currentProblem.explanation) {
-        setExplanation(currentProblem.explanation);
-        setShowExplanation(true);
+    if (currentProblem.questionType === 'multiple-choice') {
+      // PHASE 1 FIX: Handle Multiple Choice Submit
+      const selectedIndex = parseInt(userAnswer);
+      if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= (currentProblem.options?.length || 0)) {
+        return;
       }
       
-      if (userId) {
-        try {
-          const achievementResult = await updateProgress(
-            'math',
-            'questions_solved', 
-            1
-          );
-          
-          if (achievementResult && Array.isArray(achievementResult) && achievementResult.length > 0) {
-            setNewAchievements(achievementResult);
-          }
-        } catch (error) {
-          console.error('Achievement update failed:', error);
-        }
-      }
+      const questionTime = (Date.now() - questionStartTime) / 1000;
+      setTotalTimeSpent(prev => prev + questionTime);
+      setTotalQuestions(prev => prev + 1);
       
-      setTimeout(() => {
-        nextQuestion();
-      }, 2000);
+      const isCorrect = selectedIndex === currentProblem.correctAnswer;
+      console.log(`🎯 MC Answer: Selected ${selectedIndex}, Correct ${currentProblem.correctAnswer}, Result: ${isCorrect}`);
+      
+      if (isCorrect) {
+        handleCorrectAnswer();
+      } else {
+        handleIncorrectAnswer(`Die richtige Antwort ist: ${currentProblem.options?.[currentProblem.correctAnswer || 0]}`);
+      }
     } else {
-      setFeedback('incorrect');
-      setStreak(0);
-      setWaitingForNext(true);
+      // Handle text input questions
+      const normalizedAnswer = userAnswer.replace(',', '.');
       
-      // Show correct answer with AI explanation
-      setExplanation(`Die richtige Antwort ist: ${currentProblem.answer}. ${currentProblem.explanation}`);
-      setShowExplanation(true);
+      if (!normalizedAnswer.trim()) return;
       
-      setTimeout(() => {
-        nextQuestion();
-      }, 3000);
+      const questionTime = (Date.now() - questionStartTime) / 1000;
+      setTotalTimeSpent(prev => prev + questionTime);
+      setTotalQuestions(prev => prev + 1);
+      
+      // DIRECT AI ANSWER COMPARISON (no parser needed!)
+      const isCorrect = normalizedAnswer === currentProblem.answer || 
+                       normalizedAnswer.toLowerCase() === currentProblem.answer.toLowerCase() ||
+                       parseFloat(normalizedAnswer) === parseFloat(currentProblem.answer);
+      
+      if (isCorrect) {
+        handleCorrectAnswer();
+      } else {
+        handleIncorrectAnswer(`Die richtige Antwort ist: ${currentProblem.answer}`);
+      }
     }
+  };
+
+  const handleCorrectAnswer = async () => {
+    setCorrectAnswers(prev => prev + 1);
+    setStreak(prev => prev + 1);
+    setFeedback('correct');
+    setWaitingForNext(true);
+    
+    // Use AI-generated explanation directly
+    if (currentProblem.explanation) {
+      setExplanation(currentProblem.explanation);
+      setShowExplanation(true);
+    }
+    
+    if (userId) {
+      try {
+        const achievementResult = await updateProgress(
+          'math',
+          'questions_solved', 
+          1
+        );
+        
+        if (achievementResult && Array.isArray(achievementResult) && achievementResult.length > 0) {
+          setNewAchievements(achievementResult);
+        }
+      } catch (error) {
+        console.error('Achievement update failed:', error);
+      }
+    }
+    
+    setTimeout(() => {
+      nextQuestion();
+    }, 2000);
+  };
+
+  const handleIncorrectAnswer = (correctAnswerText: string) => {
+    setFeedback('incorrect');
+    setStreak(0);
+    setWaitingForNext(true);
+    
+    // Show correct answer with AI explanation
+    setExplanation(`${correctAnswerText}. ${currentProblem.explanation}`);
+    setShowExplanation(true);
+    
+    setTimeout(() => {
+      nextQuestion();
+    }, 3000);
+      if (isCorrect) {
+        handleCorrectAnswer();
+      } else {
+        handleIncorrectAnswer(`Die richtige Antwort ist: ${currentProblem.answer}`);
+      }
+    }
+  };
+
+  const handleCorrectAnswer = async () => {
+    setCorrectAnswers(prev => prev + 1);
+    setStreak(prev => prev + 1);
+    setFeedback('correct');
+    setWaitingForNext(true);
+    
+    // Use AI-generated explanation directly
+    if (currentProblem.explanation) {
+      setExplanation(currentProblem.explanation);
+      setShowExplanation(true);
+    }
+    
+    if (userId) {
+      try {
+        const achievementResult = await updateProgress(
+          'math',
+          'questions_solved', 
+          1
+        );
+        
+        if (achievementResult && Array.isArray(achievementResult) && achievementResult.length > 0) {
+          setNewAchievements(achievementResult);
+        }
+      } catch (error) {
+        console.error('Achievement update failed:', error);
+      }
+    }
+    
+    setTimeout(() => {
+      nextQuestion();
+    }, 2000);
+  };
+
+  const handleIncorrectAnswer = (correctAnswerText: string) => {
+    setFeedback('incorrect');
+    setStreak(0);
+    setWaitingForNext(true);
+    
+    // Show correct answer with AI explanation
+    setExplanation(`${correctAnswerText}. ${currentProblem.explanation}`);
+    setShowExplanation(true);
+    
+    setTimeout(() => {
+      nextQuestion();
+    }, 3000);
   };
 
   const nextQuestion = () => {
@@ -402,18 +506,40 @@ export function MathProblemOptimized({ grade, onBack, onComplete, userId }: Math
 
           {!waitingForNext ? (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                type="text"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Deine Antwort eingeben..."
-                className="text-center text-lg"
-                disabled={waitingForNext}
-                autoFocus
-              />
-              <Button type="submit" className="w-full" disabled={!userAnswer.trim()}>
-                Antwort prüfen
-              </Button>
+              {currentProblem.questionType === 'multiple-choice' && currentProblem.options ? (
+                <div className="space-y-2">
+                  {currentProblem.options.map((option, index) => (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant={userAnswer === index.toString() ? 'default' : 'outline'}
+                      className="w-full text-left justify-start p-4 h-auto"
+                      onClick={() => setUserAnswer(index.toString())}
+                    >
+                      <span className="font-semibold mr-3">{String.fromCharCode(65 + index)})</span>
+                      {option}
+                    </Button>
+                  ))}
+                  <Button type="submit" className="w-full mt-4" disabled={userAnswer === ''}>
+                    Antwort prüfen
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    type="text"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder="Deine Antwort eingeben..."
+                    className="text-center text-lg"
+                    disabled={waitingForNext}
+                    autoFocus
+                  />
+                  <Button type="submit" className="w-full" disabled={!userAnswer.trim()}>
+                    Antwort prüfen
+                  </Button>
+                </>
+              )}
             </form>
           ) : (
             <div className="text-center space-y-4">

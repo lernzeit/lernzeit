@@ -14,11 +14,17 @@ Erstelle genau **eine** Aufgabe im JSON‑Schema:
 }
 
 # GUIDELINES
-- Varianten → MULTIPLE_CHOICE: `data = { "options":[…4], "correct_idx":0‑3 }`  
+- Varianten → MULTIPLE_CHOICE: `data = { "options":[…4], "correct_idx":0‑3 }` (IMMER 4 Optionen!)
 - SORT: `data = { "items":[…3‑6], "correct_order":[…] }`  
 - MATCH: `data = { "left":[…], "right":[…], "pairs":[…] }`  
 - FREETEXT: `data = { "expected":"…", "grading":"exact" }`  
-- Schwierigkeit zur Klassenstufe passend (Bloom Level 2‑3).  
+- **SCHWIERIGKEIT**: Lehrplan-konform für {{grade}}. Klasse! KEINE zu einfachen Aufgaben!
+  - Klasse 1: ZR bis 20, Grundrechenarten, Formen
+  - Klasse 2: ZR bis 100, Einmaleins, Geld bis 100€
+  - Klasse 3: ZR bis 1000, Division mit Rest, Umfang/Fläche
+  - Klasse 4: ZR Millionen, schriftl. Verfahren, Dezimalzahlen
+  - Klasse 5+: Negative Zahlen, Brüche, Terme, Gleichungen
+- **MULTIPLE CHOICE**: Immer 4 plausible Optionen! Distraktoren müssen häufige Fehler sein.
 - Wenn need_image=true nur **eine** knappe Szenenbeschreibung in `body`.
 - **VISUELLE AUFGABEN**: Generell VERMEIDEN! Keine Zeichnungen, Bilder, Konstruktionen
 - **AUSNAHME Klasse 1 Q1**: Einfache Emoji-Zählaufgaben erlaubt (z.B. "🍏🍎🍏🍎 = ?")

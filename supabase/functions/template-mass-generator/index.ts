@@ -50,13 +50,21 @@ const FULL_CURRICULUM = [
 
 const DIFFICULTY_LEVELS = ["easy", "medium", "hard"];
 
+// PHASE 2: Enhanced Method Diversity Distribution
+const VARIANT_DISTRIBUTION = {
+  'MULTIPLE_CHOICE': 0.40,
+  'SORT': 0.20,
+  'MATCH': 0.20,
+  'FREETEXT': 0.20
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('🚀 Enhanced Template Mass Generator - Curriculum-Compliant');
+    console.log('🚀 Enhanced Template Mass Generator - Curriculum-Compliant with Method Diversity');
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -89,15 +97,15 @@ serve(async (req) => {
     // Phase 1: Intelligente Coverage-Gap-Analyse
     const { data: existingTemplates } = await supabase
       .from('templates')
-      .select('grade, grade_app, quarter_app, domain, difficulty, subcategory, source_skill_id')
+      .select('grade, grade_app, quarter_app, domain, difficulty, subcategory, source_skill_id, variant, question_type')
       .eq('status', 'ACTIVE');
 
     console.log(`📈 Existing Templates: ${existingTemplates?.length || 0}`);
 
-    // Phase 2: Curriculum-integrierte Lücken-Identifikation
+    // Phase 2: ENHANCED - Lücken-Identifikation mit Methodenvielfalt-Garantie
     const gaps = identifyEnhancedCoverageGaps(
       existingTemplates || [], 
-      grade, 
+      grade,
       quarter, 
       domain, 
       difficulty,
@@ -106,7 +114,7 @@ serve(async (req) => {
     );
     console.log(`🎯 Coverage Gaps Identified: ${gaps.length}`);
 
-    // Phase 3: Systematische Template-Generierung
+    // Phase 3: Systematische Template-Generierung mit Methodenvielfalt
     const results = {
       totalGenerated: 0,
       successCount: 0,
@@ -114,7 +122,13 @@ serve(async (req) => {
       errors: [] as string[],
       generatedTemplates: [] as any[],
       coverageImprovement: 0,
-      curriculumAlignment: 0
+      curriculumAlignment: 0,
+      methodDiversity: {
+        MULTIPLE_CHOICE: 0,
+        SORT: 0,
+        MATCH: 0,
+        FREETEXT: 0
+      }
     };
 
     const targetGaps = gaps.slice(0, Math.min(targetCount, gaps.length));
@@ -129,7 +143,8 @@ serve(async (req) => {
           skill: gap.skill
         });
         
-        const templates = await generateCurriculumCompliantTemplates(
+        // PHASE 2: Generate with guaranteed method diversity
+        const templates = await generateCurriculumCompliantTemplatesWithDiversity(
           gap, 
           openaiApiKey, 
           Math.min(8, gap.needed) // Max 8 pro Gap
@@ -162,6 +177,13 @@ serve(async (req) => {
           } else {
             results.successCount++;
             results.generatedTemplates.push(template);
+            
+            // Track method diversity
+            const variant = template.variant || template.question_type || 'FREETEXT';
+            if (results.methodDiversity[variant as keyof typeof results.methodDiversity] !== undefined) {
+              results.methodDiversity[variant as keyof typeof results.methodDiversity]++;
+            }
+            
             console.log('✅ Curriculum-compliant template saved');
           }
         }
@@ -188,250 +210,266 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Generated ${results.totalGenerated} curriculum-compliant templates, ${results.successCount} saved`,
+      message: `Generated ${results.totalGenerated} curriculum-compliant templates with method diversity, ${results.successCount} saved`,
       ...results,
       processingStats: {
         requestedCount: targetCount,
         gapsFound: gaps.length,
         gapsProcessed: targetGaps.length,
         successRate: `${Math.round((results.successCount / results.totalGenerated) * 100)}%`,
-        curriculumMode: curriculumMode
+        curriculumMode: curriculumMode,
+        methodDistribution: results.methodDiversity
       }
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('❌ Enhanced Mass Generator Error:', error);
-    return new Response(JSON.stringify({ 
+    console.error('❌ Enhanced Template Mass Generator Error:', error);
+    return new Response(JSON.stringify({
       success: false,
       error: error.message,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
 
+// PHASE 2: Enhanced Gap Identification with Method Diversity
 function identifyEnhancedCoverageGaps(
-  existing: any[], 
-  targetGrade?: number, 
-  targetQuarter?: string, 
+  existingTemplates: any[], 
+  targetGrade?: number,
+  targetQuarter?: string,
   targetDomain?: string,
   targetDifficulty?: string,
-  curriculumMode?: boolean,
+  curriculumMode: boolean = false,
   targetSkillId?: string
-) {
-  const gaps = [];
+): any[] {
+  const gaps: any[] = [];
+  const MIN_TEMPLATES_PER_COMBINATION = 15; // Erhöht für bessere Abdeckung
+  const MIN_PER_VARIANT = 3; // Mindestens 3 pro Methodentyp
   
-  if (curriculumMode && targetSkillId) {
-    // Spezifische Skill-basierte Lücken-Analyse
-    const curriculumItem = FULL_CURRICULUM.find(item => item.id === targetSkillId);
-    if (curriculumItem) {
-      const difficulties = targetDifficulty ? [targetDifficulty] : DIFFICULTY_LEVELS;
-      
-      for (const difficulty of difficulties) {
-        const existingCount = existing.filter(t => 
-          t.grade_app === curriculumItem.grade_app &&
-          t.quarter_app === curriculumItem.quarter_app &&
-          t.domain === curriculumItem.domain &&
-          t.difficulty === difficulty &&
-          (t.source_skill_id === curriculumItem.id || t.subcategory === curriculumItem.subcategory)
-        ).length;
+  // Define targets based on parameters
+  const targetGrades = targetGrade ? [targetGrade] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const targetQuarters = targetQuarter ? [targetQuarter] : ['Q1', 'Q2', 'Q3', 'Q4'];
+  const targetDomains = targetDomain ? [targetDomain] : 
+    ['Zahlen & Operationen', 'Raum & Form', 'Größen & Messen', 'Daten & Zufall', 'Gleichungen & Funktionen'];
+  const targetDifficulties = targetDifficulty ? [targetDifficulty] : DIFFICULTY_LEVELS;
+  
+  // Get relevant curriculum items
+  const relevantCurriculum = FULL_CURRICULUM.filter(item => 
+    targetGrades.includes(item.grade) &&
+    (!targetDomain || item.domain === targetDomain) &&
+    (!targetSkillId || item.id === targetSkillId)
+  );
+
+  console.log(`📚 Relevant Curriculum Items: ${relevantCurriculum.length}`);
+
+  for (const curriculumItem of relevantCurriculum) {
+    for (const difficulty of targetDifficulties) {
+      // Count existing templates for this combination
+      const existing = existingTemplates.filter(t =>
+        t.grade === curriculumItem.grade_app &&
+        t.quarter_app === curriculumItem.quarter_app &&
+        t.domain === curriculumItem.domain &&
+        t.difficulty === difficulty &&
+        (!targetSkillId || t.source_skill_id === curriculumItem.id)
+      );
+
+      // PHASE 2: Check method diversity within this combination
+      const variantCounts = {
+        MULTIPLE_CHOICE: existing.filter(t => t.variant === 'MULTIPLE_CHOICE' || t.question_type === 'multiple-choice').length,
+        SORT: existing.filter(t => t.variant === 'SORT' || t.question_type === 'sort').length,
+        MATCH: existing.filter(t => t.variant === 'MATCH' || t.question_type === 'matching').length,
+        FREETEXT: existing.filter(t => t.variant === 'FREETEXT' || t.question_type === 'freetext').length
+      };
+
+      const totalExisting = existing.length;
+      const totalNeeded = Math.max(MIN_TEMPLATES_PER_COMBINATION - totalExisting, 0);
+
+      // Calculate method-specific needs
+      const methodNeeds = {
+        MULTIPLE_CHOICE: Math.max(MIN_PER_VARIANT - variantCounts.MULTIPLE_CHOICE, 0),
+        SORT: Math.max(MIN_PER_VARIANT - variantCounts.SORT, 0),
+        MATCH: Math.max(MIN_PER_VARIANT - variantCounts.MATCH, 0),
+        FREETEXT: Math.max(MIN_PER_VARIANT - variantCounts.FREETEXT, 0)
+      };
+
+      const totalMethodNeeds = Object.values(methodNeeds).reduce((a, b) => a + b, 0);
+
+      if (totalNeeded > 0 || totalMethodNeeds > 0) {
+        const priority = calculatePriority(totalExisting, totalNeeded, curriculumItem.grade, difficulty);
         
-        const targetMinimum = 15;
-        if (existingCount < targetMinimum) {
-          gaps.push({
-            grade: curriculumItem.grade_app,
-            quarter: curriculumItem.quarter_app,
-            domain: curriculumItem.domain,
-            difficulty: difficulty,
-            skillId: curriculumItem.id,
-            skill: curriculumItem.skill,
-            subcategory: curriculumItem.subcategory,
-            tags: curriculumItem.tags,
-            existing: existingCount,
-            needed: targetMinimum - existingCount,
-            priority: calculateEnhancedPriority(curriculumItem, difficulty, existingCount),
-            curriculumData: curriculumItem
-          });
-        }
+        gaps.push({
+          grade: curriculumItem.grade_app,
+          quarter: curriculumItem.quarter_app,
+          domain: curriculumItem.domain,
+          difficulty: difficulty,
+          skillId: curriculumItem.id,
+          skill: curriculumItem.skill,
+          subcategory: curriculumItem.subcategory,
+          existing: totalExisting,
+          needed: Math.max(totalNeeded, totalMethodNeeds),
+          priority: priority,
+          curriculumData: curriculumItem,
+          methodNeeds: methodNeeds,
+          variantCounts: variantCounts
+        });
+      }
+    }
+  }
+
+  // Sort by priority (highest first)
+  gaps.sort((a, b) => b.priority - a.priority);
+  
+  console.log(`🎯 Top 5 Priority Gaps:`, gaps.slice(0, 5).map(g => ({
+    grade: g.grade,
+    domain: g.domain,
+    difficulty: g.difficulty,
+    existing: g.existing,
+    needed: g.needed,
+    priority: g.priority,
+    methodNeeds: g.methodNeeds
+  })));
+
+  return gaps;
+}
+
+function calculatePriority(existing: number, needed: number, grade: number, difficulty: string): number {
+  let priority = needed * 10; // Base priority on need
+  
+  // Boost priority for underrepresented grades
+  if (grade <= 4) priority += 15; // Primary school boost
+  if (grade >= 9) priority += 10; // High school boost
+  
+  // Boost priority for harder difficulties (often underrepresented)
+  if (difficulty === 'hard') priority += 20;
+  if (difficulty === 'medium') priority += 10;
+  
+  // Penalize if we already have many
+  if (existing > 20) priority -= existing;
+  
+  return Math.max(0, priority);
+}
+
+// PHASE 2: Generate templates with guaranteed method diversity
+async function generateCurriculumCompliantTemplatesWithDiversity(
+  gap: any,
+  openaiApiKey: string,
+  batchSize: number = 8
+): Promise<any[]> {
+  const templates: any[] = [];
+  const variants = Object.keys(VARIANT_DISTRIBUTION);
+  
+  // Distribute batch across all variants based on needs
+  const variantAllocation: Record<string, number> = {};
+  const totalMethodNeeds = Object.values(gap.methodNeeds || {}).reduce((a: number, b: number) => a + b, 0);
+  
+  if (totalMethodNeeds > 0) {
+    // Allocate based on specific needs
+    for (const [variant, need] of Object.entries(gap.methodNeeds || {})) {
+      if (need > 0) {
+        variantAllocation[variant] = Math.min(need, Math.ceil(batchSize * 0.25));
       }
     }
   } else {
-    // Vollständige systematische Analyse
-    const grades = targetGrade ? [targetGrade] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const quarters = targetQuarter ? [targetQuarter] : ["Q1", "Q2", "Q3", "Q4"];
-    const domains = targetDomain ? [targetDomain] : [
-      "Zahlen & Operationen",
-      "Größen & Messen", 
-      "Raum & Form",
-      "Daten & Zufall",
-      "Gleichungen & Funktionen"
-    ];
-    const difficulties = targetDifficulty ? [targetDifficulty] : DIFFICULTY_LEVELS;
+    // Default distribution
+    variantAllocation['MULTIPLE_CHOICE'] = Math.ceil(batchSize * 0.40);
+    variantAllocation['SORT'] = Math.ceil(batchSize * 0.20);
+    variantAllocation['MATCH'] = Math.ceil(batchSize * 0.20);
+    variantAllocation['FREETEXT'] = Math.ceil(batchSize * 0.20);
+  }
 
-    for (const grade of grades) {
-      for (const quarter of quarters) {
-        for (const domain of domains) {
-          for (const difficulty of difficulties) {
-            // Curriculum-Items für diese Kombination finden
-            const relevantCurriculumItems = FULL_CURRICULUM.filter(item =>
-              item.grade_app === grade &&
-              item.quarter_app === quarter &&
-              item.domain === domain
-            );
+  console.log(`🎲 Variant Allocation:`, variantAllocation);
 
-            if (relevantCurriculumItems.length > 0) {
-              // Für jeden Curriculum-Item prüfen
-              for (const curriculumItem of relevantCurriculumItems) {
-                const existingCount = existing.filter(t => 
-                  t.grade_app === grade &&
-                  t.quarter_app === quarter &&
-                  t.domain === domain &&
-                  t.difficulty === difficulty &&
-                  (t.source_skill_id === curriculumItem.id || t.subcategory === curriculumItem.subcategory)
-                ).length;
-                
-                const targetMinimum = 12;
-                if (existingCount < targetMinimum) {
-                  gaps.push({
-                    grade,
-                    quarter,
-                    domain,
-                    difficulty,
-                    skillId: curriculumItem.id,
-                    skill: curriculumItem.skill,
-                    subcategory: curriculumItem.subcategory,
-                    tags: curriculumItem.tags,
-                    existing: existingCount,
-                    needed: targetMinimum - existingCount,
-                    priority: calculateEnhancedPriority(curriculumItem, difficulty, existingCount),
-                    curriculumData: curriculumItem
-                  });
-                }
-              }
-            } else {
-              // Fallback für Domänen ohne spezifische Curriculum-Items
-              const existingCount = existing.filter(t => 
-                t.grade_app === grade &&
-                t.quarter_app === quarter &&
-                t.domain === domain &&
-                t.difficulty === difficulty
-              ).length;
-              
-              const targetMinimum = 8; // Niedrigere Mindestanzahl für unspezifische Bereiche
-              if (existingCount < targetMinimum) {
-                gaps.push({
-                  grade,
-                  quarter,
-                  domain,
-                  difficulty,
-                  skillId: null,
-                  skill: `Allgemeine ${domain} Kompetenzen`,
-                  subcategory: 'Allgemein',
-                  tags: [],
-                  existing: existingCount,
-                  needed: targetMinimum - existingCount,
-                  priority: calculateBasicPriority(grade, quarter, domain, difficulty, existingCount),
-                  curriculumData: null
-                });
-              }
-            }
+  for (const [variant, count] of Object.entries(variantAllocation)) {
+    if (count > 0) {
+      for (let i = 0; i < count; i++) {
+        try {
+          const template = await generateSingleTemplate(gap, variant, openaiApiKey);
+          if (template) {
+            templates.push(template);
+            console.log(`✅ Generated ${variant} template for Grade ${gap.grade}`);
           }
+        } catch (error) {
+          console.error(`❌ Failed to generate ${variant} template:`, error);
         }
       }
     }
   }
-  
-  return gaps.sort((a, b) => b.priority - a.priority);
+
+  return templates;
 }
 
-function calculateEnhancedPriority(curriculumItem: any, difficulty: string, existingCount: number): number {
-  let priority = 120; // Höhere Basis-Priorität für Curriculum-Items
-
-  // Klassenstufe-Gewichtung
-  priority += (11 - curriculumItem.grade_app) * 12;
+async function generateSingleTemplate(gap: any, variant: string, openaiApiKey: string): Promise<any | null> {
+  const curriculumData = gap.curriculumData || {};
+  const skill = gap.skill || curriculumData.skill || 'Mathematische Grundfertigkeiten';
   
-  // Domain-spezifische Prioritäten
-  const domainPriorities = {
-    "Zahlen & Operationen": 70,
-    "Gleichungen & Funktionen": 60,
-    "Größen & Messen": 45,
-    "Raum & Form": 40,
-    "Daten & Zufall": 30
-  };
-  priority += domainPriorities[curriculumItem.domain] || 25;
+  // PHASE 3: Curriculum-enhanced prompts
+  const enhancedPrompt = `Du bist Experte für deutschen Mathematikunterricht und erstellst eine ${variant}-Aufgabe.
 
-  // Schwierigkeitsgrad (ausgewogene Verteilung)
-  const difficultyPriorities = { "easy": 45, "medium": 40, "hard": 30 };
-  priority += difficultyPriorities[difficulty] || 0;
+CURRICULUM-KONTEXT:
+- Klasse: ${gap.grade}
+- Quartal: ${gap.quarter} 
+- Domain: ${gap.domain}
+- Kompetenz: ${skill}
+- Schwierigkeit: ${gap.difficulty}
 
-  // Quartal-Priorität
-  const quarterPriorities = { "Q1": 60, "Q2": 50, "Q3": 40, "Q4": 35 };
-  priority += quarterPriorities[curriculumItem.quarter_app] || 0;
-
-  // Kritische Lücken
-  if (existingCount === 0) priority += 150;
-  else if (existingCount < 3) priority += 80;
-  else if (existingCount < 6) priority += 40;
-
-  // Skill-Wichtigkeit
-  const skillText = curriculumItem.skill?.toLowerCase() || '';
-  if (skillText.includes('grundlagen') || skillText.includes('einführung')) priority += 40;
-  if (skillText.includes('zählen') || skillText.includes('rechnen')) priority += 35;
-  if (skillText.includes('verstehen') || skillText.includes('erkennen')) priority += 25;
-
-  // Tag-basierte Prioritäten
-  if (curriculumItem.tags?.includes('ZR_10') || curriculumItem.tags?.includes('ZR_20')) priority += 30;
-  if (curriculumItem.tags?.includes('Addition') || curriculumItem.tags?.includes('Subtraktion')) priority += 25;
-
-  return Math.round(priority);
+ANFORDERUNGEN:
+${variant === 'MULTIPLE_CHOICE' ? 
+  '- IMMER 4 Antwortoptionen (3 falsche + 1 richtige)\n- Falsche Optionen = häufige Schülerfehler\n- Richtige Antwort randomisiert in der Liste' :
+  variant === 'SORT' ?
+  '- 4-6 Elemente zum Sortieren\n- Eindeutige richtige Reihenfolge\n- Logische Zusammenhänge' :
+  variant === 'MATCH' ?
+  '- 4-6 Paare zum Zuordnen\n- Links/Rechts-Spalten\n- Eindeutige Zuordnungen' :
+  '- Numerische oder kurze Textantwort\n- Exakte Lösung erforderlich'
 }
 
-function calculateBasicPriority(grade: number, quarter: string, domain: string, difficulty: string, existing: number): number {
-  let priority = 80; // Niedrigere Basis-Priorität für unspezifische Items
-  
-  priority += (11 - grade) * 8;
-  
-  const domainPriorities = {
-    "Zahlen & Operationen": 50, "Größen & Messen": 30, "Raum & Form": 25,
-    "Daten & Zufall": 20, "Gleichungen & Funktionen": 40
-  };
-  priority += domainPriorities[domain] || 15;
-  
-  const difficultyPriorities = { "easy": 30, "medium": 25, "hard": 20 };
-  priority += difficultyPriorities[difficulty] || 0;
-  
-  const quarterPriorities = { "Q1": 40, "Q2": 30, "Q3": 25, "Q4": 20 };
-  priority += quarterPriorities[quarter as keyof typeof quarterPriorities] || 0;
-  
-  if (existing === 0) priority += 100;
-  
-  return Math.round(priority);
+LEHRPLAN-LEVEL für Klasse ${gap.grade}:
+${gap.grade <= 2 ? '- Zahlenraum bis 100, Grundrechenarten, einfache Geometrie' :
+  gap.grade <= 4 ? '- Zahlenraum bis Million, schriftliche Verfahren, Brüche, Dezimalzahlen' :
+  gap.grade <= 6 ? '- Negative Zahlen, Bruchrechnung, Gleichungen, Prozent' :
+  gap.grade <= 8 ? '- Terme, lineare Funktionen, Geometrie, Wahrscheinlichkeit' :
+  '- Quadratische Funktionen, Trigonometrie, Stochastik, Analysis'
 }
 
-async function generateCurriculumCompliantTemplates(gap: any, apiKey: string, count: number = 5) {
-  const prompt = buildEnhancedCurriculumPrompt(gap);
-  
+Erstelle JSON:
+{
+  "student_prompt": "Aufgabentext...",
+  "variant": "${variant}",
+  "question_type": "${variant.toLowerCase().replace('_', '-')}",
+  ${variant === 'MULTIPLE_CHOICE' ? 
+    '"distractors": ["Falsch1", "Falsch2", "Falsch3"],\n  "solution": {"value": "RichtigeAntwort"},' :
+    '"solution": {"value": "Antwort"},'
+  }
+  "explanation": "Schülergerechte Erklärung...",
+  "subcategory": "${gap.subcategory || 'Allgemein'}",
+  "tags": ${JSON.stringify(curriculumData.tags || [gap.domain])}
+}`;
+
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-2025-04-14',
         messages: [
-          { 
-            role: 'system', 
-            content: 'Du bist ein Experte für deutsches Mathematik-Curriculum und erstellst perfekte, lehrplangerechte Aufgaben für deutsche Schulen.' 
+          {
+            role: 'system',
+            content: 'Du bist Experte für deutsche Mathematik-Lehrpläne und erstellst altersgerechte, curriculum-konforme Aufgaben. Antworte nur mit validem JSON.'
           },
-          { role: 'user', content: prompt }
+          {
+            role: 'user',
+            content: enhancedPrompt
+          }
         ],
-        max_completion_tokens: 5000,
+        max_tokens: 800,
+        temperature: 0.7
       }),
     });
 
@@ -440,267 +478,33 @@ async function generateCurriculumCompliantTemplates(gap: any, apiKey: string, co
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices[0]?.message?.content?.trim();
     
-    return parseEnhancedTemplates(content, count);
-    
-  } catch (error) {
-    console.error('❌ Enhanced AI generation error:', error);
-    throw error;
-  }
-}
-
-function buildEnhancedCurriculumPrompt(gap: any): string {
-  return `
-# DEUTSCHES MATHEMATIK-CURRICULUM: PRÄZISE AUFGABEN-ERSTELLUNG
-
-Du bist Experte für **deutsches Mathematik-Curriculum** und erstellst Aufgaben nach **deutschen Bildungsstandards**.
-
-## ZIELSPEZIFIKATION
-**Klassenstufe:** ${gap.grade}
-**Schuljahr-Quartal:** ${gap.quarter}  
-**Fachbereich:** ${gap.domain}
-**Schwierigkeitsgrad:** ${gap.difficulty}
-**Spezifische Kompetenz:** ${gap.skill}
-**Unterkategorie:** ${gap.subcategory}
-${gap.tags ? `**Curriculum-Tags:** ${gap.tags.join(', ')}` : ''}
-
-## LEHRPLAN-KONFORMITÄT (KRITISCH!)
-
-### Klassenstufe ${gap.grade} - ${gap.quarter} Requirements:
-${getDomainCurriculumRequirements(gap.domain, gap.grade, gap.quarter)}
-
-### Schwierigkeitsgrad "${gap.difficulty}" Definition:
-${getDifficultyDefinition(gap.difficulty, gap.grade)}
-
-### Spezifische Kompetenz-Anforderungen:
-**Skill:** ${gap.skill}
-- Diese Kompetenz MUSS im Mittelpunkt jeder Aufgabe stehen
-- Aufgaben müssen diese spezifische Fähigkeit gezielt trainieren
-- Realitätsbezug für Klasse ${gap.grade} herstellen
-
-## QUALITÄTS-STANDARDS (NICHT-VERHANDELBAR!)
-
-### 1. MATHEMATISCHE PERFEKTION
-- ALLE Berechnungen 100% korrekt
-- Eindeutige, nachprüfbare Lösungen
-- Keine Rundungs- oder Rechenfehler
-- Altersgerechte Zahlenräume
-
-### 2. PÄDAGOGISCHE EXZELLENZ  
-- Sprache für ${gap.grade}. Klasse optimal
-- Schritt-für-Schritt Erklärungen
-- Positive, ermutigende Formulierung
-- Alltagsbezug und Motivation
-
-### 3. ANTI-VISUAL DESIGN
-- KEINE Diagramme, Grafiken, Konstruktionen
-- Nur bei Klasse 1: Simple Emojis (🍎🏀⭐)
-- Rein textbasierte Mathematik
-- VERBOTEN: "zeichne", "male", "konstruiere"
-
-## ERWARTETES JSON-FORMAT:
-
-Erstelle genau ${Math.min(8, gap.needed)} Aufgaben im Format:
-
-\`\`\`json
-[
-  {
-    "student_prompt": "Vollständige, verständliche Aufgabe in deutscher Sprache",
-    "solution": {"value": "EXAKTE_ANTWORT_ALS_STRING"},
-    "explanation": "Kindgerechte Schritt-für-Schritt Erklärung mit positiver Sprache",
-    "question_type": "text-input",
-    "distractors": ["Plausible falsche Antwort 1", "Falsche Antwort 2", "Falsche Antwort 3"],
-    "tags": ["${gap.tags?.join('", "') || 'Mathematik'}"],
-    "subcategory": "${gap.subcategory}",
-    "variables": {},
-    "unit": "${getExpectedUnit(gap.domain, gap.skill)}"
-  }
-]
-\`\`\`
-
-## DOMAIN-SPEZIFISCHE EXPERTISE:
-${getAdvancedDomainGuidance(gap.domain, gap.grade, gap.skill)}
-
-## BEISPIEL KINDGERECHTE ERKLÄRUNG:
-❌ Falsch: "Verwende die Formel V = l × b × h"
-✅ Richtig: "Um das Volumen zu berechnen, multiplizierst du Länge × Breite × Höhe. Also: 4 × 3 × 2 = 24. Das Volumen ist 24 cm³."
-
-**JETZT ERSTELLE ${Math.min(8, gap.needed)} PERFEKTE, LEHRPLANGERECHTE AUFGABEN:**`;
-}
-
-function getDomainCurriculumRequirements(domain: string, grade: number, quarter: string): string {
-  const requirements = {
-    "Zahlen & Operationen": {
-      1: "Zahlraum 0-20, Grundrechenarten ohne Übergang, Zählen und Zahlverständnis",
-      2: "Zahlraum 0-100, Einmaleins, halbschriftliche Verfahren",
-      3: "Zahlraum 0-1000, schriftliche Addition/Subtraktion, Multiplikation",
-      4: "Zahlraum bis 1 Million, alle schriftlichen Verfahren",
-      5: "Negative Zahlen, Brüche, Dezimalzahlen, Prozent-Grundlagen",
-      6: "Rationale Zahlen, Prozentrechnung, Potenzen (Grundlagen)",
-      7: "Terme, lineare Gleichungen, Prozent-/Zinsrechnung",
-      8: "Termumformungen, lineare Funktionen, Gleichungssysteme",
-      9: "Quadratische Funktionen, Wurzeln, Potenzen erweitert",
-      10: "Exponentialfunktionen, komplexe Terme, Zinseszins"
-    },
-    "Größen & Messen": {
-      1: "Längen vergleichen, Zeit (Stunde), Geld (Euro/Cent)",
-      2: "cm/m, Uhrzeit, Geld bis 100€",
-      3: "mm/cm/m/km, Zeit-Spannen, Umfang/Fläche Rechteck",
-      4: "Alle Längeneinheiten, Volumen, Maßstab einfach",
-      5: "Flächeninhalt, Volumen Quader, Umrechnungen sicher",
-      6: "Kreis (Umfang/Fläche), Prismen-Volumen",
-      7: "Oberflächen, zusammengesetzte Körper",
-      8: "Zylinder, Kegel (Grundlagen), Trigonometrie einfach",
-      9: "Pyramide, Kegel, Kugel, Trigonometrie erweitert",
-      10: "Komplexe Körper, trigonometrische Berechnungen"
-    },
-    "Raum & Form": {
-      1: "Grundformen erkennen, räumliche Lagebeziehungen",
-      2: "Eigenschaften Vierecke/Dreiecke, symmetrische Figuren",
-      3: "Achsensymmetrie, Muster, einfache Konstruktionen",
-      4: "Koordinaten (1. Quadrant), geometrische Figuren klassifizieren",
-      5: "Koordinatensystem erweitert, Dreiecke/Vierecke konstruieren",
-      6: "4-Quadranten-System, Abbildungen (Spiegelung/Drehung)",
-      7: "Winkel, Dreiecks-Konstruktionen, Ähnlichkeit",
-      8: "Strahlensätze, Kreis-Geometrie, Koordinaten-Geometrie",
-      9: "Trigonometrie im Dreieck, Vektoren (Grundlagen)",
-      10: "Trigonometrische Funktionen, analytische Geometrie"
-    },
-    "Daten & Zufall": {
-      1: "Daten sammeln, einfache Strichlisten",
-      2: "Säulendiagramme lesen, Häufigkeiten zählen",
-      3: "Mittelwert berechnen, einfache Experimente",
-      4: "Median, Diagramme erstellen und interpretieren",
-      5: "Statistik-Grundlagen, relative Häufigkeit",
-      6: "Wahrscheinlichkeit als Bruch, Baumdiagramme einfach",
-      7: "Laplace-Versuche, mehrstufige Experimente",
-      8: "Bedingte Wahrscheinlichkeit, Vierfeldertafel",
-      9: "Normalverteilung (Grundlagen), Boxplots",
-      10: "Statistische Tests, Korrelation, Regression"
-    },
-    "Gleichungen & Funktionen": {
-      5: "Variable als Platzhalter, einfache Terme",
-      6: "Lineare Gleichungen (Grundform), Proportionalität",
-      7: "Termumformungen, Gleichungssysteme (2 Unbekannte)",
-      8: "Lineare Funktionen, Steigung, y-Achsenabschnitt",
-      9: "Quadratische Funktionen, Parabeln, Nullstellen",
-      10: "Exponential-/Logarithmusfunktionen, Kurvendiskussion"
+    if (!content) {
+      throw new Error('Empty response from OpenAI');
     }
-  };
-  
-  return requirements[domain]?.[grade] || `Allgemeine ${domain}-Kompetenzen für Klasse ${grade}`;
-}
 
-function getDifficultyDefinition(difficulty: string, grade: number): string {
-  const definitions = {
-    "easy": `Grundwissen abrufen und bekannte Verfahren anwenden. Für Klasse ${grade}: Direkte Anwendung gelernter Regeln und Formeln.`,
-    "medium": `Gelerntes auf neue Situationen übertragen und Zusammenhänge erkennen. Für Klasse ${grade}: Kombination mehrerer Schritte oder leichte Transferleistungen.`,
-    "hard": `Problemlösung und kreative Lösungswege finden. Für Klasse ${grade}: Unbekannte Situationen analysieren und eigenständig Lösungsstrategien entwickeln.`
-  };
-  return definitions[difficulty] || "Standard-Schwierigkeitsgrad";
-}
-
-function getExpectedUnit(domain: string, skill: string): string {
-  const skillLower = skill?.toLowerCase() || '';
-  
-  if (skillLower.includes('länge') || skillLower.includes('cm') || skillLower.includes('meter')) return 'cm';
-  if (skillLower.includes('fläche') || skillLower.includes('quadrat')) return 'cm²';
-  if (skillLower.includes('volumen') || skillLower.includes('raum')) return 'cm³';
-  if (skillLower.includes('zeit') || skillLower.includes('stunde')) return 'min';
-  if (skillLower.includes('geld') || skillLower.includes('euro')) return '€';
-  if (skillLower.includes('winkel') || skillLower.includes('grad')) return '°';
-  if (skillLower.includes('prozent') || skillLower.includes('%')) return '%';
-  if (skillLower.includes('gewicht') || skillLower.includes('gramm')) return 'g';
-  
-  return ''; // Keine Einheit wenn nicht eindeutig
-}
-
-function getAdvancedDomainGuidance(domain: string, grade: number, skill: string): string {
-  const guidance = {
-    "Zahlen & Operationen": `
-**Zahlenraum:** ${grade <= 2 ? 'bis 100' : grade <= 4 ? 'bis 1.000.000' : 'unbegrenzt'}
-**Rechenverfahren:** ${grade <= 3 ? 'halbschriftlich' : 'schriftlich und mental'}
-**Besonderheiten:** Realitätsbezug durch Alltagssituationen, schrittweise Erklärungen`,
+    // Parse and validate JSON
+    const template = JSON.parse(content);
     
-    "Größen & Messen": `
-**Einheiten Klasse ${grade}:** ${grade <= 2 ? 'cm, €, h' : grade <= 4 ? 'mm-km, g-kg, min-h' : 'alle Einheiten'}
-**Messgenauigkeit:** ${grade <= 3 ? 'ganze Zahlen' : 'Dezimalzahlen möglich'}
-**Anwendung:** Praktische Mess- und Schätzaufgaben`,
-    
-    "Raum & Form": `
-**Geometrie-Level:** ${grade <= 3 ? 'Erkennen und Beschreiben' : grade <= 6 ? 'Konstruieren und Berechnen' : 'Beweisen und Anwenden'}
-**Hilfsmittel:** ${grade <= 4 ? 'kein Geodreieck nötig' : 'Geodreieck und Zirkel'}
-**Fokus:** ${skill}`,
-    
-    "Daten & Zufall": `
-**Daten-Umfang:** ${grade <= 3 ? 'bis 10 Werte' : 'größere Datensätze'}
-**Darstellung:** ${grade <= 4 ? 'einfache Diagramme' : 'komplexe Visualisierungen'}
-**Wahrscheinlichkeit:** ${grade <= 5 ? 'als Bruch' : 'als Dezimal/Prozent'}`,
-    
-    "Gleichungen & Funktionen": `
-**Komplexität:** ${grade <= 6 ? 'lineare Zusammenhänge' : 'auch quadratische Funktionen'}
-**Darstellung:** Tabelle, Graph, Formel (altersgerecht)
-**Anwendung:** Realitätsbezogene Funktions-Situationen`
-  };
-  
-  return guidance[domain] || `Spezielle Anforderungen für ${domain} in Klasse ${grade}`;
-}
-
-function parseEnhancedTemplates(content: string, expectedCount: number): any[] {
-  try {
-    const templates = [];
-    
-    // Try to extract JSON array from response
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      if (Array.isArray(parsed)) {
-        for (const item of parsed) {
-          if (item.student_prompt && item.solution && item.explanation) {
-            // Enhanced validation with curriculum compliance
-            let qualityScore = 0.85; // Higher base score for curriculum mode
-            
-            // Quality indicators
-            const prompt = item.student_prompt.toLowerCase();
-            const explanation = item.explanation.toLowerCase();
-            
-            if (explanation.includes('schritt') || explanation.includes('zuerst')) qualityScore += 0.1;
-            if (explanation.length > 60) qualityScore += 0.05;
-            if (!prompt.includes('zeichn') && !prompt.includes('konstruier')) qualityScore += 0.05;
-            if (prompt.includes('berechne') || prompt.includes('bestimme')) qualityScore += 0.05;
-            
-            // Ensure solution format
-            let solution = item.solution;
-            if (typeof solution === 'string' || typeof solution === 'number') {
-              solution = { value: solution.toString() };
-            }
-            
-            templates.push({
-              student_prompt: item.student_prompt,
-              solution: solution,
-              explanation: item.explanation,
-              question_type: item.question_type || 'text-input',
-              distractors: Array.isArray(item.distractors) ? item.distractors : [],
-              tags: Array.isArray(item.tags) ? item.tags : [],
-              subcategory: item.subcategory || '',
-              variables: item.variables || {},
-              unit: item.unit || '',
-              quality_score: Math.min(1.0, qualityScore)
-            });
-            
-            console.log(`✅ Enhanced template validated (Quality: ${Math.min(1.0, qualityScore).toFixed(2)})`);
-          }
-        }
-      }
+    // Validate required fields
+    if (!template.student_prompt || !template.solution || !template.explanation) {
+      throw new Error('Missing required template fields');
     }
-    
-    console.log(`🔍 Parsed ${templates.length} enhanced templates from AI response`);
-    return templates;
-    
+
+    return {
+      ...template,
+      grade: gap.grade,
+      grade_app: gap.grade,
+      quarter_app: gap.quarter,
+      domain: gap.domain,
+      difficulty: gap.difficulty,
+      source_skill_id: gap.skillId
+    };
+
   } catch (error) {
-    console.error('❌ Enhanced parsing error:', error);
-    return [];
+    console.error('❌ Template generation error:', error);
+    return null;
   }
 }
 
@@ -708,16 +512,17 @@ function calculateCurriculumAlignment(templates: any[]): number {
   if (templates.length === 0) return 0;
   
   let alignmentScore = 0;
+  
   for (const template of templates) {
-    let score = 0.5; // Base alignment
+    let score = 70; // Base score
     
-    if (template.subcategory && template.subcategory !== '') score += 0.2;
-    if (template.tags && template.tags.length > 0) score += 0.15;
-    if (template.unit && template.unit !== '') score += 0.1;
-    if (template.quality_score > 0.8) score += 0.05;
+    // Bonus for curriculum integration
+    if (template.source_skill_id) score += 15;
+    if (template.subcategory) score += 10;
+    if (template.tags && template.tags.length > 0) score += 5;
     
-    alignmentScore += Math.min(1.0, score);
+    alignmentScore += score;
   }
   
-  return Math.round((alignmentScore / templates.length) * 100);
+  return Math.round((alignmentScore / templates.length));
 }
