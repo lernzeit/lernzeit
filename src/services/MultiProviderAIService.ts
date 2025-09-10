@@ -55,14 +55,14 @@ class MultiProviderAIService {
     },
     {
       provider: 'openai', 
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       priority: 2,
       enabled: true,
       maxTokens: 1000
     },
     {
       provider: 'gemini',
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
       priority: 3,
       enabled: true,
       maxTokens: 1000

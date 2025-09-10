@@ -47,7 +47,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-5-2025-08-07',
+            model: 'gpt-4o-mini',
             messages: [{ role: 'user', content: 'Hello' }],
             max_completion_tokens: 5
           }),
@@ -276,7 +276,7 @@ Wichtig:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_completion_tokens: 3000,
       }),

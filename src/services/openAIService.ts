@@ -33,7 +33,7 @@ export interface GenerationResult {
 }
 
 class OpenAIService {
-  private async callOpenAIProxy(prompt: string, model: string = 'gpt-5-2025-08-07'): Promise<any> {
+  private async callOpenAIProxy(prompt: string, model: string = 'gpt-4o-mini'): Promise<any> {
     try {
       const { data, error } = await supabase.functions.invoke('openai-proxy', {
         body: {
