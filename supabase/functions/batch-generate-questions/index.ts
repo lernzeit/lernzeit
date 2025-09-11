@@ -96,16 +96,10 @@ serve(async (req) => {
       errors: [] as string[]
     };
 
-    // Process combinations by priority
-    const prioritizedCombinations = targetCombinations
-      .sort((a, b) => {
-        const priorityOrder = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 };
-        return priorityOrder[a.priority as keyof typeof priorityOrder] - 
-               priorityOrder[b.priority as keyof typeof priorityOrder];
-      })
-      .slice(0, batchSize);
+    // Process combinations with balanced distribution across grades
+    const balancedCombinations = getBalancedCombinations(targetCombinations, batchSize);
 
-    for (const combination of prioritizedCombinations) {
+    for (const combination of balancedCombinations) {
       try {
         console.log(`🎯 Generating template for Grade ${combination.grade}, ${combination.domain}, ${combination.difficulty}`);
 
@@ -154,7 +148,7 @@ serve(async (req) => {
         success: true,
         message: `Systematic generation complete: ${results.successful}/${results.successful + results.failed} templates generated`,
         results,
-        processed_combinations: prioritizedCombinations.length,
+        processed_combinations: balancedCombinations.length,
         coverage_analysis: {
           total_gaps: targetCombinations.length,
           high_priority_gaps: targetCombinations.filter(g => g.priority === 'HIGH').length,
@@ -187,7 +181,7 @@ async function analyzeCoverageGaps(supabase: any): Promise<TemplateGap[]> {
   if (error) throw error;
 
   const gaps: TemplateGap[] = [];
-  const targetCount = 15; // Target: 15 templates per combination
+  const targetCount = 8; // Target: 8 templates per combination (more realistic)
 
   const grades = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
@@ -246,6 +240,150 @@ function getPriority(grade: number): string {
   if (grade >= 1 && grade <= 4) return 'HIGH';
   if (grade >= 5 && grade <= 6) return 'MEDIUM';
   return 'LOW';
+}
+
+// Balanced distribution function to ensure coverage across all grades/domains
+function getBalancedCombinations(gaps: TemplateGap[], targetCount: number): TemplateGap[] {
+  console.log(`📊 Balancing ${gaps.length} gaps across ${targetCount} templates`);
+  
+  if (gaps.length <= targetCount) {
+    return gaps;
+  }
+
+  // Group gaps by grade, domain, difficulty, and question type
+  const gradeGroups = new Map<number, TemplateGap[]>();
+  const domainGroups = new Map<string, TemplateGap[]>();
+  const difficultyGroups = new Map<string, TemplateGap[]>();
+  const questionTypeGroups = new Map<string, TemplateGap[]>();
+
+  gaps.forEach(gap => {
+    // Group by grade
+    if (!gradeGroups.has(gap.grade)) {
+      gradeGroups.set(gap.grade, []);
+    }
+    gradeGroups.get(gap.grade)!.push(gap);
+
+    // Group by domain
+    if (!domainGroups.has(gap.domain)) {
+      domainGroups.set(gap.domain, []);
+    }
+    domainGroups.get(gap.domain)!.push(gap);
+
+    // Group by difficulty
+    if (!difficultyGroups.has(gap.difficulty)) {
+      difficultyGroups.set(gap.difficulty, []);
+    }
+    difficultyGroups.get(gap.difficulty)!.push(gap);
+
+    // Group by question type
+    if (!questionTypeGroups.has(gap.question_type)) {
+      questionTypeGroups.set(gap.question_type, []);
+    }
+    questionTypeGroups.get(gap.question_type)!.push(gap);
+  });
+
+  const selected: TemplateGap[] = [];
+  const used = new Set<string>();
+
+  // Calculate distribution targets
+  const gradesCount = gradeGroups.size;
+  const domainsCount = domainGroups.size;
+  const difficultiesCount = difficultyGroups.size;
+  const questionTypesCount = questionTypeGroups.size;
+
+  const templatesPerGrade = Math.floor(targetCount / gradesCount);
+  const templatesPerDomain = Math.floor(targetCount / domainsCount);
+  const templatesPerDifficulty = Math.floor(targetCount / difficultiesCount);
+  const templatesPerType = Math.floor(targetCount / questionTypesCount);
+
+  console.log(`🎯 Distribution: ${templatesPerGrade}/grade, ${templatesPerDomain}/domain, ${templatesPerDifficulty}/difficulty, ${templatesPerType}/type`);
+
+  // Round-robin selection to ensure balanced coverage
+  const maxIterations = targetCount * 2; // Prevent infinite loops
+  let iterations = 0;
+
+  while (selected.length < targetCount && iterations < maxIterations) {
+    iterations++;
+
+    // Try to select one from each grade
+    for (const [grade, gradeGaps] of gradeGroups) {
+      if (selected.length >= targetCount) break;
+
+      // Count current selections for this grade
+      const gradeSelections = selected.filter(s => s.grade === grade).length;
+      if (gradeSelections >= templatesPerGrade + 2) continue; // Allow some flexibility
+
+      // Find unused gaps for this grade
+      const availableGaps = gradeGaps.filter(gap => {
+        const key = `${gap.grade}-${gap.quarter_app}-${gap.domain}-${gap.difficulty}-${gap.question_type}`;
+        return !used.has(key);
+      });
+
+      if (availableGaps.length === 0) continue;
+
+      // Prefer gaps that improve overall balance
+      const bestGap = availableGaps.find(gap => {
+        const domainCount = selected.filter(s => s.domain === gap.domain).length;
+        const difficultyCount = selected.filter(s => s.difficulty === gap.difficulty).length;
+        const typeCount = selected.filter(s => s.question_type === gap.question_type).length;
+
+        return domainCount < templatesPerDomain + 1 &&
+               difficultyCount < templatesPerDifficulty + 1 &&
+               typeCount < templatesPerType + 1;
+      }) || availableGaps[0]; // Fallback to first available
+
+      const key = `${bestGap.grade}-${bestGap.quarter_app}-${bestGap.domain}-${bestGap.difficulty}-${bestGap.question_type}`;
+      used.add(key);
+      selected.push(bestGap);
+    }
+  }
+
+  // Fill remaining slots with high-priority gaps
+  while (selected.length < targetCount) {
+    const remaining = gaps.filter(gap => {
+      const key = `${gap.grade}-${gap.quarter_app}-${gap.domain}-${gap.difficulty}-${gap.question_type}`;
+      return !used.has(key);
+    });
+
+    if (remaining.length === 0) break;
+
+    // Sort by priority and select
+    remaining.sort((a, b) => {
+      const priorityOrder = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 };
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder];
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder];
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
+      // Secondary sort by current count (fewer templates = higher priority)
+      return a.current_count - b.current_count;
+    });
+
+    const gap = remaining[0];
+    const key = `${gap.grade}-${gap.quarter_app}-${gap.domain}-${gap.difficulty}-${gap.question_type}`;
+    used.add(key);
+    selected.push(gap);
+  }
+
+  // Log distribution
+  const gradeDistribution = new Map<number, number>();
+  const domainDistribution = new Map<string, number>();
+  const difficultyDistribution = new Map<string, number>();
+  const typeDistribution = new Map<string, number>();
+
+  selected.forEach(gap => {
+    gradeDistribution.set(gap.grade, (gradeDistribution.get(gap.grade) || 0) + 1);
+    domainDistribution.set(gap.domain, (domainDistribution.get(gap.domain) || 0) + 1);
+    difficultyDistribution.set(gap.difficulty, (difficultyDistribution.get(gap.difficulty) || 0) + 1);
+    typeDistribution.set(gap.question_type, (typeDistribution.get(gap.question_type) || 0) + 1);
+  });
+
+  console.log('📈 Selected distribution:');
+  console.log('Grades:', Object.fromEntries(gradeDistribution));
+  console.log('Domains:', Object.fromEntries(domainDistribution));
+  console.log('Difficulties:', Object.fromEntries(difficultyDistribution));
+  console.log('Types:', Object.fromEntries(typeDistribution));
+
+  return selected;
 }
 
 // Template generation function
