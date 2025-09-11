@@ -102,7 +102,8 @@ class SmartTemplateSelector {
         rating_count
       `)
       .eq('status', 'ACTIVE')
-      .eq('grade', request.grade);
+      .eq('grade', request.grade)
+      .gte('quality_score', 0.8); // 🔧 PHASE 1: Raised quality threshold from 0.7 to 0.8
 
     // Apply quarter filter if curriculum-appropriate
     if (request.quarter !== 'ANY') {
@@ -124,9 +125,19 @@ class SmartTemplateSelector {
       query = query.in('question_type', request.questionTypes);
     }
 
-    // Exclude visual templates (except emojis for Grade 1)
-    const visualKeywords = ['zeichne', 'male', 'konstruiere', 'bild', 'diagramm', 'grafik', 'netz'];
-    for (const keyword of visualKeywords) {
+    // 🔧 PHASE 1: Enhanced problematic pattern exclusion
+    const problematicKeywords = [
+      // Visual/drawing tasks
+      'zeichne', 'male', 'konstruiere', 'bild', 'diagramm', 'grafik', 'netz', 'skizziere',
+      'bastle', 'schneide', 'klebe', 'falte', 'markiere', 'verbinde mit linien',
+      // Circular/impossible tasks  
+      'miss dein lineal', 'länge deines lineals', 'wie lang ist dein',
+      'miss deinen bleistift', 'größe deines', 'dein alter',
+      // Ambiguous assignments
+      'ordne richtig zu', 'welches bild passt', 'betrachte das bild'
+    ];
+    
+    for (const keyword of problematicKeywords) {
       query = query.not('student_prompt', 'ilike', `%${keyword}%`);
     }
 
@@ -140,7 +151,55 @@ class SmartTemplateSelector {
       throw error;
     }
 
-    return data || [];
+    // 🔧 PHASE 1: Additional filtering for feedback-based exclusion
+    const filteredData = await this.applyFeedbackBasedFiltering(data || [], request.userId);
+    
+    return filteredData;
+  }
+
+  /**
+   * 🔧 PHASE 1: Filter out templates with negative feedback patterns
+   */
+  private async applyFeedbackBasedFiltering(templates: any[], userId: string): Promise<any[]> {
+    if (templates.length === 0) return templates;
+
+    try {
+      // Get templates with negative feedback
+      const { data: negativeFeedback, error } = await supabase
+        .from('question_feedback')
+        .select('question_content, feedback_type')
+        .eq('user_id', userId)
+        .in('feedback_type', ['duplicate', 'inappropriate', 'too_easy', 'too_hard', 'not_curriculum_compliant', 'confusing']);
+
+      if (error || !negativeFeedback) return templates;
+
+      // Create blacklist of problematic question content
+      const blacklistedContent = new Set(
+        negativeFeedback
+          .filter(f => ['confusing', 'inappropriate', 'not_curriculum_compliant'].includes(f.feedback_type))
+          .map(f => f.question_content)
+      );
+
+      // Filter out blacklisted templates
+      const filtered = templates.filter(template => {
+        const prompt = template.student_prompt || '';
+        
+        // Check if this exact content was flagged
+        if (blacklistedContent.has(prompt)) {
+          console.log(`🚫 Excluded template based on user feedback: ${template.id}`);
+          return false;
+        }
+        
+        return true;
+      });
+
+      console.log(`🔍 Feedback filtering: ${templates.length} → ${filtered.length} templates (excluded ${templates.length - filtered.length})`);
+      return filtered;
+
+    } catch (error) {
+      console.warn('Error applying feedback filtering:', error);
+      return templates;
+    }
   }
 
   private async getUserTemplateHistory(userId: string): Promise<Map<string, UserTemplateHistory>> {

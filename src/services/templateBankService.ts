@@ -74,9 +74,16 @@ export class EnhancedTemplateBankService {
       });
 
       // Convert to SelectionQuestion format and filter out invalid questions
-      return sessionTemplates
-        .map(template => this.convertTemplateToQuestion(template))
-        .filter(question => question !== null);
+      const convertedQuestions: SelectionQuestion[] = [];
+      
+      for (const template of sessionTemplates) {
+        const converted = await this.convertTemplateToQuestion(template);
+        if (converted !== null) {
+          convertedQuestions.push(converted);
+        }
+      }
+      
+      return convertedQuestions;
     } catch (error) {
       console.error('❌ Template-Bank fetch failed:', error);
       return [];
@@ -130,7 +137,7 @@ export class EnhancedTemplateBankService {
   /**
    * Convert template to SelectionQuestion format
    */
-  private convertTemplateToQuestion(template: any): SelectionQuestion {
+  private async convertTemplateToQuestion(template: any): Promise<SelectionQuestion | null> {
     // Filter out drawing/sketching questions
     const prompt = template.student_prompt || "";
     if (this.containsDrawingInstructions(prompt)) {
@@ -141,6 +148,12 @@ export class EnhancedTemplateBankService {
     const questionType = this.mapQuestionType(template.question_type);
     
     if (questionType === 'text-input') {
+      // 🔧 PHASE 1: Validate content before conversion using enhanced filtering
+      if (this.containsDrawingInstructions(prompt)) {
+        console.log(`🚫 Filtered out problematic question: ${prompt.substring(0, 100)}...`);
+        return null;
+      }
+
       // 🔧 BULLETPROOF CALCULATION: Use BulletproofAnswerCalculator instead of static answers
       const calculatedAnswer = this.calculateDynamicAnswer(template, prompt);
       
@@ -169,25 +182,50 @@ export class EnhancedTemplateBankService {
   }
 
   /**
-   * Check if question contains drawing/sketching instructions
+   * 🔧 PHASE 1: Enhanced check for problematic question patterns
    */
   private containsDrawingInstructions(prompt: string): boolean {
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Import comprehensive validator
+    const { contentValidator } = require('./ContentValidator');
+    
+    // Quick blacklist check
+    if (contentValidator.containsBlacklistedPattern(prompt)) {
+      console.log(`🚫 Blacklisted pattern detected: ${prompt.substring(0, 50)}...`);
+      return true;
+    }
+    
+    // Original drawing keywords (enhanced)
     const drawingKeywords = [
+      // Visual/drawing tasks
       'zeichne', 'zeichnet', 'zeichnen',
       'male', 'malt', 'malen',
       'skizziere', 'skizziert', 'skizzieren',
       'draw', 'drawing', 'sketch',
       'konstruiere', 'konstruiert', 'konstruieren',
       'entwirf', 'entwirft', 'entwerfen',
-      'bild', 'bilder', 'abbildung',
-      'ordne', 'ordnet', 'ordnen', 'zuordnen',
-      'verbind', 'verbindet', 'verbinden',
-      'netz', 'netze', 'körper',
-      'diagramm', 'graph', 'graphen',
-      'tabelle passt', 'welches bild'
+      'bastle', 'bastelt', 'basteln',
+      'schneide', 'schneidet', 'schneiden',
+      'klebe', 'klebt', 'kleben',
+      'falte', 'faltet', 'falten',
+      'markiere', 'markiert', 'markieren',
+      
+      // Visual reference tasks
+      'bild', 'bilder', 'abbildung', 'grafik',
+      'betrachte das bild', 'schaue dir an',
+      'welches bild passt', 'ordne dem bild zu',
+      
+      // Impossible assignments without context
+      'ordne richtig zu', 'verbinde mit linien',
+      'netz', 'netze', 'körper', 'diagramm',
+      
+      // Circular/impossible measurement
+      'miss dein lineal', 'länge deines lineals',
+      'wie lang ist dein', 'größe deines',
+      'miss deinen bleistift'
     ];
     
-    const lowerPrompt = prompt.toLowerCase();
     return drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
   }
 

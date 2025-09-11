@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,245 +14,317 @@ interface ValidationRequest {
   batch_size?: number;
 }
 
+interface ValidationResult {
+  isValid: boolean;
+  score: number;
+  issues: string[];
+  shouldExclude: boolean;
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { template_ids, grade, domain, batch_size = 50 }: ValidationRequest = await req.json();
-    
-    console.log(`🔍 PHASE 5: Starting template validation`);
-    
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const body = await req.json() as ValidationRequest;
+    const { template_ids, grade, domain, batch_size = 50 } = body;
+
+    console.log('🔍 Starting Phase 1 template validation...', { template_ids, grade, domain, batch_size });
+
+    // Build query to fetch templates for validation
     let query = supabase
       .from('templates')
-      .select('id, student_prompt, solution, domain, grade, validation_status')
-      .eq('status', 'ACTIVE')
-      .limit(batch_size);
-    
+      .select('*')
+      .eq('status', 'ACTIVE');
+
     if (template_ids && template_ids.length > 0) {
       query = query.in('id', template_ids);
-    } else if (grade) {
+    }
+    if (grade) {
       query = query.eq('grade', grade);
-      if (domain) {
-        query = query.eq('domain', domain);
-      }
     }
-    
-    const { data: templates, error } = await query;
-    
-    if (error) {
-      throw new Error(`Database error: ${error.message}`);
+    if (domain) {
+      query = query.eq('domain', domain);
     }
-    
+
+    query = query.limit(batch_size);
+
+    const { data: templates, error: fetchError } = await query;
+
+    if (fetchError) {
+      throw new Error(`Template fetch error: ${fetchError.message}`);
+    }
+
     if (!templates || templates.length === 0) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No templates to validate',
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'No templates found for validation',
         validated: 0,
-        invalid: 0
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        invalid: 0,
+        excluded: 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-    
-    console.log(`📊 Validating ${templates.length} templates`);
-    
+
+    console.log(`📊 Validating ${templates.length} templates...`);
+
     let validatedCount = 0;
     let invalidCount = 0;
-    const invalidTemplates = [];
-    
+    let excludedCount = 0;
+    const validationResults: any[] = [];
+
+    // Validate each template
     for (const template of templates) {
       try {
-        const validationResult = await validateTemplate(template);
+        const result = await validateTemplate(template);
         
-        if (validationResult.isValid) {
-          // Update template as valid
-          await supabase
-            .from('templates')
-            .update({
-              validation_status: 'valid',
-              quality_score: validationResult.score,
-              last_validated: new Date().toISOString()
-            })
-            .eq('id', template.id);
-          
-          validatedCount++;
-        } else {
-          // Mark as invalid
-          await supabase
-            .from('templates')
-            .update({
-              validation_status: 'invalid',
-              quality_score: 0,
-              last_validated: new Date().toISOString()
-            })
-            .eq('id', template.id);
-          
-          invalidCount++;
-          invalidTemplates.push({
-            id: template.id,
-            prompt: template.student_prompt.substring(0, 100),
-            issues: validationResult.issues
-          });
+        // Update template in database with validation results
+        const updateData: any = {
+          validation_status: result.isValid ? 'valid' : 'invalid',
+          quality_score: result.score,
+          last_validated: new Date().toISOString()
+        };
+
+        // If template should be excluded, mark as ARCHIVED
+        if (result.shouldExclude) {
+          updateData.status = 'ARCHIVED';
+          excludedCount++;
         }
+
+        const { error: updateError } = await supabase
+          .from('templates')
+          .update(updateData)
+          .eq('id', template.id);
+
+        if (updateError) {
+          console.error(`Update error for template ${template.id}:`, updateError);
+        } else {
+          validatedCount++;
+          if (!result.isValid) invalidCount++;
+        }
+
+        validationResults.push({
+          template_id: template.id,
+          prompt: template.student_prompt?.substring(0, 100) + '...',
+          ...result
+        });
+
       } catch (error) {
-        console.error(`Error validating template ${template.id}:`, error);
+        console.error(`Validation error for template ${template.id}:`, error);
         invalidCount++;
       }
     }
-    
-    console.log(`✅ Validation complete: ${validatedCount} valid, ${invalidCount} invalid`);
-    
+
+    console.log(`✅ Phase 1 validation complete: ${validatedCount} processed, ${invalidCount} invalid, ${excludedCount} excluded`);
+
     return new Response(JSON.stringify({
       success: true,
       validated: validatedCount,
       invalid: invalidCount,
-      total_processed: templates.length,
-      invalid_templates: invalidTemplates.slice(0, 10) // Return first 10 invalid examples
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    
+      excluded: excludedCount,
+      total: templates.length,
+      problematic_templates: validationResults
+        .filter(r => !r.isValid || r.shouldExclude)
+        .slice(0, 10),
+      message: `Phase 1: Validated ${validatedCount} templates, found ${invalidCount} invalid, excluded ${excludedCount}`
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   } catch (error) {
-    console.error('Template validation error:', error);
-    return new Response(JSON.stringify({
-      error: error.message
+    console.error('Phase 1 validation function error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
 
-interface ValidationResult {
-  isValid: boolean;
-  score: number;
-  issues: string[];
-}
-
+/**
+ * Phase 1 comprehensive template validation function
+ */
 async function validateTemplate(template: any): Promise<ValidationResult> {
   const issues: string[] = [];
-  let score = 1.0;
-  
-  // Validate student prompt
-  if (!template.student_prompt || template.student_prompt.trim().length < 10) {
-    issues.push('Student prompt too short or missing');
+  let score = 0.8; // Base score
+  let shouldExclude = false;
+
+  const prompt = template.student_prompt || '';
+  const solution = template.solution;
+  const grade = template.grade || 1;
+
+  // 1. Basic requirements
+  if (!prompt || prompt.length < 10) {
+    issues.push('Prompt zu kurz oder fehlend');
     score -= 0.3;
   }
-  
-  // Validate solution format
-  if (!template.solution) {
-    issues.push('Solution is missing');
-    score -= 0.5;
-  } else if (typeof template.solution === 'object') {
-    if (!template.solution.value) {
-      issues.push('Solution object missing value property');
-      score -= 0.3;
-    }
+
+  if (!solution) {
+    issues.push('Lösung fehlt');
+    score -= 0.4;
   }
-  
-  // Check for visual content (forbidden)
-  const visualKeywords = [
-    'zeichne', 'male', 'konstruiere', 'entwirf', 'bild', 
-    'diagramm', 'grafik', 'skizze', 'ordne.*zu', 'verbinde'
-  ];
-  
-  for (const keyword of visualKeywords) {
-    const regex = new RegExp(keyword, 'i');
-    if (regex.test(template.student_prompt)) {
-      issues.push(`Contains forbidden visual keyword: ${keyword}`);
-      score -= 0.4;
-    }
+
+  // 2. Phase 1: Check for problematic patterns (CRITICAL EXCLUSIONS)
+  const problematicIssues = checkProblematicPatterns(prompt);
+  issues.push(...problematicIssues);
+  if (problematicIssues.length > 0) {
+    score = 0.2; // Very low score for problematic content
+    shouldExclude = true; // Exclude immediately
   }
-  
-  // Basic math validation for math domain
-  if (template.domain === 'Zahlen & Operationen') {
-    const mathValidation = validateMathSolution(template.student_prompt, template.solution);
-    if (!mathValidation.isValid) {
-      issues.push(`Math validation failed: ${mathValidation.reason}`);
-      score -= 0.4;
-    }
+
+  // 3. Validate solution format
+  const solutionIssues = validateMathSolution(prompt, solution);
+  if (!solutionIssues.isValid) {
+    issues.push(solutionIssues.reason || 'Lösungsformat ungültig');
+    score -= 0.3;
   }
-  
-  // Grade appropriateness check
-  if (template.grade && template.student_prompt) {
-    const complexityScore = assessComplexity(template.student_prompt, template.grade);
-    if (complexityScore < 0.3) {
-      issues.push('Content may be too simple for grade level');
-      score -= 0.1;
-    } else if (complexityScore > 0.8) {
-      issues.push('Content may be too complex for grade level');
-      score -= 0.2;
-    }
+
+  // 4. Check complexity vs grade level
+  const complexity = assessComplexity(prompt, grade);
+  if (complexity > 0.8 && grade <= 2) {
+    issues.push('Zu komplex für Klassenstufe');
+    score -= 0.2;
   }
-  
+
+  // 5. Phase 1: Hard threshold for quality
+  if (score < 0.5) {
+    shouldExclude = true;
+  }
+
   return {
-    isValid: issues.length === 0 && score >= 0.6,
-    score: Math.max(0, score),
-    issues
+    isValid: issues.length === 0,
+    score: Math.max(0, Math.min(1, score)),
+    issues,
+    shouldExclude
   };
 }
 
-function validateMathSolution(prompt: string, solution: any): { isValid: boolean; reason?: string } {
-  try {
-    // Basic checks for mathematical content
-    if (!solution || (typeof solution === 'object' && !solution.value)) {
-      return { isValid: false, reason: 'No solution provided' };
+/**
+ * Phase 1: Check for problematic question patterns (IMMEDIATE EXCLUSIONS)
+ */
+function checkProblematicPatterns(prompt: string): string[] {
+  const issues: string[] = [];
+  const lowerPrompt = prompt.toLowerCase();
+
+  // 🚨 CRITICAL: Circular/impossible tasks
+  const circularPatterns = [
+    { pattern: /miss.*lineal.*lineal/, message: '🚨 KRITISCH: Zirkuläre Messaufgabe (Lineal mit Lineal)' },
+    { pattern: /wie lang.*lineal/, message: '🚨 KRITISCH: Unmögliche Linealmessung' },
+    { pattern: /größe.*dein/, message: '🚨 KRITISCH: Persönliche Messung unmöglich' },
+    { pattern: /miss.*bleistift.*ohne/, message: '🚨 KRITISCH: Bleistift ohne Messwerkzeug messen' },
+    { pattern: /länge.*eingeben.*lineal/, message: '🚨 KRITISCH: Keine Standard-Lineallänge verfügbar' }
+  ];
+
+  // 🚨 CRITICAL: Visual/drawing tasks that cannot be completed digitally
+  const visualPatterns = [
+    { pattern: /zeichne|male|konstruiere/, message: '🚨 KRITISCH: Visuelle Aufgabe digital unmöglich' },
+    { pattern: /bastle|schneide|klebe|falte/, message: '🚨 KRITISCH: Physische Manipulation unmöglich' },
+    { pattern: /markiere|verbinde.*linie/, message: '🚨 KRITISCH: Interaktive Aufgabe ohne Interface' },
+    { pattern: /ordne.*zu(?!.*zahl)/i, message: '🚨 KRITISCH: Zuordnung ohne visuelle Elemente' },
+    { pattern: /betrachte.*bild|welches bild/, message: '🚨 KRITISCH: Bildaufgabe ohne bereitgestelltes Bild' },
+    { pattern: /schaue dir.*an|sieh dir.*an/, message: '🚨 KRITISCH: Visuelle Betrachtung ohne Material' }
+  ];
+
+  // Check all critical patterns
+  [...circularPatterns, ...visualPatterns].forEach(({ pattern, message }) => {
+    if (pattern.test(lowerPrompt)) {
+      issues.push(message);
     }
-    
-    const solutionValue = typeof solution === 'object' ? solution.value : String(solution);
-    
-    // Check for obvious errors
-    if (String(solutionValue).includes('INVALID') || String(solutionValue).includes('ERROR')) {
-      return { isValid: false, reason: 'Solution contains error markers' };
+  });
+
+  // Additional blacklist keywords
+  const blacklistWords = ['miss dein', 'länge deines', 'wie alt bist du', 'deine lieblingsfarbe'];
+  blacklistWords.forEach(word => {
+    if (lowerPrompt.includes(word)) {
+      issues.push(`🚨 KRITISCH: Blacklist-Wort "${word}" erkannt`);
     }
-    
-    // For now, basic validation - could be enhanced with actual math parsing
-    if (prompt.toLowerCase().includes('subtrahiere') && prompt.toLowerCase().includes('von')) {
-      // Check if it's the common "subtract A from B" format
-      const match = prompt.match(/subtrahiere\s+([\d,]+)\s+von\s+([\d,]+)/i);
-      if (match) {
-        const a = parseFloat(match[1].replace(',', '.'));
-        const b = parseFloat(match[2].replace(',', '.'));
-        const expectedResult = b - a;
-        const actualResult = parseFloat(String(solutionValue).replace(',', '.'));
-        
-        if (Math.abs(expectedResult - actualResult) > 0.01) {
-          return { isValid: false, reason: `Expected ${expectedResult}, got ${actualResult}` };
-        }
-      }
-    }
-    
-    return { isValid: true };
-  } catch (error) {
-    return { isValid: false, reason: `Validation error: ${error.message}` };
-  }
+  });
+
+  return issues;
 }
 
+/**
+ * Validate mathematical solution
+ */
+function validateMathSolution(prompt: string, solution: any): { isValid: boolean; reason?: string } {
+  if (!solution) {
+    return { isValid: false, reason: 'Keine Lösung vorhanden' };
+  }
+
+  // Extract solution value
+  let solutionValue: any = null;
+  if (typeof solution === 'string') {
+    solutionValue = solution;
+  } else if (solution.value !== undefined) {
+    solutionValue = solution.value;
+  } else if (solution.answer !== undefined) {
+    solutionValue = solution.answer;
+  }
+
+  if (solutionValue === null || solutionValue === undefined) {
+    return { isValid: false, reason: 'Lösungswert nicht extrahierbar' };
+  }
+
+  // Check for error markers
+  const solutionStr = String(solutionValue).toLowerCase();
+  if (solutionStr.includes('undefined') || solutionStr.includes('null') || solutionStr.includes('error')) {
+    return { isValid: false, reason: 'Lösung enthält Fehlerwerte' };
+  }
+
+  // Basic math validation for subtraction problems (common error source)
+  if (prompt.includes('−') || prompt.includes('-') || prompt.toLowerCase().includes('minus')) {
+    const numbers = prompt.match(/\d+/g);
+    if (numbers && numbers.length >= 2) {
+      const a = parseInt(numbers[0]);
+      const b = parseInt(numbers[1]);
+      const expected = a - b;
+      const provided = parseFloat(String(solutionValue));
+      
+      if (!isNaN(provided) && Math.abs(expected - provided) > 0.1) {
+        return { isValid: false, reason: `Subtraktionsrechnung falsch: ${a}-${b}=${expected}, aber Lösung ist ${provided}` };
+      }
+    }
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Assess text complexity based on content
+ */
 function assessComplexity(text: string, grade: number): number {
-  const wordCount = text.split(/\s+/).length;
-  const hasNumbers = /\d/.test(text);
-  const hasOperations = /[+\-×÷=]/.test(text);
-  const hasDecimals = /\d+,\d+/.test(text);
-  const hasFractions = /\d+\/\d+/.test(text);
-  
-  let complexity = 0.3; // Base complexity
-  
+  let complexity = 0;
+
   // Word count factor
-  if (wordCount > 20) complexity += 0.2;
-  if (wordCount > 40) complexity += 0.2;
+  const wordCount = text.split(/\s+/).length;
+  complexity += Math.min(0.3, wordCount / 50);
+
+  // Number complexity
+  const numbers = text.match(/\d+/g) || [];
+  const maxNumber = Math.max(...numbers.map(n => parseInt(n))) || 0;
   
-  // Mathematical complexity
-  if (hasNumbers) complexity += 0.1;
-  if (hasOperations) complexity += 0.1;
-  if (hasDecimals && grade >= 3) complexity += 0.2;
-  if (hasFractions && grade >= 4) complexity += 0.2;
+  if (maxNumber > 1000) complexity += 0.3;
+  else if (maxNumber > 100) complexity += 0.2;
+  else if (maxNumber > 20) complexity += 0.1;
+
+  // Operation complexity
+  if (text.includes('×') || text.includes('÷')) complexity += 0.2;
+  if (text.includes('²') || text.includes('³')) complexity += 0.3;
+  if (text.toLowerCase().includes('prozent')) complexity += 0.4;
+  if (text.toLowerCase().includes('bruch')) complexity += 0.3;
+
+  // Adjust for grade level expectations
+  const gradeAdjustment = (grade - 1) * 0.1;
   
-  // Grade appropriateness
-  if (grade <= 2 && (hasDecimals || hasFractions)) complexity += 0.3;
-  if (grade >= 5 && !hasOperations && wordCount < 10) complexity -= 0.2;
-  
-  return Math.min(1.0, complexity);
+  return Math.max(0, Math.min(1, complexity - gradeAdjustment));
 }
