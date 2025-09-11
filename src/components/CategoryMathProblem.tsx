@@ -22,6 +22,7 @@ import { GameTimeDisplay } from '@/components/game/GameTimeDisplay';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AlertTriangle, RefreshCw, Database, Brain, Archive, Check, X, Flag, ArrowRight } from 'lucide-react';
 import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
+import { toEnglishCategory, getTimePerTaskKey } from '@/lib/category';
 
 interface CategoryMathProblemProps {
   category: string;
@@ -347,9 +348,19 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     let timePerTask = 30;
     
     if (settings) {
-      const categoryKey = `${category.toLowerCase()}_seconds_per_task` as keyof typeof settings;
+      // ✅ FIXED: Use correct English category mapping for settings key
+      const englishCategory = toEnglishCategory(category);
+      const categoryKey = getTimePerTaskKey(englishCategory) as keyof typeof settings;
       timePerTask = settings[categoryKey] as number || 30;
       earnedSeconds = score * timePerTask;
+      console.log('⏱️ Time calculation:', { 
+        category, 
+        englishCategory, 
+        categoryKey, 
+        timePerTask, 
+        score, 
+        earnedSeconds 
+      });
     } else {
       earnedSeconds = score * 30;
     }
@@ -357,31 +368,32 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     // Save session data
     if (user) {
       try {
-        await supabase.from('game_sessions').insert({
+        // ✅ FIXED: Use English category for database consistency
+        const englishCategory = toEnglishCategory(category);
+        
+        const gameSessionResult = await supabase.from('game_sessions').insert({
           user_id: user.id,
           grade,
           correct_answers: score,
           total_questions: problems.length,
           time_spent: finalSessionDuration / 1000,
-          time_earned: earnedSeconds,
+          time_earned: earnedSeconds, // ✅ Store in seconds for consistency
           duration_seconds: Math.round(finalSessionDuration / 1000),
           score: Math.round((score / problems.length) * 100),
           question_source: generationSource, // Track Template-Bank vs other sources
-          category
+          category: englishCategory // ✅ Use English category
         });
 
-        // Save session to learning_sessions for analytics
-        await supabase.from('learning_sessions').insert({
-          user_id: user.id,
-          grade,
-          correct_answers: score,
-          total_questions: problems.length,
-          time_spent: finalSessionDuration / 1000,
-          time_earned: earnedSeconds,
-          category
-        });
+        if (gameSessionResult.error) {
+          console.error('❌ Failed to save game session:', gameSessionResult.error);
+        } else {
+          console.log('✅ Game session saved successfully');
+        }
+
+        // ✅ REMOVED: No longer saving to learning_sessions (redundant)
+        // Only game_sessions is used now for consistency
       } catch (error) {
-        console.error('Error saving session:', error);
+        console.error('❌ Error saving session:', error);
       }
     }
     

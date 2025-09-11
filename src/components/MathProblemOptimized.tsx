@@ -10,6 +10,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useTemplateBankGeneration, Quarter } from '@/hooks/useTemplateBankGeneration';
 import { AchievementAnimation } from '@/components/game/AchievementAnimation';
+import { toEnglishCategory, getTimePerTaskKey } from '@/lib/category';
 
 interface Problem {
   id: number;
@@ -178,6 +179,7 @@ export function MathProblemOptimized({ grade, onBack, onComplete, userId }: Math
   const calculateReward = () => {
     let earnedSeconds = 0;
     if (settings) {
+      // ✅ FIXED: Use 'math' category directly since this is MathProblemOptimized
       earnedSeconds = correctAnswers * settings.math_seconds_per_task;
     } else {
       earnedSeconds = correctAnswers * 30;
@@ -199,18 +201,30 @@ export function MathProblemOptimized({ grade, onBack, onComplete, userId }: Math
     if (!userId) return;
 
     try {
-      await supabase.from('learning_sessions').insert([{
+      // ✅ MIGRATED: Use game_sessions instead of learning_sessions
+      const { earnedSeconds } = calculateReward();
+      
+      const gameSessionResult = await supabase.from('game_sessions').insert([{
         user_id: userId,
-        category: 'math',
+        category: 'math', // ✅ English category
         grade: grade,
         correct_answers: correctAnswers,
         total_questions: targetQuestions,
         time_spent: totalTimeSpent,
-        time_earned: earnedMinutes,
+        time_earned: earnedSeconds, // ✅ Store in seconds for consistency
+        duration_seconds: Math.round(totalTimeSpent),
+        score: Math.round((correctAnswers / targetQuestions) * 100),
+        question_source: 'template-bank',
         session_date: new Date().toISOString(),
       }]);
+
+      if (gameSessionResult.error) {
+        console.error('❌ Failed to save game session:', gameSessionResult.error);
+      } else {
+        console.log('✅ Game session saved successfully');
+      }
     } catch (error) {
-      console.error('Fehler beim Speichern der Lernsession:', error);
+      console.error('❌ Fehler beim Speichern der Lernsession:', error);
     }
   };
 

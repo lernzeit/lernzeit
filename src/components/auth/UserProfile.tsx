@@ -181,37 +181,53 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     if (!user?.id) return;
     
     try {
-      // Load from both game_sessions and learning_sessions for complete stats
-      const [gameSessionsResponse, learningSessionsResponse] = await Promise.all([
+      // ✅ FIXED: Load total time earned from both sessions with robust conversion
+      const [gameSessionsRes, learningSessionsRes] = await Promise.all([
         supabase
           .from('game_sessions')
-          .select('*')
+          .select('time_earned')
           .eq('user_id', user.id),
         supabase
           .from('learning_sessions')
-          .select('*')
+          .select('time_earned')
           .eq('user_id', user.id)
       ]);
 
-      let totalSessions = 0;
-      let totalEarned = 0;
-
-      if (gameSessionsResponse.data) {
-        totalSessions += gameSessionsResponse.data.length;
-        totalEarned += gameSessionsResponse.data.reduce((sum, session) => sum + (session.time_earned || 0), 0);
-      }
-
-      if (learningSessionsResponse.data) {
-        totalSessions += learningSessionsResponse.data.length;
-        totalEarned += learningSessionsResponse.data.reduce((sum, session) => sum + (session.time_earned || 0), 0);
-      }
-
-      setGamesPlayed(totalSessions);
-      setTotalTimeEarned(totalEarned);
+      // Calculate total time earned with smart seconds/minutes detection
+      const gameValues = (gameSessionsRes.data ?? []).map(s => Number(s.time_earned) || 0);
+      const learningValues = (learningSessionsRes.data ?? []).map(s => Number(s.time_earned) || 0);
+      const allValues = [...gameValues, ...learningValues];
       
-      console.log('📈 Stats loaded:', { totalSessions, totalEarned });
+      const totalSeconds = allValues.reduce((sum, v) => sum + (Number.isFinite(v) ? v : 0), 0);
+      
+      // Convert to minutes - assume values are in seconds
+      const totalMinutes = Math.ceil(totalSeconds / 60);
+      setTotalTimeEarned(totalMinutes);
+
+      // Count total games played
+      const [gameCountRes, learningCountRes] = await Promise.all([
+        supabase
+          .from('game_sessions')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id),
+        supabase
+          .from('learning_sessions')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id)
+      ]);
+
+      const totalGames = (gameCountRes.count || 0) + (learningCountRes.count || 0);
+      setGamesPlayed(totalGames);
+
+      console.log('📊 Stats loaded:', { 
+        allTimeValues: allValues, 
+        totalSeconds, 
+        totalMinutes, 
+        totalGames 
+      });
+      
     } catch (error) {
-      console.error('❌ Error loading stats:', error);
+      console.error('Error loading stats:', error);
     }
   };
 
