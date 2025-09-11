@@ -223,14 +223,19 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
                       if (!a.is_completed && b.is_completed) return 1;
                       if (a.is_completed && b.is_completed) return 0;
                       
-                      const aProgress = (a.current_progress || 0) / a.requirement_value;
-                      const bProgress = (b.current_progress || 0) / b.requirement_value;
+                      const aProgress = a.requirement_value > 0 ? (a.current_progress || 0) / a.requirement_value : 0;
+                      const bProgress = b.requirement_value > 0 ? (b.current_progress || 0) / b.requirement_value : 0;
                       if (aProgress !== bProgress) return bProgress - aProgress;
                       
                       return a.requirement_value - b.requirement_value;
                     })
                     .map((achievement) => {
-                      const progress = (achievement.current_progress || 0) / achievement.requirement_value * 100;
+                      const rawProgress = achievement.requirement_value > 0 
+                        ? ((achievement.current_progress || 0) / achievement.requirement_value) * 100 
+                        : 0;
+                      const progress = Math.max(0, Math.min(100, Number.isFinite(rawProgress) ? rawProgress : 0));
+                      const current = Math.max(0, achievement.current_progress || 0);
+                      const required = Math.max(1, achievement.requirement_value || 1);
                       
                       return (
                         <div key={achievement.id} className="space-y-2">
@@ -251,7 +256,7 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
                               </div>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {achievement.current_progress || 0}/{achievement.requirement_value}
+                              {current}/{required}
                             </div>
                           </div>
                           <Progress 

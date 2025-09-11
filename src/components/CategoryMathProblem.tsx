@@ -243,22 +243,23 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     if (isCorrect) {
       setScore(score + 1);
       
-      // 🎯 UPDATE ACHIEVEMENTS for correct answers
-      if (user?.id && updateProgress) {
-        try {
-          console.log('🎯 Triggering achievement update for correct answer');
-          const newAchievements = await updateProgress(category, 'questions_solved', 1);
-          
-          if (newAchievements && newAchievements.length > 0) {
-            console.log('🏆 New achievements earned:', newAchievements);
-            // Store new achievements to show later
-            setNewAchievements(prev => [...(prev || []), ...newAchievements]);
-            setShowAchievements(true); // ✅ FIXED: Show achievement animation
-          }
-        } catch (error) {
-          console.error('❌ Error updating achievements:', error);
+    // 🎯 UPDATE ACHIEVEMENTS for correct answers
+    if (user?.id && updateProgress) {
+      try {
+        console.log('🎯 Triggering achievement update for correct answer');
+        const englishCategory = toEnglishCategory(category);
+        const newAchievements = await updateProgress(englishCategory, 'questions_solved', 1);
+        
+        if (newAchievements && newAchievements.length > 0) {
+          console.log('🏆 New achievements earned:', newAchievements);
+          // Store new achievements to show later
+          setNewAchievements(prev => [...(prev || []), ...newAchievements]);
+          setShowAchievements(true); // ✅ FIXED: Show achievement animation
         }
+      } catch (error) {
+        console.error('❌ Error updating achievements:', error);
       }
+    }
     }
     
     // ✅ FIXED: Set waiting state instead of auto-advancing
