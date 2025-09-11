@@ -244,7 +244,7 @@ export class ContentValidator {
     if (lowerPrompt.includes('+') || lowerPrompt.includes('plus')) {
       const numbers = prompt.match(/\d+/g);
       if (numbers && numbers.length >= 2) {
-        const sum = numbers.slice(0, 2).reduce((a, b) => parseInt(a) + parseInt(b), 0);
+        const sum = numbers.slice(0, 2).reduce((a, b) => parseInt(String(a)) + parseInt(String(b)), 0);
         if (Math.abs(sum - numericAnswer) > 0.1) {
           issues.push(`Additionsrechnung falsch: ${numbers[0]}+${numbers[1]}=${sum}, aber Lösung ist ${numericAnswer}`);
         }
