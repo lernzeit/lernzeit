@@ -8,6 +8,7 @@ import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
 import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
+import { contentValidator } from './ContentValidator';
 
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
@@ -186,9 +187,6 @@ export class EnhancedTemplateBankService {
    */
   private containsDrawingInstructions(prompt: string): boolean {
     const lowerPrompt = prompt.toLowerCase();
-    
-    // Import comprehensive validator
-    const { contentValidator } = require('./ContentValidator');
     
     // Quick blacklist check
     if (contentValidator.containsBlacklistedPattern(prompt)) {
