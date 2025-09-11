@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen } from 'lucide-react';
+import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen, RefreshCw } from 'lucide-react';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
@@ -193,6 +193,39 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           .eq('user_id', user.id)
       ]);
 
+      let totalSessions = 0;
+      let totalEarned = 0;
+
+      if (gameSessionsResponse.data) {
+        totalSessions += gameSessionsResponse.data.length;
+        totalEarned += gameSessionsResponse.data.reduce((sum, session) => sum + (session.time_earned || 0), 0);
+      }
+
+      if (learningSessionsResponse.data) {
+        totalSessions += learningSessionsResponse.data.length;
+        totalEarned += learningSessionsResponse.data.reduce((sum, session) => sum + (session.time_earned || 0), 0);
+      }
+
+      setGamesPlayed(totalSessions);
+      setTotalTimeEarned(totalEarned);
+      
+      console.log('📈 Stats loaded:', { totalSessions, totalEarned });
+    } catch (error) {
+      console.error('❌ Error loading stats:', error);
+    }
+  };
+
+  const handleManualRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    refreshUsage();
+    loadStats();
+  };
+
+  const loadLegacyStats = async () => {
+    if (!user?.id) return;
+
+    try {
+
       let totalTime = 0;
       let totalGames = 0;
 
@@ -348,12 +381,26 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                   <div className="text-center">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-blue-700">Heute verdient:</span>
-                      <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={handleManualRefresh}
+                          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                          disabled={loading}
+                        >
+                          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-700">Noch verfügbar:</span>
                       <span className="font-bold text-blue-800">{remainingMinutes} Min.</span>
                     </div>
+                    {loading && (
+                      <div className="text-xs text-blue-600 mt-1">Daten werden aktualisiert...</div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
