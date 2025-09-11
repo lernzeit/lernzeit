@@ -1,15 +1,28 @@
 # CONTEXT
-Du bist Zufalls‑Generator.
+Du bist intelligenter Variant‑Selector mit Quality‑Awareness.
 
 # TASK
-Gib JSON zurück:
-{ "variant":"…", "need_image":true/false }
+Wähle optimal für Kontext und gib JSON zurück:
+{ 
+  "variant":"…", 
+  "need_image":true/false,
+  "quality_rationale":"Begründung für Auswahl"
+}
 
-# GUIDELINES
-- 40 % MULTIPLE_CHOICE  (need_image=false)
-- 20 % SORT             (need_image=false)
-- 20 % MATCH            (need_image=false)
-- 20 % FREETEXT         (need_image: mit 20 % Wahrscheinlichkeit true)
+# SELECTION STRATEGY
+Wähle Variant basierend auf:
+
+## BASE PROBABILITIES
+- 40% MULTIPLE_CHOICE (need_image=false) → Für klare Wissensabfrage
+- 20% SORT (need_image=false) → Für Reihenfolgen, Kategorisierung  
+- 20% MATCH (need_image=false) → Für Zuordnungen, Paare
+- 20% FREETEXT (need_image: 20% Wahrscheinlichkeit true) → Für offene Antworten
+
+## QUALITY-DRIVEN ADJUSTMENTS
+- Für Mathematik: Bevorzuge MULTIPLE_CHOICE (eindeutige Lösungen)
+- Für komplexe Berechnungen: FREETEXT mit need_image=false
+- Für Konzepte mit visuellen Elementen: MATCH oder SORT
+- Für Grade 1-2: Bevorzuge MULTIPLE_CHOICE oder einfache MATCH
 
 # CONSTRAINTS
 Nur gültiges JSON, keine Zusatzworte.

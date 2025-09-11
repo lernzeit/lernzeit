@@ -13,6 +13,8 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { QualityDashboard } from './QualityDashboard';
+import { QualityManagement } from './QualityManagement';
+import { QualityMonitoringDashboard } from './QualityMonitoringDashboard';
 import { SystematicGenerationControl } from './SystematicGenerationControl';
 import { TemplateBankDashboard } from './TemplateBankDashboard';
 
@@ -40,7 +42,7 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -48,6 +50,10 @@ export function AdminDashboard() {
             <TabsTrigger value="quality" className="flex items-center gap-2">
               <Target className="w-4 h-4" />
               Quality Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="monitoring" className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Live Monitoring
             </TabsTrigger>
             <TabsTrigger value="generation" className="flex items-center gap-2">
               <Zap className="w-4 h-4" />
@@ -114,6 +120,11 @@ export function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Live Monitoring Tab */}
+          <TabsContent value="monitoring">
+            <QualityMonitoringDashboard />
           </TabsContent>
 
           {/* Quality Dashboard Tab */}
