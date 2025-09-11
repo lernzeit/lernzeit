@@ -341,63 +341,77 @@ export class EnhancedTemplateBankService {
     const calculatedAnswer = this.calculateDynamicAnswer(template, template.student_prompt || '');
     const correct = calculatedAnswer.answer;
     
+    console.log(`🔧 Extracting options - Correct answer: "${correct}"`);
+    
     // Extract unit from correct answer for consistent option formatting
     const unit = this.extractUnit(correct);
     const correctNum = parseFloat(correct);
     
-    // Start with correct answer as first option
-    const options = [correct];
+    // Start with correct answer as first option - ensure it's properly formatted
+    const correctOption = correct;
+    const options = [correctOption];
     
     if (template.distractors && Array.isArray(template.distractors)) {
-      // Ensure distractors have consistent units
-      const formattedDistractors = template.distractors.slice(0, 3).map((distractor: string) => {
-        const distractorNum = parseFloat(distractor);
-        return !isNaN(distractorNum) ? distractorNum + unit : distractor;
-      });
+      // Ensure distractors have consistent units but are different from correct answer
+      const formattedDistractors = template.distractors.slice(0, 3)
+        .map((distractor: string) => {
+          const distractorNum = parseFloat(distractor);
+          return !isNaN(distractorNum) ? distractorNum + unit : distractor;
+        })
+        .filter(distractor => distractor !== correctOption); // Ensure no duplicates
+      
       options.push(...formattedDistractors);
     } else {
       // Generate mathematically plausible distractors with consistent units
       if (!isNaN(correctNum)) {
+        const distractors = new Set<string>(); // Use Set to avoid duplicates
+        
         if (unit.includes('²')) {
           // Area problems - common mistakes: wrong formula, calculation errors
-          const baseNum = correctNum;
-          options.push(
-            `${Math.round(baseNum * 2)}${unit}`, // Common error: forgot to divide perimeter formula
-            `${Math.round(baseNum * 0.5)}${unit}`, // Division instead of multiplication
-            `${Math.round(baseNum + 10)}${unit}` // Addition instead of multiplication
-          );
+          distractors.add(`${Math.round(correctNum * 2)}${unit}`);
+          distractors.add(`${Math.round(correctNum * 0.5)}${unit}`);
+          distractors.add(`${Math.round(correctNum + 10)}${unit}`);
         } else if (unit.includes('Schüler') || unit.includes('Euro') || unit.includes('Brote')) {
           // Word problem distractors
-          const baseNum = correctNum;
-          options.push(
-            `${Math.round(baseNum * 0.5)}${unit}`, // Division instead of multiplication
-            `${Math.round(baseNum + 5)}${unit}`, // Addition instead of multiplication  
-            `${Math.round(baseNum * 1.5)}${unit}` // Wrong multiplication factor
-          );
+          distractors.add(`${Math.round(correctNum * 0.5)}${unit}`);
+          distractors.add(`${Math.round(correctNum + 5)}${unit}`);
+          distractors.add(`${Math.round(correctNum * 1.5)}${unit}`);
         } else if (unit.includes('cm') || unit.includes('m')) {
-          // Geometry perimeter/length problems
-          const baseNum = correctNum;
-          options.push(
-            `${Math.round(baseNum * 0.5)}${unit}`, // Forgot to double for perimeter
-            `${Math.round(baseNum + 8)}${unit}`, // Addition instead of proper formula
-            `${Math.round(baseNum * 1.5)}${unit}` // Wrong coefficient
-          );
+          // Geometry perimeter/length problems - better distractors for subtraction problems
+          distractors.add(`${Math.round(correctNum + 5)}${unit}`); // Addition instead of subtraction
+          distractors.add(`${Math.round(correctNum * 2)}${unit}`); // Used full length instead of difference
+          distractors.add(`${Math.round(correctNum - 2)}${unit}`); // Small calculation error
         } else {
           // General numeric problems with unit preservation
-          options.push(
-            `${correctNum * 2}${unit}`,
-            `${correctNum + 1}${unit}`,
-            `${Math.max(1, correctNum - 1)}${unit}`
-          );
+          distractors.add(`${correctNum * 2}${unit}`);
+          distractors.add(`${correctNum + 1}${unit}`);
+          distractors.add(`${Math.max(1, correctNum - 1)}${unit}`);
         }
+        
+        // Remove correct answer if it accidentally got added as a distractor
+        distractors.delete(correctOption);
+        
+        // Convert to array and add to options
+        const distractorArray = Array.from(distractors).slice(0, 3);
+        options.push(...distractorArray);
       } else {
         options.push("Option B", "Option C", "Option D");
+      }
+    }
+    
+    // Ensure we have exactly 4 options, filling with generic ones if needed
+    while (options.length < 4) {
+      const fallbackOption = `${Math.floor(Math.random() * 50) + 1}${unit}`;
+      if (!options.includes(fallbackOption)) {
+        options.push(fallbackOption);
       }
     }
     
     // Shuffle options and track where the correct answer ends up
     const shuffledOptions = [...options];
     const correctAnswerText = options[0]; // Store original correct answer
+    
+    console.log(`🔄 Before shuffle - Options: [${options.join(', ')}], Correct: "${correctAnswerText}"`);
     
     // Simple shuffle algorithm
     for (let i = shuffledOptions.length - 1; i > 0; i--) {
@@ -408,9 +422,22 @@ export class EnhancedTemplateBankService {
     // Find where the correct answer ended up after shuffle
     const correctIndex = shuffledOptions.findIndex(opt => opt === correctAnswerText);
     
+    console.log(`✅ After shuffle - Options: [${shuffledOptions.join(', ')}], Correct index: ${correctIndex}`);
+    
+    // Verify that correct answer is actually in the options
+    if (correctIndex === -1) {
+      console.error(`❌ CRITICAL: Correct answer "${correctAnswerText}" not found in shuffled options!`);
+      // Force correct answer to be first option if shuffle failed
+      shuffledOptions[0] = correctAnswerText;
+      return {
+        options: shuffledOptions.slice(0, 4),
+        correctIndex: 0
+      };
+    }
+    
     return {
       options: shuffledOptions.slice(0, 4),
-      correctIndex: Math.max(0, correctIndex) // Ensure valid index
+      correctIndex: correctIndex
     };
   }
 
@@ -425,6 +452,12 @@ export class EnhancedTemplateBankService {
         return ' ' + unit;
       }
     }
+    
+    // Check for common patterns without space
+    const answerLower = answer.toLowerCase();
+    if (answerLower.match(/\d+cm$/)) return ' cm';
+    if (answerLower.match(/\d+m$/)) return ' m';
+    if (answerLower.match(/\d+euro$/)) return ' Euro';
     
     return ''; // No unit found
   }
