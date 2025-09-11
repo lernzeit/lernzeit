@@ -41,25 +41,26 @@ export function useScreenTimeLimit(userId: string) {
           .lt('session_date', endOfDay.toISOString())
       ]);
 
-      let totalMinutesEarned = 0;
+      // Aggregate today's earned time across sources
+      const gameValues = (gameSessionsRes.data ?? []).map((s: any) => Number(s.time_earned) || 0);
+      const learningValues = (learningSessionsRes.data ?? []).map((s: any) => Number(s.time_earned) || 0);
+      const allValues = [...gameValues, ...learningValues];
 
-      if (gameSessionsRes.data) {
-        totalMinutesEarned += gameSessionsRes.data.reduce((sum, session) => sum + session.time_earned, 0);
-      }
+      const total = allValues.reduce((sum: number, v: number) => sum + (Number.isFinite(v) ? v : 0), 0);
+      const treatAsSeconds = allValues.some((v) => v > 60);
+      const minutesEarned = treatAsSeconds ? Math.ceil(total / 60) : Math.round(total);
 
-      if (learningSessionsRes.data) {
-        totalMinutesEarned += learningSessionsRes.data.reduce((sum, session) => sum + session.time_earned, 0);
-      }
-
-      setTodayMinutesUsed(totalMinutesEarned);
+      setTodayMinutesUsed(minutesEarned);
 
       // Calculate limit based on day of week
       const isWeekend = today.getDay() === 0 || today.getDay() === 6; // Sunday = 0, Saturday = 6
       const dailyLimit = isWeekend ? settings.weekend_max_minutes : settings.weekday_max_minutes;
       
-      const remaining = Math.max(0, dailyLimit - totalMinutesEarned);
+      const remaining = Math.max(0, dailyLimit - minutesEarned);
       setRemainingMinutes(remaining);
       setIsAtLimit(remaining <= 0);
+
+      console.info('⏱️ ScreenTime (today):', { allValues, minutesEarned, dailyLimit, treatAsSeconds });
 
     } catch (error) {
       console.error('Error loading today\'s usage:', error);

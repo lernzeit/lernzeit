@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen, RefreshCw } from 'lucide-react';
+import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen } from 'lucide-react';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
@@ -215,11 +215,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     }
   };
 
-  const handleManualRefresh = () => {
-    console.log('🔄 Manual refresh triggered');
-    refreshUsage();
-    loadStats();
-  };
 
 
   const handleSignOut = async () => {
@@ -357,15 +352,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                       <span className="text-sm text-blue-700">Heute verdient:</span>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={handleManualRefresh}
-                          className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
-                          disabled={usageLoading}
-                        >
-                          <RefreshCw className={`h-3 w-3 ${usageLoading ? 'animate-spin' : ''}`} />
-                        </Button>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
