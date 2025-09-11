@@ -48,12 +48,59 @@ export function AdminDashboard() {
               Systematic Template Generation & Quality Management System
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="gap-1">
               <CheckCircle className="w-3 h-3 text-green-600" />
               System Active
             </Badge>
             <Badge variant="secondary">Phase 4 Implementation</Badge>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                try {
+                  const response = await supabase.functions.invoke('cleanup-todays-templates', {
+                    body: { action: 'analyze' }
+                  });
+                  if (response.data?.analysis) {
+                    const analysis = response.data.analysis;
+                    toast({
+                      title: `Template-Analyse`,
+                      description: `${analysis.total_templates} Templates heute. ${analysis.problematic_count} problematisch.`
+                    });
+                  }
+                } catch (error) {
+                  toast({ title: 'Fehler bei Analyse', description: error.message });
+                }
+              }}
+              className="flex items-center gap-2"
+            >
+              <Target className="w-4 h-4" />
+              Template Analyse
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={async () => {
+                if (confirm('Wirklich ALLE problematischen Templates von heute löschen?')) {
+                  try {
+                    const response = await supabase.functions.invoke('cleanup-todays-templates', {
+                      body: { action: 'cleanup' }
+                    });
+                    if (response.data?.cleanup_result) {
+                      toast({
+                        title: 'Bereinigung abgeschlossen',
+                        description: `${response.data.cleanup_result.deleted_count} Templates gelöscht`
+                      });
+                    }
+                  } catch (error) {
+                    toast({ title: 'Fehler bei Bereinigung', description: error.message });
+                  }
+                }
+              }}
+              className="flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Template Cleanup
+            </Button>
             <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
               <LogOut className="w-4 h-4" />
               Logout

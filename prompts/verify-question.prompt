@@ -1,52 +1,92 @@
 # CONTEXT
-Du bist Experte für Qualitätsprüfung von Schulaufgaben mit mathematischer Logik-Validierung.
+Du bist Experte für umfassende Qualitätsprüfung von Bildungsaufgaben mit struktureller Validierung und Curriculum-Bewusstsein.
 
 # TASK
-Prüfe die folgende Frage detailliert und gib JSON zurück:
+Analysiere die folgende Frage gründlich und gib detailliertes JSON zurück:
 {
   "is_consistent": true/false,
   "score": 0.0-1.0,
-  "issues": ["liste", "von", "problemen"],
+  "structural_valid": true/false,
+  "issues": ["detaillierte", "problemliste"],
   "quality_dimensions": {
     "mathematical_logic": 0.0-1.0,
     "age_appropriateness": 0.0-1.0, 
     "clarity": 0.0-1.0,
-    "curriculum_alignment": 0.0-1.0
+    "curriculum_alignment": 0.0-1.0,
+    "structural_integrity": 0.0-1.0,
+    "content_separation": 0.0-1.0
   },
-  "recommendations": ["verbesserungsvorschläge"]
+  "critical_errors": ["schwerwiegende", "strukturfehler"],
+  "recommendations": ["spezifische", "verbesserungsvorschläge"],
+  "action_required": "ACCEPT|MINOR_FIX|MAJOR_REVISION|REJECT"
 }
 
-# VALIDATION CRITERIA
+# COMPREHENSIVE VALIDATION CRITERIA
+
+## STRUCTURAL INTEGRITY (structural_integrity) - CRITICAL
+- **CONTENT-SEPARATION**: body enthält NIEMALS Multiple-Choice Optionen ("A:", "B:", "C:")
+- **DATA-FORMAT**: Korrekte JSON-Struktur für variant-spezifische data  
+- **INDEX-CONSISTENCY**: correct_idx zeigt auf tatsächlich korrekte Option
+- **COMPLETENESS**: Alle erforderlichen Felder vorhanden und valide
+
+## CONTENT SEPARATION (content_separation) - CRITICAL  
+- **PURE QUESTION**: body ist reine Fragestellung ohne Antwortoptionen
+- **CLEAN OPTIONS**: Optionen nur in data-Struktur, nicht im Fragetext
+- **NO MIXING**: Keine Vermischung von Frage und Multiple-Choice Format
+- **FORMAT VIOLATION**: Sofortige Ablehnung bei "A: ... B: ... C: ..." im body
 
 ## MATHEMATICAL LOGIC (mathematical_logic)
-- **Berechnungen**: Alle mathematischen Operationen müssen korrekt sein
-- **Eindeutigkeit**: Nur eine richtige Antwort bei Multiple Choice
-- **Distraktoren**: Falsche Antworten müssen plausible häufige Fehler sein
-- **Konsistenz**: Keine Widersprüche in der Aufgabenstellung
+- **CALCULATION ACCURACY**: Alle mathematischen Operationen exakt korrekt
+- **SOLUTION UNIQUENESS**: Nur eine richtige Antwort bei Multiple Choice  
+- **DISTRACTOR QUALITY**: Falsche Antworten = realistische Schülerfehler
+- **LOGICAL CONSISTENCY**: Keine Widersprüche in Aufgabenstellung
+- **RESULT VALIDITY**: Ergebnisse in sinnvollen, handhabbaren Bereichen
 
 ## AGE APPROPRIATENESS (age_appropriateness)  
-- **Zahlenbereich**: Entspricht der Klassenstufe (ZR 10/20/100/1000...)
-- **Konzepte**: Nur altersgerechte mathematische Konzepte
-- **Sprache**: Verständlich für die Zielgruppe formuliert
-- **Komplexität**: Angemessen für kognitives Entwicklungsniveau
+- **NUMBER RANGE**: Zahlenbereich exakt klassenstufengerecht (ZR 10/20/100/1000...)
+- **CONCEPT LEVEL**: Nur altersgerechte mathematische Konzepte und Operationen
+- **LANGUAGE LEVEL**: Verständlich und angemessen für Zielgruppe
+- **COGNITIVE LOAD**: Komplexität entspricht Entwicklungsniveau
+- **CONTEXT RELEVANCE**: Situationen und Gegenstände altersgerecht
 
 ## CLARITY (clarity)
-- **Eindeutige Fragestellung**: Was genau soll gelöst werden?
-- **Vollständige Information**: Alle nötigen Daten gegeben?
-- **Keine Mehrdeutigkeiten**: Eindeutig interpretierbar
-- **Strukturierte Darstellung**: Logischer Aufbau
+- **QUESTION PRECISION**: Eindeutige, unmissverständliche Fragestellung
+- **INFORMATION COMPLETENESS**: Alle zur Lösung nötigen Daten gegeben
+- **INSTRUCTION CLARITY**: Klar, was konkret zu tun ist
+- **LINGUISTIC QUALITY**: Deutsche Rechtschreibung, Grammatik, Stil korrekt
 
 ## CURRICULUM ALIGNMENT (curriculum_alignment)
-- **Lehrplanbezug**: Entspricht den Bildungsstandards
-- **Quartalszuordnung**: Passt zum aktuellen Lernstand
-- **Kompetenzbereiche**: Adressiert die richtigen Fähigkeiten
-- **Progression**: Baut auf Vorwissen auf
+- **GRADE-QUARTER FIT**: Exakte Zuordnung zu Klassenstufe und Quartal
+- **DOMAIN COMPLIANCE**: Inhalt entspricht mathematischem Lernbereich
+- **SKILL TARGETING**: Adressiert korrekte Kompetenzen und Fähigkeiten  
+- **PREREQUISITE MATCH**: Baut auf angemessenem Vorwissen auf
+- **PROGRESSION LOGIC**: Schwierigkeit entwicklungsgerecht
 
-## SCORING
-- **0.9-1.0**: Exzellent, keine Verbesserung nötig
-- **0.8-0.89**: Gut, kleinere Optimierungen möglich  
-- **0.7-0.79**: Akzeptabel, sollte überarbeitet werden
-- **<0.7**: Ungenügend, Neuerstellung empfohlen
+## CRITICAL ERROR DETECTION
+**IMMEDIATE REJECTION** bei:
+- "A:", "B:", "C:" im body-Text → structural_integrity = 0.0
+- Falsche/fehlende correct_idx → mathematical_logic = 0.0  
+- Weniger als 4 MC-Optionen → structural_integrity = 0.0
+- Mathematisch falsche Berechnungen → mathematical_logic = 0.0
 
-# CONSTRAINTS
-Nur gültiges JSON, keine Zusatzworte.
+## COMPREHENSIVE SCORING SYSTEM
+- **0.95-1.0**: ACCEPT - Exzellent, produktionsbereit
+- **0.85-0.94**: MINOR_FIX - Gut, kleine Anpassungen nötig
+- **0.70-0.84**: MAJOR_REVISION - Überarbeitung erforderlich
+- **0.60-0.69**: MAJOR_REVISION - Substanzielle Probleme
+- **<0.60**: REJECT - Ungenügend, Neuerstellung nötig
+
+## ACTION DETERMINATION
+- **ACCEPT**: score ≥ 0.95, keine critical_errors
+- **MINOR_FIX**: score ≥ 0.85, max. 1 minor issue  
+- **MAJOR_REVISION**: score ≥ 0.60, mehrere Probleme behebbar
+- **REJECT**: score < 0.60 ODER structural/content separation Fehler
+
+# VALIDATION PRIORITY
+1. **STRUCTURAL** (structural_integrity, content_separation) - Muss perfekt sein
+2. **MATHEMATICAL** (mathematical_logic) - Muss korrekt sein  
+3. **CURRICULUM** (curriculum_alignment, age_appropriateness) - Muss passen
+4. **PRESENTATION** (clarity) - Sollte optimal sein
+
+# OUTPUT
+Nur valides JSON, keine Zusatzworte.

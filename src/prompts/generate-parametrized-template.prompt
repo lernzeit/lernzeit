@@ -1,59 +1,94 @@
-# CONTEXT
-Du bist spezialisierter Template‑Generator für parametrisierte Mathe‑Aufgaben mit integrierten Quality‑Checks.
+# CONTEXT  
+Du bist Experte für curriculum-konforme parametrisierte Template-Generierung mit integrierten Quality-Gates und Lehrplan-Awareness.
 
 # AUFGABE
-Erstelle genau **eine** parametrisierte Aufgaben-Vorlage im folgenden JSON-Schema:
+Erstelle genau **eine** hochwertige parametrisierte Aufgaben-Vorlage im folgenden JSON-Schema:
 {
   "grade": {{grade}},
   "quarter_app": "{{quarter}}",
   "domain": "{{domain}}",
-  "subcategory": "<<Passende Unterkategorie>>",
+  "subcategory": "<<Lehrplan-konforme Unterkategorie>>",
   "difficulty": "{{difficulty}}",
   "question_type": "{{variant}}",
-  "student_prompt": "<<Template mit {parameter} Platzhaltern>>",
+  "student_prompt": "<<Template mit {parameter} Platzhaltern - KEIN A:/B:/C:!>>",
   "parameter_definitions": {
-    "zahl1": { "type": "number", "curriculum_rule": "zahlenraum_grade_quarter" },
-    "zahl2": { "type": "number", "curriculum_rule": "zahlenraum_grade_quarter" },
-    "name": { "type": "word", "curriculum_rule": "age_appropriate_names" },
-    "gegenstand": { "type": "word", "curriculum_rule": "context_objects" }
+    "zahl1": { 
+      "type": "number", 
+      "min": "<<curriculum_basiert>>", 
+      "max": "<<curriculum_basiert>>",
+      "context": "{{domain}}_appropriate" 
+    },
+    "zahl2": { 
+      "type": "number", 
+      "min": "<<curriculum_basiert>>", 
+      "max": "<<curriculum_basiert>>",
+      "relationship": "compatible_with_zahl1" 
+    },
+    "name": { 
+      "type": "word", 
+      "category": "age_appropriate_names",
+      "grade_level": {{grade}}
+    },
+    "gegenstand": { 
+      "type": "word", 
+      "category": "context_objects",
+      "domain": "{{domain}}",
+      "grade_appropriate": true
+    }
   },
   "curriculum_rules": {
     "grade": {{grade}},
     "quarter": "{{quarter}}",
-    "zahlenraum_max": <<Lehrplan-basierte Obergrenze>>,
-    "operation_types": [<<Erlaubte Operationen>>],
-    "contexts": [<<Altersgerechte Kontexte>>]
+    "domain": "{{domain}}",
+    "zahlenraum_min": "<<Lehrplan-Minimum>>",
+    "zahlenraum_max": "<<Lehrplan-Maximum>>",
+    "operation_types": "<<Erlaubte Operationen>>",
+    "complexity_level": "{{difficulty}}",
+    "contexts": "<<Altersgerechte Kontexte>>",
+    "prerequisites": "<<Vorwissen-Anforderungen>>"
   },
-  "solution": "<<Lösungslogik mit Parametern>>",
-  "distractors": [<<Falsche Antworten basierend auf Parametern>>],
-  "explanation_teacher": "<<Erklärung für Lehrende>>"
+  "solution": {
+    "type": "calculation",
+    "formula": "<<Parameter-basierte Lösungsformel>>",
+    "result_validation": "<<Ergebnis-Validierung>>"
+  },
+  "distractors": [
+    "<<Häufiger Fehler 1 mit Parametern>>",
+    "<<Häufiger Fehler 2 mit Parametern>>", 
+    "<<Häufiger Fehler 3 mit Parametern>>"
+  ],
+  "explanation": "<<Kindgerechte Erklärung mit Parametern>>",
+  "quality_score": 0.85
 }
 
-# LEHRPLAN-KONFORME PARAMETER-REGELN
+# CURRICULUM-BEWUSSTE PARAMETER-SYSTEME
 
-## Klassenstufe {{grade}} Quartal {{quarter}}:
+## Dynamische Zahlenraum-Bestimmung für Klasse {{grade}} Quartal {{quarter}}:
 
-### Zahlenräume nach Klassenstufe:
-- **Klasse 1 Q1**: Zahlen 1-10, Kontexte: Spielzeug, Tiere, Obst
-- **Klasse 1 Q2**: Zahlen 1-20, Addition/Subtraktion ohne Übergang
-- **Klasse 1 Q3**: Zahlen 1-20, Addition/Subtraktion mit Übergang  
-- **Klasse 1 Q4**: Zahlen 1-100, erste Multiplikation
-- **Klasse 2 Q1**: Zahlen 1-100, sicheres Rechnen
-- **Klasse 2 Q2**: Einmaleins 2er/5er/10er Reihen
-- **Klasse 2 Q3**: Einmaleins erweitern 3er/4er/6er
-- **Klasse 2 Q4**: Einmaleins automatisieren  
-- **Klasse 3 Q1**: Zahlenraum 1000, schriftliche Addition/Subtraktion
-- **Klasse 3 Q2**: Multiplikation/Division als Umkehr
-- **Klasse 3 Q3**: Mehrstellige Multiplikation, Division mit Rest
-- **Klasse 3 Q4**: Dezimalzahlen (Geld)
-- **Klasse 4+**: Zahlenraum bis 1.000.000, Brüche, komplexe Operationen
-- **Klasse 5-7**: Negative Zahlen, Bruchrechnung, Prozent, Algebra-Grundlagen
-- **Klasse 8-10**: Funktionen, Gleichungssysteme, Trigonometrie
+### Präzise Lehrplan-Zuordnung:
+- **Klasse 1 Q1**: ZR 1-10, Addition bis 10, Kontexte: Spielzeug, Früchte, Tiere
+- **Klasse 1 Q2**: ZR 1-20, Addition/Subtraktion ohne Übergang, erste Sachaufgaben
+- **Klasse 1 Q3**: ZR 1-20, Addition/Subtraktion mit Übergang, Zehnerfreunde  
+- **Klasse 1 Q4**: ZR 1-100, Zehner/Einer, erste Multiplikation (Verdoppeln)
+- **Klasse 2 Q1**: ZR 1-100, sicheres ±, Einmaleins-Vorbereitung
+- **Klasse 2 Q2**: Einmaleins 2er/5er/10er, erste Division
+- **Klasse 2 Q3**: Einmaleins 3er/4er/6er/7er/8er/9er, Division sichern
+- **Klasse 2 Q4**: Einmaleins automatisieren, Sachaufgaben mit ×÷  
+- **Klasse 3 Q1**: ZR 1000, schriftliche +/-, Runden
+- **Klasse 3 Q2**: Schriftliche ×, ÷ einstellig, Größen
+- **Klasse 3 Q3**: ÷ mit Rest, Brüche einführend, Flächen/Umfang
+- **Klasse 3 Q4**: Dezimalzahlen (Euro/Cent), schriftliche ÷ sichern
+- **Klasse 4 Q1**: ZR 1.000.000, alle schriftlichen Verfahren
+- **Klasse 4 Q2**: Brüche erweitert, Dezimalzahlen rechnen
+- **Klasse 4 Q3**: Größen umrechnen, Maßstab, Zeit
+- **Klasse 4 Q4**: Geometrie vertiefen, Daten/Diagramme
+- **Klasse 5+**: Negative Zahlen, Bruchrechnung, Prozent, Terme, Gleichungen
 
-### Kontexte nach Alter:
-- **Grundschule (1-4)**: Familie, Spielplatz, Tiere, Einkaufen, Sport
-- **Sekundarstufe I (5-7)**: Wissenschaft, Technik, Umwelt, Reisen
-- **Sekundarstufe II (8-10)**: Physik, Ingenieurwesen, Forschung, Wirtschaft
+### Kontexte nach Entwicklungsstufe:
+- **Klasse 1-2**: Familie (Mama, Papa, Oma), Haustiere (Hund, Katze), Spielsachen (Ball, Puppe), Obst (Apfel, Birne)
+- **Klasse 3-4**: Schule (Klasse, Pausenhof), Sport (Fußball, Schwimmen), Natur (Wald, Park), Hobbys (Sammeln, Basteln)  
+- **Klasse 5-7**: Technik (Computer, Handy), Umwelt (Recycling, Energie), Reisen (Städte, Länder), Wissenschaft (Experimente)
+- **Klasse 8-10**: Berufswelt (Ingenieur, Forschung), Gesellschaft (Politik, Wirtschaft), globale Themen (Klimawandel, Digitalisierung)
 
 # PARAMETER-PLATZHALTER VERWENDEN
 
@@ -88,24 +123,31 @@ Erstelle genau **eine** parametrisierte Aufgaben-Vorlage im folgenden JSON-Schem
 }
 ```
 
-# QUALITY ASSURANCE
-Vor der Ausgabe MUSS jedes Template folgende Checks bestehen:
+# ADVANCED QUALITY ASSURANCE
 
-## MATHEMATISCHE LOGIK
-- Alle Parameter‑Kombinationen führen zu gültigen Aufgaben
-- Berechnungen sind mathematisch korrekt
-- Keine Division durch Null oder negative Ergebnisse (außer explizit gewünscht)
-- Lösungen liegen in altersgerechten Bereichen
+## STRUKTURELLE TEMPLATE-VALIDIERUNG
+- **NO-OPTION-MIXING**: student_prompt enthält NIEMALS "A:", "B:", "C:" Optionen
+- **PARAMETER-INTEGRITY**: Alle {parameter} haben korrekte Definitionen
+- **SOLUTION-CONSISTENCY**: Lösung ergibt sich mathematisch korrekt aus Parametern
+- **DISTRACTOR-QUALITY**: Falsche Antworten basieren auf realistischen Schülerfehlern
 
-## CURRICULUM COMPLIANCE
-- Parameter entsprechen exakt den Lehrplanvorgaben
-- Zahlenbereich passend zur Klassenstufe und Quartal
-- Operationen dem Lernstand entsprechend
+## MATHEMATISCHE ROBUSTHEIT  
+- **ALLE Parameter-Kombinationen** führen zu validen, lösbare Aufgaben
+- **ERGEBNIS-BEREICHE**: Lösungen liegen in altersgerechten, handhabbare Zahlenräume
+- **EDGE-CASE-HANDLING**: Keine Division durch Null, keine negativen Ergebnisse (außer explizit erwünscht)
+- **OPERATION-VALIDITY**: Nur lehrplan-konforme mathematische Operationen
 
-## SPRACHLICHE QUALITÄT
-- Eindeutige, altersgerechte Formulierungen
-- Deutsche Rechtschreibung und Grammatik
-- Keine mehrdeutigen Begriffe
+## CURRICULUM DEEP-COMPLIANCE
+- **PRECISE-ALIGNMENT**: Parameter exakt nach Klassenstufe {{grade}} Quartal {{quarter}}
+- **SKILL-PROGRESSION**: Template baut auf korrektem Vorwissen auf
+- **DOMAIN-FOCUS**: Inhalt entspricht {{domain}} Anforderungen
+- **DIFFICULTY-MATCHING**: {{difficulty}} Level realistisch für Zielgruppe
+
+## LINGUISTISCHE & KOGNITIVE QUALITÄT
+- **AGE-APPROPRIATE**: Sprache, Kontext und Komplexität der Altersgruppe angemessen
+- **COGNITIVE-LOAD**: Nicht überfordernd, aber herausfordernd  
+- **CULTURAL-SENSITIVITY**: Namen und Kontexte kulturell diverse und inklusive
+- **CLARITY-CHECK**: Eindeutige, unmissverständliche Aufgabenstellung
 
 # CONSTRAINTS
 1. **QUALITY GATES**: Template muss alle obigen Quality‑Checks bestehen
