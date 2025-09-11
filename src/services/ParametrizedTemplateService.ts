@@ -55,7 +55,7 @@ export class ParametrizedTemplateService {
     const sessionId = `pts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     // FIXED: Korrekte Quartal-/Grade-Berechnung
-    const targetGrade = grade - 1; // G5Q1 User soll G4Q4 Inhalte bekommen
+    const targetGrade = Math.max(1, grade - 1); // Nie unter Klasse 1 fallen
     const targetQuarter = this.getPreviousQuarter(quarter); // Q1 -> Q4 vom Vorjahr
     
     console.log(`🎯 Generiere ${totalQuestions} Fragen: User G${grade}${quarter} -> Ziel G${targetGrade}${targetQuarter}`);
@@ -202,7 +202,26 @@ export class ParametrizedTemplateService {
           const existingIds = new Set(allTemplates.map(t => t.id));
           const newTemplates = additionalTemplates.filter(t => !existingIds.has(t.id));
           allTemplates.push(...newTemplates);
+          totalFetched += newTemplates.length;
           console.log(`✅ Added ${newTemplates.length} additional templates`);
+        }
+
+        // Second-level fallback: drop quarter filter if still not enough
+        if (allTemplates.length < 8) {
+          console.log(`🔄 Still low (${allTemplates.length}), fetching by grade only (no quarter filter)...`);
+          const { data: additionalAny, error: errorAny } = await supabase
+            .from('templates')
+            .select('*')
+            .eq('grade', grade)
+            .eq('status', 'ACTIVE')
+            .limit(12 - allTemplates.length);
+
+          if (additionalAny && !errorAny) {
+            const existingIds2 = new Set(allTemplates.map(t => t.id));
+            const newTemplates2 = additionalAny.filter(t => !existingIds2.has(t.id));
+            allTemplates.push(...newTemplates2);
+            console.log(`✅ Added ${newTemplates2.length} additional templates (no quarter filter)`);
+          }
         }
       }
 

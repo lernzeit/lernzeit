@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Settings, 
   BarChart3, 
@@ -10,7 +14,8 @@ import {
   Zap,
   Target,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  LogOut
 } from 'lucide-react';
 import { QualityDashboard } from './QualityDashboard';
 import { QualityManagement } from './QualityManagement';
@@ -20,6 +25,18 @@ import { TemplateBankDashboard } from './TemplateBankDashboard';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({ title: 'Abmeldung fehlgeschlagen', description: error.message });
+    } else {
+      toast({ title: 'Abgemeldet' });
+      navigate('/');
+    }
+  };
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -37,6 +54,10 @@ export function AdminDashboard() {
               System Active
             </Badge>
             <Badge variant="secondary">Phase 4 Implementation</Badge>
+            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
           </div>
         </div>
 
