@@ -47,7 +47,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   );
   
   // Use screen time limit hook for children
-  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed } = useScreenTimeLimit(
+  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
     profile?.role === 'child' ? user?.id || '' : ''
   );
   
@@ -221,32 +221,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     loadStats();
   };
 
-  const loadLegacyStats = async () => {
-    if (!user?.id) return;
-
-    try {
-
-      let totalTime = 0;
-      let totalGames = 0;
-
-      // Add time from game_sessions
-      if (gameSessionsResponse.data) {
-        totalTime += gameSessionsResponse.data.reduce((sum, session) => sum + session.time_earned, 0);
-        totalGames += gameSessionsResponse.data.length;
-      }
-
-      // Add time from learning_sessions  
-      if (learningSessionsResponse.data) {
-        totalTime += learningSessionsResponse.data.reduce((sum, session) => sum + session.time_earned, 0);
-        totalGames += learningSessionsResponse.data.length;
-      }
-
-      setTotalTimeEarned(totalTime);
-      setGamesPlayed(totalGames);
-    } catch (error: any) {
-      console.error('Fehler beim Laden der Statistiken:', error);
-    }
-  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -388,9 +362,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                           size="sm"
                           onClick={handleManualRefresh}
                           className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
-                          disabled={loading}
+                          disabled={usageLoading}
                         >
-                          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+                          <RefreshCw className={`h-3 w-3 ${usageLoading ? 'animate-spin' : ''}`} />
                         </Button>
                       </div>
                     </div>
@@ -398,7 +372,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                       <span className="text-sm text-blue-700">Noch verfügbar:</span>
                       <span className="font-bold text-blue-800">{remainingMinutes} Min.</span>
                     </div>
-                    {loading && (
+                    {usageLoading && (
                       <div className="text-xs text-blue-600 mt-1">Daten werden aktualisiert...</div>
                     )}
                   </div>
