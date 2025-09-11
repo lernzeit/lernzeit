@@ -523,7 +523,9 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   // Show completion screen when game is finished
   if (gameCompleted && sessionEndTime) {
     const sessionDuration = sessionEndTime - sessionStartTime;
-    const timePerTask = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30;
+    const englishCategoryForDisplay = toEnglishCategory(category);
+    const categoryKeyForDisplay = getTimePerTaskKey(englishCategoryForDisplay) as keyof typeof settings;
+    const timePerTask = (settings?.[categoryKeyForDisplay] as number) || 30;
     const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60);
     const perfectSessionBonus = score === problems.length ? 2 : 0;
     
@@ -536,7 +538,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         achievementBonusMinutes={achievementBonusMinutes}
         perfectSessionBonus={perfectSessionBonus}
         onContinue={() => {
-          const timePerTaskValue = settings?.[`${category.toLowerCase()}_seconds_per_task` as keyof typeof settings] as number || 30;
+          const timePerTaskValue = (settings?.[categoryKeyForDisplay] as number) || 30;
           const earnedSeconds = score * timePerTaskValue;
           const earnedMinutes = Math.floor(earnedSeconds / 60);
           
