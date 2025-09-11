@@ -526,7 +526,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     const englishCategoryForDisplay = toEnglishCategory(category);
     const categoryKeyForDisplay = getTimePerTaskKey(englishCategoryForDisplay) as keyof typeof settings;
     const timePerTask = (settings?.[categoryKeyForDisplay] as number) || 30;
-    const achievementBonusMinutes = Math.floor((newAchievements.length * 5) / 60);
+    const achievementBonusMinutes = newAchievements.reduce((sum, ach) => sum + ach.reward_minutes, 0);
     const perfectSessionBonus = score === problems.length ? 2 : 0;
     
     return (

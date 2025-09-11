@@ -27,7 +27,7 @@ export function GameCompletionScreen({
   const perfectSessionBonusSeconds = perfectSessionBonus * 60;
   const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
   const efficiency = Math.round((score / totalQuestions) * 100);
-  const earnedMinutes = Math.round(netTimeSeconds / 60 * 10) / 10;
+  const earnedMinutes = Number((netTimeSeconds / 60).toFixed(1));
 
   // Determine celebration level
   const getCelebrationLevel = () => {
@@ -124,10 +124,17 @@ export function GameCompletionScreen({
             </div>
           )}
 
-          {/* Simple Time Calculation */}
+          {/* Detailed Time Calculation */}
           <div className="text-center text-sm text-muted-foreground mb-6">
             <Clock className="w-4 h-4 inline mr-1" />
-            {score} richtige × {timePerTask}s - {timeSpentSeconds}s verbraucht = <span className="font-semibold text-primary">{netTimeSeconds}s</span>
+            {score} richtige × {timePerTask}s = {earnedSeconds}s<br/>
+            - {timeSpentSeconds}s verbraucht
+            {(achievementBonusMinutes > 0 || perfectSessionBonus > 0) && (
+              <>
+                <br/>+ {achievementBonusMinutes * 60 + perfectSessionBonusSeconds}s Bonus
+              </>
+            )}
+            <br/>= <span className="font-semibold text-primary">{netTimeSeconds}s ({earnedMinutes} Min.)</span>
           </div>
         </CardContent>
       </Card>
