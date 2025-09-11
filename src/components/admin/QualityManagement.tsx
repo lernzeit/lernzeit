@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { templateQualityPipeline } from '@/services/TemplateQualityPipeline';
+import { postGenerationReviewer } from '@/services/PostGenerationReviewer';
+import { usePreGenerationValidator } from '@/hooks/usePreGenerationValidator';
 
 interface ValidationResult {
   success: boolean;

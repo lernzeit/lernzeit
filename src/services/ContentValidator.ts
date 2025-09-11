@@ -1,6 +1,6 @@
 /**
- * Content Validator Service - Phase 1 Quality Assurance
- * Detects problematic question patterns and validates content logic
+ * Enhanced Content Validator Service - Phase 2 Quality Assurance
+ * Comprehensive validation with mathematical logic checking and advanced pattern detection
  */
 import { supabase } from '@/integrations/supabase/client';
 
@@ -60,7 +60,7 @@ export class ContentValidator {
     }
 
     // 5. Check user feedback patterns
-    const feedbackIssues = await this.checkNegativeFeedbackPattern(template.id);
+    const feedbackIssues = await this.checkNegativeFeedbackPattern(template.id?.toString() || '');
     issues.push(...feedbackIssues);
     if (feedbackIssues.length > 0) {
       qualityScore -= 0.4;
@@ -186,7 +186,7 @@ export class ContentValidator {
   }
 
   /**
-   * Validate answer logic and solution consistency
+   * Phase 2: Enhanced answer logic and solution consistency validation
    */
   private validateAnswerLogic(template: any): string[] {
     const issues: string[] = [];
@@ -220,16 +220,77 @@ export class ContentValidator {
       issues.push('Lösung enthält Fehlerwerte');
     }
 
-    // For math problems, try basic validation
-    if (prompt.includes('+') || prompt.includes('plus')) {
+    // Enhanced mathematical validation
+    const mathValidationIssues = this.validateMathematicalLogic(prompt, expectedAnswer);
+    issues.push(...mathValidationIssues);
+
+    return issues;
+  }
+
+  /**
+   * Phase 2: Advanced mathematical logic validation
+   */
+  private validateMathematicalLogic(prompt: string, expectedAnswer: string | number): string[] {
+    const issues: string[] = [];
+    const lowerPrompt = prompt.toLowerCase();
+    const numericAnswer = parseFloat(String(expectedAnswer));
+
+    if (isNaN(numericAnswer)) {
+      // Skip validation for non-numeric answers
+      return issues;
+    }
+
+    // Addition validation
+    if (lowerPrompt.includes('+') || lowerPrompt.includes('plus')) {
       const numbers = prompt.match(/\d+/g);
       if (numbers && numbers.length >= 2) {
         const sum = numbers.slice(0, 2).reduce((a, b) => parseInt(a) + parseInt(b), 0);
-        const providedAnswer = parseFloat(String(expectedAnswer));
-        if (!isNaN(providedAnswer) && Math.abs(sum - providedAnswer) > sum * 0.1) {
-          issues.push('Lösung stimmt nicht mit Additionsaufgabe überein');
+        if (Math.abs(sum - numericAnswer) > 0.1) {
+          issues.push(`Additionsrechnung falsch: ${numbers[0]}+${numbers[1]}=${sum}, aber Lösung ist ${numericAnswer}`);
         }
       }
+    }
+
+    // Subtraction validation
+    if (lowerPrompt.includes('−') || lowerPrompt.includes('-') || lowerPrompt.includes('minus')) {
+      const numbers = prompt.match(/\d+/g);
+      if (numbers && numbers.length >= 2) {
+        const difference = parseInt(numbers[0]) - parseInt(numbers[1]);
+        if (Math.abs(difference - numericAnswer) > 0.1) {
+          issues.push(`Subtraktionsrechnung falsch: ${numbers[0]}-${numbers[1]}=${difference}, aber Lösung ist ${numericAnswer}`);
+        }
+      }
+    }
+
+    // Multiplication validation
+    if (lowerPrompt.includes('×') || lowerPrompt.includes('*') || lowerPrompt.includes('mal')) {
+      const numbers = prompt.match(/\d+/g);
+      if (numbers && numbers.length >= 2) {
+        const product = parseInt(numbers[0]) * parseInt(numbers[1]);
+        if (Math.abs(product - numericAnswer) > 0.1) {
+          issues.push(`Multiplikationsrechnung falsch: ${numbers[0]}×${numbers[1]}=${product}, aber Lösung ist ${numericAnswer}`);
+        }
+      }
+    }
+
+    // Division validation
+    if (lowerPrompt.includes('÷') || lowerPrompt.includes('/') || lowerPrompt.includes('geteilt')) {
+      const numbers = prompt.match(/\d+/g);
+      if (numbers && numbers.length >= 2) {
+        const quotient = parseInt(numbers[0]) / parseInt(numbers[1]);
+        if (Math.abs(quotient - numericAnswer) > 0.1) {
+          issues.push(`Divisionsrechnung falsch: ${numbers[0]}÷${numbers[1]}=${quotient}, aber Lösung ist ${numericAnswer}`);
+        }
+      }
+    }
+
+    // Logical range validation
+    if (numericAnswer < 0 && !lowerPrompt.includes('negativ') && !lowerPrompt.includes('minus')) {
+      issues.push('Negative Antwort ohne Hinweis auf negative Zahlen');
+    }
+
+    if (numericAnswer > 10000 && !lowerPrompt.includes('groß') && !lowerPrompt.includes('tausend')) {
+      issues.push('Sehr große Antwort ohne entsprechende Aufgabenstellung');
     }
 
     return issues;
@@ -245,7 +306,7 @@ export class ContentValidator {
       const { data: feedback, error } = await supabase
         .from('question_feedback')
         .select('feedback_type, created_at')
-        .eq('question_content', templateId) // Assuming we track template ID in question_content
+        .eq('question_content', templateId) // Template ID as string
         .in('feedback_type', ['duplicate', 'inappropriate', 'too_easy', 'too_hard', 'not_curriculum_compliant', 'confusing']);
 
       if (error || !feedback) return issues;

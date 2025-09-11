@@ -36,7 +36,7 @@ serve(async (req) => {
     const body = await req.json() as ValidationRequest;
     const { template_ids, grade, domain, batch_size = 50 } = body;
 
-    console.log('🔍 Starting Phase 1 template validation...', { template_ids, grade, domain, batch_size });
+    console.log('🔍 Starting Phase 2 systematic template validation...', { template_ids, grade, domain, batch_size });
 
     // Build query to fetch templates for validation
     let query = supabase
@@ -123,7 +123,12 @@ serve(async (req) => {
       }
     }
 
-    console.log(`✅ Phase 1 validation complete: ${validatedCount} processed, ${invalidCount} invalid, ${excludedCount} excluded`);
+    // Phase 2: Additional analysis and reporting
+    const qualityDistribution = analyzeQualityDistribution(validationResults);
+    const issueCategories = categorizeIssues(validationResults);
+    
+    console.log(`✅ Phase 2 validation complete: ${validatedCount} processed, ${invalidCount} invalid, ${excludedCount} excluded`);
+    console.log(`📊 Quality distribution:`, qualityDistribution);
 
     return new Response(JSON.stringify({
       success: true,
@@ -131,10 +136,13 @@ serve(async (req) => {
       invalid: invalidCount,
       excluded: excludedCount,
       total: templates.length,
+      quality_distribution: qualityDistribution,
+      issue_categories: issueCategories,
       problematic_templates: validationResults
         .filter(r => !r.isValid || r.shouldExclude)
-        .slice(0, 10),
-      message: `Phase 1: Validated ${validatedCount} templates, found ${invalidCount} invalid, excluded ${excludedCount}`
+        .slice(0, 15),
+      recommendations: generateRecommendations(qualityDistribution, issueCategories),
+      message: `Phase 2: Validated ${validatedCount} templates, found ${invalidCount} invalid, excluded ${excludedCount}`
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -152,7 +160,7 @@ serve(async (req) => {
 });
 
 /**
- * Phase 1 comprehensive template validation function
+ * Phase 2 comprehensive template validation function with enhanced logic checking
  */
 async function validateTemplate(template: any): Promise<ValidationResult> {
   const issues: string[] = [];
@@ -174,7 +182,7 @@ async function validateTemplate(template: any): Promise<ValidationResult> {
     score -= 0.4;
   }
 
-  // 2. Phase 1: Check for problematic patterns (CRITICAL EXCLUSIONS)
+  // 2. Phase 2: Enhanced problematic pattern detection
   const problematicIssues = checkProblematicPatterns(prompt);
   issues.push(...problematicIssues);
   if (problematicIssues.length > 0) {
@@ -182,22 +190,36 @@ async function validateTemplate(template: any): Promise<ValidationResult> {
     shouldExclude = true; // Exclude immediately
   }
 
-  // 3. Validate solution format
+  // 3. Phase 2: Enhanced solution validation with mathematical logic
   const solutionIssues = validateMathSolution(prompt, solution);
   if (!solutionIssues.isValid) {
     issues.push(solutionIssues.reason || 'Lösungsformat ungültig');
     score -= 0.3;
   }
 
-  // 4. Check complexity vs grade level
+  // 4. Phase 2: Advanced complexity assessment
   const complexity = assessComplexity(prompt, grade);
   if (complexity > 0.8 && grade <= 2) {
     issues.push('Zu komplex für Klassenstufe');
     score -= 0.2;
   }
 
-  // 5. Phase 1: Hard threshold for quality
-  if (score < 0.5) {
+  // 5. Phase 2: Enhanced mathematical correctness check
+  const mathValidationIssues = validateMathematicalCorrectness(prompt, solution);
+  issues.push(...mathValidationIssues);
+  if (mathValidationIssues.length > 0) {
+    score -= mathValidationIssues.length * 0.15;
+  }
+
+  // 6. Phase 2: Context and semantic validation
+  const contextIssues = validateContext(prompt, template);
+  issues.push(...contextIssues);
+  if (contextIssues.length > 0) {
+    score -= contextIssues.length * 0.1;
+  }
+
+  // 7. Phase 2: Higher quality threshold
+  if (score < 0.6) {
     shouldExclude = true;
   }
 
@@ -328,3 +350,12 @@ function assessComplexity(text: string, grade: number): number {
   
   return Math.max(0, Math.min(1, complexity - gradeAdjustment));
 }
+
+// Import Phase 2 validation functions
+import { 
+  validateMathematicalCorrectness, 
+  validateContext, 
+  analyzeQualityDistribution,
+  categorizeIssues,
+  generateRecommendations 
+} from './phase2-validators.ts';
