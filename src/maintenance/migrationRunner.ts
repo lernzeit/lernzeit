@@ -4,11 +4,11 @@ import { topUpBank, pruneOldBad } from './templateBankRunner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MigrationConfig {
-  enableTemplateBankMode: boolean;
-  enableQualityPruning: boolean;
-  enableAutoTopUp: boolean;
-  targetTemplatesPerDomain: number;
-  phases: ('template-bank' | 'knowledge-integration' | 'legacy-cleanup' | 'optimization')[];
+  enableTemplateBankMode?: boolean;
+  enableQualityPruning?: boolean;
+  enableAutoTopUp?: boolean;
+  targetTemplatesPerDomain?: number;
+  phases?: ('template-bank' | 'knowledge-integration' | 'legacy-cleanup' | 'optimization')[];
 }
 
 interface MigrationResult {
