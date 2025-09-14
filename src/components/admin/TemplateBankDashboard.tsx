@@ -210,6 +210,27 @@ export const TemplateBankDashboard: React.FC = () => {
     }
   };
 
+  const handleAutoRepair = async () => {
+    setIsAnalyzing(true);
+    addLog('Starte Daten-Reparatur (Mathe & Trennzeichen)...');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-template-repair', {
+        body: { limit: 2000 }
+      });
+
+      if (error) throw error;
+
+      addLog(`Reparatur fertig: ${data?.updatedIds?.length || 0} Vorlagen aktualisiert (Mathe: ${data?.mathFixed || 0}, Trennz.: ${data?.sepFixed || 0})`);
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Repair error:', error);
+      addLog(`Repair error: ${error.message}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`${timestamp}: ${message}`, ...prev.slice(0, 19)]);
@@ -248,6 +269,14 @@ export const TemplateBankDashboard: React.FC = () => {
           >
             <Target className="h-4 w-4 mr-2" />
             Stats Neu Berechnen
+          </Button>
+          <Button 
+            onClick={handleAutoRepair}
+            disabled={isAnalyzing}
+            variant="outline"
+          >
+            <Brain className="h-4 w-4 mr-2" />
+            Daten-Reparatur (Mathe & Trennzeichen)
           </Button>
         </div>
       </div>
