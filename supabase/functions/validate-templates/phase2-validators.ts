@@ -4,7 +4,7 @@
  */
 
 /**
- * Enhanced mathematical correctness validation
+ * Enhanced mathematical correctness validation with Euro/Money calculation logic
  */
 export function validateMathematicalCorrectness(prompt: string, solution: any): string[] {
   const issues: string[] = [];
@@ -26,45 +26,57 @@ export function validateMathematicalCorrectness(prompt: string, solution: any): 
     return issues; // Skip for non-numeric solutions
   }
 
-  const numbers = prompt.match(/\d+/g);
-  if (!numbers || numbers.length < 2) {
-    return issues; // Need at least 2 numbers for validation
+  // Enhanced Euro/Money calculation validation
+  if (lowerPrompt.includes('€') || lowerPrompt.includes('euro') || lowerPrompt.includes('geld')) {
+    const euroResult = validateEuroCalculations(prompt, solutionValue || 0);
+    if (euroResult.errors.length > 0) {
+      issues.push(...euroResult.errors);
+    }
   }
 
-  const num1 = parseInt(numbers[0]);
-  const num2 = parseInt(numbers[1]);
+  // Extract all numbers for general validation
+  const numbers = prompt.match(/\d+(?:[.,]\d+)?/g);
+  if (!numbers || numbers.length < 2) {
+    return issues; // Need at least 2 numbers for basic validation
+  }
 
-  // Addition validation
-  if (lowerPrompt.includes('+') || lowerPrompt.includes('plus') || lowerPrompt.includes('addiere')) {
+  const num1 = parseFloat(numbers[0].replace(',', '.'));
+  const num2 = parseFloat(numbers[1].replace(',', '.'));
+
+  // Basic arithmetic validation
+  if (lowerPrompt.includes('+') || lowerPrompt.includes('plus') || lowerPrompt.includes('addiere') || lowerPrompt.includes('zusammen')) {
     const expected = num1 + num2;
-    if (Math.abs(expected - (solutionValue || 0)) > 0.1) {
+    if (Math.abs(expected - (solutionValue || 0)) > 0.01) {
       issues.push(`Addition falsch: ${num1}+${num2}=${expected}, Lösung: ${solutionValue}`);
     }
   }
 
-  // Subtraction validation
-  if (lowerPrompt.includes('−') || lowerPrompt.includes('-') || lowerPrompt.includes('minus') || lowerPrompt.includes('subtrahiere')) {
+  if (lowerPrompt.includes('−') || lowerPrompt.includes('-') || lowerPrompt.includes('minus') || lowerPrompt.includes('weniger')) {
     const expected = num1 - num2;
-    if (Math.abs(expected - (solutionValue || 0)) > 0.1) {
+    if (Math.abs(expected - (solutionValue || 0)) > 0.01) {
       issues.push(`Subtraktion falsch: ${num1}-${num2}=${expected}, Lösung: ${solutionValue}`);
     }
   }
 
-  // Multiplication validation  
-  if (lowerPrompt.includes('×') || lowerPrompt.includes('*') || lowerPrompt.includes('mal') || lowerPrompt.includes('multipliziere')) {
+  if (lowerPrompt.includes('×') || lowerPrompt.includes('*') || lowerPrompt.includes('mal') || lowerPrompt.includes('zu je') || lowerPrompt.includes('jeweils')) {
     const expected = num1 * num2;
-    if (Math.abs(expected - (solutionValue || 0)) > 0.1) {
+    if (Math.abs(expected - (solutionValue || 0)) > 0.01) {
       issues.push(`Multiplikation falsch: ${num1}×${num2}=${expected}, Lösung: ${solutionValue}`);
+      
+      // Check for common addition error
+      const wrongAddition = num1 + num2;
+      if (Math.abs(wrongAddition - (solutionValue || 0)) < 0.01) {
+        issues.push(`KRITISCHER FEHLER: Addition (${num1}+${num2}=${wrongAddition}) statt Multiplikation (${num1}×${num2}=${expected}) bei "zu je"-Aufgabe!`);
+      }
     }
   }
 
-  // Division validation
-  if (lowerPrompt.includes('÷') || lowerPrompt.includes('/') || lowerPrompt.includes('geteilt') || lowerPrompt.includes('dividiere')) {
+  if (lowerPrompt.includes('÷') || lowerPrompt.includes('/') || lowerPrompt.includes('geteilt') || lowerPrompt.includes('aufteilen')) {
     if (num2 === 0) {
       issues.push('Division durch Null ist nicht definiert');
     } else {
       const expected = num1 / num2;
-      if (Math.abs(expected - (solutionValue || 0)) > 0.1) {
+      if (Math.abs(expected - (solutionValue || 0)) > 0.01) {
         issues.push(`Division falsch: ${num1}÷${num2}=${expected}, Lösung: ${solutionValue}`);
       }
     }
@@ -75,11 +87,55 @@ export function validateMathematicalCorrectness(prompt: string, solution: any): 
     issues.push('Negative Lösung ohne entsprechenden Kontext');
   }
 
-  if ((solutionValue || 0) > 1000 && !lowerPrompt.includes('tausend') && !lowerPrompt.includes('groß')) {
-    issues.push('Sehr große Lösung ohne entsprechenden Kontext');
+  return issues;
+}
+
+/**
+ * Specialized Euro/Money calculation validator
+ */
+function validateEuroCalculations(prompt: string, solutionValue: number): { expected: number | null; errors: string[] } {
+  const p = prompt.toLowerCase().replace(/\s+/g, ' ');
+  const errors: string[] = [];
+  let expected: number | null = null;
+
+  // Extract numbers
+  const numbers = [...prompt.matchAll(/(\d+(?:[.,]\d+)?)/g)].map(m => parseFloat(m[1].replace(',', '.')));
+
+  // Pattern 1: "X Äpfel zu je Y €" - should be X * Y
+  const multiplyPattern = /(\d+(?:[.,]\d+)?)\s+[^.]*?(zu\s+je|jeweils|je|pro)\s*(\d+(?:[.,]\d+)?)\s*(€|euro)/gi;
+  for (const match of p.matchAll(multiplyPattern)) {
+    const qty = parseFloat(match[1].replace(',', '.'));
+    const price = parseFloat(match[3].replace(',', '.'));
+    if (!isNaN(qty) && !isNaN(price)) {
+      expected = qty * price;
+      
+      if (Math.abs(expected - solutionValue) > 0.01) {
+        errors.push(`Euro-Berechnung falsch: ${qty} × ${price} = ${expected}€, nicht ${solutionValue}€`);
+        
+        // Check for addition error
+        const wrongSum = qty + price;
+        if (Math.abs(wrongSum - solutionValue) < 0.01) {
+          errors.push(`SCHWERER FEHLER: Addition (${qty}+${price}=${wrongSum}€) statt Multiplikation bei "zu je"-Aufgabe!`);
+        }
+      }
+      break;
+    }
   }
 
-  return issues;
+  // Pattern 2: "X Äpfel für Y €" - bundle price, should be Y
+  const bundlePattern = /(\d+(?:[.,]\d+)?)\s+[^.]*?für\s*(\d+(?:[.,]\d+)?)\s*(€|euro)/gi;
+  for (const match of p.matchAll(bundlePattern)) {
+    const bundlePrice = parseFloat(match[2].replace(',', '.'));
+    if (!isNaN(bundlePrice)) {
+      expected = bundlePrice;
+      if (Math.abs(expected - solutionValue) > 0.01) {
+        errors.push(`Bundle-Preis falsch: "für ${bundlePrice}€" bedeutet Gesamtpreis ${bundlePrice}€, nicht ${solutionValue}€`);
+      }
+      break;
+    }
+  }
+
+  return { expected, errors };
 }
 
 /**

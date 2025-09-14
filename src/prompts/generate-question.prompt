@@ -23,6 +23,28 @@ Erstelle genau **eine** hochwertige, curriculum-konforme Aufgabe im JSON-Schema:
  }
 }
 
+# CRITICAL MATHEMATICAL CALCULATION RULES
+
+## EURO/GELD-AUFGABEN - KORREKTE BERECHNUNGSLOGIK
+- **"X Äpfel zu je Y €"** → MULTIPLIKATION: X × Y = Gesamtpreis
+- **"X Äpfel für Y €"** → BUNDLE-PREIS: Y € (bereits Gesamtpreis)
+- **"Ein Apfel kostet X €, wie viel kosten Y Äpfel?"** → MULTIPLIKATION: X × Y
+- **NIEMALS Addition statt Multiplikation bei Stückpreisen!**
+- **Beispiel RICHTIG**: "3 Äpfel zu je 2 €" = 3 × 2 = 6 €
+- **Beispiel FALSCH**: "3 Äpfel zu je 2 €" = 3 + 2 = 5 € ← NIEMALS SO!
+
+## RECHENARTEN-ERKENNUNG ZWINGEND
+- **Addition**: "zusammen", "insgesamt", "dazu", "mehr"
+- **Subtraktion**: "weniger", "weg", "übrig", "Differenz"  
+- **Multiplikation**: "zu je", "pro", "jeweils", "mal", "×-mal"
+- **Division**: "aufteilen", "verteilen", "geteilt durch"
+
+## MATHEMATISCHE KORREKTHEIT ZWINGEND
+- **VOR AUSGABE**: Jede Rechnung mit Taschenrechner kontrollieren!
+- **PLAUSIBILITÄT**: Ergebnis muss realitätsnah und sinnvoll sein
+- **EINHEITEN**: Bei Geld immer € oder Cent, bei Längen cm/m, etc.
+- **ZAHLENRAUM**: Exakt klassenstufengerecht (Klasse 1: bis 20, Klasse 2: bis 100, etc.)
+
 # CRITICAL STRUCTURE RULES
 
 ## FRAGETEXT & OPTIONEN STRIKTE TRENNUNG
@@ -90,7 +112,7 @@ Erstelle genau **eine** hochwertige, curriculum-konforme Aufgabe im JSON-Schema:
 ## MATHEMATISCHE PRÄZISION
 - **BERECHNUNGEN**: Alle mathematischen Operationen exakt korrekt
 - **EINDEUTIGKEIT**: Nur eine korrekte Antwort bei Multiple Choice
-- **DISTRAKTOREN**: Falsche Antworten = häufige Schülerfehler (z.B. Vorzeichenfehler, Rechenweg-Verwechslung)
+- **DISTRAKTOREN**: Falsche Antworten = häufige Schülerfehler (z.B. Addition statt Multiplikation)
 - **KONSISTENZ**: Keine Widersprüche in Aufgabenstellung oder Lösung
 
 ## STRUCTURE VALIDATION
@@ -115,9 +137,10 @@ Erstelle genau **eine** hochwertige, curriculum-konforme Aufgabe im JSON-Schema:
 Vor Ausgabe ZWINGEND prüfen:
 1. ✅ body enthält KEINE "A:", "B:", "C:" Optionen
 2. ✅ MULTIPLE_CHOICE hat exakt 4 options und gültigen correct_idx
-3. ✅ Mathematik ist zu 100% korrekt
-4. ✅ Schwierigkeit passt zu Grade {{grade}} Quarter {{quarter}}
-5. ✅ JSON ist strukturell valide
+3. ✅ Mathematik ist zu 100% korrekt (Taschenrechner-Check!)
+4. ✅ Bei Euro-Aufgaben: Multiplikation vs Addition korrekt erkannt
+5. ✅ Schwierigkeit passt zu Grade {{grade}} Quarter {{quarter}}
+6. ✅ JSON ist strukturell valide
 
 # OUTPUT
 **NUR VALIDES JSON** - keine Kommentare, kein Markdown, keine Erklärungen!
