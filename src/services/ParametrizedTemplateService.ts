@@ -345,21 +345,42 @@ export class ParametrizedTemplateService {
   }
 
   /**
-   * SIMPLIFIED: Use database solution directly - NO COMPLEX PARSING
+   * FIXED: Extract solution value from database object structure
    */
   private extractSolutionValue(solution: any, parameters: Record<string, any>): string {
-    console.log('🔍 DIRECT: Using solution as stored in database:', solution);
+    console.log('🔍 Extracting solution from database:', solution);
     
-    // Use solution directly as string - no complex parsing
-    const directValue = String(solution || '');
+    let value = '';
+    
+    // Handle different solution formats from database
+    if (typeof solution === 'string') {
+      value = solution;
+    } else if (typeof solution === 'object' && solution !== null) {
+      // Database stores solutions as objects like {value: "6"} or {answer: "6"}
+      if (solution.value !== undefined) {
+        value = String(solution.value);
+      } else if (solution.answer !== undefined) {
+        value = String(solution.answer);
+      } else if (solution.correct !== undefined) {
+        value = String(solution.correct);
+      } else {
+        // If it's an object but no known key, try to get the first value
+        const keys = Object.keys(solution);
+        if (keys.length > 0) {
+          value = String(solution[keys[0]]);
+        }
+      }
+    } else {
+      value = String(solution || '1');
+    }
     
     // Only replace placeholders if we have parameters
     if (Object.keys(parameters).length > 0) {
-      return this.replacePlaceholders(directValue, parameters);
+      value = this.replacePlaceholders(value, parameters);
     }
     
-    console.log('✅ DIRECT: Solution value:', directValue);
-    return directValue;
+    console.log('✅ Extracted solution value:', value);
+    return value;
   }
 
   /**

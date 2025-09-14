@@ -147,7 +147,7 @@ export class MigrationRunner {
         3,
         'Q1',
         5,
-        { enableQualityControl: true, minQualityThreshold: 0.7 }
+        { enableQualityControl: true, minQualityThreshold: 0.7, diversityWeight: 0.3, fallbackToLegacy: true }
       );
 
       return {
@@ -339,7 +339,7 @@ export class MigrationRunner {
         grade,
         'Q1',
         3,
-        { enableQualityControl: true }
+        { enableQualityControl: true, minQualityThreshold: 0.7, diversityWeight: 0.3, fallbackToLegacy: true }
       );
 
       console.log(`✅ Quick test successful: ${result.questions.length} questions from ${result.source}`);
