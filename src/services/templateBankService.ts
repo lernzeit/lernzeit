@@ -79,11 +79,18 @@ export class EnhancedTemplateBankService {
 
       // Convert to SelectionQuestion format and filter out invalid questions
       const convertedQuestions: SelectionQuestion[] = [];
+      const seenQuestions = new Set<string>();
       
       for (const template of selectedTemplates) {
         const converted = await this.convertTemplateToQuestion(template);
         if (converted !== null) {
-          convertedQuestions.push(converted);
+          const key = `${converted.questionType}::${converted.question?.toLowerCase().replace(/\s+/g,' ').trim()}`;
+          if (!seenQuestions.has(key)) {
+            convertedQuestions.push(converted);
+            seenQuestions.add(key);
+          } else {
+            console.log(`🔁 Deduped similar question: ${converted.question.substring(0,80)}...`);
+          }
         }
       }
       
@@ -174,7 +181,9 @@ export class EnhancedTemplateBankService {
         type: this.mapDomainToSubject(template.domain),
         questionType: 'text-input',
         answer: calculatedAnswer.answer,
-        explanation: calculatedAnswer.explanation || template.explanation || ""
+        explanation: calculatedAnswer.explanation || template.explanation || "",
+        // 🔗 Keep original template reference for analytics
+        templateId: String(template.id)
       } as TextInputQuestion;
     } else {
       // 🔧 FIXED: Properly extract options and track correct answer index
@@ -187,7 +196,9 @@ export class EnhancedTemplateBankService {
         questionType: 'multiple-choice',
         options: optionsData.options,
         correctAnswer: optionsData.correctIndex, // 🔧 CORRECT INDEX AFTER SHUFFLE
-        explanation: template.explanation || ""
+        explanation: template.explanation || "",
+        // 🔗 Keep original template reference for analytics
+        templateId: String(template.id)
       } as MultipleChoiceQuestion;
     }
   }
@@ -383,9 +394,18 @@ export class EnhancedTemplateBankService {
    * Extract options and return both options and correct index - FIXED units consistency
    */
   private extractOptionsWithCorrectIndex(template: any): { options: string[]; correctIndex: number } {
-    // Calculate the correct answer dynamically
-    const calculatedAnswer = this.calculateDynamicAnswer(template, template.student_prompt || '');
-    const correct = calculatedAnswer.answer;
+    // Prefer static solution from DB if available; fall back to dynamic calc
+    let correct: string | undefined;
+    const sol = template.solution;
+    if (sol) {
+      if (typeof sol === 'string') correct = sol;
+      else if (typeof sol.value !== 'undefined') correct = String(sol.value);
+      else if (typeof sol.answer !== 'undefined') correct = String(sol.answer);
+    }
+    if (!correct || correct.trim() === '') {
+      const calculated = this.calculateDynamicAnswer(template, template.student_prompt || '');
+      correct = calculated.answer;
+    }
     
     console.log(`🔧 Extracting options - Correct answer: "${correct}"`);
     
