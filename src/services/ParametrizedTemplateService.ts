@@ -321,7 +321,8 @@ export class ParametrizedTemplateService {
         return {
           ...baseQuestion,
           questionType: 'text-input',
-          answer: renderedSolution
+          answer: renderedSolution,
+          templateId: String(template.id)
         } as TextInputQuestion;
       } else {
         // Multiple Choice mit korrekter Lösung und Distractors
@@ -333,7 +334,8 @@ export class ParametrizedTemplateService {
           ...baseQuestion,
           questionType: 'multiple-choice',
           options: shuffledOptions,
-          correctAnswer: correctIndex
+          correctAnswer: correctIndex,
+          templateId: String(template.id)
         } as MultipleChoiceQuestion;
       }
     } catch (error) {

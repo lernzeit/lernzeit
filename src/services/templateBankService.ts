@@ -35,6 +35,7 @@ export class EnhancedTemplateBankService {
   private static instance: EnhancedTemplateBankService;
   private cache = new Map<string, TemplateBankResult>();
   private sessionPolicy: any = null;
+  private userSessions = new Map<string, string>();
 
   static getInstance(): EnhancedTemplateBankService {
     if (!EnhancedTemplateBankService.instance) {
@@ -50,7 +51,8 @@ export class EnhancedTemplateBankService {
     category: string,
     grade: number,
     quarter: Quarter,
-    count: number
+    count: number,
+    sessionId?: string
   ): Promise<SelectionQuestion[]> {
     try {
       // Fetch active templates with quarter logic
@@ -68,9 +70,15 @@ export class EnhancedTemplateBankService {
 
       console.log(`📚 Found ${categoryTemplates.length} templates for ${category}`);
 
+      const availableTemplates = sessionId
+        ? categoryTemplates.filter(t => !TemplateSessionManager.isTemplateUsed(sessionId, String(t.id)))
+        : categoryTemplates;
+
+      console.log(`🧹 After session filter: ${availableTemplates.length} unused templates`);
+
       // FIXED: More diverse template selection with less restrictive domain requirements
-      const sessionTemplates = pickSessionTemplates(categoryTemplates, {
-        count: Math.min(count * 3, categoryTemplates.length), // Get more candidates
+      const sessionTemplates = pickSessionTemplates(availableTemplates, {
+        count: Math.min(count * 3, availableTemplates.length), // Get more candidates
         minDistinctDomains: Math.max(1, Math.min(2, count)), // Less restrictive: min 1-2 domains instead of 4
         difficulty: undefined
       });
@@ -105,15 +113,24 @@ export class EnhancedTemplateBankService {
         
         const templateId = question.templateId || String(question.id);
         const questionHash = this.generateQuestionHash(question.question);
-        
-        if (!usedTemplateIds.has(templateId) && !usedQuestionHashes.has(questionHash)) {
-          convertedQuestions.push(question);
-          usedTemplateIds.add(templateId);
-          usedQuestionHashes.add(questionHash);
-          console.log(`✅ Selected unique question: ${question.question.substring(0, 60)}... (ID: ${templateId})`);
-        } else {
+
+        // Skip if already used in this in-memory selection or session-wide
+        if (
+          usedTemplateIds.has(templateId) ||
+          usedQuestionHashes.has(questionHash) ||
+          (sessionId && (TemplateSessionManager.isTemplateUsed(sessionId, templateId) || TemplateSessionManager.isQuestionUsed(sessionId, question as any)))
+        ) {
           console.log(`🔁 Skipped duplicate: ${question.question.substring(0, 60)}... (ID: ${templateId})`);
+          continue;
         }
+        
+        convertedQuestions.push(question);
+        usedTemplateIds.add(templateId);
+        usedQuestionHashes.add(questionHash);
+        if (sessionId) {
+          TemplateSessionManager.markTemplateUsed(sessionId, templateId, question as any);
+        }
+        console.log(`✅ Selected unique question: ${question.question.substring(0, 60)}... (ID: ${templateId})`);
       }
       
       return convertedQuestions;
@@ -680,8 +697,15 @@ export class EnhancedTemplateBankService {
       ...config
     };
 
-    const sessionId = `etb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`🏦 Enhanced Template-Bank: Generating ${totalQuestions} questions for ${category} Grade ${grade} Quarter ${quarter}`);
+    const userKey = `${userId || 'anonymous'}|${category}|${grade}`;
+    let sessionId = this.userSessions.get(userKey) || '';
+    const existingSession = sessionId ? TemplateSessionManager.getSessionStats(sessionId) : null;
+    if (!existingSession) {
+      sessionId = TemplateSessionManager.createSession(userId || 'anonymous', category, grade);
+      this.userSessions.set(userKey, sessionId);
+    }
+
+    console.log(`🏦 Enhanced Template-Bank: Generating ${totalQuestions} questions for ${category} Grade ${grade} Quarter ${quarter} (session ${sessionId})`);
 
     try {
       // 1. PARAMETRISIERTE TEMPLATES ALS PRIMÄRQUELLE
@@ -696,6 +720,15 @@ export class EnhancedTemplateBankService {
 
       if (parametrizedResult.questions.length >= totalQuestions) {
         console.log(`✅ Parametrisierte Templates lieferten ${parametrizedResult.questions.length} Fragen`);
+        // Mark all parametrized questions as used in this session
+        try {
+          for (const q of parametrizedResult.questions) {
+            const tid = (q as any).templateId || String(q.id);
+            TemplateSessionManager.markTemplateUsed(sessionId, tid, q as any);
+          }
+        } catch (e) {
+          console.warn('⚠️ Mark parametrized used failed:', e);
+        }
         return {
           questions: parametrizedResult.questions,
           source: 'template-bank',
@@ -715,7 +748,8 @@ export class EnhancedTemplateBankService {
         category,
         grade,
         quarter,
-        totalQuestions - parametrizedResult.questions.length
+        totalQuestions - parametrizedResult.questions.length,
+        sessionId
       );
 
       // Kombiniere parametrisierte + Template-Bank Fragen
@@ -723,6 +757,15 @@ export class EnhancedTemplateBankService {
 
       if (combinedQuestions.length >= totalQuestions) {
         console.log(`✅ Kombiniert: ${combinedQuestions.length} Fragen (${parametrizedResult.questions.length} parametrisiert + ${bankQuestions.length} Template-Bank)`);
+        // Mark all combined questions as used in this session
+        try {
+          for (const q of combinedQuestions.slice(0, totalQuestions)) {
+            const tid = (q as any).templateId || String(q.id);
+            TemplateSessionManager.markTemplateUsed(sessionId, tid, q as any);
+          }
+        } catch (e) {
+          console.warn('⚠️ Mark combined used failed:', e);
+        }
         return {
           questions: combinedQuestions.slice(0, totalQuestions),
           source: 'template-bank',
@@ -755,6 +798,16 @@ export class EnhancedTemplateBankService {
         
         // This would need to be handled by the calling component
         throw new Error("FALLBACK_TO_BALANCED_GENERATION");
+      }
+
+      // Mark all questions as used (including knowledge-generated)
+      try {
+        for (const q of allQuestions) {
+          const tid = (q as any).templateId || `kb-${q.id}`;
+          TemplateSessionManager.markTemplateUsed(sessionId, tid, q as any);
+        }
+      } catch (e) {
+        console.warn('⚠️ Mark allQuestions used failed:', e);
       }
 
       return {
