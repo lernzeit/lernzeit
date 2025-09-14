@@ -1,6 +1,7 @@
 // Hook for logging question events (correct/incorrect answers, ratings)
 import { useCallback } from 'react';
 import { logPlay, rateTemplate } from '@/data/templateMetrics';
+import { supabase } from '@/lib/supabase';
 
 export function useQuestionEventLogging() {
   // Log when user answers a question
@@ -15,7 +16,11 @@ export function useQuestionEventLogging() {
 
     try {
       console.log(`📊 Logging ${isCorrect ? 'CORRECT' : 'INCORRECT'} answer for template ${templateId}`);
+      
+      // Use RPC for reliable stats update with immediate effect
       await logPlay(templateId, isCorrect);
+      
+      console.log(`✅ Template stats updated: ${templateId} - plays+1, correct+${isCorrect ? 1 : 0}`);
     } catch (error) {
       console.error('❌ Failed to log question answer:', error);
     }

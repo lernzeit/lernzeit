@@ -189,6 +189,27 @@ export const TemplateBankDashboard: React.FC = () => {
     }
   };
 
+  const handleRecountStats = async () => {
+    setIsAnalyzing(true);
+    addLog('Starting template statistics recount...');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('recount-template-stats', {});
+      
+      if (error) throw error;
+      
+      addLog(`Stats recount complete: ${data?.templatesProcessed || 0} templates processed`);
+      
+      // Refresh dashboard data
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Recount error:', error);
+      addLog(`Recount error: ${error.message}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setLogs(prev => [`${timestamp}: ${message}`, ...prev.slice(0, 19)]);
@@ -219,6 +240,14 @@ export const TemplateBankDashboard: React.FC = () => {
           >
             <Zap className="h-4 w-4 mr-2" />
             {isGenerating ? 'Generiert...' : 'High-Priority Füllen'}
+          </Button>
+          <Button 
+            onClick={handleRecountStats}
+            disabled={isAnalyzing}
+            variant="outline"
+          >
+            <Target className="h-4 w-4 mr-2" />
+            Stats Neu Berechnen
           </Button>
         </div>
       </div>
