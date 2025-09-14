@@ -60,7 +60,16 @@ export class OptionGenerator {
     }
     
     // Shuffle options to randomize correct answer position
-    return options.sort(() => Math.random() - 0.5);
+    // Then ensure proper spacing for multi-word answers
+    return options
+      .sort(() => Math.random() - 0.5)
+      .map(option => {
+        // Add spacing between concatenated words (e.g., "BananenÄpfel" -> "Bananen, Äpfel")
+        if (typeof option === 'string' && option.length > 5) {
+          return option.replace(/([a-zäöüß])([A-ZÄÖÜ])/g, '$1, $2');
+        }
+        return option;
+      });
   }
 
   static generateWordSelection(

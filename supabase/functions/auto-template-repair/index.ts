@@ -38,58 +38,104 @@ function fixMissingSeparators(text: string): string {
   return withCommas;
 }
 
-// Heuristic parser for Euro/Cost problems
-function computeExpectedEuro(prompt: string): { total: number | null; details: string[] } {
-  const p = prompt.replace(/\s+/g, ' ').trim();
+// Improved parser for Euro/Cost problems - detects multiplication vs addition errors
+function computeExpectedEuro(prompt: string): { total: number | null; details: string[]; errorType?: string } {
+  const p = prompt.replace(/\s+/g, ' ').trim().toLowerCase();
   const details: string[] = [];
   let total = 0;
   let matched = false;
+  let errorType = '';
 
-  // Case A: pairs like "3 Äpfel, die jeweils 2 € kosten" or "3 Äpfel zu je 2 €" or "pro 2 €"
-  const regexEach = /(\d+)\s+[^,.]*?(jeweils|je|pro)\s*(\d+)\s*(€|euro)/gi;
-  for (const m of p.matchAll(regexEach)) {
-    const qty = Number(m[1]);
-    const price = Number(m[3]);
-    if (!isNaN(qty) && !isNaN(price)) {
-      total += qty * price;
-      details.push(`${qty}×${price}€ = ${qty * price}€`);
-      matched = true;
+  // Extract all numbers from the prompt
+  const numbers = [...p.matchAll(/(\d+(?:[.,]\d+)?)/g)].map(m => parseFloat(m[1].replace(',', '.')));
+  
+  // Case A: Multiplication patterns - "X Äpfel zu je Y €", "X Stück à Y €", "pro Y €"
+  const multiplyPatterns = [
+    /(\d+)\s+[^,.]*?(zu\s+je|jeweils|je|pro|à)\s*(\d+(?:[.,]\d+)?)\s*(€|euro)/gi,
+    /(\d+)\s+[^,.]*?(kosten|kostet)\s+(\d+(?:[.,]\d+)?)\s*(€|euro)[^,.]*?(je|pro|stück)/gi
+  ];
+  
+  for (const regex of multiplyPatterns) {
+    for (const m of p.matchAll(regex)) {
+      const qty = Number(m[1]);
+      const price = Number(m[3].replace(',', '.'));
+      if (!isNaN(qty) && !isNaN(price)) {
+        total += qty * price;
+        details.push(`${qty}×${price}€ = ${qty * price}€`);
+        matched = true;
+        
+        // Check if current solution used addition instead of multiplication
+        const wrongAddition = qty + price;
+        if (numbers.includes(wrongAddition)) {
+          errorType = `Addition statt Multiplikation: ${qty}+${price}=${wrongAddition}€ ist falsch, richtig: ${qty}×${price}=${qty * price}€`;
+        }
+      }
     }
   }
 
-  // Case B: bundles like "3 Äpfel für 2 €" (means together 2€)
-  const regexBundle = /(\d+)\s+[^,.]*?für\s*(\d+)\s*(€|euro)/gi;
-  for (const m of p.matchAll(regexBundle)) {
-    const price = Number(m[2]);
-    if (!isNaN(price)) {
-      total += price;
-      details.push(`Bundle: ${price}€`);
-      matched = true;
+  // Case B: Addition patterns - "für insgesamt X €", "zusammen X €"
+  const additionPatterns = [
+    /(\d+)\s+[^,.]*?für\s*(insgesamt\s*)?(\d+(?:[.,]\d+)?)\s*(€|euro)/gi,
+    /(\d+)\s+[^,.]*?(zusammen|gesamt|insgesamt)\s*(\d+(?:[.,]\d+)?)\s*(€|euro)/gi
+  ];
+  
+  for (const regex of additionPatterns) {
+    for (const m of p.matchAll(regex)) {
+      const price = Number(m[3].replace(',', '.'));
+      if (!isNaN(price)) {
+        total += price;
+        details.push(`Bundle: ${price}€`);
+        matched = true;
+      }
     }
   }
 
-  // Case C: unit price then quantity later: "Ein Apfel kostet 2 Euro, wie viel kosten 5 Äpfel?"
-  // Take the first standalone price and multiply by the last quantity
+  // Case C: Shopping scenario - "X Äpfel ... Y €, Z Bananen ... W €" (multiple items)
   if (!matched) {
-    const priceMatch = p.match(/(\d+)\s*(€|euro)/i);
-    const qtyMatch = p.match(/kosten\s*(\d+)\s*[^,.]*?\?$/i) || p.match(/wie\s+viel\s+kosten\s*(\d+)/i);
-    const qtyAlt = p.match(/(\d+)\s*Äpfel|Bananen|Birnen|Stücke|Stück/gi);
-    const price = priceMatch ? Number(priceMatch[1]) : null;
-    let qty: number | null = null;
-    if (qtyMatch) {
-      qty = Number((qtyMatch[1] || '').replace(/[^0-9]/g, ''));
-    } else if (qtyAlt && qtyAlt.length > 0) {
-      const last = qtyAlt[qtyAlt.length - 1].match(/(\d+)/);
-      qty = last ? Number(last[1]) : null;
-    }
-    if (price != null && qty != null && !isNaN(price) && !isNaN(qty)) {
-      total = price * qty;
-      details.push(`${qty}×${price}€ = ${total}€`);
-      matched = true;
+    const itemPattern = /(\d+)\s+(äpfel|bananen|birnen|stück|stücke)[^,.]*?(\d+)\s*(€|euro)/gi;
+    const items = [...p.matchAll(itemPattern)];
+    
+    if (items.length >= 2) {
+      let subtotal = 0;
+      for (const item of items) {
+        const qty = Number(item[1]);
+        const price = Number(item[3]);
+        if (!isNaN(qty) && !isNaN(price)) {
+          subtotal += qty * price;
+          details.push(`${qty}×${price}€ = ${qty * price}€`);
+        }
+      }
+      if (subtotal > 0) {
+        total = subtotal;
+        matched = true;
+      }
     }
   }
 
-  return { total: matched ? total : null, details };
+  // Case D: Single unit price question - "Ein Apfel kostet X €, wie viel kosten Y Äpfel?"
+  if (!matched) {
+    const unitPriceMatch = p.match(/(ein|eine)\s+[^,.]*(kostet|kosten)\s*(\d+(?:[.,]\d+)?)\s*(€|euro)/i);
+    const questionMatch = p.match(/wie\s+viel.*?kosten\s*(\d+)/i) || p.match(/(\d+)\s*(äpfel|bananen|birnen)/i);
+    
+    if (unitPriceMatch && questionMatch) {
+      const unitPrice = Number(unitPriceMatch[3].replace(',', '.'));
+      const qty = Number(questionMatch[1]);
+      
+      if (!isNaN(unitPrice) && !isNaN(qty)) {
+        total = unitPrice * qty;
+        details.push(`${qty}×${unitPrice}€ = ${total}€`);
+        matched = true;
+        
+        // Check for addition error
+        const wrongAddition = unitPrice + qty;
+        if (numbers.includes(wrongAddition)) {
+          errorType = `Addition statt Multiplikation: ${unitPrice}+${qty}=${wrongAddition}€ ist falsch, richtig: ${qty}×${unitPrice}=${total}€`;
+        }
+      }
+    }
+  }
+
+  return { total: matched ? total : null, details, errorType };
 }
 
 serve(async (req) => {
@@ -124,13 +170,20 @@ serve(async (req) => {
       for (const t of templates as TemplateRow[]) {
         const updates: Partial<TemplateRow> & { solution?: any; distractors?: any } = {};
 
-        // 1) Mathematics repair for Euro prompts
-        const { total, details } = computeExpectedEuro(t.student_prompt || '');
+        // 1) Mathematics repair for Euro prompts with error detection
+        const { total, details, errorType } = computeExpectedEuro(t.student_prompt || '');
         const currentVal = toNumber(t.solution);
         if (total != null && currentVal != null && Math.abs(total - currentVal) > 0.001) {
           updates.solution = { value: total };
           const sumStr = details.length > 0 ? `${details.join(' + ')} = ${total}€` : `${total}€`;
-          updates.explanation = `Automatisch korrigiert: ${sumStr}`;
+          let explanation = `Automatisch korrigiert: ${sumStr}`;
+          
+          // Add specific error explanation if detected
+          if (errorType) {
+            explanation += ` | Fehler erkannt: ${errorType}`;
+          }
+          
+          updates.explanation = explanation;
           mathFixed++;
         }
 
