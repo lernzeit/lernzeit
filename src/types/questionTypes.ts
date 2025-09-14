@@ -82,4 +82,10 @@ export interface MatchingQuestion extends BaseQuestion {
   }>;
 }
 
-export type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion | MatchingQuestion;
+export interface SortQuestion extends BaseQuestion {
+  questionType: 'sort';
+  items: string[];           // Items to be sorted
+  correctOrder: string[];    // Correct order of items
+}
+
+export type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion | MatchingQuestion | SortQuestion;

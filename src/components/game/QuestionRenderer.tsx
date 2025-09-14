@@ -5,6 +5,7 @@ import { MultipleChoiceQuestion } from '@/components/question-types/MultipleChoi
 import { WordSelectionQuestion } from '@/components/question-types/WordSelectionQuestion';
 import { MatchingQuestion } from '@/components/question-types/MatchingQuestion';
 import { DragDropQuestion } from '@/components/question-types/DragDropQuestion';
+import { SortQuestion } from '@/components/question-types/SortQuestion';
 import { SelectionQuestion, TextInputQuestion } from '@/types/questionTypes';
 
 interface QuestionRendererProps {
@@ -19,6 +20,8 @@ interface QuestionRendererProps {
   onMatchingComplete: (isCorrect: boolean) => void;
   currentPlacements?: Record<string, string>;
   onItemMove?: (itemId: string, categoryId: string) => void;
+  currentSortOrder?: string[] | null;
+  onSortOrderChange?: (order: string[]) => void;
   feedback: 'correct' | 'incorrect' | null;
 }
 
@@ -34,6 +37,8 @@ export function QuestionRenderer({
   onMatchingComplete,
   currentPlacements = {},
   onItemMove = () => {},
+  currentSortOrder = null,
+  onSortOrderChange = () => {},
   feedback
 }: QuestionRendererProps) {
   // PHASE 4: Debug information removed for students
@@ -74,6 +79,16 @@ export function QuestionRenderer({
           question={question}
           currentPlacements={currentPlacements}
           onItemMove={onItemMove}
+          disabled={feedback !== null}
+        />
+      );
+      
+    case 'sort':
+      return (
+        <SortQuestion
+          question={question}
+          currentOrder={currentSortOrder}
+          onOrderChange={onSortOrderChange}
           disabled={feedback !== null}
         />
       );

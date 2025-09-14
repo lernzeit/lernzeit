@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchActiveTemplates, pickSessionTemplates, Quarter } from '@/data/templateBank';
 import { loadKnowledge, preselectCards, KnowledgeCard } from '@/knowledge/knowledge';
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory';
-import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion } from '@/types/questionTypes';
+import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion, SortQuestion } from '@/types/questionTypes';
 import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
 import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
@@ -185,7 +185,21 @@ export class EnhancedTemplateBankService {
     
     const questionType = this.mapQuestionType(template.question_type);
     
-    if (questionType === 'text-input') {
+    if (questionType === 'sort') {
+      // Handle sort questions - extract items from solution array
+      const sortItems = this.extractSortItems(template.solution);
+      
+      return {
+        id: parseInt(template.id) || Date.now(),
+        question: prompt,
+        type: this.mapDomainToSubject(template.domain),
+        questionType: 'sort',
+        items: sortItems,
+        correctOrder: sortItems, // Correct order is the solution array
+        explanation: template.explanation || "",
+        templateId: String(template.id)
+      } as SortQuestion;
+    } else if (questionType === 'text-input') {
       // Get answer from database solution
       const answer = this.extractSolutionValue(template.solution);
       
@@ -397,10 +411,38 @@ export class EnhancedTemplateBankService {
   }
 
   /**
+   * Extract sort items from database solution array
+   */
+  private extractSortItems(solution: any): string[] {
+    console.log('🔍 Extracting sort items from solution:', solution);
+    
+    if (Array.isArray(solution)) {
+      return solution.map(item => String(item));
+    }
+    
+    // Fallback for string format
+    if (typeof solution === 'string') {
+      try {
+        const parsed = JSON.parse(solution);
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => String(item));
+        }
+      } catch (e) {
+        // Not JSON, treat as single item
+        return [solution];
+      }
+    }
+    
+    console.warn('⚠️ Could not extract sort items, using default');
+    return ['Item 1', 'Item 2', 'Item 3'];
+  }
+
+  /**
    * Map question type from database format
    */
-  private mapQuestionType(questionType: string): 'multiple-choice' | 'text-input' {
+  private mapQuestionType(questionType: string): 'multiple-choice' | 'text-input' | 'sort' {
     const type = questionType?.toLowerCase() || 'multiple-choice';
+    if (type === 'sort') return 'sort';
     return type === 'text-input' || type === 'text_input' || type === 'freitext' 
       ? 'text-input' 
       : 'multiple-choice';
