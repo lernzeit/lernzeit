@@ -343,59 +343,21 @@ export class ParametrizedTemplateService {
   }
 
   /**
-   * Extrahiere korrekten Lösungswert aus verschiedenen Formaten - COMPLETELY FIXED
+   * SIMPLIFIED: Use database solution directly - NO COMPLEX PARSING
    */
   private extractSolutionValue(solution: any, parameters: Record<string, any>): string {
-    console.log('🔍 PHASE 3: Extracting solution from:', solution, typeof solution);
+    console.log('🔍 DIRECT: Using solution as stored in database:', solution);
     
-    // Falls solution bereits ein String ist
-    if (typeof solution === 'string') {
-      // CRITICAL FIX: Prüfe auf "map[value:...]" Format aus der Datenbank
-      const mapMatch = solution.match(/map\[value:(.+?)\]/);
-      if (mapMatch) {
-        let extractedValue = mapMatch[1];
-        console.log('✅ Extracted value from map format:', extractedValue);
-        return this.replacePlaceholders(extractedValue, parameters);
-      }
-      // Ansonsten normal Platzhalter ersetzen
-      return this.replacePlaceholders(solution, parameters);
+    // Use solution directly as string - no complex parsing
+    const directValue = String(solution || '');
+    
+    // Only replace placeholders if we have parameters
+    if (Object.keys(parameters).length > 0) {
+      return this.replacePlaceholders(directValue, parameters);
     }
     
-    // Falls solution ein Objekt ist
-    if (typeof solution === 'object' && solution !== null) {
-      // Standard format: {"value": "6,25"}
-      if (solution.value !== undefined) {
-        let value = String(solution.value);
-        console.log('✅ PHASE 3: Extracted solution.value:', value);
-        return this.replacePlaceholders(value, parameters);
-      }
-      
-      // Direct JSON number
-      if (typeof solution === 'number') {
-        return String(solution);
-      }
-      
-      // Fallback für unbekannte Objekt-Struktur - prüfe alle Keys
-      console.warn('⚠️ Unknown object solution structure:', solution);
-      const keys = Object.keys(solution);
-      for (const key of keys) {
-        const val = solution[key];
-        if (typeof val === 'string' || typeof val === 'number') {
-          console.log('✅ Found fallback value in key', key, ':', val);
-          return this.replacePlaceholders(String(val), parameters);
-        }
-      }
-      
-      return JSON.stringify(solution);
-    }
-    
-    // Direct number
-    if (typeof solution === 'number') {
-      return String(solution);
-    }
-    
-    console.error('❌ PHASE 3: Failed to extract solution from:', solution, typeof solution);
-    return String(solution || '0');
+    console.log('✅ DIRECT: Solution value:', directValue);
+    return directValue;
   }
 
   /**

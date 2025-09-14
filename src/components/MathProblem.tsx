@@ -294,13 +294,13 @@ const generateProblem = (grade: number): Problem => {
   }
 };
 
-// PHASE 3: Template-Bank Integration
+// SIMPLIFIED: Template-Bank Integration - Direct Database Values
 const convertTemplateToProblems = (templates: any[]): Problem[] => {
   return templates.map((template, index) => ({
     id: template.id || index + 1000,
-    question: template.question_text || 'Frage lädt...',
-    answer: template.solution?.value || '0',
-    explanation: template.explanation || 'Erklärung wird geladen...',
+    question: template.student_prompt || 'Frage lädt...',
+    answer: String(template.solution || ''), // DIRECT from database
+    explanation: template.explanation || 'Keine Erklärung verfügbar.',
     type: template.domain || 'Mathematik',
     questionType: 'text-input' as const,
     options: template.options || undefined,

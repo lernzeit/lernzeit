@@ -30,27 +30,22 @@ interface MathProblemOptimizedProps {
   userId?: string;
 }
 
-  // PHASE 1: Enhanced Template-to-Problems Conversion with Multiple Choice Fix
+  // SIMPLIFIED: Direct Database Value Usage - NO PARSING
   const convertTemplateToProblems = (templates: any[]): Problem[] => {
     return templates.map((template, index) => {
-      // Extract answer directly from template solution
-      let answer = '';
-      if (template.solution && typeof template.solution === 'object' && template.solution.value) {
-        answer = template.solution.value.toString();
-      } else if (template.solution) {
-        answer = template.solution.toString();
-      }
-
-      // PHASE 1 FIX: Proper Multiple Choice Options Handling
+      // Use solution directly as stored in database - NO COMPLEX PARSING
+      const answer = String(template.solution || '');
+      
+      // Handle question types
       let options: string[] | undefined;
       let correctAnswer: number | undefined;
       let questionType: 'text-input' | 'multiple-choice' | 'word-selection' | 'matching' | 'drag-drop' = 'text-input';
 
-      if (template.question_type === 'multiple-choice' || template.variant === 'MULTIPLE_CHOICE') {
+      if (template.question_type === 'multiple-choice') {
         questionType = 'multiple-choice';
         
-        // Create 4 options: 3 distractors + 1 correct answer
-        const distractors = template.distractors || [];
+        // Use distractors as stored in database
+        const distractors = Array.isArray(template.distractors) ? template.distractors : [];
         options = [...distractors, answer];
         
         // Shuffle options and find correct index
@@ -61,11 +56,13 @@ interface MathProblemOptimizedProps {
         console.log(`🎯 Multiple Choice created: ${options.length} options, correct at index ${correctAnswer}`);
       }
 
+      console.log(`📋 Template converted: ID=${template.id}, Answer="${answer}", Explanation="${template.explanation?.substring(0, 50)}..."`);
+
       return {
         id: template.id || index + 1000,
-        question: template.student_prompt || template.question_text || 'Frage lädt...',
-        answer: answer,
-        explanation: template.explanation || 'Diese Aufgabe wurde von der KI erstellt und ist mathematisch korrekt.',
+        question: template.student_prompt || 'Frage lädt...',
+        answer: answer, // DIRECT from database
+        explanation: template.explanation || 'Keine Erklärung verfügbar.',
         type: template.domain || 'Mathematik',
         questionType,
         options,
