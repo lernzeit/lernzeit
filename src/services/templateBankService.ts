@@ -9,6 +9,7 @@ import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
 import { contentValidator } from './ContentValidator';
+import { TemplateSessionManager } from '@/utils/templates/templateSessionManager';
 
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
