@@ -59,13 +59,13 @@ export function AdminDashboard() {
               onClick={async () => {
                 try {
                   const response = await supabase.functions.invoke('cleanup-todays-templates', {
-                    body: { action: 'analyze' }
+                    body: { action: 'analyze', days: 7 }
                   });
                   if (response.data?.analysis) {
                     const analysis = response.data.analysis;
                     toast({
-                      title: `Template-Analyse`,
-                      description: `${analysis.total_templates} Templates heute. ${analysis.problematic_count} problematisch.`
+                      title: `Template-Analyse (7 Tage)`,
+                      description: `${analysis.total_templates} Templates im Zeitraum. ${analysis.problematic_count} problematisch.`
                     });
                   }
                 } catch (error) {
@@ -77,30 +77,32 @@ export function AdminDashboard() {
               <Target className="w-4 h-4" />
               Template Analyse
             </Button>
-            <Button 
-              variant="destructive"
-              onClick={async () => {
-                if (confirm('Wirklich ALLE problematischen Templates von heute löschen?')) {
-                  try {
-                    const response = await supabase.functions.invoke('cleanup-todays-templates', {
-                      body: { action: 'cleanup' }
-                    });
-                    if (response.data?.cleanup_result) {
-                      toast({
-                        title: 'Bereinigung abgeschlossen',
-                        description: `${response.data.cleanup_result.deleted_count} Templates gelöscht`
+              <Button 
+                variant="destructive"
+                onClick={async () => {
+                  const input = prompt('Problematische Templates der letzten N Tage löschen. N =', '7');
+                  const days = input ? Math.max(1, parseInt(input)) : 1;
+                  if (confirm(`Wirklich alle problematischen Templates der letzten ${days} Tage löschen?`)) {
+                    try {
+                      const response = await supabase.functions.invoke('cleanup-todays-templates', {
+                        body: { action: 'cleanup', days }
                       });
+                      if (response.data?.cleanup_result) {
+                        toast({
+                          title: 'Bereinigung abgeschlossen',
+                          description: `${response.data.cleanup_result.deleted_count} Templates gelöscht (Zeitraum: ${days} Tage)`
+                        });
+                      }
+                    } catch (error: any) {
+                      toast({ title: 'Fehler bei Bereinigung', description: error.message });
                     }
-                  } catch (error) {
-                    toast({ title: 'Fehler bei Bereinigung', description: error.message });
                   }
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              Template Cleanup
-            </Button>
+                }}
+                className="flex items-center gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                Template Cleanup
+              </Button>
             <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
               <LogOut className="w-4 h-4" />
               Logout

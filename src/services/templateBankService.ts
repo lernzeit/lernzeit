@@ -74,10 +74,13 @@ export class EnhancedTemplateBankService {
         difficulty: undefined // No difficulty filter for now
       });
 
+      // Enforce method (question type) diversity across the selection
+      const selectedTemplates = this.enforceMethodDiversity(sessionTemplates, categoryTemplates, count);
+
       // Convert to SelectionQuestion format and filter out invalid questions
       const convertedQuestions: SelectionQuestion[] = [];
       
-      for (const template of sessionTemplates) {
+      for (const template of selectedTemplates) {
         const converted = await this.convertTemplateToQuestion(template);
         if (converted !== null) {
           convertedQuestions.push(converted);
@@ -140,11 +143,18 @@ export class EnhancedTemplateBankService {
    */
   private async convertTemplateToQuestion(template: any): Promise<SelectionQuestion | null> {
     // Filter out drawing/sketching questions
-    const prompt = template.student_prompt || "";
-    if (this.containsDrawingInstructions(prompt)) {
-      console.log(`🚫 Filtered out drawing question: ${prompt.substring(0, 100)}...`);
+    const promptRaw = template.student_prompt || "";
+    if (this.containsDrawingInstructions(promptRaw)) {
+      console.log(`🚫 Filtered out drawing question: ${promptRaw.substring(0, 100)}...`);
       return null;
     }
+    
+    // Sanitize prompt: strip inline option lines like "A: ...", "B) ..."
+    const prompt = promptRaw
+      .replace(/^\s*[ABCD]:.*$/gm, '')
+      .replace(/^\s*[ABCD]\).*$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
     
     const questionType = this.mapQuestionType(template.question_type);
     
@@ -1876,6 +1886,64 @@ export class EnhancedTemplateBankService {
       return 'deutsch';
     }
     return normalized;
+  }
+  private enforceMethodDiversity(initial: any[], pool: any[], count: number): any[] {
+    const normalize = (t: any) => (t.question_type || '').toString().toLowerCase().replace(/_/g, '-');
+    const typeOrder = ['multiple-choice', 'freetext', 'matching', 'sort'];
+
+    // Build pools per type
+    const poolsByType = new Map<string, any[]>();
+    for (const t of pool) {
+      const key = normalize(t) || 'multiple-choice';
+      if (!poolsByType.has(key)) poolsByType.set(key, []);
+      poolsByType.get(key)!.push(t);
+    }
+
+    const existingIds = new Set(initial.map(t => t.id));
+    const result: any[] = [...initial];
+
+    // If already diverse enough, keep as is (cap to count)
+    const currentTypes = new Set(result.map(t => normalize(t)));
+    if (currentTypes.size >= Math.min(3, count)) {
+      return result.slice(0, count);
+    }
+
+    // Try to introduce missing types
+    for (const ty of typeOrder) {
+      if (result.length >= count) break;
+      if (!currentTypes.has(ty) && poolsByType.get(ty)?.length) {
+        const candidate = poolsByType.get(ty)!.find(t => !existingIds.has(t.id));
+        if (candidate) {
+          result.push(candidate);
+          existingIds.add(candidate.id);
+          currentTypes.add(ty);
+        }
+      }
+    }
+
+    // Fill remaining slots prioritizing non-MC types first
+    for (const ty of typeOrder) {
+      if (result.length >= count) break;
+      const list = poolsByType.get(ty) || [];
+      for (const t of list) {
+        if (result.length >= count) break;
+        if (!existingIds.has(t.id)) {
+          result.push(t);
+          existingIds.add(t.id);
+        }
+      }
+    }
+
+    // Dedupe and cap
+    const unique: any[] = [];
+    const seen = new Set<string>();
+    for (const t of result) {
+      if (!seen.has(t.id)) {
+        unique.push(t); seen.add(t.id);
+      }
+      if (unique.length >= count) break;
+    }
+    return unique;
   }
 
   clearCache(): void {

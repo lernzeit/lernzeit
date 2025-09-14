@@ -18,22 +18,23 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { action = 'analyze' } = await req.json().catch(() => ({}));
+    const { action = 'analyze', days = 1 } = await req.json().catch(() => ({}));
     
-    // Get today's date in UTC
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    // Compute analysis window in UTC
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const start = new Date(end);
+    start.setDate(end.getDate() - Math.max(1, Number(days)));
 
-    console.log(`🕒 Analyzing templates created between ${todayStart.toISOString()} and ${todayEnd.toISOString()}`);
+    console.log(`🕒 Analyzing templates created between ${start.toISOString()} and ${end.toISOString()} (last ${days} day(s))`);
 
     if (action === 'analyze') {
       // First, analyze what we have
       const { data: todaysTemplates, error: fetchError } = await supabaseClient
         .from('templates')
         .select('id, created_at, student_prompt, grade, domain, quality_score, status')
-        .gte('created_at', todayStart.toISOString())
-        .lt('created_at', todayEnd.toISOString());
+        .gte('created_at', start.toISOString())
+        .lt('created_at', end.toISOString());
 
       if (fetchError) {
         throw new Error(`Failed to fetch templates: ${fetchError.message}`);
@@ -113,8 +114,8 @@ serve(async (req) => {
       const { data: problematicTemplates, error: fetchError } = await supabaseClient
         .from('templates')
         .select('id, student_prompt, quality_score')
-        .gte('created_at', todayStart.toISOString())
-        .lt('created_at', todayEnd.toISOString())
+        .gte('created_at', start.toISOString())
+        .lt('created_at', end.toISOString())
         .or('student_prompt.ilike.%A:%,student_prompt.ilike.%B:%,student_prompt.ilike.%C:%,quality_score.lt.0.7');
 
       if (fetchError) {
@@ -147,13 +148,20 @@ serve(async (req) => {
           console.log(`✅ Deleted batch ${i}-${i + batchSize} (${deletedCount}/${idsToDelete.length})`);
         }
 
+        // After deletion, count remaining in range
+        const { count: remaining } = await supabaseClient
+          .from('templates')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', start.toISOString())
+          .lt('created_at', end.toISOString());
+
         return new Response(
           JSON.stringify({
             success: true,
             cleanup_result: {
               deleted_count: deletedCount,
-              remaining_today: (todaysTemplates?.length || 0) - deletedCount,
-              message: `Successfully cleaned up ${deletedCount} problematic templates`
+              remaining_in_range: remaining ?? null,
+              message: `Successfully cleaned up ${deletedCount} problematic templates (window: last ${days} day(s))`
             }
           }),
           { 
@@ -184,8 +192,8 @@ serve(async (req) => {
       const { data: allToday, error: fetchError } = await supabaseClient
         .from('templates')
         .select('id')
-        .gte('created_at', todayStart.toISOString())
-        .lt('created_at', todayEnd.toISOString());
+        .gte('created_at', start.toISOString())
+        .lt('created_at', end.toISOString());
 
       if (fetchError) {
         throw new Error(`Failed to fetch today's templates: ${fetchError.message}`);
