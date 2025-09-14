@@ -67,30 +67,51 @@ export class EnhancedTemplateBankService {
 
       console.log(`📚 Found ${categoryTemplates.length} templates for ${category}`);
 
-      // Pick session templates with domain diversity enforcement
+      // FIXED: More diverse template selection with less restrictive domain requirements
       const sessionTemplates = pickSessionTemplates(categoryTemplates, {
-        count,
-        minDistinctDomains: Math.min(4, count), // Session policy: min 4 domains for 5 questions
-        difficulty: undefined // No difficulty filter for now
+        count: Math.min(count * 3, categoryTemplates.length), // Get more candidates
+        minDistinctDomains: Math.max(1, Math.min(2, count)), // Less restrictive: min 1-2 domains instead of 4
+        difficulty: undefined
       });
 
-      // Enforce method (question type) diversity across the selection
-      const selectedTemplates = this.enforceMethodDiversity(sessionTemplates, categoryTemplates, count);
+      console.log(`📚 Template pool: ${categoryTemplates.length} available, selected ${sessionTemplates.length} candidates`);
 
-      // Convert to SelectionQuestion format and filter out invalid questions
-      const convertedQuestions: SelectionQuestion[] = [];
-      const seenQuestions = new Set<string>();
+      // Convert all candidates first, then select diverse ones
+      const allConverted: SelectionQuestion[] = [];
+      const conversionFailures = [];
       
-      for (const template of selectedTemplates) {
+      for (const template of sessionTemplates) {
         const converted = await this.convertTemplateToQuestion(template);
         if (converted !== null) {
-          const key = `${converted.questionType}::${converted.question?.toLowerCase().replace(/\s+/g,' ').trim()}`;
-          if (!seenQuestions.has(key)) {
-            convertedQuestions.push(converted);
-            seenQuestions.add(key);
-          } else {
-            console.log(`🔁 Deduped similar question: ${converted.question.substring(0,80)}...`);
-          }
+          allConverted.push(converted);
+        } else {
+          conversionFailures.push(template.id);
+        }
+      }
+
+      console.log(`✅ Converted ${allConverted.length}/${sessionTemplates.length} templates (${conversionFailures.length} failed)`);
+
+      // FIXED: Select diverse questions from converted pool using ID-based deduplication
+      const convertedQuestions: SelectionQuestion[] = [];
+      const usedTemplateIds = new Set<string>();
+      const usedQuestionHashes = new Set<string>();
+      
+      // Shuffle for variety
+      const shuffledConverted = [...allConverted].sort(() => Math.random() - 0.5);
+      
+      for (const question of shuffledConverted) {
+        if (convertedQuestions.length >= count) break;
+        
+        const templateId = question.templateId || String(question.id);
+        const questionHash = this.generateQuestionHash(question.question);
+        
+        if (!usedTemplateIds.has(templateId) && !usedQuestionHashes.has(questionHash)) {
+          convertedQuestions.push(question);
+          usedTemplateIds.add(templateId);
+          usedQuestionHashes.add(questionHash);
+          console.log(`✅ Selected unique question: ${question.question.substring(0, 60)}... (ID: ${templateId})`);
+        } else {
+          console.log(`🔁 Skipped duplicate: ${question.question.substring(0, 60)}... (ID: ${templateId})`);
         }
       }
       
@@ -134,6 +155,28 @@ export class EnhancedTemplateBankService {
       console.error('❌ Knowledge-based generation failed:', error);
       return [];
     }
+  }
+
+  /**
+   * Generate hash for question content to detect semantic duplicates
+   */
+  private generateQuestionHash(question: string): string {
+    // Create a normalized hash based on question structure
+    const normalized = question
+      .toLowerCase()
+      .replace(/\d+/g, 'X') // Replace numbers with X to catch structural similarities
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
   }
 
   /**

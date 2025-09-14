@@ -130,20 +130,28 @@ export function pickSessionTemplates(all: any[], opts: {
   const domains = Array.from(byDomain.keys());
   const out: any[] = [];
   
-  console.log(`🎯 Picking ${count} templates from ${domains.length} domains (min ${minDistinctDomains}):`, domains);
+  console.log(`🎯 FIXED: Picking ${count} templates from ${domains.length} domains (min ${minDistinctDomains}), pool size: ${pool.length}`);
   
-  // 1) Mindestens eine Frage pro verfügbarer Domäne (bis minDistinctDomains erreicht)
-  for (const d of domains.slice(0, Math.min(domains.length, minDistinctDomains))) {
-    const arr = byDomain.get(d)!;
-    if (arr.length) {
-      const selected = arr[Math.floor(Math.random() * arr.length)];
-      out.push(selected);
-      console.log(`✅ Domain ${d}: Selected template ${selected.id || 'no-id'}`);
+  // FIXED: More flexible domain selection - don't enforce strict domain minimums that limit variety
+  if (minDistinctDomains > 0 && domains.length > 0) {
+    // Select at least one from each domain if possible, but don't limit total selection
+    for (const d of domains.slice(0, Math.min(domains.length, minDistinctDomains))) {
+      const arr = byDomain.get(d)!;
+      if (arr.length && out.length < count) {
+        // Pick multiple from same domain if count allows
+        const domainPicks = Math.min(Math.ceil(count / domains.length), arr.length);
+        for (let i = 0; i < domainPicks && out.length < count; i++) {
+          const selected = arr[Math.floor(Math.random() * arr.length)];
+          if (!out.some(o => o.id === selected.id)) {
+            out.push(selected);
+            console.log(`✅ Domain ${d}: Selected template ${selected.id || 'no-id'} (${i+1}/${domainPicks})`);
+          }
+        }
+      }
     }
-    if (out.length >= count) break;
   }
   
-  // 2) Restliche Plätze auffüllen (bevorzugt aus bereits verwendeten Domänen)
+  // Fill remaining slots with any available templates (prioritize variety)
   const remaining = pool.filter(t => !out.some(o => o.id === t.id));
   const shuffled = remaining.sort(() => Math.random() - 0.5);
   
@@ -151,13 +159,10 @@ export function pickSessionTemplates(all: any[], opts: {
     out.push(shuffled.pop()!);
   }
   
-  // 3) Domänenverteilung prüfen
+  // Final stats
   const finalDomains = [...new Set(out.map(t => t.domain))];
-  console.log(`📊 Final selection: ${out.length} templates across ${finalDomains.length} domains:`, finalDomains);
-  
-  if (finalDomains.length < minDistinctDomains && domains.length >= minDistinctDomains) {
-    console.warn(`⚠️ Could not achieve minimum domain diversity: ${finalDomains.length}/${minDistinctDomains}`);
-  }
+  console.log(`📊 FIXED Final selection: ${out.length} templates across ${finalDomains.length} domains:`, finalDomains);
+  console.log(`📊 Template IDs selected:`, out.map(t => t.id).slice(0, 10));
   
   return out.slice(0, count);
 }

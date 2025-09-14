@@ -30,6 +30,7 @@ export interface BaseQuestion {
   question: string;
   type: 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
   explanation?: string;
+  templateId?: string; // Optional template ID for tracking
 }
 
 export interface TextInputQuestion extends BaseQuestion {
