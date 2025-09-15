@@ -114,7 +114,18 @@ export function pickSessionTemplates(all: any[], opts: {
   count: number; minDistinctDomains: number; difficulty?: "easy"|"medium"|"hard";
 }) {
   const { count, minDistinctDomains, difficulty } = opts;
-  const pool = difficulty ? all.filter(t => t.difficulty === difficulty) : all.slice();
+  const poolRaw = difficulty ? all.filter(t => t.difficulty === difficulty) : all.slice();
+  
+  // De-duplicate by normalized prompt text to avoid repeated identical questions
+  const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const seenPrompts = new Set<string>();
+  const pool = poolRaw.filter(t => {
+    const key = normalize(t.student_prompt);
+    if (!key) return true;
+    if (seenPrompts.has(key)) return false;
+    seenPrompts.add(key);
+    return true;
+  });
   
   if (pool.length === 0) {
     console.warn("🚨 No templates available for selection");

@@ -53,7 +53,7 @@ export class EnhancedTemplateBankService {
   ): Promise<SelectionQuestion[]> {
     try {
       // Fetch more templates for variety
-      const templates = await fetchActiveTemplates({ grade, quarter, limit: 50 });
+      const templates = await fetchActiveTemplates({ grade, quarter, limit: 200 });
       
       if (templates.length === 0) {
         console.warn(`🚨 No active templates found for ${category} Grade ${grade} Quarter ${quarter}`);
@@ -67,26 +67,33 @@ export class EnhancedTemplateBankService {
 
       console.log(`📚 Found ${categoryTemplates.length} templates for ${category}`);
 
-      // SIMPLIFIED: Just shuffle and take what we need
+      // Shuffle entire pool and iterate until we collect the required amount
       const shuffledTemplates = [...categoryTemplates].sort(() => Math.random() - 0.5);
-      const selectedTemplates = shuffledTemplates.slice(0, count * 2); // Get more candidates
-
-      console.log(`📚 Selected ${selectedTemplates.length} candidates for conversion`);
-
-      // Convert templates to questions
+      
+      // Ensure we don't repeat semantically identical prompts within the same session
       const questions: SelectionQuestion[] = [];
       const usedIds = new Set<string>();
+      const usedHashes = new Set<string>();
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+      const usedPrompts = new Set<string>();
       
-      for (const template of selectedTemplates) {
+      for (const template of shuffledTemplates) {
         if (questions.length >= count) break;
-        
         const templateId = String(template.id);
         if (usedIds.has(templateId)) continue;
         
         const converted = await this.convertTemplateToQuestion(template);
         if (converted !== null) {
+          const hash = this.generateQuestionHash(converted.question);
+          const normPrompt = normalize(converted.question);
+          if (usedHashes.has(hash) || usedPrompts.has(normPrompt)) {
+            // Skip duplicates with same or very similar content
+            continue;
+          }
           questions.push(converted);
           usedIds.add(templateId);
+          usedHashes.add(hash);
+          usedPrompts.add(normPrompt);
           console.log(`✅ Converted template ${templateId}: ${converted.question.substring(0, 60)}...`);
         }
       }
@@ -269,8 +276,13 @@ export class EnhancedTemplateBankService {
   private extractOptionsWithCorrectIndex(template: any): { options: string[]; correctIndex: number } {
     console.log('🔍 Extracting options from template:', template.id, 'solution:', template.solution, 'distractors:', template.distractors);
     
+    // Helper to normalize numeric strings (e.g., 400.000 vs 400000)
+    const normalizeNum = (s: string) => s.replace(/[^0-9,-]/g, '').replace(/\./g, '').replace(/,/g, '');
+    
     // Extract correct answer from solution
-    const correct = this.extractSolutionValue(template.solution);
+    const rawCorrect = this.extractSolutionValue(template.solution);
+    const correct = rawCorrect.trim();
+    const correctNorm = normalizeNum(correct);
     
     // Fallback if no solution found
     if (!correct || correct.trim() === '') {
@@ -301,9 +313,11 @@ export class EnhancedTemplateBankService {
         } else {
           distractorStr = String(distractor);
         }
+        distractorStr = distractorStr.trim();
         
-        if (distractorStr.trim() !== '' && distractorStr !== correct) {
-          distractors.push(distractorStr.trim());
+        // Skip duplicates that are the same as the correct answer when normalized
+        if (distractorStr && normalizeNum(distractorStr) !== correctNorm) {
+          distractors.push(distractorStr);
         }
       }
     }
@@ -312,21 +326,36 @@ export class EnhancedTemplateBankService {
     
     // Generate defaults if needed
     if (distractors.length < 3) {
-      const generated = this.generateDefaultDistractors(correct, 3 - distractors.length);
+      const generated = this.generateDefaultDistractors(correct, 3 - distractors.length)
+        .filter(d => normalizeNum(d) !== correctNorm);
       distractors.push(...generated);
       console.log(`🔧 Added ${generated.length} default distractors: [${generated.join(', ')}]`);
     }
     
-    // Create final options array and shuffle
-    const allOptions = [correct, ...distractors.slice(0, 3)];
+    // Create final options array, dedupe by normalized representation and shuffle
+    const preliminary = [correct, ...distractors.slice(0, 3)];
+    const seen = new Set<string>();
+    const allOptions = preliminary.filter(opt => {
+      const key = normalizeNum(opt.trim());
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     const shuffledOptions = [...allOptions].sort(() => Math.random() - 0.5);
-    const correctIndex = shuffledOptions.indexOf(correct);
+    // Ensure the correct variant exists; if removed by dedupe, reinsert canonical form
+    if (!shuffledOptions.some(o => normalizeNum(o) === correctNorm)) {
+      shuffledOptions.pop(); // remove one distractor if necessary
+      shuffledOptions.push(correct);
+    }
+    
+    const correctIndex = shuffledOptions.findIndex(o => normalizeNum(o) === correctNorm);
     
     console.log(`✅ Final options: [${shuffledOptions.join(', ')}], Correct index: ${correctIndex}`);
     
     return {
       options: shuffledOptions,
-      correctIndex
+      correctIndex: correctIndex >= 0 ? correctIndex : 0
     };
   }
 
