@@ -23,49 +23,56 @@ import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AlertTriangle, RefreshCw, Database, Brain, Archive, Check, X, Flag, ArrowRight } from 'lucide-react';
 import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 import { toEnglishCategory, getTimePerTaskKey } from '@/lib/category';
-
 interface CategoryMathProblemProps {
   category: string;
   grade: number;
   onComplete: (minutes: number, category: string) => void;
   onBack?: () => void;
 }
+export function CategoryMathProblem({
+  category,
+  grade,
+  onComplete,
+  onBack
+}: CategoryMathProblemProps) {
+  const {
+    user
+  } = useAuth();
+  const {
+    addScreenTime
+  } = useScreenTime();
+  const {
+    settings
+  } = useChildSettings(user?.id || '');
+  const {
+    updateProgress
+  } = useAchievements(user?.id);
+  const {
+    logQuestionAnswer,
+    logQuestionRating
+  } = useQuestionEventLogging();
 
-export function CategoryMathProblem({ category, grade, onComplete, onBack }: CategoryMathProblemProps) {
-  const { user } = useAuth();
-  const { addScreenTime } = useScreenTime();
-  const { settings } = useChildSettings(user?.id || '');
-  const { updateProgress } = useAchievements(user?.id);
-  const { logQuestionAnswer, logQuestionRating } = useQuestionEventLogging();
-  
   // 🏦 NEW TEMPLATE-BANK SYSTEM - PRIMARY SOURCE
   const currentQuarter = getCurrentSchoolQuarter();
   console.log(`🏦 Using Template-Bank for ${category} Grade ${grade} Quarter ${currentQuarter}`);
-  
-  const templateBankGeneration = useTemplateBankGeneration(
-    category,
-    grade,
-    user?.id || 'anonymous',
-    5, // 5 questions per session (session policy)
-    currentQuarter,
-    {
-      enableQualityControl: true,
-      minQualityThreshold: 0.7,
-      preferredDifficulty: undefined, // Let adaptive system decide
-      diversityWeight: 0.8,
-      fallbackToLegacy: false // LEGACY FALLBACKS DEAKTIVIERT
-    }
-  );
-
-  const { 
-    problems, 
-    isGenerating, 
-    error: generationError, 
+  const templateBankGeneration = useTemplateBankGeneration(category, grade, user?.id || 'anonymous', 5,
+  // 5 questions per session (session policy)
+  currentQuarter, {
+    enableQualityControl: true,
+    minQualityThreshold: 0.7,
+    preferredDifficulty: undefined,
+    // Let adaptive system decide
+    diversityWeight: 0.8,
+    fallbackToLegacy: false // LEGACY FALLBACKS DEAKTIVIERT
+  });
+  const {
+    problems,
+    isGenerating,
+    error: generationError,
     generationSource,
     qualityMetrics,
-    refreshQuestions 
+    refreshQuestions
   } = templateBankGeneration;
-
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
@@ -97,29 +104,34 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     if (s.includes('latein') || s.includes('latin')) return 'latin';
     return s;
   };
-
   const adaptiveUserId = user?.id || '00000000-0000-0000-0000-000000000000';
   const adaptive = useAdaptiveDifficultySystem(normalizeCategoryForAdaptive(category), grade, adaptiveUserId);
 
   // Show generation status and source
   const getSourceIcon = () => {
     switch (generationSource) {
-      case 'template-bank': return <Database className="w-4 h-4 text-green-600" />;
-      case 'knowledge-generated': return <Brain className="w-4 h-4 text-blue-600" />;
-      case 'legacy-fallback': return <Archive className="w-4 h-4 text-orange-600" />;
-      default: return null;
+      case 'template-bank':
+        return <Database className="w-4 h-4 text-green-600" />;
+      case 'knowledge-generated':
+        return <Brain className="w-4 h-4 text-blue-600" />;
+      case 'legacy-fallback':
+        return <Archive className="w-4 h-4 text-orange-600" />;
+      default:
+        return null;
     }
   };
-
   const getSourceLabel = () => {
     switch (generationSource) {
-      case 'template-bank': return 'Template-Bank';
-      case 'knowledge-generated': return 'Lehrplan-Generator';
-      case 'legacy-fallback': return 'Fallback-System';
-      default: return 'Wird geladen...';
+      case 'template-bank':
+        return 'Template-Bank';
+      case 'knowledge-generated':
+        return 'Lehrplan-Generator';
+      case 'legacy-fallback':
+        return 'Fallback-System';
+      default:
+        return 'Wird geladen...';
     }
   };
-
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
   // Start game
@@ -127,7 +139,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     adaptive.resetSession();
     setGameStarted(true);
   };
-
   const resetAnswers = () => {
     setUserAnswer('');
     setSelectedMultipleChoice(null);
@@ -138,7 +149,6 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
   // ✅ NEW: Handle manual continuation to next question
   const handleNextQuestion = () => {
     const isLastQuestion = currentQuestionIndex === problems.length - 1;
-    
     if (isLastQuestion) {
       completeGame();
     } else {
@@ -157,126 +167,111 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         const textAnswer = (question as any).answer;
         const userInput = String(answer).trim().toLowerCase().replace(',', '.');
         const correctAnswer = String(textAnswer).toLowerCase().replace(',', '.');
-        
+
         // For numeric answers, try numeric comparison
         const userNum = parseFloat(userInput);
         const correctNum = parseFloat(correctAnswer);
         if (!isNaN(userNum) && !isNaN(correctNum)) {
           return Math.abs(userNum - correctNum) < 0.001;
         }
-        
         return userInput === correctAnswer;
-        
       case 'multiple-choice':
         // ✅ FIXED: Handle both correctAnswer index and string matching
         const mcQuestion = question as any;
         const selectedIndex = Number(answer);
         const selectedOption = mcQuestion.options?.[selectedIndex];
-        
+
         // Method 1: Check by index (if correctAnswer is a number)
         if (typeof mcQuestion.correctAnswer === 'number') {
           return selectedIndex === mcQuestion.correctAnswer;
         }
-        
+
         // Method 2: Check by string matching (if correctAnswer is a string)
         if (typeof mcQuestion.correctAnswer === 'string') {
           return selectedOption === mcQuestion.correctAnswer;
         }
-        
+
         // Method 3: Use BulletproofAnswerCalculator for reliable calculation
         if (mcQuestion.question && mcQuestion.options) {
           // Try to get template info for calculation
           const questionTemplate = (question as any).template;
           const questionParams = (question as any).params || {};
-          
           if (questionTemplate && Object.keys(questionParams).length > 0) {
             console.log('🔍 Using AnswerCalculator for validation');
-            const calculationResult = AnswerCalculator.calculateAnswer(
-              questionTemplate, 
-              questionParams, 
-              mcQuestion.question
-            );
-            
+            const calculationResult = AnswerCalculator.calculateAnswer(questionTemplate, questionParams, mcQuestion.question);
             if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
               const calculatedAnswer = String(calculationResult.answer);
-              console.log('🎯 AnswerCalculator result:', { 
-                calculated: calculatedAnswer, 
+              console.log('🎯 AnswerCalculator result:', {
+                calculated: calculatedAnswer,
                 selected: selectedOption,
                 confidence: calculationResult.confidence
               });
               return selectedOption === calculatedAnswer || selectedOption.includes(calculatedAnswer);
             }
           }
-          
+
           // Fallback: Direct comparison with stored answer
           const calculatedAnswer = (question as any).answer;
           if (calculatedAnswer !== undefined) {
             return selectedOption === String(calculatedAnswer) || selectedOption === calculatedAnswer;
           }
         }
-        
         return selectedIndex === mcQuestion.correctAnswer;
-        
       default:
         return false;
     }
   };
-
   const handleAnswerSubmit = async (answer: string | number | number[] | Record<string, string>) => {
     if (!problems || problems.length === 0) return;
-    
     const currentQuestion = problems[currentQuestionIndex];
     const isCorrect = checkAnswer(answer, currentQuestion);
-    
+
     // 📊 LOG QUESTION EVENT (Template-Bank Analytics)
     const templateId = (currentQuestion as any).templateId;
     if (templateId && typeof templateId === 'string') {
       await logQuestionAnswer(templateId, isCorrect);
       console.log(`📊 Logged ${isCorrect ? 'CORRECT' : 'INCORRECT'} answer for template ${templateId}`);
     }
-    
+
     // Update adaptive difficulty - simplified logging
     console.log(`📈 Question ${currentQuestionIndex + 1}: ${isCorrect ? 'CORRECT' : 'INCORRECT'} (${Date.now() - questionStartTime}ms)`);
     adaptive.resetSession(); // Keep session reset functionality
-    
+
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
       setScore(score + 1);
-      
-    // 🎯 UPDATE ACHIEVEMENTS for correct answers
-    if (user?.id && updateProgress) {
-      try {
-        console.log('🎯 Triggering achievement update for correct answer');
-        const englishCategory = toEnglishCategory(category);
-        const newAchievements = await updateProgress(englishCategory, 'questions_solved', 1);
-        
-        if (newAchievements && newAchievements.length > 0) {
-          console.log('🏆 New achievements earned:', newAchievements);
-          // Store new achievements to show later
-          setNewAchievements(prev => [...(prev || []), ...newAchievements]);
-          setShowAchievements(true); // ✅ FIXED: Show achievement animation
+
+      // 🎯 UPDATE ACHIEVEMENTS for correct answers
+      if (user?.id && updateProgress) {
+        try {
+          console.log('🎯 Triggering achievement update for correct answer');
+          const englishCategory = toEnglishCategory(category);
+          const newAchievements = await updateProgress(englishCategory, 'questions_solved', 1);
+          if (newAchievements && newAchievements.length > 0) {
+            console.log('🏆 New achievements earned:', newAchievements);
+            // Store new achievements to show later
+            setNewAchievements(prev => [...(prev || []), ...newAchievements]);
+            setShowAchievements(true); // ✅ FIXED: Show achievement animation
+          }
+        } catch (error) {
+          console.error('❌ Error updating achievements:', error);
         }
-      } catch (error) {
-        console.error('❌ Error updating achievements:', error);
       }
     }
-    }
-    
+
     // ✅ FIXED: Set waiting state instead of auto-advancing
     setWaitingForNext(true);
   };
-
   const completeGame = async () => {
     const endTime = Date.now();
     setSessionEndTime(endTime);
     setGameCompleted(true);
-    
+
     // 🏆 UPDATE SESSION-BASED ACHIEVEMENTS
     if (user?.id && updateProgress) {
       try {
         const sessionDurationMinutes = Math.round((endTime - sessionStartTime) / 1000 / 60);
-        const accuracy = Math.round((score / problems.length) * 100);
-        
+        const accuracy = Math.round(score / problems.length * 100);
         console.log('🎯 Triggering session completion achievements:', {
           category,
           sessionDurationMinutes,
@@ -284,56 +279,48 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
           score,
           totalQuestions: problems.length
         });
-        
+
         // Update total questions achievement
         const totalQuestionsAchievements = await updateProgress('general', 'total_questions', score);
-        
+
         // Update streak achievement (daily learning)
         const streakAchievements = await updateProgress('general', 'streak', 1);
-        
+
         // Update accuracy achievements if high accuracy
         let accuracyAchievements = [];
         if (accuracy >= 90) {
           accuracyAchievements = await updateProgress('general', 'accuracy_master', accuracy);
         }
-        
+
         // Update perfect session bonus
         let perfectAchievements = [];
         if (accuracy === 100) {
           perfectAchievements = await updateProgress('general', 'perfect_sessions', 1);
         }
-        
+
         // Update marathon sessions if session was long (> 30 minutes)
         let marathonAchievements = [];
         if (sessionDurationMinutes > 30) {
           marathonAchievements = await updateProgress('general', 'marathon_sessions', 1);
         }
-        
+
         // Update night owl achievement if after 8 PM
         let nightOwlAchievements = [];
         const currentHour = new Date().getHours();
         if (currentHour >= 20 || currentHour <= 5) {
           nightOwlAchievements = await updateProgress('general', 'night_owl', 1);
         }
-        
+
         // Update weekend warrior on weekends
         let weekendAchievements = [];
         const dayOfWeek = new Date().getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) { // Sunday = 0, Saturday = 6
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          // Sunday = 0, Saturday = 6
           weekendAchievements = await updateProgress('general', 'weekend_warrior', 1);
         }
-        
+
         // Collect all new achievements
-        const allNewAchievements = [
-          ...totalQuestionsAchievements,
-          ...streakAchievements,
-          ...accuracyAchievements,
-          ...perfectAchievements,
-          ...marathonAchievements,
-          ...nightOwlAchievements,
-          ...weekendAchievements
-        ];
-        
+        const allNewAchievements = [...totalQuestionsAchievements, ...streakAchievements, ...accuracyAchievements, ...perfectAchievements, ...marathonAchievements, ...nightOwlAchievements, ...weekendAchievements];
         if (allNewAchievements.length > 0) {
           console.log('🏆 Session completion achievements earned:', allNewAchievements);
           setNewAchievements(prev => [...(prev || []), ...allNewAchievements]);
@@ -343,24 +330,22 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         console.error('❌ Error updating session achievements:', error);
       }
     }
-    
     const finalSessionDuration = endTime - sessionStartTime;
     let earnedSeconds = 0;
     let timePerTask = 30;
-    
     if (settings) {
       // ✅ FIXED: Use correct English category mapping for settings key
       const englishCategory = toEnglishCategory(category);
       const categoryKey = getTimePerTaskKey(englishCategory) as keyof typeof settings;
       timePerTask = settings[categoryKey] as number || 30;
       earnedSeconds = score * timePerTask;
-      console.log('⏱️ Time calculation:', { 
-        category, 
-        englishCategory, 
-        categoryKey, 
-        timePerTask, 
-        score, 
-        earnedSeconds 
+      console.log('⏱️ Time calculation:', {
+        category,
+        englishCategory,
+        categoryKey,
+        timePerTask,
+        score,
+        earnedSeconds
       });
     } else {
       earnedSeconds = score * 30;
@@ -371,20 +356,20 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
       try {
         // ✅ FIXED: Use English category for database consistency
         const englishCategory = toEnglishCategory(category);
-        
         const gameSessionResult = await supabase.from('game_sessions').insert({
           user_id: user.id,
           grade,
           correct_answers: score,
           total_questions: problems.length,
           time_spent: finalSessionDuration / 1000,
-          time_earned: earnedSeconds, // ✅ Store in seconds for consistency
+          time_earned: earnedSeconds,
+          // ✅ Store in seconds for consistency
           duration_seconds: Math.round(finalSessionDuration / 1000),
-          score: Math.round((score / problems.length) * 100),
-          question_source: generationSource, // Track Template-Bank vs other sources
+          score: Math.round(score / problems.length * 100),
+          question_source: generationSource,
+          // Track Template-Bank vs other sources
           category: englishCategory // ✅ Use English category
         });
-
         if (gameSessionResult.error) {
           console.error('❌ Failed to save game session:', gameSessionResult.error);
         } else {
@@ -397,24 +382,14 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
         console.error('❌ Error saving session:', error);
       }
     }
-    
     addScreenTime(earnedSeconds);
   };
 
   // Loading state - child-friendly design
   if (isGenerating || problems.length === 0) {
-    const loadingMessages = [
-      "🎯 Suche die besten Fragen für dich...",
-      "📚 Bereite spannende Aufgaben vor...",
-      "✨ Zaubere tolle Rätsel herbei...",
-      "🌟 Sammle interessante Fragen...",
-      "🎈 Mache alles bereit für dich..."
-    ];
-    
+    const loadingMessages = ["🎯 Suche die besten Fragen für dich...", "📚 Bereite spannende Aufgaben vor...", "✨ Zaubere tolle Rätsel herbei...", "🌟 Sammle interessante Fragen...", "🎈 Mache alles bereit für dich..."];
     const randomMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-    
-    return (
-      <div className="container mx-auto px-4 py-8">
+    return <div className="container mx-auto px-4 py-8">
         <Card className="w-full max-w-2xl mx-auto shadow-lg border-0 bg-gradient-to-br from-primary/5 to-purple-50">
           <CardContent className="p-8">
             <div className="text-center space-y-6">
@@ -450,14 +425,12 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             </div>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
 
   // Error state with Template-Bank info
   if (generationError) {
-    return (
-      <div className="container mx-auto px-4 py-8">
+    return <div className="container mx-auto px-4 py-8">
         <Card className="w-full max-w-4xl mx-auto border-red-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
@@ -478,31 +451,24 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
                 <RefreshCw className="h-4 w-4" />
                 Erneut versuchen
               </Button>
-              {onBack && (
-                <Button variant="outline" onClick={onBack}>
+              {onBack && <Button variant="outline" onClick={onBack}>
                   Zurück
-                </Button>
-              )}
+                </Button>}
             </div>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
   if (!gameStarted) {
-    return (
-      <Card className="w-full max-w-2xl mx-auto">
+    return <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-center flex-1">
               {category} - Klasse {grade}
             </CardTitle>
-            {onBack && (
-              <Button variant="outline" size="sm" onClick={onBack}>
+            {onBack && <Button variant="outline" size="sm" onClick={onBack}>
                 Zurück
-              </Button>
-            )}
+              </Button>}
           </div>
         </CardHeader>
         <CardContent className="text-center space-y-6">
@@ -517,8 +483,7 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             Spiel starten
           </Button>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
 
   // Show completion screen when game is finished
@@ -526,35 +491,20 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
     const sessionDuration = sessionEndTime - sessionStartTime;
     const englishCategoryForDisplay = toEnglishCategory(category);
     const categoryKeyForDisplay = getTimePerTaskKey(englishCategoryForDisplay) as keyof typeof settings;
-    const timePerTask = (settings?.[categoryKeyForDisplay] as number) || 30;
+    const timePerTask = settings?.[categoryKeyForDisplay] as number || 30;
     const achievementBonusMinutes = newAchievements.reduce((sum, ach) => sum + ach.reward_minutes, 0);
     const perfectSessionBonus = score === problems.length ? 2 : 0;
-    
-    return (
-      <GameCompletionScreen
-        score={score}
-        totalQuestions={problems.length}
-        sessionDuration={sessionDuration}
-        timePerTask={timePerTask}
-        achievementBonusMinutes={achievementBonusMinutes}
-        perfectSessionBonus={perfectSessionBonus}
-        onContinue={() => {
-          const timePerTaskValue = (settings?.[categoryKeyForDisplay] as number) || 30;
-          const earnedSeconds = score * timePerTaskValue;
-          const earnedMinutes = Math.floor(earnedSeconds / 60);
-          
-          setGameCompleted(false);
-          setGameStarted(false);
-          
-          onComplete(earnedMinutes, category);
-        }}
-      />
-    );
+    return <GameCompletionScreen score={score} totalQuestions={problems.length} sessionDuration={sessionDuration} timePerTask={timePerTask} achievementBonusMinutes={achievementBonusMinutes} perfectSessionBonus={perfectSessionBonus} onContinue={() => {
+      const timePerTaskValue = settings?.[categoryKeyForDisplay] as number || 30;
+      const earnedSeconds = score * timePerTaskValue;
+      const earnedMinutes = Math.floor(earnedSeconds / 60);
+      setGameCompleted(false);
+      setGameStarted(false);
+      onComplete(earnedMinutes, category);
+    }} />;
   }
-
   if (!currentQuestion) {
-    return (
-      <Card className="w-full max-w-2xl mx-auto">
+    return <Card className="w-full max-w-2xl mx-auto">
         <CardContent className="text-center py-8">
           <p className="text-lg">Keine Fragen verfügbar</p>
           <Button onClick={refreshQuestions} className="mt-4">
@@ -562,234 +512,134 @@ export function CategoryMathProblem({ category, grade, onComplete, onBack }: Cat
             Neue Fragen laden
           </Button>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
+  return <div className="container mx-auto px-4 py-8">
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Frage {currentQuestionIndex + 1} von {problems.length}</span>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {getSourceIcon()}
-              <span>{getSourceLabel()}</span>
-            </div>
+            
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Template-Bank Quality Metrics */}
-          <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
-            <div className="flex items-center gap-4 text-sm">
-              <span>Qualität: {Math.round(qualityMetrics.averageQuality * 100)}%</span>
-              <span>Abdeckung: {Math.round(qualityMetrics.templateCoverage * 100)}%</span>
-              <span>Vielfalt: {Math.round(qualityMetrics.domainDiversity * 100)}%</span>
-              <span>Quartal: {currentQuarter}</span>
-            </div>
-          </div>
+          
 
-          <GameProgress 
-            currentQuestion={currentQuestionIndex + 1} 
-            totalQuestions={problems.length} 
-            score={score} 
-            startTime={sessionStartTime}
-            isActive={!gameCompleted}
-          />
+          <GameProgress currentQuestion={currentQuestionIndex + 1} totalQuestions={problems.length} score={score} startTime={sessionStartTime} isActive={!gameCompleted} />
 
-          <QuestionRenderer
-            question={currentQuestion}
-            userAnswer={userAnswer}
-            setUserAnswer={setUserAnswer}
-            selectedMultipleChoice={selectedMultipleChoice}
-            setSelectedMultipleChoice={setSelectedMultipleChoice}
-            selectedWords={selectedWords}
-            setSelectedWords={setSelectedWords}
-            onWordToggle={(wordIndex: number) => {
-              setSelectedWords(prev => 
-                prev.includes(wordIndex) 
-                  ? prev.filter(i => i !== wordIndex)
-                  : [...prev, wordIndex]
-              );
-            }}
-            onMatchingComplete={(isCorrect: boolean) => {
-              setFeedback(isCorrect ? 'correct' : 'incorrect');
-              if (isCorrect) setScore(prev => prev + 1);
-            }}
-            currentPlacements={currentPlacements}
-            onItemMove={(itemId: string, categoryId: string) => {
-              setCurrentPlacements(prev => ({
-                ...prev,
-                [itemId]: categoryId
-              }));
-            }}
-            feedback={feedback}
-          />
+          <QuestionRenderer question={currentQuestion} userAnswer={userAnswer} setUserAnswer={setUserAnswer} selectedMultipleChoice={selectedMultipleChoice} setSelectedMultipleChoice={setSelectedMultipleChoice} selectedWords={selectedWords} setSelectedWords={setSelectedWords} onWordToggle={(wordIndex: number) => {
+          setSelectedWords(prev => prev.includes(wordIndex) ? prev.filter(i => i !== wordIndex) : [...prev, wordIndex]);
+        }} onMatchingComplete={(isCorrect: boolean) => {
+          setFeedback(isCorrect ? 'correct' : 'incorrect');
+          if (isCorrect) setScore(prev => prev + 1);
+        }} currentPlacements={currentPlacements} onItemMove={(itemId: string, categoryId: string) => {
+          setCurrentPlacements(prev => ({
+            ...prev,
+            [itemId]: categoryId
+          }));
+        }} feedback={feedback} />
 
           {/* ✅ FIXED: Single feedback component with correct answer display */}
-          {feedback && (
-            <div className={`p-6 rounded-lg border-2 ${
-              feedback === 'correct' 
-                ? 'bg-green-50 text-green-800 border-green-200' 
-                : 'bg-red-50 text-red-800 border-red-200'
-            }`}>
+          {feedback && <div className={`p-6 rounded-lg border-2 ${feedback === 'correct' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
               <div className="flex items-center justify-center gap-3 mb-3">
-                {feedback === 'correct' ? (
-                  <Check className="w-8 h-8 text-green-600" />
-                ) : (
-                  <X className="w-8 h-8 text-red-600" />
-                )}
+                {feedback === 'correct' ? <Check className="w-8 h-8 text-green-600" /> : <X className="w-8 h-8 text-red-600" />}
                 <span className="font-bold text-lg">
                   {feedback === 'correct' ? 'Richtig!' : 'Falsch!'}
                 </span>
               </div>
               
               {/* ✅ FIXED: Show actual correct answer for incorrect responses */}
-              {feedback === 'incorrect' && (
-                <div className="mt-3 p-3 bg-white/50 rounded-md border-l-4 border-green-500">
+              {feedback === 'incorrect' && <div className="mt-3 p-3 bg-white/50 rounded-md border-l-4 border-green-500">
                   <p className="text-sm font-medium mb-1 text-green-700">Richtige Antwort:</p>
-                  {currentQuestion.questionType === 'multiple-choice' ? (
-                     <p className="text-sm font-semibold text-green-800">
+                  {currentQuestion.questionType === 'multiple-choice' ? <p className="text-sm font-semibold text-green-800">
                        {(() => {
-                         const mcQuestion = currentQuestion as any;
-                         
-                          // Try AnswerCalculator first for reliable calculation
-                          if (mcQuestion.template && mcQuestion.params) {
-                            const calculationResult = AnswerCalculator.calculateAnswer(
-                              mcQuestion.template, 
-                              mcQuestion.params,
-                             mcQuestion.question
-                           );
-            if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
-              return String(calculationResult.answer);
-            }
-                         }
-                         
-                         // Fallback to stored answer or options
-                         return mcQuestion.options?.[mcQuestion.correctAnswer] || mcQuestion.answer || 'Siehe Erklärung';
-                       })()}
-                     </p>
-                  ) : (
-                    <p className="text-sm font-semibold text-green-800">
+                const mcQuestion = currentQuestion as any;
+
+                // Try AnswerCalculator first for reliable calculation
+                if (mcQuestion.template && mcQuestion.params) {
+                  const calculationResult = AnswerCalculator.calculateAnswer(mcQuestion.template, mcQuestion.params, mcQuestion.question);
+                  if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
+                    return String(calculationResult.answer);
+                  }
+                }
+
+                // Fallback to stored answer or options
+                return mcQuestion.options?.[mcQuestion.correctAnswer] || mcQuestion.answer || 'Siehe Erklärung';
+              })()}
+                     </p> : <p className="text-sm font-semibold text-green-800">
                       {(currentQuestion as any).answer || 'Siehe Erklärung'}
-                    </p>
-                  )}
+                    </p>}
                   <p className="text-xs text-red-600 mt-1">
-                    Deine Antwort: {
-                      currentQuestion.questionType === 'multiple-choice' 
-                        ? (currentQuestion as any).options?.[selectedMultipleChoice || 0]
-                        : userAnswer
-                    }
+                    Deine Antwort: {currentQuestion.questionType === 'multiple-choice' ? (currentQuestion as any).options?.[selectedMultipleChoice || 0] : userAnswer}
                   </p>
-                </div>
-              )}
+                </div>}
               
               {/* Show explanation */}
-              {currentQuestion.explanation && (
-                <div className="mt-3 p-3 bg-white/50 rounded-md">
+              {currentQuestion.explanation && <div className="mt-3 p-3 bg-white/50 rounded-md">
                   <p className="text-sm font-medium mb-2">Erklärung:</p>
                   <div className="text-sm space-y-1">
-                    {currentQuestion.explanation.split('\n').map((line, index) => (
-                      <div key={index}>
-                        {line.trim() ? (
-                          <p>{line}</p>
-                        ) : (
-                          <div className="h-1"></div>
-                        )}
-                      </div>
-                    ))}
+                    {currentQuestion.explanation.split('\n').map((line, index) => <div key={index}>
+                        {line.trim() ? <p>{line}</p> : <div className="h-1"></div>}
+                      </div>)}
                   </div>
-                </div>
-              )}
+                </div>}
 
               <div className="flex gap-2 mt-4 justify-center">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowFeedbackDialog(true)}
-                  className="flex items-center gap-1"
-                >
+                <Button variant="outline" size="sm" onClick={() => setShowFeedbackDialog(true)} className="flex items-center gap-1">
                   <Flag className="w-4 h-4" />
                   Problem melden
                 </Button>
                 
-                <Button 
-                  onClick={handleNextQuestion}
-                  size="sm"
-                  className="flex items-center gap-1"
-                >
+                <Button onClick={handleNextQuestion} size="sm" className="flex items-center gap-1">
                   <ArrowRight className="w-4 h-4" />
                   Weiter
                 </Button>
               </div>
-            </div>
-          )}
+            </div>}
 
-          {!feedback && (
-            <div className="text-center">
-              <Button 
-                onClick={() => {
-                  let answer: string | number | number[] | Record<string, string>;
-                  
-                  switch (currentQuestion.questionType) {
-                    case 'text-input':
-                      answer = userAnswer;
-                      break;
-                    case 'multiple-choice':
-                      answer = selectedMultipleChoice || 0;
-                      break;
-                    default:
-                      answer = userAnswer;
-                  }
-                  
-                  handleAnswerSubmit(answer);
-                }}
-                disabled={
-                  (currentQuestion.questionType === 'text-input' && !userAnswer.trim()) ||
-                  (currentQuestion.questionType === 'multiple-choice' && selectedMultipleChoice === null)
-                }
-                size="lg"
-                className="w-full"
-              >
+          {!feedback && <div className="text-center">
+              <Button onClick={() => {
+            let answer: string | number | number[] | Record<string, string>;
+            switch (currentQuestion.questionType) {
+              case 'text-input':
+                answer = userAnswer;
+                break;
+              case 'multiple-choice':
+                answer = selectedMultipleChoice || 0;
+                break;
+              default:
+                answer = userAnswer;
+            }
+            handleAnswerSubmit(answer);
+          }} disabled={currentQuestion.questionType === 'text-input' && !userAnswer.trim() || currentQuestion.questionType === 'multiple-choice' && selectedMultipleChoice === null} size="lg" className="w-full">
                 Antwort abgeben
               </Button>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
 
-      <QuestionFeedbackDialog
-        isOpen={showFeedbackDialog}
-        onClose={() => setShowFeedbackDialog(false)}
-        onSubmit={async (feedbackType: string, details?: string) => {
-          if (!currentQuestion || !user) return;
+      <QuestionFeedbackDialog isOpen={showFeedbackDialog} onClose={() => setShowFeedbackDialog(false)} onSubmit={async (feedbackType: string, details?: string) => {
+      if (!currentQuestion || !user) return;
+      try {
+        await supabase.from('question_feedback').insert({
+          user_id: user.id,
+          question_content: currentQuestion.question,
+          question_type: currentQuestion.questionType,
+          feedback_type: feedbackType,
+          feedback_details: details,
+          category: category.toLowerCase(),
+          grade
+        });
+      } catch (error) {
+        console.error('Error submitting feedback:', error);
+      }
+      setShowFeedbackDialog(false);
+    }} />
 
-          try {
-            await supabase.from('question_feedback').insert({
-              user_id: user.id,
-              question_content: currentQuestion.question,
-              question_type: currentQuestion.questionType,
-              feedback_type: feedbackType,
-              feedback_details: details,
-              category: category.toLowerCase(),
-              grade
-            });
-          } catch (error) {
-            console.error('Error submitting feedback:', error);
-          }
-          
-          setShowFeedbackDialog(false);
-        }}
-      />
-
-      <AchievementAnimation
-        achievements={newAchievements}
-        isVisible={showAchievements}
-        onClose={() => {
-          setShowAchievements(false);
-          setNewAchievements([]);
-        }}
-      />
-    </div>
-  );
+      <AchievementAnimation achievements={newAchievements} isVisible={showAchievements} onClose={() => {
+      setShowAchievements(false);
+      setNewAchievements([]);
+    }} />
+    </div>;
 }
