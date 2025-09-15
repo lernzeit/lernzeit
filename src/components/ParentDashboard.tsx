@@ -26,7 +26,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
     if (userId) {
       loadFamilyData(userId);
     }
-  }, [userId, loadFamilyData]);
+  }, [userId]);
   
 
   // Event handlers

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,7 +24,7 @@ export function useFamilyLinking() {
   const { toast } = useToast();
 
   // Load invitation codes and linked children
-  const loadFamilyData = async (userId: string) => {
+  const loadFamilyData = useCallback(async (userId: string) => {
     console.log('📊 loadFamilyData called for userId:', userId);
     try {
       setLoading(true);
@@ -77,7 +77,7 @@ export function useFamilyLinking() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   // Generate new invitation code
   const generateInvitationCode = async (parentId: string): Promise<string | null> => {
