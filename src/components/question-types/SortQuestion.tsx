@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SortQuestion as SortQuestionType } from '@/types/questionTypes';
-import { ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
+import { ChevronUp, ChevronDown, RotateCcw, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
 
 interface SortQuestionProps {
   question: SortQuestionType;
@@ -85,60 +85,95 @@ export function SortQuestion({
     }
   };
 
+  // Determine if we're sorting numbers or text
+  const isNumericSort = items.every(item => !isNaN(parseFloat(item.replace(/[.,]/g, '').replace(/\s/g, ''))));
+  
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p className="text-xl font-medium mb-4">
+        <p className="text-xl font-medium mb-2">
           {question.question}
         </p>
+        {/* Clear sorting direction indicator */}
+        <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg max-w-sm mx-auto">
+          <ArrowUp className="h-4 w-4 text-green-600" />
+          <span className="text-sm font-medium">
+            {isNumericSort ? "Kleinste zuerst" : "A-Z sortieren"}
+          </span>
+          <ArrowDown className="h-4 w-4 text-green-600" />
+        </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Sortiere die Elemente in die richtige Reihenfolge. Du kannst sie per Drag & Drop verschieben oder die Pfeile verwenden.
+          Ziehe die Zahlen in die richtige Reihenfolge oder nutze die Pfeile
         </p>
       </div>
 
-      <div className="max-w-md mx-auto space-y-3">
+      <div className="max-w-sm mx-auto space-y-2">
         {items.map((item, index) => (
           <Card 
             key={`${item}-${index}`}
-            className={`p-4 border-2 transition-all duration-200 ${
-              disabled ? 'opacity-50' : 'hover:border-primary/50 cursor-move'
-            }`}
+            className={`relative group transition-all duration-200 ${
+              disabled 
+                ? 'opacity-50' 
+                : 'hover:shadow-md hover:scale-[1.02] cursor-move active:scale-[0.98]'
+            } ${index === 0 ? 'border-green-200 bg-green-50/50' : 'border-2'}`}
             draggable={!disabled}
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
           >
-            <div className="flex items-center justify-between">
-              {/* Position number */}
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+            <div className="flex items-center p-4">
+              {/* Drag handle */}
+              <div className="flex items-center gap-3 flex-1">
+                <GripVertical className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100" />
+                
+                {/* Position indicator */}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  index === 0 
+                    ? 'bg-green-100 text-green-700 border-2 border-green-200' 
+                    : 'bg-muted text-muted-foreground'
+                }`}>
                   {index + 1}
                 </div>
-                <span className="font-medium">{item}</span>
+                
+                {/* The actual number/value - make it prominent */}
+                <div className={`text-xl font-black ${
+                  isNumericSort ? 'font-mono' : 'font-sans'
+                } ${index === 0 ? 'text-green-700' : 'text-foreground'}`}>
+                  {item}
+                </div>
               </div>
 
               {/* Movement controls */}
-              <div className="flex flex-col space-y-1">
+              <div className="flex flex-col gap-1 opacity-70 group-hover:opacity-100">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => moveItem(index, 'up')}
                   disabled={disabled || index === 0}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-primary/10"
+                  title="Nach oben"
                 >
-                  <ChevronUp className="h-3 w-3" />
+                  <ChevronUp className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => moveItem(index, 'down')}
                   disabled={disabled || index === items.length - 1}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-primary/10"
+                  title="Nach unten"
                 >
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
               </div>
             </div>
+            
+            {/* First position indicator */}
+            {index === 0 && (
+              <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                Kleinste
+              </div>
+            )}
           </Card>
         ))}
       </div>
@@ -150,7 +185,7 @@ export function SortQuestion({
           size="sm"
           onClick={resetOrder}
           disabled={disabled}
-          className="inline-flex items-center space-x-2"
+          className="inline-flex items-center gap-2 hover:bg-muted"
         >
           <RotateCcw className="h-4 w-4" />
           <span>Neu mischen</span>
