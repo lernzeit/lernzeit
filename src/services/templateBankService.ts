@@ -9,6 +9,7 @@ import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
 import { contentValidator } from './ContentValidator';
+import { TemplateSessionManager } from '@/utils/templates/templateSessionManager';
 
 export interface TemplateBankConfig {
   enableQualityControl: boolean;
@@ -190,7 +191,7 @@ export class EnhancedTemplateBankService {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
     
-    const questionType = this.mapQuestionType(template);
+    const questionType = this.mapQuestionType(template.question_type);
     
     if (questionType === 'sort') {
       // Handle sort questions - extract items from solution array
@@ -820,7 +821,6 @@ export class EnhancedTemplateBankService {
    * NEW: Session management integration
    */
   private ensureSessionExists(userId: string, category: string, grade: number): string {
-    const { TemplateSessionManager } = require('@/utils/templates/templateSessionManager');
     return TemplateSessionManager.createSession(userId, category, grade);
   }
 
@@ -834,8 +834,7 @@ export class EnhancedTemplateBankService {
     count: number,
     sessionId: string
   ): Promise<SelectionQuestion[]> {
-    const { TemplateSessionManager } = require('@/utils/templates/templateSessionManager');
-    
+    // TemplateSessionManager imported at module scope
     try {
       // Fetch expanded pool for variety
       const templates = await fetchActiveTemplates({ grade, quarter, limit: 300 });
