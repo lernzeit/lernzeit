@@ -190,11 +190,15 @@ export class EnhancedTemplateBankService {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
     
-    const questionType = this.mapQuestionType(template.question_type);
+    const questionType = this.mapQuestionType(template);
     
     if (questionType === 'sort') {
       // Handle sort questions - extract items from solution array
-      const sortItems = this.extractSortItems(template.solution);
+      const sortItems = this.extractSortItems(template);
+      if (!sortItems) {
+        console.warn(`⚠️ Cannot extract sort items from template ${template.id}, falling back to multiple-choice`);
+        return this.createMultipleChoiceFallback(template, prompt);
+      }
       
       return {
         id: parseInt(template.id) || Date.now(),
@@ -206,6 +210,25 @@ export class EnhancedTemplateBankService {
         explanation: template.explanation || "",
         templateId: String(template.id)
       } as SortQuestion;
+    } else if (questionType === 'matching') {
+      // Handle matching questions - extract pairs from database
+      const matchData = this.extractMatchPairs(template);
+      if (!matchData) {
+        console.warn(`⚠️ Cannot extract match pairs from template ${template.id}, falling back to multiple-choice`);
+        return this.createMultipleChoiceFallback(template, prompt);
+      }
+      
+      return {
+        id: parseInt(template.id) || Date.now(),
+        question: prompt,
+        type: this.mapDomainToSubject(template.domain),
+        questionType: 'matching' as const,
+        leftItems: matchData.leftItems,
+        rightItems: matchData.rightItems,
+        correctMatches: matchData.correctMatches,
+        explanation: template.explanation || "",
+        templateId: String(template.id)
+      };
     } else if (questionType === 'text-input') {
       // Get answer from database solution
       const answer = this.extractSolutionValue(template.solution);
@@ -402,6 +425,76 @@ export class EnhancedTemplateBankService {
   }
 
   /**
+   * NEW: Extract matching pairs for match questions
+   */
+  private extractMatchPairs(template: any): { leftItems: string[]; rightItems: string[]; correctMatches: Record<string, string> } | null {
+    console.log('🔍 Extracting match pairs from template:', template.id);
+    
+    let matchData = null;
+    
+    // Try to extract from solution field
+    if (template.solution && typeof template.solution === 'object') {
+      if (template.solution.pairs || template.solution.matches) {
+        const pairs = template.solution.pairs || template.solution.matches;
+        if (Array.isArray(pairs) && pairs.length >= 3) {
+          const leftItems = pairs.map((p, i) => p.left || p.term || `Begriff ${i+1}`);
+          const rightItems = pairs.map((p, i) => p.right || p.definition || `Definition ${i+1}`);
+          const correctMatches = {};
+          pairs.forEach((p, i) => {
+            correctMatches[leftItems[i]] = rightItems[i];
+          });
+          matchData = { leftItems, rightItems, correctMatches };
+        }
+      }
+    }
+    
+    // Fallback: Generate simple math term matching for math domains
+    if (!matchData && this.isMathDomain(template.domain)) {
+      const mathTerms = [
+        { left: "5 + 3", right: "8" },
+        { left: "10 - 4", right: "6" },
+        { left: "3 × 2", right: "6" }
+      ];
+      
+      const leftItems = mathTerms.map(t => t.left);
+      const rightItems = mathTerms.map(t => t.right);
+      const correctMatches = {};
+      mathTerms.forEach(t => correctMatches[t.left] = t.right);
+      
+      matchData = { leftItems, rightItems, correctMatches };
+    }
+    
+    console.log('✅ Match data extracted:', matchData);
+    return matchData;
+  }
+
+  /**
+   * NEW: Create multiple-choice fallback for failed conversions
+   */
+  private createMultipleChoiceFallback(template: any, prompt: string) {
+    const optionsData = this.extractOptionsWithCorrectIndex(template);
+    
+    return {
+      id: parseInt(template.id) || Date.now(),
+      question: prompt,
+      type: this.mapDomainToSubject(template.domain),
+      questionType: 'multiple-choice' as const,
+      options: optionsData.options,
+      correctAnswer: optionsData.correctIndex,
+      explanation: template.explanation || "",
+      templateId: String(template.id)
+    };
+  }
+
+  /**
+   * NEW: Check if domain is math-related
+   */
+  private isMathDomain(domain: string): boolean {
+    const mathDomains = ['Zahlen & Operationen', 'Raum & Form', 'Größen & Messen', 'Gleichungen & Funktionen'];
+    return mathDomains.includes(domain);
+  }
+
+  /**
    * Enhanced check for problematic question patterns
    */
   private containsDrawingInstructions(prompt: string): boolean {
@@ -523,8 +616,14 @@ export class EnhancedTemplateBankService {
     console.log(`🎯 SIMPLIFIED Template-Bank: Generate ${count} questions for ${category} Grade ${grade} ${quarter}`);
 
     try {
-      // Primary strategy: Use Template-Bank directly from database
-      const bankQuestions = await this.generateFromTemplateBank(category, grade, quarter, count);
+      // Primary strategy: Use Template-Bank directly from database with session management
+      const sessionId = userId ? 
+        this.ensureSessionExists(userId, category, grade) : 
+        `anonymous_${Date.now()}`;
+      
+      const bankQuestions = await this.generateFromTemplateBankWithSessionTracking(
+        category, grade, quarter, count, sessionId
+      );
       
       if (bankQuestions.length >= count) {
         const qualityMetrics = {
@@ -716,6 +815,92 @@ export class EnhancedTemplateBankService {
   /**
    * Clear cache
    */
+  /**
+   * NEW: Session management integration
+   */
+  private ensureSessionExists(userId: string, category: string, grade: number): string {
+    const { TemplateSessionManager } = require('@/utils/templates/templateSessionManager');
+    return TemplateSessionManager.createSession(userId, category, grade);
+  }
+
+  /**
+   * NEW: Generate from template bank with session tracking to prevent repetitions
+   */
+  private async generateFromTemplateBankWithSessionTracking(
+    category: string,
+    grade: number,
+    quarter: Quarter,
+    count: number,
+    sessionId: string
+  ): Promise<SelectionQuestion[]> {
+    const { TemplateSessionManager } = require('@/utils/templates/templateSessionManager');
+    
+    try {
+      // Fetch expanded pool for variety
+      const templates = await fetchActiveTemplates({ grade, quarter, limit: 300 });
+      
+      if (templates.length === 0) {
+        console.warn(`🚨 No active templates found for ${category} Grade ${grade} Quarter ${quarter}`);
+        return [];
+      }
+
+      // Filter by category and exclude already used templates
+      const categoryTemplates = category.toLowerCase() !== 'general' 
+        ? templates.filter(t => this.matchesMathCategory(t.domain, category))
+        : templates;
+
+      // Filter out templates already used in this session
+      const availableTemplates = categoryTemplates.filter(template => 
+        !TemplateSessionManager.isTemplateUsed(sessionId, String(template.id))
+      );
+
+      console.log(`📚 Found ${availableTemplates.length}/${categoryTemplates.length} available templates for ${category} (session: ${sessionId})`);
+
+      // Shuffle and convert templates
+      const shuffledTemplates = [...availableTemplates].sort(() => Math.random() - 0.5);
+      const questions: SelectionQuestion[] = [];
+      const usedHashes = new Set<string>();
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+      const usedPrompts = new Set<string>();
+      
+      for (const template of shuffledTemplates) {
+        if (questions.length >= count) break;
+        
+        const converted = await this.convertTemplateToQuestion(template);
+        if (converted !== null) {
+          // Check for semantic duplicates
+          const hash = this.generateQuestionHash(converted.question);
+          const normPrompt = normalize(converted.question);
+          
+          if (usedHashes.has(hash) || usedPrompts.has(normPrompt)) {
+            continue; // Skip duplicates
+          }
+          
+          // Check session-level repetition
+          if (TemplateSessionManager.isQuestionUsed(sessionId, converted)) {
+            continue; // Skip already seen questions
+          }
+          
+          questions.push(converted);
+          usedHashes.add(hash);
+          usedPrompts.add(normPrompt);
+          
+          // Mark as used in session
+          TemplateSessionManager.markTemplateUsed(sessionId, String(template.id), converted);
+          
+          console.log(`✅ Added question from template ${template.id}: ${converted.question.substring(0, 60)}...`);
+        }
+      }
+
+      console.log(`📊 Session ${sessionId} stats:`, TemplateSessionManager.getSessionStats(sessionId));
+      return questions;
+
+    } catch (error) {
+      console.error('❌ Error in generateFromTemplateBankWithSessionTracking:', error);
+      return [];
+    }
+  }
+
   clearCache(): void {
     this.cache.clear();
   }

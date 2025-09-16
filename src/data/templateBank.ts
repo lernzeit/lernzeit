@@ -116,16 +116,29 @@ export function pickSessionTemplates(all: any[], opts: {
   const { count, minDistinctDomains, difficulty } = opts;
   const poolRaw = difficulty ? all.filter(t => t.difficulty === difficulty) : all.slice();
   
-  // De-duplicate by normalized prompt text to avoid repeated identical questions
+  // ENHANCED: De-duplicate by multiple criteria to prevent repetitions
   const normalize = (s: string) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
   const seenPrompts = new Set<string>();
+  const seenIds = new Set<string>();
+  
   const pool = poolRaw.filter(t => {
+    // Skip duplicate IDs
+    const id = String(t.id || '');
+    if (id && seenIds.has(id)) return false;
+    if (id) seenIds.add(id);
+    
+    // Skip duplicate normalized prompts
     const key = normalize(t.student_prompt);
     if (!key) return true;
-    if (seenPrompts.has(key)) return false;
+    if (seenPrompts.has(key)) {
+      console.log(`🔄 Skipping duplicate prompt: ${key.substring(0, 50)}...`);
+      return false;
+    }
     seenPrompts.add(key);
     return true;
   });
+  
+  console.log(`📊 Pre-deduplication: ${poolRaw.length} → Post-deduplication: ${pool.length} templates`);
   
   if (pool.length === 0) {
     console.warn("🚨 No templates available for selection");

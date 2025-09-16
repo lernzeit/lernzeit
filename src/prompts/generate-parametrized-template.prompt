@@ -158,5 +158,63 @@ Erstelle genau **eine** hochwertige parametrisierte Aufgaben-Vorlage im folgende
    AUSNAHME: Klasse 1 Q1 darf einfache Emoji‑Zählaufgaben (🍎🍏 etc.)
 6. **OUTPUT FORMAT**: Liefere nur das JSON‑Template, keine Kommentare!
 
+# TYPE-SPECIFIC TEMPLATE RULES
+
+## SORT-TEMPLATE SPEZIFIKATION ({{variant}}="sort")
+- **STUDENT_PROMPT**: Muss sortierbare Elemente enthalten: "Bringe in die richtige Reihenfolge: {item1}, {item2}, {item3}, {item4}"
+- **SOLUTION FORMAT**: `{"type": "array", "formula": "[{item1}, {item2}, {item3}, {item4}]", "order": "chronological|numerical|alphabetical"}`
+- **PARAMETER_RULES**: Items müssen curriculum-kompatibel und eindeutig sortierbar sein
+- **VALIDATION**: Mindestens 3, maximal 6 Parameter für Sortier-Items
+
+## MATCH-TEMPLATE SPEZIFIKATION ({{variant}}="match")  
+- **STUDENT_PROMPT**: Zuordnungsaufgabe: "Ordne {begriff1} zu {definition1}, {begriff2} zu {definition2}, {begriff3} zu {definition3}"
+- **SOLUTION FORMAT**: `{"type": "pairs", "formula": "{begriff1: definition1, begriff2: definition2, begriff3: definition3}"}`
+- **PARAMETER_RULES**: Begriffe und Definitionen müssen eindeutig zuordenbar und altersgerecht sein
+- **VALIDATION**: Mindestens 3 Begriff-Definition-Paare
+
+## FREETEXT-TEMPLATE SPEZIFIKATION ({{variant}}="freetext")
+- **STUDENT_PROMPT**: Berechnungsaufgabe OHNE Auswahloptionen: "Berechne: {zahl1} + {zahl2} = ?"
+- **SOLUTION FORMAT**: `{"type": "calculation", "formula": "{zahl1} + {zahl2}", "result_type": "number"}`
+- **ANTI-PATTERN**: NIEMALS "Wähle aus A/B/C" bei freetext Templates
+- **VALIDATION**: Eindeutige mathematische Formel als Lösung
+
+## MULTIPLE_CHOICE-TEMPLATE SPEZIFIKATION ({{variant}}="multiple_choice")
+- **STUDENT_PROMPT**: Fragestellung OHNE A:/B:/C: "Wie viel ist {zahl1} × {zahl2}?"
+- **SOLUTION FORMAT**: `{"type": "calculation", "formula": "{zahl1} × {zahl2}"}`
+- **DISTRACTORS**: Müssen parametrisiert sein: `["{zahl1} + {zahl2}", "{zahl1} - {zahl2}", "{zahl1} × {zahl2} + 1"]`
+- **VALIDATION**: Exakt 3 parametrisierte Distraktoren
+
+## ENHANCED PARAMETER VALIDATION
+```
+TYPE-COMPLIANCE CHECK:
+✅ SORT: Parameter für sortierbare Items (zeit, größe, alphabet)
+✅ MATCH: Parameter für Begriffe UND Definitionen
+✅ FREETEXT: Parameter für Berechnung ohne Auswahloptionen  
+✅ MULTIPLE_CHOICE: Parameter für Frage UND parametrisierte Distraktoren
+```
+
+## STRICT ANTI-PATTERN RULES
+- **SORT**: Keine Berechnungen, nur sortierbare Sequenzen
+- **MATCH**: Keine mathematischen Operationen, nur Zuordnungen
+- **FREETEXT**: Keine Auswahloptionen im Prompt, nur offene Eingabe
+- **MULTIPLE_CHOICE**: Keine Sortierung oder Zuordnung, nur Auswahl
+
+## PARAMETER INTEGRITY VALIDATION
+- **DEPENDENCY CHECK**: Parameter müssen mathematisch/logisch kompatibel sein
+- **RANGE VALIDATION**: Zahlenräume curriculum-konform für Grade {{grade}}
+- **CONTEXT CONSISTENCY**: Alle Parameter passen zum gewählten Kontext
+- **OUTPUT VALIDATION**: Alle Parameter-Kombinationen führen zu validen Lösungen
+
+# FINAL TEMPLATE VALIDATION (ERWEITERT)
+Vor Ausgabe ZWINGEND prüfen:
+1. ✅ student_prompt enthält KEINE A:/B:/C: Optionen (nur bei multiple_choice erlaubt)
+2. ✅ Alle {parameter} haben korrekte parameter_definitions
+3. ✅ solution.formula ist mathematisch korrekt für alle Parameter-Kombinationen
+4. ✅ distractors sind parametrisiert und erzeugen plausible Fehler
+5. ✅ question_type entspricht exakt dem gewählten {{variant}}
+6. ✅ curriculum_rules sind vollständig und grade-spezifisch
+7. ✅ quality_score ≥ 0.85 durch alle Quality-Gates
+8. ✅ JSON ist strukturell valide und template-spezifisch korrekt
+
 # AUSGABE
 Liefere **nur das JSON-Template** – keine Kommentare, kein Markdown.

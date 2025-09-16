@@ -3,7 +3,8 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { MultipleChoiceQuestion } from '@/components/question-types/MultipleChoiceQuestion';
 import { WordSelectionQuestion } from '@/components/question-types/WordSelectionQuestion';
-import { MatchingQuestion } from '@/components/question-types/MatchingQuestion';
+import { NewMatchingQuestion } from '@/components/question-types/NewMatchingQuestion';
+import { MatchingQuestion as OldMatchingQuestion } from '@/components/question-types/MatchingQuestion';
 import { DragDropQuestion } from '@/components/question-types/DragDropQuestion';
 import { SortQuestion } from '@/components/question-types/SortQuestion';
 import { SelectionQuestion, TextInputQuestion } from '@/types/questionTypes';
@@ -65,13 +66,24 @@ export function QuestionRenderer({
       );
       
     case 'matching':
-      return (
-        <MatchingQuestion
-          question={question}
-          onComplete={onMatchingComplete}
-          disabled={feedback !== null}
-        />
-      );
+      // Check if it's the new matching question type or old type
+      if ('leftItems' in question && 'rightItems' in question && 'correctMatches' in question) {
+        return (
+          <NewMatchingQuestion
+            question={question as any}
+            onComplete={onMatchingComplete}
+            disabled={feedback !== null}
+          />
+        );
+      } else {
+        return (
+          <OldMatchingQuestion
+            question={question as any}
+            onComplete={onMatchingComplete}
+            disabled={feedback !== null}
+          />
+        );
+      }
       
     case 'drag-drop':
       return (

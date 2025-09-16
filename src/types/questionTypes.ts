@@ -70,16 +70,9 @@ export interface DragDropQuestion extends BaseQuestion {
 
 export interface MatchingQuestion extends BaseQuestion {
   questionType: 'matching';
-  items: Array<{
-    id: string;
-    content: string;
-    category: string;
-  }>;
-  categories: Array<{
-    id: string;
-    name: string;
-    acceptsItems: string[]; // item ids that belong in this category
-  }>;
+  leftItems: string[];
+  rightItems: string[];
+  correctMatches: Record<string, string>;
 }
 
 export interface SortQuestion extends BaseQuestion {

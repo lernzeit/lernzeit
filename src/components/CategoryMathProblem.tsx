@@ -63,7 +63,7 @@ export function CategoryMathProblem({
     preferredDifficulty: undefined,
     // Let adaptive system decide
     diversityWeight: 0.8,
-    fallbackToLegacy: false // LEGACY FALLBACKS DEAKTIVIERT
+    fallbackToLegacy: false // LEGACY FALLBACKS DEAKTIVIERT - Only use DB templates
   });
   const {
     problems,

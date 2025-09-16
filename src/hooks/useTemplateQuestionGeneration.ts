@@ -426,8 +426,9 @@ export function useTemplateQuestionGeneration(
         return {
           ...base,
           questionType: 'matching',
-          items: generated.items || [],
-          categories: generated.categories || []
+          leftItems: generated.leftItems || [],
+          rightItems: generated.rightItems || [],
+          correctMatches: generated.correctMatches || {}
         };
       
       case 'drag-drop':

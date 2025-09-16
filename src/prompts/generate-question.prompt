@@ -142,5 +142,59 @@ Vor Ausgabe ZWINGEND prüfen:
 5. ✅ Schwierigkeit passt zu Grade {{grade}} Quarter {{quarter}}
 6. ✅ JSON ist strukturell valide
 
+# TYPE-SPECIFIC GENERATION RULES
+
+## SORT-AUFGABEN ({{variant}}="SORT")
+- **SOLUTION FORMAT**: JSON-Array mit korrekter Reihenfolge: `["Item 1", "Item 2", "Item 3", "Item 4"]`
+- **ITEM COUNT**: Mindestens 3, maximal 6 sortierbare Items
+- **BODY CONTENT**: Items müssen aus dem Fragetext extrahierbar sein
+- **VALIDATION**: Lösung muss eindeutig logische Reihenfolge darstellen
+- **EXAMPLE**: `"data": {"items": ["Montag", "Dienstag", "Mittwoch"], "correct_order": [0, 1, 2]}`
+
+## MATCH-AUFGABEN ({{variant}}="MATCH") 
+- **SOLUTION FORMAT**: JSON-Object mit Begriff-Definition-Paaren: `{"Begriff 1": "Definition A", "Begriff 2": "Definition B"}`
+- **PAIR COUNT**: Mindestens 3 Begriff-Definition-Paare
+- **UNIQUENESS**: Eindeutige, unverwechselbare Zuordnungen
+- **VALIDATION**: Jeder Begriff hat genau eine korrekte Definition
+- **EXAMPLE**: `"data": {"left": ["Kreis", "Dreieck"], "right": ["Runde Form", "Drei Ecken"], "pairs": [[0,0], [1,1]]}`
+
+## STRICT TYPE VALIDATION (VERSCHÄRFT)
+- **SORT**: Wenn `variant="SORT"` → `body` MUSS sortierbare Elemente enthalten + `data.items` Array + `data.correct_order` Array
+- **MATCH**: Wenn `variant="MATCH"` → `body` MUSS zuordbare Begriffe enthalten + `data.left` + `data.right` + `data.pairs`
+- **FREETEXT**: Wenn `variant="FREETEXT"` → `data.expected` MUSS eindeutig berechenbar sein
+- **MULTIPLE_CHOICE**: Wenn `variant="MULTIPLE_CHOICE"` → Exakt 4 unterscheidbare Optionen + gültiger `correct_idx`
+
+## ANTI-PATTERN PREVENTION
+- **VERBOT**: "Wähle aus:", "Sortiere:", "Ordne zu:" in FREETEXT-Aufgaben
+- **VERBOT**: Fehlende Optionen bei MULTIPLE_CHOICE 
+- **VERBOT**: Unvollständige Item-Listen bei SORT
+- **VERBOT**: Mehrdeutige Zuordnungen bei MATCH
+- **VALIDATION**: Jede Aufgabe muss `variant`-konform strukturiert sein
+
+## ENHANCED QUALITY GATES
+```
+TYPE-SPECIFIC VALIDATION (NEU):
+✅ SORT: JSON-Array solution mit 3-6 Items, eindeutige Reihenfolge
+✅ MATCH: JSON-Object solution mit Begriff:Definition Paaren, mindestens 3 Paare
+✅ FREETEXT: Eindeutige expected-Antwort ohne Mehrdeutigkeit oder Auswahloptionen
+✅ MULTIPLE_CHOICE: Exakt 4 Optionen, eindeutiger correct_idx, keine Dopplungen
+```
+
+## ID-TRACKING & SOURCE-METADATA
+- **TEMPLATE_ID**: Eindeutige Identifikation für Datenbankrückverfolgung
+- **SOURCE_HASH**: Content-basierte Duplikaterkennung
+- **GENERATION_SOURCE**: "ai-generated" für prompt-basierte Templates
+
+# FINAL VALIDATION (ERWEITERT)
+Vor Ausgabe ZWINGEND prüfen:
+1. ✅ body enthält KEINE "A:", "B:", "C:" Optionen
+2. ✅ MULTIPLE_CHOICE hat exakt 4 options und gültigen correct_idx
+3. ✅ SORT hat items Array und correct_order Array mit gleicher Länge
+4. ✅ MATCH hat left/right Arrays und pairs Array mit korrekten Indizes
+5. ✅ Mathematik ist zu 100% korrekt (Taschenrechner-Check!)
+6. ✅ Bei Euro-Aufgaben: Multiplikation vs Addition korrekt erkannt
+7. ✅ Schwierigkeit passt zu Grade {{grade}} Quarter {{quarter}}
+8. ✅ JSON ist strukturell valide und type-spezifisch korrekt
+
 # OUTPUT
 **NUR VALIDES JSON** - keine Kommentare, kein Markdown, keine Erklärungen!
