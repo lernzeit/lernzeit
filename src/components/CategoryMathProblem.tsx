@@ -518,8 +518,12 @@ export function CategoryMathProblem({
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Frage {currentQuestionIndex + 1} von {problems.length}</span>
-            
+            <div className="flex flex-col gap-1">
+              <span>Frage {currentQuestionIndex + 1} von {problems.length}</span>
+              <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                ID: {currentQuestion.id || currentQuestion.templateId || 'N/A'}
+              </span>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
