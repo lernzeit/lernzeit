@@ -42,6 +42,10 @@ export interface GeneratedQuestion {
     name: string;
     acceptsItems: string[];
   }>;
+  // Matching question properties
+  leftItems?: string[];
+  rightItems?: string[];
+  correctMatches?: Record<string, string>;
 }
 
 import { germanTemplates } from './templates/germanTemplates';

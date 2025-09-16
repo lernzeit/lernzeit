@@ -562,9 +562,10 @@ export class EnhancedTemplateBankService {
   /**
    * Map question type from database format
    */
-  private mapQuestionType(questionType: string): 'multiple-choice' | 'text-input' | 'sort' {
+  private mapQuestionType(questionType: string): 'multiple-choice' | 'text-input' | 'sort' | 'matching' {
     const type = questionType?.toLowerCase() || 'multiple-choice';
     if (type === 'sort') return 'sort';
+    if (type === 'matching' || type === 'match') return 'matching';
     return type === 'text-input' || type === 'text_input' || type === 'freitext' 
       ? 'text-input' 
       : 'multiple-choice';
