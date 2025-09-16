@@ -521,7 +521,11 @@ export function CategoryMathProblem({
             <div className="flex flex-col gap-1">
               <span>Frage {currentQuestionIndex + 1} von {problems.length}</span>
               <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
-                ID: {currentQuestion.id || currentQuestion.templateId || 'N/A'}
+                {/* Show source and ID to help debug where questions come from */}
+                {currentQuestion.templateId ? 
+                  `DB: ${currentQuestion.templateId}` : 
+                  `Fallback: ${currentQuestion.id || 'N/A'}`
+                }
               </span>
             </div>
           </CardTitle>

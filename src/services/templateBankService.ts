@@ -56,6 +56,8 @@ export class EnhancedTemplateBankService {
       // Fetch more templates for variety
       const templates = await fetchActiveTemplates({ grade, quarter, limit: 200 });
       
+      console.log(`📚 Fetched ${templates.length} active templates from database`);
+      
       if (templates.length === 0) {
         console.warn(`🚨 No active templates found for ${category} Grade ${grade} Quarter ${quarter}`);
         return [];
@@ -66,7 +68,8 @@ export class EnhancedTemplateBankService {
         ? templates.filter(t => this.matchesMathCategory(t.domain, category))
         : templates;
 
-      console.log(`📚 Found ${categoryTemplates.length} templates for ${category}`);
+      console.log(`📚 After category filtering: ${categoryTemplates.length} templates for ${category} (from ${templates.length} total)`);
+      console.log(`🔍 Sample template IDs: ${categoryTemplates.slice(0, 3).map(t => t.id).join(', ')}`);
 
       // Shuffle entire pool and iterate until we collect the required amount
       const shuffledTemplates = [...categoryTemplates].sort(() => Math.random() - 0.5);
@@ -89,6 +92,7 @@ export class EnhancedTemplateBankService {
           const normPrompt = normalize(converted.question);
           if (usedHashes.has(hash) || usedPrompts.has(normPrompt)) {
             // Skip duplicates with same or very similar content
+            console.log(`⚠️ Skipping duplicate template ${templateId}: ${converted.question.substring(0, 60)}...`);
             continue;
           }
           questions.push(converted);
@@ -96,6 +100,8 @@ export class EnhancedTemplateBankService {
           usedHashes.add(hash);
           usedPrompts.add(normPrompt);
           console.log(`✅ Converted template ${templateId}: ${converted.question.substring(0, 60)}...`);
+        } else {
+          console.log(`❌ Failed to convert template ${templateId}`);
         }
       }
       
@@ -201,8 +207,9 @@ export class EnhancedTemplateBankService {
         return this.createMultipleChoiceFallback(template, prompt);
       }
       
+      console.log(`🔄 Creating sort question from template ${template.id}`);
       return {
-        id: parseInt(template.id) || Date.now(),
+        id: template.id, // Use UUID directly instead of parsing
         question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'sort',
@@ -219,8 +226,9 @@ export class EnhancedTemplateBankService {
         return this.createMultipleChoiceFallback(template, prompt);
       }
       
+      console.log(`🔄 Creating matching question from template ${template.id}`);
       return {
-        id: parseInt(template.id) || Date.now(),
+        id: template.id, // Use UUID directly instead of parsing
         question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'matching' as const,
@@ -234,8 +242,9 @@ export class EnhancedTemplateBankService {
       // Get answer from database solution
       const answer = this.extractSolutionValue(template.solution);
       
+      console.log(`🔄 Creating text-input question from template ${template.id}`);
       return {
-        id: parseInt(template.id) || Date.now(),
+        id: template.id, // Use UUID directly instead of parsing
         question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'text-input',
@@ -247,8 +256,9 @@ export class EnhancedTemplateBankService {
       // Multiple choice - extract options correctly from database
       const optionsData = this.extractOptionsWithCorrectIndex(template);
       
+      console.log(`🔄 Creating multiple-choice question from template ${template.id}`);
       return {
-        id: parseInt(template.id) || Date.now(),
+        id: template.id, // Use UUID directly instead of parsing
         question: prompt,
         type: this.mapDomainToSubject(template.domain),
         questionType: 'multiple-choice',
