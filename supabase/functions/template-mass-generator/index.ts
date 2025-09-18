@@ -197,6 +197,22 @@ serve(async (req) => {
       }
     }
 
+    // Automatic duplicate cleanup after successful generation
+    if (results.successCount > 0) {
+      try {
+        console.log('🧹 Running automatic duplicate cleanup...');
+        const cleanupResponse = await supabase.functions.invoke('cleanup-duplicates', {
+          body: { trigger: 'post-generation', source: 'template-mass-generator' }
+        });
+        
+        if (cleanupResponse.data?.success) {
+          console.log(`✅ Cleanup completed: ${cleanupResponse.data.total_deactivated} duplicates removed`);
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Cleanup failed but generation succeeded:', cleanupError);
+      }
+    }
+
     // Phase 4: Coverage & Curriculum Alignment Analysis
     const { data: newCount } = await supabase
       .from('templates')

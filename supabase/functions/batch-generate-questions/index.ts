@@ -143,6 +143,22 @@ serve(async (req) => {
 
     console.log(`🏁 Systematic generation complete: ${results.successful} successful, ${results.failed} failed`);
 
+    // Automatic duplicate cleanup after successful generation
+    if (results.successful > 0) {
+      try {
+        console.log('🧹 Running automatic duplicate cleanup...');
+        const cleanupResponse = await supabase.functions.invoke('cleanup-duplicates', {
+          body: { trigger: 'post-generation', source: 'batch-generate-questions' }
+        });
+        
+        if (cleanupResponse.data?.success) {
+          console.log(`✅ Cleanup completed: ${cleanupResponse.data.total_deactivated} duplicates removed`);
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Cleanup failed but generation succeeded:', cleanupError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

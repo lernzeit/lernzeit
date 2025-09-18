@@ -124,6 +124,22 @@ serve(async (req) => {
 
     console.log('✅ Systematische Generierung abgeschlossen:', generateResult);
 
+    // Automatic duplicate cleanup after successful generation
+    if (generateResult?.successCount > 0) {
+      try {
+        console.log('🧹 Running automatic duplicate cleanup...');
+        const cleanupResponse = await supabase.functions.invoke('cleanup-duplicates', {
+          body: { trigger: 'post-generation', source: 'auto-question-generator' }
+        });
+        
+        if (cleanupResponse.data?.success) {
+          console.log(`✅ Cleanup completed: ${cleanupResponse.data.total_deactivated} duplicates removed`);
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ Cleanup failed but generation succeeded:', cleanupError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: `Systematische Generierung: ${generateResult?.successCount || 0} Templates für ${topGap.domain} Klasse ${topGap.grade}`,

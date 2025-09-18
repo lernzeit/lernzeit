@@ -821,6 +821,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      find_duplicate_templates: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          all_ids: string
+          duplicate_count: number
+          earliest_created: string
+          normalized_prompt: string
+          original_prompts: string
+        }[]
+      }
       generate_invitation_code: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -838,6 +848,10 @@ export type Database = {
         Returns: Json
       }
       trigger_curriculum_template_generation: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      trigger_duplicate_cleanup: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
