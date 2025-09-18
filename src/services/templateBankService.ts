@@ -201,7 +201,7 @@ export class EnhancedTemplateBankService {
     
     if (questionType === 'sort') {
       // Handle sort questions - extract items from solution array
-      const sortItems = this.extractSortItems(template);
+      const sortItems = this.extractSortItems(template.solution?.value || template.solution);
       if (!sortItems) {
         console.warn(`⚠️ Cannot extract sort items from template ${template.id}, falling back to multiple-choice`);
         return this.createMultipleChoiceFallback(template, prompt);
