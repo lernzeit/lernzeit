@@ -70,6 +70,78 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     });
   }
 
+  // Get child settings for daily limits
+  const { data: childSettings } = await supabase
+    .from('child_settings')
+    .select('weekday_max_minutes, weekend_max_minutes')
+    .eq('child_id', childId)
+    .single();
+
+  // Determine daily limit based on current day
+  const today = new Date();
+  const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+  const dailyLimit = childSettings ? 
+    (isWeekend ? childSettings.weekend_max_minutes : childSettings.weekday_max_minutes) : 
+    (isWeekend ? 60 : 30);
+
+  // Check existing requests for today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const { data: todayRequests } = await supabase
+    .from('screen_time_requests')
+    .select('requested_minutes, status')
+    .eq('child_id', childId)
+    .gte('created_at', todayStart.toISOString())
+    .lte('created_at', todayEnd.toISOString());
+
+  // Check if there's already a pending request
+  const pendingRequest = todayRequests?.find(req => req.status === 'pending');
+  if (pendingRequest) {
+    return new Response(JSON.stringify({ 
+      error: 'Es gibt bereits eine ausstehende Bildschirmzeit-Anfrage. Bitte warte auf die Antwort deiner Eltern.' 
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Calculate total minutes already requested/approved today
+  const totalRequestedToday = todayRequests?.reduce((sum, req) => sum + req.requested_minutes, 0) || 0;
+  const totalApprovedToday = todayRequests?.filter(req => req.status === 'approved')
+    .reduce((sum, req) => sum + req.requested_minutes, 0) || 0;
+
+  // Validate request doesn't exceed daily limit
+  if (totalRequestedToday + requestedMinutes > dailyLimit) {
+    return new Response(JSON.stringify({ 
+      error: `Die Anfrage würde das Tageslimit von ${dailyLimit} Minuten überschreiten. Bereits heute beantragt: ${totalRequestedToday} Minuten.` 
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Get total available earned minutes (not yet requested)
+  const { data: earnedMinutesData } = await supabase
+    .from('user_earned_minutes')
+    .select('minutes_remaining')
+    .eq('user_id', childId)
+    .gt('minutes_remaining', 0);
+
+  const totalAvailableMinutes = earnedMinutesData?.reduce((sum, record) => sum + record.minutes_remaining, 0) || 0;
+
+  // Validate enough earned minutes available
+  if (requestedMinutes > totalAvailableMinutes) {
+    return new Response(JSON.stringify({ 
+      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${totalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.` 
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
   // Create the request
   const { data: request, error } = await supabase
     .from('screen_time_requests')
@@ -90,19 +162,59 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     });
   }
 
-  // Get child and parent profiles for notification
+  // Update daily request summary
+  await supabase
+    .from('daily_request_summary')
+    .upsert({
+      user_id: childId,
+      request_date: todayStart.toISOString().split('T')[0],
+      total_minutes_requested: totalRequestedToday + requestedMinutes,
+      total_minutes_approved: totalApprovedToday
+    }, {
+      onConflict: 'user_id,request_date'
+    });
+
+  // Reserve the requested minutes (mark as requested but not yet consumed)
+  let remainingToReserve = requestedMinutes;
+  const { data: availableEarnedMinutes } = await supabase
+    .from('user_earned_minutes')
+    .select('*')
+    .eq('user_id', childId)
+    .gt('minutes_remaining', 0)
+    .order('earned_at', { ascending: true });
+
+  for (const earnedRecord of availableEarnedMinutes || []) {
+    if (remainingToReserve <= 0) break;
+    
+    const minutesToReserve = Math.min(remainingToReserve, earnedRecord.minutes_remaining);
+    
+    await supabase
+      .from('user_earned_minutes')
+      .update({
+        minutes_requested: earnedRecord.minutes_requested + minutesToReserve
+      })
+      .eq('id', earnedRecord.id);
+    
+    remainingToReserve -= minutesToReserve;
+  }
+
+  // Get child profile for notification
   const { data: childProfile } = await supabase
     .from('profiles')
     .select('name')
     .eq('id', childId)
     .single();
 
-  // Send push notification to parent (simplified - would need FCM/APNs integration)
-  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes`);
+  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Available: ${totalAvailableMinutes})`);
 
   return new Response(JSON.stringify({ 
     success: true, 
     request,
+    validation: {
+      dailyLimit,
+      totalRequestedToday: totalRequestedToday + requestedMinutes,
+      availableMinutes: totalAvailableMinutes - requestedMinutes
+    },
     deep_links: generateDeepLinks(requestedMinutes)
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -145,6 +257,54 @@ async function respondToRequest(supabase: any, parentId: string, body: any) {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+  }
+
+  // If request is denied, release the reserved minutes
+  if (status === 'denied') {
+    let minutesToRelease = request.requested_minutes;
+    
+    const { data: reservedMinutes } = await supabase
+      .from('user_earned_minutes')
+      .select('*')
+      .eq('user_id', request.child_id)
+      .gt('minutes_requested', 0)
+      .order('earned_at', { ascending: true });
+
+    for (const earnedRecord of reservedMinutes || []) {
+      if (minutesToRelease <= 0) break;
+      
+      const minutesToUnreserve = Math.min(minutesToRelease, earnedRecord.minutes_requested);
+      
+      await supabase
+        .from('user_earned_minutes')
+        .update({
+          minutes_requested: earnedRecord.minutes_requested - minutesToUnreserve
+        })
+        .eq('id', earnedRecord.id);
+      
+      minutesToRelease -= minutesToUnreserve;
+    }
+  }
+
+  // Update daily request summary
+  if (status === 'approved') {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: dailySummary } = await supabase
+      .from('daily_request_summary')
+      .select('*')
+      .eq('user_id', request.child_id)
+      .eq('request_date', today)
+      .single();
+
+    if (dailySummary) {
+      await supabase
+        .from('daily_request_summary')
+        .update({
+          total_minutes_approved: dailySummary.total_minutes_approved + request.requested_minutes
+        })
+        .eq('id', dailySummary.id);
+    }
   }
 
   return new Response(JSON.stringify({ success: true, request: updatedRequest }), {

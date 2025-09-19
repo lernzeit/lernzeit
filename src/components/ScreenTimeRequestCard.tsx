@@ -31,56 +31,72 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
   const handleCreateRequest = async () => {
     if (!hasParentLink) {
       toast({
-        title: "Kein Elternteil verknüpft",
-        description: "Du musst zuerst einen Elternteil verknüpfen, um Bildschirmzeit anfragen zu können.",
+        title: "Kein Eltern-Link",
+        description: "Du musst zuerst mit deinen Eltern verknüpft sein, um Bildschirmzeit zu beantragen.",
         variant: "destructive",
       });
       return;
     }
 
-    if (earnedMinutes <= 0) {
+    if (earnedMinutes < 5) {
       toast({
-        title: "Keine Zeit verdient",
-        description: "Du musst erst durch Lernen Zeit verdienen, bevor du sie anfragen kannst.",
+        title: "Nicht genügend verdiente Zeit",
+        description: "Du musst mindestens 5 Minuten durch Lernen verdienen, um Bildschirmzeit zu beantragen.",
         variant: "destructive",
       });
       return;
     }
 
     setIsSubmitting(true);
+
     try {
-      // For now, we'll use a placeholder parent ID - this should be fetched from the parent_child_relationships table
-      const { data: relationshipData } = await supabase
+      // Get parent ID from relationship
+      const { data: relationship } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', userId)
         .single();
 
-      if (!relationshipData?.parent_id) {
-        throw new Error('Kein Elternteil gefunden');
+      if (!relationship) {
+        toast({
+          title: "Fehler",
+          description: "Eltern-Kind Beziehung nicht gefunden.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const result = await createRequest(
-        relationshipData.parent_id,
+        relationship.parent_id,
+        earnedMinutes, // Request all earned minutes
         earnedMinutes,
-        earnedMinutes,
-        message || undefined
+        message.trim() || undefined
       );
 
       if (result.success) {
         toast({
-          title: "Anfrage gesendet! 📱",
-          description: "Deine Eltern können deine Anfrage jetzt genehmigen.",
+          title: "Anfrage gesendet! 🎉",
+          description: `Du hast ${earnedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
+        
+        if (result.validation) {
+          console.log('Request validation:', result.validation);
+        }
+        
         setMessage('');
         setIsDialogOpen(false);
       } else {
-        throw new Error(result.error || 'Unbekannter Fehler');
+        toast({
+          title: "Fehler beim Senden",
+          description: result.error || "Die Anfrage konnte nicht gesendet werden.",
+          variant: "destructive",
+        });
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error creating request:', error);
       toast({
         title: "Fehler",
-        description: error.message || "Anfrage konnte nicht gesendet werden.",
+        description: "Es ist ein unerwarteter Fehler aufgetreten.",
         variant: "destructive",
       });
     } finally {

@@ -18,7 +18,7 @@ export interface ScreenTimeRequest {
 interface UseScreenTimeRequestsResult {
   requests: ScreenTimeRequest[];
   loading: boolean;
-  createRequest: (parentId: string, requestedMinutes: number, earnedMinutes: number, message?: string) => Promise<{ success: boolean; request?: ScreenTimeRequest; deep_links?: any; error?: string }>;
+  createRequest: (parentId: string, requestedMinutes: number, earnedMinutes: number, message?: string) => Promise<{ success: boolean; request?: ScreenTimeRequest; deep_links?: any; validation?: any; error?: string }>;
   respondToRequest: (requestId: string, status: 'approved' | 'denied', response?: string) => Promise<{ success: boolean; error?: string }>;
   refreshRequests: () => Promise<void>;
 }
@@ -64,10 +64,15 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
 
       if (data.success) {
         await loadRequests(); // Refresh the list
-        return { success: true, request: data.request, deep_links: data.deep_links };
+        return { 
+          success: true, 
+          request: data.request, 
+          deep_links: data.deep_links,
+          validation: data.validation 
+        };
       }
 
-      return { success: false, error: 'Failed to create request' };
+      return { success: false, error: data.error || 'Failed to create request' };
     } catch (error) {
       console.error('Error creating screen time request:', error);
       return { success: false, error: error.message };

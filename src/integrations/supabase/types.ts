@@ -179,6 +179,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_request_summary: {
+        Row: {
+          created_at: string
+          id: string
+          request_date: string
+          total_minutes_approved: number
+          total_minutes_requested: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_date?: string
+          total_minutes_approved?: number
+          total_minutes_requested?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_date?: string
+          total_minutes_approved?: number
+          total_minutes_requested?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       game_sessions: {
         Row: {
           category: string | null
@@ -776,6 +806,42 @@ export type Database = {
           strengths?: string[] | null
           user_id?: string
           weaknesses?: string[] | null
+        }
+        Relationships: []
+      }
+      user_earned_minutes: {
+        Row: {
+          created_at: string
+          earned_at: string
+          id: string
+          minutes_earned: number
+          minutes_remaining: number | null
+          minutes_requested: number
+          session_id: string
+          session_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          earned_at?: string
+          id?: string
+          minutes_earned?: number
+          minutes_remaining?: number | null
+          minutes_requested?: number
+          session_id: string
+          session_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          earned_at?: string
+          id?: string
+          minutes_earned?: number
+          minutes_remaining?: number | null
+          minutes_requested?: number
+          session_id?: string
+          session_type?: string
+          user_id?: string
         }
         Relationships: []
       }
