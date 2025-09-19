@@ -175,6 +175,14 @@ export class QualityAssurancePipeline {
         if (!template.variables?.items || !Array.isArray(template.variables.items) || template.variables.items.length < 3) {
           errors.push('Sort questions must have at least 3 items to sort');
         }
+        
+        // Check for identical values in sort questions (e.g., 1,5 m = 150 cm)
+        if (template.variables?.items) {
+          const identicalCheck = this.checkForIdenticalSortValues(template.variables.items);
+          if (!identicalCheck.isValid) {
+            errors.push(...identicalCheck.errors);
+          }
+        }
         break;
       
       case 'MATCH':
@@ -326,6 +334,81 @@ export class QualityAssurancePipeline {
 
     console.log(`✅ Batch validation complete: ${results.size} templates processed`);
     return results;
+  }
+
+  private static checkForIdenticalSortValues(items: string[]): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    // Convert all items to comparable values (handle units)
+    const normalizedValues = items.map(item => this.normalizeValueWithUnit(item));
+    
+    // Check for duplicates in normalized values
+    const uniqueValues = new Set(normalizedValues);
+    if (uniqueValues.size !== normalizedValues.length) {
+      errors.push('Sort question contains mathematically identical values (e.g., 1,5 m = 150 cm)');
+    }
+    
+    return { isValid: errors.length === 0, errors };
+  }
+
+  private static normalizeValueWithUnit(item: string): string {
+    if (!item) return item;
+    
+    const text = item.toLowerCase().trim();
+    
+    // Handle length units: convert to cm
+    if (text.includes('meter') || text.includes(' m ') || text.match(/\d+,?\d*\s*m$/)) {
+      const meterMatch = text.match(/(\d+(?:,\d+)?)\s*m/);
+      if (meterMatch) {
+        const meters = parseFloat(meterMatch[1].replace(',', '.'));
+        return `${meters * 100}cm`;
+      }
+    }
+    
+    if (text.includes('zentimeter') || text.includes(' cm')) {
+      const cmMatch = text.match(/(\d+(?:,\d+)?)\s*(?:zentimeter|cm)/);
+      if (cmMatch) {
+        const cm = parseFloat(cmMatch[1].replace(',', '.'));
+        return `${cm}cm`;
+      }
+    }
+    
+    // Handle weight units: convert to grams
+    if (text.includes('kilogramm') || text.includes(' kg')) {
+      const kgMatch = text.match(/(\d+(?:,\d+)?)\s*(?:kilogramm|kg)/);
+      if (kgMatch) {
+        const kg = parseFloat(kgMatch[1].replace(',', '.'));
+        return `${kg * 1000}g`;
+      }
+    }
+    
+    if (text.includes('gramm') || text.includes(' g ')) {
+      const gMatch = text.match(/(\d+(?:,\d+)?)\s*(?:gramm|g)/);
+      if (gMatch) {
+        const grams = parseFloat(gMatch[1].replace(',', '.'));
+        return `${grams}g`;
+      }
+    }
+    
+    // Handle time units: convert to minutes
+    if (text.includes('stunde') || text.includes(' h')) {
+      const hMatch = text.match(/(\d+(?:,\d+)?)\s*(?:stunde|stunden|h)/);
+      if (hMatch) {
+        const hours = parseFloat(hMatch[1].replace(',', '.'));
+        return `${hours * 60}min`;
+      }
+    }
+    
+    if (text.includes('minute') || text.includes(' min')) {
+      const minMatch = text.match(/(\d+(?:,\d+)?)\s*(?:minute|minuten|min)/);
+      if (minMatch) {
+        const minutes = parseFloat(minMatch[1].replace(',', '.'));
+        return `${minutes}min`;
+      }
+    }
+    
+    // Return original if no conversion needed
+    return text;
   }
 
   static async updateTemplateQualityScore(templateId: string, qualityScore: number): Promise<void> {

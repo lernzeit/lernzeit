@@ -577,7 +577,7 @@ export class EnhancedTemplateBankService {
     const type = questionType?.toLowerCase() || 'multiple-choice';
     if (type === 'sort') return 'sort';
     if (type === 'matching' || type === 'match') return 'matching';
-    return type === 'text-input' || type === 'text_input' || type === 'freitext' 
+    return type === 'text-input' || type === 'text_input' || type === 'freitext' || type === 'freetext'
       ? 'text-input' 
       : 'multiple-choice';
   }
