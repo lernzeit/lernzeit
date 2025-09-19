@@ -6,6 +6,7 @@ import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { ChildManagement } from '@/components/ChildManagement';
 import { RefreshCw, Users, Clock, TrendingUp, BookOpen, Plus } from 'lucide-react';
 import { ChildErrorAnalysis } from '@/components/ChildErrorAnalysis';
+import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 
 
 interface ParentDashboardProps {
@@ -53,6 +54,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           </Button>
         </div>
       </div>
+
+      {/* Screen Time Requests - Prominent */}
+      <ParentScreenTimeRequestsDashboard userId={userId} />
 
       {/* Child Management - Family Link Style */}
       <ChildManagement 

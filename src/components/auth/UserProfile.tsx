@@ -22,6 +22,7 @@ import { getAvatarById } from '@/data/avatars';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
+import { ScreenTimeRequestCard } from '@/components/ScreenTimeRequestCard';
 
 interface UserProfileProps {
   user: any;
@@ -424,6 +425,13 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </Card>
           </div>
 
+
+          {/* Screen Time Request Card */}
+          <ScreenTimeRequestCard 
+            userId={user.id}
+            earnedMinutes={totalTimeEarned}
+            hasParentLink={hasParentLink}
+          />
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 gap-4">
