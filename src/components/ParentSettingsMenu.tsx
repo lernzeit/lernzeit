@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
 import { GradeManagement } from '@/components/GradeManagement';
-import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3, User } from 'lucide-react';
+import { ParentScreenTimeRequests } from '@/components/ParentScreenTimeRequests';
+import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3, User, Smartphone } from 'lucide-react';
 
 interface ParentSettings {
   weekday_max_minutes: number;
@@ -353,8 +354,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
       </div>
 
       <Tabs defaultValue="family" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="family">Familie</TabsTrigger>
+          <TabsTrigger value="screen-time">Bildschirmzeit</TabsTrigger>
           <TabsTrigger value="account">Konto</TabsTrigger>
           <TabsTrigger value="codes">Codes</TabsTrigger>
         </TabsList>
@@ -406,6 +408,9 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
           </Card>
         </TabsContent>
 
+        <TabsContent value="screen-time" className="space-y-6">
+          <ParentScreenTimeRequests userId={userId} />
+        </TabsContent>
 
         <TabsContent value="account" className="space-y-6">
           <Card>

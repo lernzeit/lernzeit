@@ -511,6 +511,48 @@ export type Database = {
         }
         Relationships: []
       }
+      screen_time_requests: {
+        Row: {
+          child_id: string
+          created_at: string
+          earned_minutes: number
+          expires_at: string
+          id: string
+          parent_id: string
+          parent_response: string | null
+          request_message: string | null
+          requested_minutes: number
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          earned_minutes: number
+          expires_at?: string
+          id?: string
+          parent_id: string
+          parent_response?: string | null
+          request_message?: string | null
+          requested_minutes: number
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          earned_minutes?: number
+          expires_at?: string
+          id?: string
+          parent_id?: string
+          parent_response?: string | null
+          request_message?: string | null
+          requested_minutes?: number
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           correct: number
@@ -814,6 +856,10 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_expired_screen_time_requests: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

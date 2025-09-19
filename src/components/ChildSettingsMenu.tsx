@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
+import { ScreenTimeRequestWidget } from '@/components/ScreenTimeRequestWidget';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -373,7 +374,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
           )}
           
           {activeSection === 'screen-time' && (
-            <ScreenTimeWidget />
+            <>
+              <ScreenTimeWidget />
+              <ScreenTimeRequestWidget userId={user.id} role="child" />
+            </>
           )}
           
           {activeSection === 'profile' && (
