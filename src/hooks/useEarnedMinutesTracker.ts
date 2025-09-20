@@ -42,18 +42,59 @@ export function useEarnedMinutesTracker() {
 
   const getAvailableMinutes = async (userId: string): Promise<number> => {
     try {
-      const { data, error } = await supabase
-        .from('user_earned_minutes')
-        .select('minutes_remaining')
-        .eq('user_id', userId)
-        .gt('minutes_remaining', 0);
+      // Get earned minutes from session tables
+      const [gameSessionsRes, learningSessionsRes, requestsRes] = await Promise.all([
+        supabase
+          .from('game_sessions')
+          .select('time_earned')
+          .eq('user_id', userId),
+        supabase
+          .from('learning_sessions')
+          .select('time_earned')
+          .eq('user_id', userId),
+        supabase
+          .from('screen_time_requests')
+          .select('requested_minutes')
+          .eq('child_id', userId)
+      ]);
 
-      if (error) {
-        console.error('Error getting available minutes:', error);
+      if (gameSessionsRes.error || learningSessionsRes.error || requestsRes.error) {
+        console.error('Error getting available minutes:', gameSessionsRes.error || learningSessionsRes.error || requestsRes.error);
         return 0;
       }
 
-      return data?.reduce((sum, record) => sum + record.minutes_remaining, 0) || 0;
+      // Calculate total earned minutes from sessions
+      const gameMinutes = (gameSessionsRes.data || []).reduce((sum: number, session: any) => {
+        const earned = Number(session.time_earned) || 0;
+        // Convert seconds to minutes if needed (values > 60 are likely seconds)
+        return sum + (earned > 60 ? Math.ceil(earned / 60) : earned);
+      }, 0);
+
+      const learningMinutes = (learningSessionsRes.data || []).reduce((sum: number, session: any) => {
+        const earned = Number(session.time_earned) || 0;
+        // Convert seconds to minutes if needed (values > 60 are likely seconds)
+        return sum + (earned > 60 ? Math.ceil(earned / 60) : earned);
+      }, 0);
+
+      const totalEarnedMinutes = gameMinutes + learningMinutes;
+
+      // Calculate total requested minutes (all time, not just today)
+      const totalRequestedMinutes = (requestsRes.data || []).reduce((sum: number, request: any) => {
+        return sum + (Number(request.requested_minutes) || 0);
+      }, 0);
+
+      // Available minutes = earned - already requested
+      const availableMinutes = Math.max(0, totalEarnedMinutes - totalRequestedMinutes);
+
+      console.log('Available minutes calculation:', {
+        gameMinutes,
+        learningMinutes,  
+        totalEarnedMinutes,
+        totalRequestedMinutes,
+        availableMinutes
+      });
+
+      return availableMinutes;
     } catch (error) {
       console.error('Error in getAvailableMinutes:', error);
       return 0;
