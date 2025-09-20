@@ -76,9 +76,10 @@ export interface MatchingQuestion extends BaseQuestion {
 }
 
 export interface SortQuestion extends BaseQuestion {
-  questionType: 'sort';
+  questionType: 'sort' | 'SORT';
   items: string[];           // Items to be sorted
-  correctOrder: string[];    // Correct order of items
+  correctOrder?: string[];    // Correct order of items (legacy)
+  correctAnswer?: string[];   // Correct order of items (new)
 }
 
 export type SelectionQuestion = TextInputQuestion | MultipleChoiceQuestion | WordSelectionQuestion | DragDropQuestion | MatchingQuestion | SortQuestion;

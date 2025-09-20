@@ -8,6 +8,7 @@ import { MatchingQuestion as OldMatchingQuestion } from '@/components/question-t
 import { DragDropQuestion } from '@/components/question-types/DragDropQuestion';
 import { SortQuestion } from '@/components/question-types/SortQuestion';
 import { SelectionQuestion, TextInputQuestion } from '@/types/questionTypes';
+import { createSortQuestion } from '@/utils/sortQuestionHelper';
 
 interface QuestionRendererProps {
   question: SelectionQuestion;
@@ -96,9 +97,12 @@ export function QuestionRenderer({
       );
       
     case 'sort':
+    case 'SORT':
+      // Transform template data into proper sort question format
+      const sortQuestion = createSortQuestion(question);
       return (
         <SortQuestion
-          question={question}
+          question={sortQuestion}
           currentOrder={currentSortOrder}
           onOrderChange={onSortOrderChange}
           disabled={feedback !== null}
