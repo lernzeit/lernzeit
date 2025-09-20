@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+// Badge import removed (not used on dashboard)
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Smartphone, Clock, AlertCircle } from 'lucide-react';
 import { useScreenTimeRequests } from '@/hooks/useScreenTimeRequests';
+import { useEarnedMinutesTracker } from '@/hooks/useEarnedMinutesTracker';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -24,9 +25,22 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
   const { requests, loading, createRequest } = useScreenTimeRequests('child');
   const { toast } = useToast();
 
+  // Minutes available today (reuse shared tracker)
+  const { getAvailableMinutes } = useEarnedMinutesTracker();
+  const [availableMinutes, setAvailableMinutes] = useState(0);
+
+  // Load available minutes on mount and when requests change
+  useEffect(() => {
+    let isMounted = true;
+    getAvailableMinutes(userId).then((mins) => {
+      if (isMounted) setAvailableMinutes(mins);
+    });
+    return () => { isMounted = false; };
+  }, [userId, getAvailableMinutes, requests]);
+
   // Get the most recent pending request
   const pendingRequest = requests.find(r => r.status === 'pending');
-  const recentRequests = requests.slice(0, 3);
+  // Recent requests overview hidden on dashboard per spec
 
   const handleCreateRequest = async () => {
     if (!hasParentLink) {
@@ -38,7 +52,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
       return;
     }
 
-    if (earnedMinutes < 5) {
+    if (availableMinutes < 5) {
       toast({
         title: "Nicht genügend verdiente Zeit",
         description: "Du musst mindestens 5 Minuten durch Lernen verdienen, um Bildschirmzeit zu beantragen.",
@@ -68,15 +82,15 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
 
       const result = await createRequest(
         relationship.parent_id,
-        earnedMinutes, // Request all earned minutes
-        earnedMinutes,
+        availableMinutes, // Request all available earned minutes (today-based)
+        availableMinutes,
         message.trim() || undefined
       );
 
       if (result.success) {
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${earnedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${availableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         
         if (result.validation) {
@@ -104,22 +118,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'denied': return <XCircle className="w-4 h-4 text-red-500" />;
-      default: return <AlertCircle className="w-4 h-4 text-yellow-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200';
-      case 'denied': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    }
-  };
-
+// Removed request status helpers (not used on dashboard)
   if (loading) {
     return (
       <Card className="shadow-card">
@@ -165,12 +164,12 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
         ) : (
           <div className="space-y-3">
             {hasParentLink ? (
-              earnedMinutes > 0 ? (
+              availableMinutes > 0 ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="w-5 h-5 text-green-600" />
                     <span className="font-medium text-green-800">
-                      {earnedMinutes} Minuten verdient! 🎉
+                      {availableMinutes} Minuten verdient! 🎉
                     </span>
                   </div>
                   <p className="text-sm text-green-700 mb-3">
@@ -191,7 +190,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
                       <div className="space-y-4">
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>Du möchtest {earnedMinutes} Minuten anfragen.</strong>
+                            <strong>Du möchtest {availableMinutes} Minuten anfragen.</strong>
                           </p>
                           <p className="text-xs text-blue-600 mt-1">
                             Diese Zeit hast du durch fleißiges Lernen verdient! 🌟
@@ -254,24 +253,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
           </div>
         )}
 
-        {/* Recent Requests */}
-        {recentRequests.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Letzte Anfragen:</h4>
-            {recentRequests.map((request) => (
-              <div key={request.id} className="flex items-center justify-between p-2 bg-white rounded-lg border">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(request.status)}
-                  <span className="text-sm">{request.requested_minutes} Min.</span>
-                </div>
-                <Badge className={getStatusColor(request.status)}>
-                  {request.status === 'approved' ? 'Genehmigt' : 
-                   request.status === 'denied' ? 'Abgelehnt' : 'Ausstehend'}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Recent Requests hidden on dashboard (shown in Settings) */}
       </CardContent>
     </Card>
   );
