@@ -32,9 +32,9 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   const [todayRequestedMinutes, setTodayRequestedMinutes] = useState(0);
   const [minutesBreakdown, setMinutesBreakdown] = useState({
     todaySessionMinutes: 0,
-    achievementMinutes: 0,
-    totalAvailable: 0,
-    totalRequestedMinutes: 0,
+    todayAchievementMinutes: 0,
+    totalEarnedToday: 0,
+    todayApprovedMinutes: 0,
     availableMinutes: 0
   });
   
@@ -45,16 +45,18 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   // Load available minutes when component mounts
   useEffect(() => {
     const loadMinutesData = async () => {
-      const [available, requested] = await Promise.all([
+      const [available, requested, breakdown] = await Promise.all([
         getAvailableMinutes(userId),
-        getTodayRequestedMinutes(userId)
+        getTodayRequestedMinutes(userId),
+        getAvailableMinutesBreakdown(userId)
       ]);
       setAvailableMinutes(available);
       setTodayRequestedMinutes(requested);
+      setMinutesBreakdown(breakdown);
     };
     
     loadMinutesData();
-  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, requests]); // Refresh when requests change
+  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]); // Refresh when requests change
 
   const handleRequestScreenTime = async () => {
     if (availableMinutes < 5) {
@@ -237,18 +239,18 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
                       <span>Heute erspielt:</span>
                       <span className="font-medium text-green-700">{minutesBreakdown.todaySessionMinutes} Min.</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Achievement-Belohnungen:</span>
-                      <span className="font-medium text-green-700">{minutesBreakdown.achievementMinutes} Min.</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-1">
-                      <span>Gesamt verfügbar:</span>
-                      <span className="font-medium text-green-700">{minutesBreakdown.totalAvailable} Min.</span>
-                    </div>
-                    <div className="flex justify-between text-orange-600">
-                      <span>Bereits beantragt:</span>
-                      <span className="font-medium">-{minutesBreakdown.totalRequestedMinutes} Min.</span>
-                    </div>
+                     <div className="flex justify-between">
+                       <span>Achievement-Belohnungen (heute):</span>
+                       <span className="font-medium text-green-700">{minutesBreakdown.todayAchievementMinutes} Min.</span>
+                     </div>
+                     <div className="flex justify-between border-t pt-1">
+                       <span>Gesamt heute:</span>
+                       <span className="font-medium text-green-700">{minutesBreakdown.totalEarnedToday} Min.</span>
+                     </div>
+                     <div className="flex justify-between text-orange-600">
+                       <span>Heute genehmigt:</span>
+                       <span className="font-medium">-{minutesBreakdown.todayApprovedMinutes} Min.</span>
+                     </div>
                     <div className="flex justify-between border-t pt-1 font-semibold">
                       <span>Noch verfügbar:</span>
                       <span className="text-green-800">{availableMinutes} Min.</span>

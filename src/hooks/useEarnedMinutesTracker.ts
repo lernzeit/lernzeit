@@ -85,70 +85,87 @@ export function useEarnedMinutesTracker() {
     }
   };
 
-  const getAchievementMinutes = async (userId: string): Promise<number> => {
+  const getTodayAchievementMinutes = async (userId: string): Promise<number> => {
     try {
-      // Get all completed achievements and their reward minutes
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get achievements completed TODAY only
       const { data: userAchievements, error } = await supabase
         .from('user_achievements')
         .select(`
-          achievements_template (reward_minutes)
+          achievements_template (reward_minutes),
+          earned_at
         `)
         .eq('user_id', userId)
-        .eq('is_completed', true);
+        .eq('is_completed', true)
+        .gte('earned_at', today)
+        .lt('earned_at', today + 'T23:59:59.999Z');
 
       if (error) {
-        console.error('Error getting achievement minutes:', error);
+        console.error('Error getting today achievement minutes:', error);
         return 0;
       }
 
-      return (userAchievements || []).reduce((sum: number, ua: any) => {
+      const todayMinutes = (userAchievements || []).reduce((sum: number, ua: any) => {
         return sum + (ua.achievements_template?.reward_minutes || 0);
       }, 0);
+
+      console.log('Today achievement minutes:', todayMinutes);
+      return todayMinutes;
     } catch (error) {
-      console.error('Error in getAchievementMinutes:', error);
+      console.error('Error in getTodayAchievementMinutes:', error);
       return 0;
     }
   };
 
-  const getTotalRequestedMinutes = async (userId: string): Promise<number> => {
+  const getTodayApprovedMinutes = async (userId: string): Promise<number> => {
     try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get only APPROVED requests from TODAY
       const { data, error } = await supabase
         .from('screen_time_requests')
         .select('requested_minutes')
-        .eq('child_id', userId);
+        .eq('child_id', userId)
+        .eq('status', 'approved')
+        .gte('created_at', today)
+        .lt('created_at', today + 'T23:59:59.999Z');
 
       if (error) {
-        console.error('Error getting requested minutes:', error);
+        console.error('Error getting today approved minutes:', error);
         return 0;
       }
 
-      return (data || []).reduce((sum: number, request: any) => {
+      const approvedMinutes = (data || []).reduce((sum: number, request: any) => {
         return sum + (Number(request.requested_minutes) || 0);
       }, 0);
+
+      console.log('Today approved minutes:', approvedMinutes);
+      return approvedMinutes;
     } catch (error) {
-      console.error('Error in getTotalRequestedMinutes:', error);  
+      console.error('Error in getTodayApprovedMinutes:', error);  
       return 0;
     }
   };
 
   const getAvailableMinutes = async (userId: string): Promise<number> => {
     try {
-      // Get minutes from different sources
-      const [todaySessionMinutes, achievementMinutes, totalRequestedMinutes] = await Promise.all([
+      // Get minutes from different sources - TODAY ONLY
+      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes] = await Promise.all([
         getTodaySessionMinutes(userId),
-        getAchievementMinutes(userId), 
-        getTotalRequestedMinutes(userId)
+        getTodayAchievementMinutes(userId), 
+        getTodayApprovedMinutes(userId)
       ]);
 
-      // Total available = today's sessions + all achievements - all requests
-      const totalAvailable = todaySessionMinutes + achievementMinutes;
-      const availableMinutes = Math.max(0, totalAvailable - totalRequestedMinutes);
+      // Total available = today's sessions + today's achievements - today's approved requests
+      const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
+      const availableMinutes = Math.max(0, totalEarnedToday - todayApprovedMinutes);
 
-      console.log('Available minutes calculation:', {
+      console.log('Available minutes calculation (TODAY ONLY):', {
         todaySessionMinutes,
-        achievementMinutes,
-        totalAvailable,
-        totalRequestedMinutes,
+        todayAchievementMinutes,
+        totalEarnedToday,
+        todayApprovedMinutes,
         availableMinutes
       });
 
@@ -184,29 +201,29 @@ export function useEarnedMinutesTracker() {
 
   const getAvailableMinutesBreakdown = async (userId: string) => {
     try {
-      const [todaySessionMinutes, achievementMinutes, totalRequestedMinutes] = await Promise.all([
+      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes] = await Promise.all([
         getTodaySessionMinutes(userId),
-        getAchievementMinutes(userId),
-        getTotalRequestedMinutes(userId)
+        getTodayAchievementMinutes(userId),
+        getTodayApprovedMinutes(userId)
       ]);
 
-      const totalAvailable = todaySessionMinutes + achievementMinutes;
-      const availableMinutes = Math.max(0, totalAvailable - totalRequestedMinutes);
+      const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
+      const availableMinutes = Math.max(0, totalEarnedToday - todayApprovedMinutes);
 
       return {
         todaySessionMinutes,
-        achievementMinutes,
-        totalAvailable,
-        totalRequestedMinutes,
+        todayAchievementMinutes,
+        totalEarnedToday,
+        todayApprovedMinutes,
         availableMinutes
       };
     } catch (error) {
       console.error('Error in getAvailableMinutesBreakdown:', error);
       return {
         todaySessionMinutes: 0,
-        achievementMinutes: 0,
-        totalAvailable: 0,
-        totalRequestedMinutes: 0,
+        todayAchievementMinutes: 0,
+        totalEarnedToday: 0,
+        todayApprovedMinutes: 0,
         availableMinutes: 0
       };
     }
@@ -218,7 +235,7 @@ export function useEarnedMinutesTracker() {
     getTodayRequestedMinutes,
     getAvailableMinutesBreakdown,
     getTodaySessionMinutes,
-    getAchievementMinutes,
-    getTotalRequestedMinutes
+    getTodayAchievementMinutes,
+    getTodayApprovedMinutes
   };
 }
