@@ -9,6 +9,7 @@ import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
 import { contentValidator } from './ContentValidator';
+import { firstGradeValidator } from './FirstGradeValidator';
 import { TemplateSessionManager } from '@/utils/templates/templateSessionManager';
 
 export interface TemplateBankConfig {
@@ -376,10 +377,11 @@ export class EnhancedTemplateBankService {
       return true;
     });
 
-    // Ensure we have at least 4 options after deduplication
+    // Enhanced option generation with default distractors
     while (allOptions.length < 4) {
       const additionalDistractors = this.generateDefaultDistractors(correct, 4 - allOptions.length)
         .filter(d => normalizeNum(d) !== correctNorm && !allOptions.some(opt => normalizeNum(opt) === normalizeNum(d)));
+      
       allOptions.push(...additionalDistractors);
       if (additionalDistractors.length === 0) break; // Prevent infinite loop
     }
@@ -921,5 +923,30 @@ export class EnhancedTemplateBankService {
 
   clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Deactivate problematic templates
+   */
+  private async deactivateProblematicTemplate(templateId: string, issues: string[]): Promise<void> {
+    try {
+      // Log the deactivation instead of updating the database for now
+      console.log(`🚫 Would deactivate problematic template ${templateId}:`, issues);
+      
+      // TODO: Implement proper template deactivation when database schema supports it
+      // await supabase
+      //   .from('templates')
+      //   .update({ 
+      //     metadata: {
+      //       ...existingMetadata,
+      //       deactivation_reason: `Auto-deactivated: ${issues.join(', ')}`,
+      //       deactivated_at: new Date().toISOString()
+      //     }
+      //   })
+      //   .eq('id', templateId);
+      
+    } catch (error) {
+      console.error(`❌ Failed to deactivate template ${templateId}:`, error);
+    }
   }
 }

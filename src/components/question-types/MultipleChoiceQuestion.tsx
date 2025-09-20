@@ -24,7 +24,7 @@ export function MultipleChoiceQuestion({
     fullQuestion: question
   });
 
-  // If no options available, treat as text input
+  // Enhanced fallback for insufficient options
   if (!question.options || question.options.length === 0) {
     console.log('⚠️ No options found for multiple choice, falling back to text input');
     return (
@@ -45,6 +45,32 @@ export function MultipleChoiceQuestion({
               }
             }}
           />
+        </div>
+      </div>
+    );
+  }
+
+  // Check for insufficient options (less than 2)
+  if (question.options.length < 2) {
+    console.log('⚠️ Insufficient options for multiple choice, showing single option with explanation');
+    return (
+      <div className="space-y-4">
+        <p className="text-xl font-medium mb-6 text-center">
+          {question.question}
+        </p>
+        <div className="max-w-md mx-auto space-y-3">
+          <Button
+            variant="default"
+            className="w-full h-12 text-left justify-start"
+            onClick={() => onAnswerSelect(0)}
+            disabled={disabled}
+          >
+            <span className="font-medium mr-3">A)</span>
+            {question.options[0]}
+          </Button>
+          <p className="text-sm text-gray-600 text-center">
+            Dies ist die richtige Antwort.
+          </p>
         </div>
       </div>
     );
