@@ -18,7 +18,11 @@ interface ScreenTimeRequestWidgetProps {
 
 export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidgetProps) {
   const { requests, loading, createRequest, respondToRequest } = useScreenTimeRequests(role);
-  const { getAvailableMinutes, getTodayRequestedMinutes } = useEarnedMinutesTracker();
+  const { 
+    getAvailableMinutes, 
+    getTodayRequestedMinutes, 
+    getAvailableMinutesBreakdown 
+  } = useEarnedMinutesTracker();
   const { toast } = useToast();
   
   const [message, setMessage] = useState('');
@@ -26,6 +30,13 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableMinutes, setAvailableMinutes] = useState(0);
   const [todayRequestedMinutes, setTodayRequestedMinutes] = useState(0);
+  const [minutesBreakdown, setMinutesBreakdown] = useState({
+    todaySessionMinutes: 0,
+    achievementMinutes: 0,
+    totalAvailable: 0,
+    totalRequestedMinutes: 0,
+    availableMinutes: 0
+  });
   
   // Get pending request and recent requests
   const pendingRequest = requests.find(r => r.status === 'pending');
@@ -212,21 +223,46 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
             ) : (
               <div className="space-y-3">
                 {availableMinutes > 0 ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-5 h-5 text-green-600" />
-                      <span className="font-medium text-green-800">
-                        {availableMinutes} Minuten verfügbar! 🎉
-                      </span>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-5 h-5 text-green-600" />
+                    <span className="font-medium text-green-800">
+                      {availableMinutes} Minuten verfügbar! 🎉
+                    </span>
+                  </div>
+                  
+                  {/* Detailed breakdown */}
+                  <div className="mb-3 p-3 bg-white/50 rounded border text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span>Heute erspielt:</span>
+                      <span className="font-medium text-green-700">{minutesBreakdown.todaySessionMinutes} Min.</span>
                     </div>
-                    <p className="text-sm text-green-700 mb-3">
-                      Du kannst jetzt Bildschirmzeit bei deinen Eltern anfragen.
+                    <div className="flex justify-between">
+                      <span>Achievement-Belohnungen:</span>
+                      <span className="font-medium text-green-700">{minutesBreakdown.achievementMinutes} Min.</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1">
+                      <span>Gesamt verfügbar:</span>
+                      <span className="font-medium text-green-700">{minutesBreakdown.totalAvailable} Min.</span>
+                    </div>
+                    <div className="flex justify-between text-orange-600">
+                      <span>Bereits beantragt:</span>
+                      <span className="font-medium">-{minutesBreakdown.totalRequestedMinutes} Min.</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1 font-semibold">
+                      <span>Noch verfügbar:</span>
+                      <span className="text-green-800">{availableMinutes} Min.</span>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-green-700 mb-3">
+                    Du kannst jetzt Bildschirmzeit bei deinen Eltern anfragen.
+                  </p>
+                  {todayRequestedMinutes > 0 && (
+                    <p className="text-xs text-green-600 mb-3">
+                      Heute bereits {todayRequestedMinutes} Minuten angefragt.
                     </p>
-                    {todayRequestedMinutes > 0 && (
-                      <p className="text-xs text-green-600 mb-3">
-                        Heute bereits {todayRequestedMinutes} Minuten angefragt.
-                      </p>
-                    )}
+                  )}
                     
                     <Dialog open={showDialog} onOpenChange={setShowDialog}>
                       <DialogTrigger asChild>
