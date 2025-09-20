@@ -376,7 +376,15 @@ export class EnhancedTemplateBankService {
       return true;
     });
 
-    const shuffledOptions = [...allOptions].sort(() => Math.random() - 0.5);
+    // Ensure we have at least 4 options after deduplication
+    while (allOptions.length < 4) {
+      const additionalDistractors = this.generateDefaultDistractors(correct, 4 - allOptions.length)
+        .filter(d => normalizeNum(d) !== correctNorm && !allOptions.some(opt => normalizeNum(opt) === normalizeNum(d)));
+      allOptions.push(...additionalDistractors);
+      if (additionalDistractors.length === 0) break; // Prevent infinite loop
+    }
+
+    const shuffledOptions = [...allOptions.slice(0, 4)].sort(() => Math.random() - 0.5);
     // Ensure the correct variant exists; if removed by dedupe, reinsert canonical form
     if (!shuffledOptions.some(o => normalizeNum(o) === correctNorm)) {
       shuffledOptions.pop(); // remove one distractor if necessary

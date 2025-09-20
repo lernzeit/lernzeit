@@ -80,6 +80,11 @@ export function parseSolutionArray(solution: any): string[] {
  * Create a sort question object from template data
  */
 export function createSortQuestion(template: any): any {
+  // If template already has processed items, return it directly
+  if (template.items && Array.isArray(template.items) && template.items.length > 0) {
+    return template;
+  }
+  
   const items = template.variables?.numbers || extractItemsFromPrompt(template.student_prompt || '');
   const correctAnswer = parseSolutionArray(template.solution);
   
@@ -89,6 +94,7 @@ export function createSortQuestion(template: any): any {
     question: template.student_prompt,
     items: items,
     correctAnswer: correctAnswer,
+    correctOrder: correctAnswer, // Ensure correctOrder is set
     // For compatibility with SortQuestion component
     solution: template.solution
   };

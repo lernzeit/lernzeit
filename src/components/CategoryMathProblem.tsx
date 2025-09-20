@@ -148,7 +148,7 @@ export function CategoryMathProblem({
       case 'sort':
         // Handle sort questions by comparing arrays
         const sortAnswer = Array.isArray(answer) ? answer : [];
-        const correctSortOrder = (question as any).correctAnswer || (question as any).solution?.value || [];
+        const correctSortOrder = (question as any).correctOrder || (question as any).correctAnswer || (question as any).solution?.value || [];
         
         if (!Array.isArray(correctSortOrder) || sortAnswer.length !== correctSortOrder.length) {
           return false;
@@ -560,6 +560,16 @@ export function CategoryMathProblem({
                     <ArrowRight className="w-4 h-4 ml-2" />
                     {currentQuestionIndex === problems.length - 1 ? 'Spiel beenden' : 'Weiter'}
                   </Button>
+                  {grade === 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFeedbackDialog(true)}
+                      className="mt-2 text-gray-500 hover:text-gray-700 text-xs"
+                    >
+                      Problem melden
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

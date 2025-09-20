@@ -98,8 +98,10 @@ export function QuestionRenderer({
       
     case 'sort':
     case 'SORT':
-      // Transform template data into proper sort question format
-      const sortQuestion = createSortQuestion(question);
+      // Only transform if items don't already exist, to prevent double-transformation
+      const sortQuestion = (question as any).items && Array.isArray((question as any).items) 
+        ? question 
+        : createSortQuestion(question);
       return (
         <SortQuestion
           question={sortQuestion}
