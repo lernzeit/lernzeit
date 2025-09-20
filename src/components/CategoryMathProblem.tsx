@@ -416,11 +416,10 @@ export function CategoryMathProblem({
         score={score}
         totalQuestions={problems.length}
         sessionDuration={sessionEndTime - sessionStartTime}
-        earnedMinutes={Math.floor((score * (settings ? ((settings as any)[getTimePerTaskKey(toEnglishCategory(category)) as keyof typeof settings] as number) : 30)) / 60)}
-        onPlayAgain={() => window.location.reload()}
-        onComplete={() => onComplete(Math.floor((score * (settings ? ((settings as any)[getTimePerTaskKey(toEnglishCategory(category)) as keyof typeof settings] as number) : 30)) / 60), category)}
-        category={category}
-        onBack={onBack}
+        timePerTask={settings ? ((settings as any)[getTimePerTaskKey(toEnglishCategory(category)) as keyof typeof settings] as number) : 30}
+        achievementBonusMinutes={0}
+        perfectSessionBonus={score === problems.length ? 2 : 0}
+        onContinue={() => onComplete(Math.floor((score * (settings ? ((settings as any)[getTimePerTaskKey(toEnglishCategory(category)) as keyof typeof settings] as number) : 30)) / 60), category)}
       />
     );
   }
@@ -570,7 +569,7 @@ export function CategoryMathProblem({
           {!feedback && (
             <div className="text-center">
               <Button onClick={() => {
-                let answer: string | number | number[] | Record<string, string>;
+                let answer: string | number | number[] | string[] | Record<string, string>;
                 switch (currentQuestion.questionType) {
                   case 'text-input':
                     answer = userAnswer;
@@ -580,7 +579,7 @@ export function CategoryMathProblem({
                     break;
                   case 'SORT':
                   case 'sort':
-                    answer = currentSortOrder || [];
+                    answer = currentSortOrder as string[] || [];
                     break;
                   default:
                     answer = userAnswer;
