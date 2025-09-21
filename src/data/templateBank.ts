@@ -54,28 +54,14 @@ export async function fetchActiveTemplates(params: {
       .not("student_prompt", "ilike", "%term%");
   }
 
-  // FIRST-GRADE SPECIFIC: Ultra-strict filtering for age-appropriate content
+  // FIRST-GRADE SPECIFIC: Simplified filtering (redundant logic moved to ConsolidatedFirstGradeValidator)
   if (grade === 1) {
     console.log(`🎯 Applying FIRST-GRADE specific filters`);
     query = query
       // Restrict to simple question types only
-      .in("question_type", ["MULTIPLE_CHOICE", "TEXT"])
-      // Block subjective questions
-      .not("student_prompt", "ilike", "%lieblings%")
-      .not("student_prompt", "ilike", "%schönst%")
-      .not("student_prompt", "ilike", "%best%")
-      .not("student_prompt", "ilike", "%welch%")
-      // Block measurement without tools
-      .not("student_prompt", "ilike", "%miss dein%")
-      .not("student_prompt", "ilike", "%länge dein%")
-      .not("student_prompt", "ilike", "%größe dein%")
-      // Block inappropriate complexity
-      .not("student_prompt", "ilike", "%sortier%")
-      .not("student_prompt", "ilike", "%ordne%")
-      // Ensure numbers stay in appropriate range (unter 20)  
-      .not("student_prompt", "~", "\\d{2,}[^0-9]") // No numbers >= 20
-      .not("student_prompt", "ilike", "%100%")
-      .not("student_prompt", "ilike", "%50%");
+      .in("question_type", ["MULTIPLE_CHOICE", "FREETEXT", "TEXT"])
+      // Block problematic malformed data (archival cleanup handled by migration)
+      .neq("status", "ARCHIVED");
   }
 
   let { data, error } = await query

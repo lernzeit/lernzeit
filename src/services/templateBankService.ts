@@ -9,7 +9,7 @@ import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
 import { contentValidator } from './ContentValidator';
-import { firstGradeValidator } from './FirstGradeValidator';
+import { firstGradeValidator } from './ConsolidatedFirstGradeValidator';
 import { TemplateSessionManager } from '@/utils/templates/templateSessionManager';
 
 export interface TemplateBankConfig {
@@ -194,7 +194,7 @@ export class EnhancedTemplateBankService {
       
       // Apply FirstGradeValidator for additional safety checks
       try {
-        const validationResult = await firstGradeValidator.validateFirstGradeTemplate(template);
+        const validationResult = await firstGradeValidator.validate(template);
         if (!validationResult.isValid) {
           console.warn(`❌ Template ${template.id} failed first-grade validation:`, validationResult.issues);
           return null;
