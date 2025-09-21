@@ -361,13 +361,11 @@ function assessComplexity(text: string, grade: number): number {
   return Math.max(0, Math.min(1, complexity - gradeAdjustment));
 }
 
-// Import Phase 2 validation functions and first-grade specific validators
 import { 
   validateMathematicalCorrectness, 
   validateContext, 
   analyzeQualityDistribution,
   categorizeIssues,
-  generateRecommendations 
+  generateRecommendations,
+  checkFirstGradeProblematicPatterns
 } from './phase2-validators.ts';
-
-import { checkFirstGradeProblematicPatterns } from './enhanced-first-grade-validator.ts';

@@ -279,3 +279,42 @@ export function generateRecommendations(qualityDist: any, issueCategories: any):
 
   return recommendations;
 }
+
+/**
+ * Enhanced validation patterns specifically for first-grade templates
+ */
+export function checkFirstGradeProblematicPatterns(prompt: string): string[] {
+  const issues: string[] = [];
+  const lowerPrompt = prompt.toLowerCase();
+
+  // 🚨 FIRST-GRADE CRITICAL: Subjective questions
+  const subjectivePatterns = [
+    { pattern: /lieblings/, message: '🚨 ERSTKLÄSSLER: Subjektive Lieblingsfrage' },
+    { pattern: /schönst/, message: '🚨 ERSTKLÄSSLER: Subjektive Schönheitsfrage' },
+    { pattern: /welch.*magst/, message: '🚨 ERSTKLÄSSLER: Subjektive Präferenzfrage' },
+    { pattern: /dein.*favorit/, message: '🚨 ERSTKLÄSSLER: Subjektive Favoritenfrage' }
+  ];
+
+  // 🚨 FIRST-GRADE CRITICAL: Questions requiring unavailable visual elements
+  const visualPatterns = [
+    { pattern: /betrachte.*bild/, message: '🚨 ERSTKLÄSSLER: Bildbetrachtung ohne Bild' },
+    { pattern: /welche.*form(?!el)/, message: '🚨 ERSTKLÄSSLER: Formerkennung ohne Visuals' },
+    { pattern: /schaue.*an/, message: '🚨 ERSTKLÄSSLER: Visuelle Aufgabe ohne Material' },
+    { pattern: /zeige.*auf/, message: '🚨 ERSTKLÄSSLER: Zeigegeste digital unmöglich' }
+  ];
+
+  // 🚨 FIRST-GRADE CRITICAL: Personal measurements impossible to complete
+  const personalPatterns = [
+    { pattern: /miss.*dein/, message: '🚨 ERSTKLÄSSLER: Persönliche Messung unmöglich' },
+    { pattern: /länge.*dein/, message: '🚨 ERSTKLÄSSLER: Persönliche Längenmessung' },
+    { pattern: /größe.*dein/, message: '🚨 ERSTKLÄSSLER: Persönliche Körpergrößenmessung' }
+  ];
+
+  [...subjectivePatterns, ...visualPatterns, ...personalPatterns].forEach(({ pattern, message }) => {
+    if (pattern.test(lowerPrompt)) {
+      issues.push(message);
+    }
+  });
+
+  return issues;
+}
