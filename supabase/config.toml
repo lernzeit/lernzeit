@@ -73,3 +73,6 @@ verify_jwt = false
 
 [functions.first-grade-cron]
 verify_jwt = false
+
+[functions.cleanup-faulty-questions]
+verify_jwt = false
