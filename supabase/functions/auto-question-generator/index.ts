@@ -102,20 +102,39 @@ serve(async (req) => {
       priority: topGap.priority
     });
 
-    // Phase 4: Template-Mass-Generator aufrufen für effiziente Batch-Generierung
-    const { data: generateResult, error: generateError } = await supabase.functions.invoke('template-mass-generator', {
-      body: {
-        targetCount: Math.min(15, topGap.needed), // Nicht mehr als 15 pro Durchlauf
-        grade: topGap.grade,
-        quarter: topGap.quarter,
-        domain: topGap.domain,
-        difficulty: topGap.difficulty,
-        curriculumMode: true, // Neue Flag für lehrplan-basierte Generierung
-        skillId: topGap.skillId,
-        skill: topGap.skill,
-        subcategory: topGap.subcategory
-      }
-    });
+    // Phase 4: Intelligente Generator-Wahl basierend auf Klassenstufe
+    let generateResult, generateError;
+    
+    if (topGap.grade === 1) {
+      // 🎯 Spezielle Erstklässler-Generierung
+      console.log('🎈 Verwende first-grade-math-generator für Klasse 1');
+      const firstGradeResponse = await supabase.functions.invoke('first-grade-math-generator', {
+        body: {
+          count: Math.min(10, topGap.needed), // Kleinere Batches für Erstklässler
+          domain: topGap.domain,
+          quarter: topGap.quarter
+        }
+      });
+      generateResult = firstGradeResponse.data;
+      generateError = firstGradeResponse.error;
+    } else {
+      // Standard Template-Mass-Generator für höhere Klassen
+      const standardResponse = await supabase.functions.invoke('template-mass-generator', {
+        body: {
+          targetCount: Math.min(15, topGap.needed), // Nicht mehr als 15 pro Durchlauf
+          grade: topGap.grade,
+          quarter: topGap.quarter,
+          domain: topGap.domain,
+          difficulty: topGap.difficulty,
+          curriculumMode: true, // Neue Flag für lehrplan-basierte Generierung
+          skillId: topGap.skillId,
+          skill: topGap.skill,
+          subcategory: topGap.subcategory
+        }
+      });
+      generateResult = standardResponse.data;
+      generateError = standardResponse.error;
+    }
 
     if (generateError) {
       console.error('❌ Batch-Generierung Fehler:', generateError);
@@ -125,7 +144,8 @@ serve(async (req) => {
     console.log('✅ Systematische Generierung abgeschlossen:', generateResult);
 
     // Automatic duplicate cleanup after successful generation
-    if (generateResult?.successCount > 0) {
+    const generatedCount = generateResult?.questions?.length || generateResult?.successCount || 0;
+    if (generatedCount > 0) {
       try {
         console.log('🧹 Running automatic duplicate cleanup...');
         const cleanupResponse = await supabase.functions.invoke('cleanup-duplicates', {
@@ -142,9 +162,10 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Systematische Generierung: ${generateResult?.successCount || 0} Templates für ${topGap.domain} Klasse ${topGap.grade}`,
+      message: `Systematische Generierung: ${generateResult?.questions?.length || generateResult?.successCount || 0} Templates für ${topGap.domain} Klasse ${topGap.grade}`,
       currentCount: existingTemplates?.length || 0,
-      generated: generateResult?.totalGenerated || 0,
+      generated: generateResult?.questions?.length || generateResult?.totalGenerated || 0,
+      generator: topGap.grade === 1 ? 'first-grade-math-generator' : 'template-mass-generator',
       gap: {
         grade: topGap.grade,
         quarter: topGap.quarter,
