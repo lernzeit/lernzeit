@@ -184,6 +184,27 @@ export class EnhancedTemplateBankService {
    * Convert template to SelectionQuestion format - FIXED for database values
    */
   private async convertTemplateToQuestion(template: any): Promise<SelectionQuestion | null> {
+    // FIRST-GRADE RESTRICTIONS: Only allow safe question types
+    if (template.grade === 1) {
+      const allowedTypes = ['MULTIPLE_CHOICE', 'TEXT'];
+      if (!allowedTypes.includes(template.question_type)) {
+        console.warn(`❌ Grade 1: Rejecting unsafe question type "${template.question_type}" for template ${template.id}`);
+        return null;
+      }
+      
+      // Apply FirstGradeValidator for additional safety checks
+      try {
+        const validationResult = await firstGradeValidator.validateFirstGradeTemplate(template);
+        if (!validationResult.isValid) {
+          console.warn(`❌ Template ${template.id} failed first-grade validation:`, validationResult.issues);
+          return null;
+        }
+      } catch (error) {
+        console.warn(`⚠️ FirstGradeValidator error for template ${template.id}:`, error);
+        // Continue processing if validator fails
+      }
+    }
+    
     // Filter out drawing/sketching questions
     const promptRaw = template.student_prompt || "";
     if (this.containsDrawingInstructions(promptRaw)) {

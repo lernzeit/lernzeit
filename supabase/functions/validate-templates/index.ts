@@ -190,6 +190,16 @@ async function validateTemplate(template: any): Promise<ValidationResult> {
     shouldExclude = true; // Exclude immediately
   }
 
+  // 2.1. FIRST-GRADE SPECIFIC: Additional validation for grade 1 templates
+  if (grade === 1) {
+    const firstGradeIssues = checkFirstGradeProblematicPatterns(prompt);
+    issues.push(...firstGradeIssues);
+    if (firstGradeIssues.length > 0) {
+      score = 0.1; // Even lower score for first-grade issues
+      shouldExclude = true;
+    }
+  }
+
   // 3. Phase 2: Enhanced solution validation with mathematical logic
   const solutionIssues = validateMathSolution(prompt, solution);
   if (!solutionIssues.isValid) {
@@ -351,7 +361,7 @@ function assessComplexity(text: string, grade: number): number {
   return Math.max(0, Math.min(1, complexity - gradeAdjustment));
 }
 
-// Import Phase 2 validation functions
+// Import Phase 2 validation functions and first-grade specific validators
 import { 
   validateMathematicalCorrectness, 
   validateContext, 
@@ -359,3 +369,5 @@ import {
   categorizeIssues,
   generateRecommendations 
 } from './phase2-validators.ts';
+
+import { checkFirstGradeProblematicPatterns } from './enhanced-first-grade-validator.ts';
