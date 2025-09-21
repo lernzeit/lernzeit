@@ -41,12 +41,12 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${faultyTemplates?.length || 0} potentially faulty templates`);
 
-    // Additional checks for multiple-choice questions without proper distractors
+    // Updated more precise search for faulty multiple-choice questions
     const { data: mcTemplates, error: mcError } = await supabase
       .from('templates')
       .select('*')
       .eq('status', 'ACTIVE')
-      .eq('question_type', 'multiple-choice');
+      .in('question_type', ['multiple-choice', 'MULTIPLE_CHOICE']);
 
     if (mcError) {
       throw mcError;
@@ -54,9 +54,21 @@ Deno.serve(async (req) => {
 
     const faultyMcTemplates = mcTemplates?.filter(template => {
       const distractors = template.distractors;
-      return !distractors || 
-             (Array.isArray(distractors) && distractors.length < 2) ||
-             (typeof distractors === 'object' && (!distractors.options || distractors.options.length < 3));
+      
+      // Check if distractors is null, empty, or improperly formatted
+      if (!distractors) return true;
+      
+      // If it's an array but empty or too small
+      if (Array.isArray(distractors) && distractors.length < 2) return true;
+      
+      // If it's an object but missing options or insufficient options
+      if (typeof distractors === 'object' && distractors !== null) {
+        if (!distractors.options) return true;
+        if (!Array.isArray(distractors.options)) return true;
+        if (distractors.options.length < 3) return true;
+      }
+      
+      return false;
     }) || [];
 
     console.log(`Found ${faultyMcTemplates.length} multiple-choice templates without proper distractors`);

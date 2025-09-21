@@ -959,6 +959,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      trigger_cleanup_faulty_questions: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       trigger_curriculum_template_generation: {
         Args: Record<PropertyKey, never>
         Returns: Json

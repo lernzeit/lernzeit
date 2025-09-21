@@ -115,11 +115,16 @@ WICHTIG: Antwort nur als JSON-Array ohne Zusatztext:
           continue;
         }
 
-        // Ensure proper structure
+        // Ensure proper structure with better validation for multiple choice
         const processedQuestion = {
           student_prompt: question.student_prompt,
           solution: question.solution,
-          distractors: question.distractors || [],
+          distractors: question.question_type.toUpperCase() === 'MULTIPLE_CHOICE' 
+            ? { options: [
+                question.solution.value, 
+                ...(question.distractors || []).slice(0, 3)
+              ].sort(() => Math.random() - 0.5) }
+            : null,
           question_type: question.question_type.toUpperCase(),
           explanation: question.explanation || '',
           tags: question.tags || [],
@@ -136,6 +141,14 @@ WICHTIG: Antwort nur als JSON-Array ohne Zusatztext:
           validation_status: "approved",
           is_parametrized: false
         };
+
+        // Additional validation for multiple choice questions
+        if (processedQuestion.question_type === 'MULTIPLE_CHOICE') {
+          if (!processedQuestion.distractors?.options || processedQuestion.distractors.options.length < 3) {
+            console.warn(`⚠️ Question ${index + 1} has insufficient options for multiple choice, skipping`);
+            continue;
+          }
+        }
 
         processedQuestions.push(processedQuestion);
         console.log(`✅ Question ${index + 1} processed: ${question.student_prompt.substring(0, 50)}...`);
