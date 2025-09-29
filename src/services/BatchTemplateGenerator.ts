@@ -192,9 +192,9 @@ class BatchTemplateGenerator {
             subcategory: gap.subcategory,
             grade: gap.grade,
             quarter: gap.quarter,
+            quarter_app: gap.quarter,
             difficulty: gap.difficulty as any,
-            questionType: gap.questionType as any,
-            count: 1
+            tags: []
           };
 
           const template = await multiProviderAIService.generateTemplate(request);

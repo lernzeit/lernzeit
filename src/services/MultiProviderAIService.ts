@@ -68,7 +68,7 @@ class MultiProviderAIService {
   /**
    * Get provider status (always returns 'online' for Edge Functions)
    */
-  async getProviderStatus(): Promise<any[]> {
+  getProviderStatus(): any[] {
     return [
       { provider: 'openai', status: 'online', tokensUsed: 0 }
     ];

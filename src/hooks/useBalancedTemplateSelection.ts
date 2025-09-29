@@ -629,8 +629,8 @@ export function useBalancedTemplateSelection(
       if (templates.length === 0) {
         console.warn('⚠️ No quality templates found, using enhanced fallback');
         const fallbackProblems = category === 'Mathematik' 
-          ? EnhancedFallbackGenerator.generateMathProblems(grade, totalQuestions)
-          : EnhancedFallbackGenerator.generateGermanProblems(grade, totalQuestions);
+          ? await EnhancedFallbackGenerator.generateMathProblems(grade, totalQuestions)
+          : await EnhancedFallbackGenerator.generateGermanProblems(grade, totalQuestions);
         
         setProblems(fallbackProblems);
         setGenerationSource('fallback');
@@ -652,8 +652,8 @@ export function useBalancedTemplateSelection(
         // Fill remaining with enhanced fallback
         const needed = totalQuestions - questions.length;
         const fallbackProblems = category === 'Mathematik'
-          ? EnhancedFallbackGenerator.generateMathProblems(grade, needed)
-          : EnhancedFallbackGenerator.generateGermanProblems(grade, needed);
+          ? await EnhancedFallbackGenerator.generateMathProblems(grade, needed)
+          : await EnhancedFallbackGenerator.generateGermanProblems(grade, needed);
         
         setProblems([...questions, ...fallbackProblems]);
         setGenerationSource('template');
@@ -663,8 +663,8 @@ export function useBalancedTemplateSelection(
       console.error('❌ Balanced template selection failed:', error);
       // Complete fallback
       const fallbackProblems = category === 'Mathematik'
-        ? EnhancedFallbackGenerator.generateMathProblems(grade, totalQuestions)
-        : EnhancedFallbackGenerator.generateGermanProblems(grade, totalQuestions);
+        ? await EnhancedFallbackGenerator.generateMathProblems(grade, totalQuestions)
+        : await EnhancedFallbackGenerator.generateGermanProblems(grade, totalQuestions);
       
       setProblems(fallbackProblems);
       setGenerationSource('fallback');
