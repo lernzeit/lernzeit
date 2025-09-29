@@ -18,7 +18,6 @@ import {
   LogOut
 } from 'lucide-react';
 import { QualityDashboard } from './QualityDashboard';
-import { QualityManagement } from './QualityManagement';
 import { QualityMonitoringDashboard } from './QualityMonitoringDashboard';
 import { SystematicGenerationControl } from './SystematicGenerationControl';
 import { TemplateBankDashboard } from './TemplateBankDashboard';

@@ -4,7 +4,6 @@ import { fetchActiveTemplates, pickSessionTemplates, Quarter } from '@/data/temp
 import { loadKnowledge, preselectCards, KnowledgeCard } from '@/knowledge/knowledge';
 import { SYSTEM_PROMPT, buildUserPrompt } from '@/prompt/knowledgePromptFactory';
 import { SelectionQuestion, TextInputQuestion, MultipleChoiceQuestion, SortQuestion } from '@/types/questionTypes';
-import { FeedbackBasedGenerationService } from './feedbackBasedGeneration';
 import { ParametrizedTemplateService } from './ParametrizedTemplateService';
 import { AnswerCalculator } from '@/utils/templates/answerCalculator';
 import { QuestionTemplate } from '@/utils/questionTemplates';
