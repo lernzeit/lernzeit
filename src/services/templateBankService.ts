@@ -414,23 +414,44 @@ export class EnhancedTemplateBankService {
     const distractors: string[] = [];
     const distractorsRaw = template.distractors;
     
-    console.log('🔍 Raw distractors from DB:', distractorsRaw);
+    console.log('🔍 Raw distractors from DB:', distractorsRaw, 'Type:', typeof distractorsRaw);
     
-    if (Array.isArray(distractorsRaw)) {
-      for (const distractor of distractorsRaw) {
-        const distractorStr = String(distractor).trim();
-        // Skip duplicates and irrelevant entries
-        if (distractorStr && 
-            distractorStr !== correct &&
-            normalizeNum(distractorStr) !== correctNorm &&
-            !distractorStr.match(/^[A-D]$/i) && // Skip single letters (likely keys)
-            distractorStr.length > 1) { // Skip too short entries
-          distractors.push(distractorStr);
+    // Handle distractors - they should contain ALL options, not just wrong answers
+    if (Array.isArray(distractorsRaw) && distractorsRaw.length > 0) {
+      // Convert all distractors to strings
+      const allDistractorOptions = distractorsRaw.map((d: any) => String(d).trim()).filter(Boolean);
+      
+      console.log('🔍 All distractor options:', allDistractorOptions);
+      
+      // The distractors array in DB contains ALL options (including correct)
+      // We need to separate the correct answer from the wrong options
+      const wrongOptions = allDistractorOptions.filter(opt => {
+        const optNorm = normalizeNum(opt);
+        const isCorrect = opt === correct || 
+                         optNorm === correctNorm ||
+                         opt.toLowerCase() === correct.toLowerCase();
+        
+        if (isCorrect) {
+          console.log(`  ✓ Found correct answer in distractors: "${opt}"`);
         }
+        
+        return !isCorrect;
+      });
+      
+      console.log(`🎯 Correct: "${correct}", Wrong options: [${wrongOptions.join(', ')}]`);
+      
+      // If we found wrong options, use them
+      if (wrongOptions.length > 0) {
+        distractors.push(...wrongOptions);
+      } else if (allDistractorOptions.length >= 2) {
+        // Fallback: If no wrong options found but we have multiple distractors,
+        // assume the distractors are already the wrong options and use them all
+        console.log('⚠️ No wrong options identified, using all distractors as-is');
+        distractors.push(...allDistractorOptions.filter(opt => opt !== correct));
       }
     }
     
-    console.log(`🎯 Correct: "${correct}", Filtered distractors: [${distractors.join(', ')}]`);
+    console.log(`📊 Final distractors count: ${distractors.length}`);
     
     // Generate defaults if needed (only if distractors are insufficient)
     if (distractors.length < 3) {
