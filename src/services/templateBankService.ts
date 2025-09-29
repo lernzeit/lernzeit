@@ -328,9 +328,14 @@ export class EnhancedTemplateBankService {
 
   /**
    * FIXED: Extract options directly from database without complex transformations
+   * HANDLES BOTH: direct values and variable-based formats
    */
   private extractOptionsWithCorrectIndex(template: any): { options: string[]; correctIndex: number } {
-    console.log('🔍 Extracting options from template:', template.id, 'solution:', template.solution, 'distractors:', template.distractors);
+    console.log('🔍 Extracting options from template:', template.id, {
+      solution: template.solution,
+      distractors: template.distractors,
+      variables: template.variables
+    });
     
     // Helper to normalize numeric strings (e.g., 400.000 vs 400000)
     const normalizeNum = (s: string) => s.replace(/[^0-9,-]/g, '').replace(/\./g, '').replace(/,/g, '');
@@ -349,6 +354,11 @@ export class EnhancedTemplateBankService {
       };
     }
 
+    // Check if template uses variables format (e.g., {A: "...", B: "...", C: "...", D: "..."})
+    const hasVariables = template.variables && typeof template.variables === 'object' && Object.keys(template.variables).length > 0;
+    
+    console.log('🔍 Variables detected:', hasVariables);
+
     // Extract distractors from database
     const distractors: string[] = [];
     const distractorsRaw = template.distractors;
@@ -359,7 +369,17 @@ export class EnhancedTemplateBankService {
       // Handle array format - convert all to strings
       for (const distractor of distractorsRaw) {
         let distractorStr = '';
-        if (typeof distractor === 'string') {
+        
+        // If we have variables and the distractor looks like a key (single letter), use variables
+        if (hasVariables && typeof distractor === 'string' && distractor.length <= 2 && /^[A-Z]$/i.test(distractor.trim())) {
+          const key = distractor.trim().toUpperCase();
+          if (template.variables[key]) {
+            distractorStr = String(template.variables[key]).trim();
+            console.log(`🔑 Mapped distractor key "${key}" to value "${distractorStr}"`);
+          } else {
+            distractorStr = distractor;
+          }
+        } else if (typeof distractor === 'string') {
           distractorStr = distractor;
         } else if (typeof distractor === 'object' && distractor !== null) {
           // Handle object distractors like {value: "4"} 
@@ -376,6 +396,35 @@ export class EnhancedTemplateBankService {
           distractors.push(distractorStr);
         }
       }
+    }
+    
+    // If we have variables, also check if correct answer is a key
+    let correctValue = correct;
+    if (hasVariables && correct.length <= 2 && /^[A-Z]$/i.test(correct)) {
+      const key = correct.toUpperCase();
+      if (template.variables[key]) {
+        correctValue = String(template.variables[key]).trim();
+        console.log(`🔑 Mapped correct answer key "${key}" to value "${correctValue}"`);
+      }
+    }
+    
+    // If using variables format, build complete options from all keys
+    if (hasVariables) {
+      const allKeys = Object.keys(template.variables).sort();
+      const allOptions = allKeys.map(key => String(template.variables[key]).trim());
+      
+      // Find correct index
+      const correctKey = correct.length <= 2 && /^[A-Z]$/i.test(correct) ? correct.toUpperCase() : null;
+      const correctIndex = correctKey 
+        ? allKeys.indexOf(correctKey)
+        : allOptions.findIndex(opt => opt === correctValue || normalizeNum(opt) === normalizeNum(correctValue));
+      
+      console.log(`✅ Using variables format - Options: [${allOptions.join(', ')}], Correct index: ${correctIndex}`);
+      
+      return {
+        options: allOptions,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      };
     }
     
     console.log(`🎯 Correct: "${correct}", Extracted distractors: [${distractors.join(', ')}]`);
