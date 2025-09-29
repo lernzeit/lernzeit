@@ -423,9 +423,32 @@ export class EnhancedTemplateBankService {
       const allDistractorOptions = distractorsRaw.map((d: any) => String(d).trim()).filter(Boolean);
       console.log('🔍 All distractor options (ordered):', allDistractorOptions);
 
-      // We intentionally ignore letter keys (A–D) in distractor-array mode, because
-      // we don't have a reliable mapping from letter → option in DB here.
-      // We'll determine the correct index via text matching and heuristics below.
+      // First, interpret positional keys when distractors are provided in display order
+      const letterToIndex: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
+      const isLetterKey = /^[A-D]$/i.test(correct);
+      const isNumberKey = /^\d+$/.test(correct);
+
+      if (isLetterKey) {
+        const idx = letterToIndex[correct.toUpperCase()];
+        if (idx !== undefined && idx < allDistractorOptions.length) {
+          console.log(`✅ Correct provided as letter key "${correct}" → index ${idx}`);
+          return {
+            options: allDistractorOptions,
+            correctIndex: idx
+          };
+        }
+      }
+
+      if (isNumberKey) {
+        const idx = parseInt(correct, 10) - 1; // 1-based → 0-based
+        if (!isNaN(idx) && idx >= 0 && idx < allDistractorOptions.length) {
+          console.log(`✅ Correct provided as numeric key "${correct}" → index ${idx}`);
+          return {
+            options: allDistractorOptions,
+            correctIndex: idx
+          };
+        }
+      }
 
       // Otherwise, try to locate the correct answer by text within the options array
       const textIndex = allDistractorOptions.findIndex(opt => {
