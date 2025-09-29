@@ -416,38 +416,75 @@ export class EnhancedTemplateBankService {
     
     console.log('🔍 Raw distractors from DB:', distractorsRaw, 'Type:', typeof distractorsRaw);
     
-    // Handle distractors - they should contain ALL options, not just wrong answers
+    // Handle distractors - they often contain ALL options in display order (including the correct one)
     if (Array.isArray(distractorsRaw) && distractorsRaw.length > 0) {
-      // Convert all distractors to strings
+      // Convert all distractors to strings and keep original order
       const allDistractorOptions = distractorsRaw.map((d: any) => String(d).trim()).filter(Boolean);
-      
-      console.log('🔍 All distractor options:', allDistractorOptions);
-      
-      // The distractors array in DB contains ALL options (including correct)
-      // We need to separate the correct answer from the wrong options
+      console.log('🔍 All distractor options (ordered):', allDistractorOptions);
+
+      // If the solution encodes the position (A-D or 1-4), respect original order
+      const letterToIndex: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
+      const isLetterKey = /^[A-D]$/i.test(correct);
+      const isNumberKey = /^\d+$/.test(correct);
+
+      if (isLetterKey) {
+        const key = correct.toUpperCase();
+        const idx = letterToIndex[key];
+        if (idx !== undefined && idx < allDistractorOptions.length) {
+          console.log(`✅ Correct answer provided as key "${key}" → index ${idx}`);
+          return {
+            options: allDistractorOptions,
+            correctIndex: idx
+          };
+        }
+      }
+
+      if (isNumberKey) {
+        const num = parseInt(correct, 10);
+        if (!isNaN(num) && num >= 1 && num <= allDistractorOptions.length) {
+          console.log(`✅ Correct answer provided as number "${num}" → index ${num - 1}`);
+          return {
+            options: allDistractorOptions,
+            correctIndex: num - 1
+          };
+        }
+      }
+
+      // Otherwise, try to locate the correct answer by text within the options array
+      const textIndex = allDistractorOptions.findIndex(opt => {
+        const optNorm = normalizeNum(opt);
+        return opt === correct ||
+               optNorm === correctNorm ||
+               opt.toLowerCase() === correct.toLowerCase();
+      });
+
+      if (textIndex >= 0) {
+        console.log(`✅ Correct answer matched by text at index ${textIndex}: "${allDistractorOptions[textIndex]}"`);
+        return {
+          options: allDistractorOptions,
+          correctIndex: textIndex
+        };
+      }
+
+      // If text doesn't match, separate wrong options by excluding anything equal to the textual correct value
       const wrongOptions = allDistractorOptions.filter(opt => {
         const optNorm = normalizeNum(opt);
-        const isCorrect = opt === correct || 
-                         optNorm === correctNorm ||
-                         opt.toLowerCase() === correct.toLowerCase();
-        
-        if (isCorrect) {
-          console.log(`  ✓ Found correct answer in distractors: "${opt}"`);
-        }
-        
-        return !isCorrect;
+        const isCorrectText = opt === correct || optNorm === correctNorm || opt.toLowerCase() === correct.toLowerCase();
+        if (isCorrectText) console.log(`  ✓ Found correct answer in distractors (text): "${opt}"`);
+        return !isCorrectText;
       });
-      
-      console.log(`🎯 Correct: "${correct}", Wrong options: [${wrongOptions.join(', ')}]`);
-      
-      // If we found wrong options, use them
+
+      console.log(`🎯 Correct (unmatched): "${correct}", Wrong options inferred: [${wrongOptions.join(', ')}]`);
+
       if (wrongOptions.length > 0) {
         distractors.push(...wrongOptions);
-      } else if (allDistractorOptions.length >= 2) {
-        // Fallback: If no wrong options found but we have multiple distractors,
-        // assume the distractors are already the wrong options and use them all
-        console.log('⚠️ No wrong options identified, using all distractors as-is');
-        distractors.push(...allDistractorOptions.filter(opt => opt !== correct));
+      } else {
+        // As a last resort, keep all options and mark index 0 (will rarely happen)
+        console.warn('⚠️ Could not infer correct option from distractors. Keeping order, default correct index 0.');
+        return {
+          options: allDistractorOptions,
+          correctIndex: 0
+        };
       }
     }
     
