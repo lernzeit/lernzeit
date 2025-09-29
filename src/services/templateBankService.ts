@@ -438,18 +438,9 @@ export class EnhancedTemplateBankService {
             correctIndex: idx
           };
         }
-      }
-
-      if (isNumberKey) {
-        const num = parseInt(correct, 10);
-        if (!isNaN(num) && num >= 1 && num <= allDistractorOptions.length) {
-          console.log(`✅ Correct answer provided as number "${num}" → index ${num - 1}`);
-          return {
-            options: allDistractorOptions,
-            correctIndex: num - 1
-          };
-        }
-      }
+      // We do NOT treat numeric or letter solutions (1-4 / A-D) as indices here,
+      // because we don't know the original option ordering for this template.
+      // Only rely on text matching and, as a heuristic, explanation content.
 
       // Otherwise, try to locate the correct answer by text within the options array
       const textIndex = allDistractorOptions.findIndex(opt => {
@@ -465,6 +456,27 @@ export class EnhancedTemplateBankService {
           options: allDistractorOptions,
           correctIndex: textIndex
         };
+      }
+
+      // Heuristic fallback: use explanation to detect the correct option (pick earliest mention)
+      const explanationText = String(template.explanation || '').toLowerCase();
+      if (explanationText) {
+        let bestIdx = -1;
+        let bestPos = Number.POSITIVE_INFINITY;
+        allDistractorOptions.forEach((opt, idx) => {
+          const pos = explanationText.indexOf(String(opt).toLowerCase());
+          if (pos >= 0 && pos < bestPos) {
+            bestPos = pos;
+            bestIdx = idx;
+          }
+        });
+        if (bestIdx >= 0) {
+          console.log(`✅ Heuristic (explanation) picked index ${bestIdx}: "${allDistractorOptions[bestIdx]}"`);
+          return {
+            options: allDistractorOptions,
+            correctIndex: bestIdx
+          };
+        }
       }
 
       // If text doesn't match, separate wrong options by excluding anything equal to the textual correct value
