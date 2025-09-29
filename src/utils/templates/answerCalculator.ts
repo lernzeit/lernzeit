@@ -1,6 +1,5 @@
 
 import { QuestionTemplate } from '../questionTemplates';
-import { GermanMathParser, MathParseResult } from '../math/germanMathParser';
 import { ImprovedGermanMathParser, ParsedMathResult } from '../math/ImprovedGermanMathParser';
 
 export interface CalculationResult {
@@ -102,29 +101,6 @@ export class AnswerCalculator {
           calculationSteps: steps,
           confidence: improvedResult.confidence || 0.9,
           metadata: improvedResult.metadata
-        };
-      }
-
-      // Fallback to basic parser
-      const basicResult: MathParseResult = GermanMathParser.parse(questionText);
-      
-      if (basicResult.success && basicResult.answer !== undefined) {
-        // STUDENT-FRIENDLY steps only
-        if (basicResult.steps && basicResult.steps.length > 0) {
-          steps.push(...basicResult.steps.filter(step => 
-            !step.includes('Parser') && 
-            !step.includes('Fallback')
-          ));
-        }
-        steps.push(`Ergebnis: ${basicResult.answer}`);
-        
-        return {
-          answer: basicResult.answer,
-          isValid: true,
-          errors: [],
-          calculationSteps: steps,
-          confidence: 0.8,
-          metadata: { operation: basicResult.expression ? 'parsed_expression' : 'unknown' }
         };
       }
 

@@ -5,7 +5,7 @@
 
 import { SelectionQuestion } from '@/types/questionTypes';
 import { QuestionTemplate } from '../questionTemplates';
-import { GermanMathParser } from './germanMathParser';
+import { ImprovedGermanMathParser } from './ImprovedGermanMathParser';
 
 export interface QualityReport {
   overallScore: number;
@@ -338,7 +338,7 @@ export class QualityAssuranceEngine {
    */
   private static validateMathAnswer(question: SelectionQuestion): { isValid: boolean; error?: string } {
     try {
-      const mathResult = GermanMathParser.parse(question.question);
+      const mathResult = ImprovedGermanMathParser.parse(question.question);
       
       if (mathResult.success && mathResult.answer !== undefined) {
         const expectedAnswer = mathResult.answer.toString();

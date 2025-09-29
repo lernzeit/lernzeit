@@ -3,8 +3,6 @@
  * Integrates with the new architecture and provides better parsing
  */
 
-import { GermanMathParser } from './germanMathParser';
-
 export interface ParsedMathResult {
   success: boolean;
   answer?: number | string;
@@ -24,18 +22,6 @@ export class ImprovedGermanMathParser {
    * Enhanced parsing with multiple strategies - NO DEBUG OUTPUT
    */
   static parse(question: string): ParsedMathResult {
-    // First try the existing parser
-    const basicResult = GermanMathParser.parse(question);
-    
-    if (basicResult.success) {
-      return {
-        ...basicResult,
-        confidence: 0.8,
-        questionType: this.detectQuestionType(question),
-        metadata: this.extractMetadata(question, basicResult.answer)
-      };
-    }
-
     // Enhanced parsing strategies
     const enhancedResult = this.enhancedParse(question);
     if (enhancedResult.success) {

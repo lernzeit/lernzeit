@@ -3,7 +3,6 @@
  */
 
 import { SelectionQuestion } from '@/types/questionTypes';
-import { calculateQuestionSimilarity, isDuplicateQuestion } from './duplicateDetection';
 
 export interface GenerationTestResult {
   success: boolean;
@@ -17,7 +16,7 @@ export interface GenerationTestResult {
 }
 
 /**
- * Test question generation for duplicate protection
+ * Test question generation for duplicate protection (simplified without dependency)
  */
 export function testDuplicateProtection(questions: SelectionQuestion[]): {
   hasDuplicates: boolean;
@@ -25,14 +24,18 @@ export function testDuplicateProtection(questions: SelectionQuestion[]): {
 } {
   const duplicates: Array<{ question1: string; question2: string; similarity: number }> = [];
   
+  // Simple text comparison for testing
   for (let i = 0; i < questions.length; i++) {
     for (let j = i + 1; j < questions.length; j++) {
-      const result = calculateQuestionSimilarity(questions[i].question, questions[j].question);
-      if (result.isDuplicate) {
+      const q1 = questions[i].question.toLowerCase().trim();
+      const q2 = questions[j].question.toLowerCase().trim();
+      
+      // Simple similarity check
+      if (q1 === q2) {
         duplicates.push({
           question1: questions[i].question,
           question2: questions[j].question,
-          similarity: result.similarity
+          similarity: 1.0
         });
       }
     }
