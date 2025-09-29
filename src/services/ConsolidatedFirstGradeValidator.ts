@@ -32,12 +32,12 @@ export class ConsolidatedFirstGradeValidator {
 
     const prompt = (template.student_prompt || '').toLowerCase();
 
-    // 1. CRITICAL: Subjective content detection
+    // 1. Subjective content detection (reduce quality but don't exclude)
     const subjectiveIssues = this.checkSubjectiveContent(prompt);
     if (subjectiveIssues.length > 0) {
       issues.push(...subjectiveIssues);
-      shouldExclude = true;
-      qualityScore = 0.1;
+      // Don't exclude subjective questions, just reduce quality score
+      qualityScore = Math.min(qualityScore, 0.5);
     }
 
     // 2. CRITICAL: Age-inappropriate complexity
@@ -83,7 +83,7 @@ export class ConsolidatedFirstGradeValidator {
   }
 
   /**
-   * Check for subjective/opinion-based content
+   * Check for subjective/opinion-based content (informational only)
    */
   private checkSubjectiveContent(prompt: string): string[] {
     const patterns = [
@@ -97,7 +97,7 @@ export class ConsolidatedFirstGradeValidator {
 
     return patterns
       .filter(p => p.regex.test(prompt))
-      .map(p => `🚨 ERSTKLÄSSLER: ${p.message}`);
+      .map(p => `ℹ️ HINWEIS: ${p.message}`);
   }
 
   /**
@@ -174,18 +174,17 @@ export class ConsolidatedFirstGradeValidator {
   }
 
   /**
-   * Check visual support requirements
+   * Check visual support requirements (relaxed - drawing already filtered elsewhere)
    */
   private checkVisualSupport(template: any): string[] {
     const issues: string[] = [];
     const prompt = template.student_prompt || '';
 
-    // Questions requiring unavailable visuals
+    // Only check for truly problematic visual patterns
+    // Note: Drawing/sketching already filtered by templateBankService.ts
     const visualPatterns = [
-      { regex: /betrachte.*bild/i, message: 'Bildbetrachtung ohne bereitgestelltes Bild' },
-      { regex: /schaue.*an/i, message: 'Visuelle Aufgabe ohne Material' },
-      { regex: /zeige.*auf/i, message: 'Zeigegeste digital unmöglich' },
-      { regex: /zeichn|mal /i, message: 'Zeichenaufgabe in digitaler Umgebung' }
+      { regex: /zeige.*auf/i, message: 'Zeigegeste digital unmöglich' }
+      // Removed: betrachte, schaue, zeichn, mal (too general or already filtered)
     ];
 
     visualPatterns.forEach(pattern => {
