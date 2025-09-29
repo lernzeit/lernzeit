@@ -162,41 +162,52 @@ export function CategoryMathProblem({
         });
         
       case 'multiple-choice':
-        // Handle multiple-choice questions
+        // Handle multiple-choice questions – ALWAYS validate against DB solution.value (canonical)
         const mcQuestion = question as any;
         const selectedIndex = Number(answer);
         const selectedOption = mcQuestion.options?.[selectedIndex];
 
-        // Method 1: Check by index (if correctAnswer is a number)
-        if (typeof mcQuestion.correctAnswer === 'number') {
-          return selectedIndex === mcQuestion.correctAnswer;
+        // 1) Canonical check against DB value (preferred, authoritative)
+        const canonical = mcQuestion.answer ?? mcQuestion?.solution?.value;
+        if (selectedOption !== undefined && canonical !== undefined && canonical !== null) {
+          const normalize = (s: any) => String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+          if (normalize(selectedOption) === normalize(canonical)) return true;
         }
 
-        // Method 2: Check by string matching (if correctAnswer is a string)
-        if (typeof mcQuestion.correctAnswer === 'string') {
-          return selectedOption === mcQuestion.correctAnswer;
-        }
+        // 2) Fallbacks only if no canonical available
+        if (canonical === undefined || canonical === null || canonical === '') {
+          // Fallback A: Check by index (if correctAnswer is a number)
+          if (typeof mcQuestion.correctAnswer === 'number') {
+            return selectedIndex === mcQuestion.correctAnswer;
+          }
 
-        // Method 3: Use AnswerCalculator for reliable calculation
-        if (mcQuestion.question && mcQuestion.options) {
-          const questionTemplate = (question as any).template;
-          const questionParams = (question as any).params || {};
-          if (questionTemplate && Object.keys(questionParams).length > 0) {
-            const calculationResult = AnswerCalculator.calculateAnswer(questionTemplate, questionParams, mcQuestion.question);
-            if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
-              const calculatedAnswer = String(calculationResult.answer);
-              return selectedOption === calculatedAnswer || selectedOption.includes(calculatedAnswer);
+          // Fallback B: Check by string matching (if correctAnswer is a string)
+          if (typeof mcQuestion.correctAnswer === 'string') {
+            return String(selectedOption) === String(mcQuestion.correctAnswer);
+          }
+
+          // Fallback C: Try calculator / stored answer
+          if (mcQuestion.question && mcQuestion.options) {
+            const questionTemplate = (question as any).template;
+            const questionParams = (question as any).params || {};
+            if (questionTemplate && Object.keys(questionParams).length > 0) {
+              const calculationResult = AnswerCalculator.calculateAnswer(questionTemplate, questionParams, mcQuestion.question);
+              if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
+                const calculatedAnswer = String(calculationResult.answer);
+                return String(selectedOption) === calculatedAnswer || String(selectedOption).includes(calculatedAnswer);
+              }
+            }
+
+            // Fallback D: Direct comparison with stored answer
+            const calculatedAnswer = (question as any).answer;
+            if (calculatedAnswer !== undefined) {
+              return String(selectedOption) === String(calculatedAnswer);
             }
           }
-
-          // Fallback: Direct comparison with stored answer
-          const calculatedAnswer = (question as any).answer;
-          if (calculatedAnswer !== undefined) {
-            return selectedOption === String(calculatedAnswer) || selectedOption === calculatedAnswer;
-          }
         }
-        return selectedIndex === mcQuestion.correctAnswer;
-        
+
+        // If canonical existed but didn't match, it's incorrect.
+        return false;
       default:
         return false;
     }
