@@ -328,7 +328,7 @@ export class EnhancedTemplateBankService {
 
   /**
    * FIXED: Extract options directly from database without complex transformations
-   * HANDLES BOTH: direct values and variable-based formats
+   * HANDLES MULTIPLE formats: {A: "...", B: "..."}, {options: [...]}, {object1: "...", object2: "..."}
    */
   private extractOptionsWithCorrectIndex(template: any): { options: string[]; correctIndex: number } {
     console.log('🔍 Extracting options from template:', template.id, {
@@ -354,82 +354,86 @@ export class EnhancedTemplateBankService {
       };
     }
 
-    // Check if template uses variables format (e.g., {A: "...", B: "...", C: "...", D: "..."})
+    // Check if template uses variables format
     const hasVariables = template.variables && typeof template.variables === 'object' && Object.keys(template.variables).length > 0;
     
     console.log('🔍 Variables detected:', hasVariables);
 
-    // Extract distractors from database
+    if (hasVariables) {
+      const vars = template.variables;
+      
+      // FORMAT 1: {options: ["1. Option A", "2. Option B", ...]}
+      if (vars.options && Array.isArray(vars.options)) {
+        const options = vars.options.map((opt: any) => String(opt).trim());
+        const correctIndex = parseInt(correct) - 1; // 1-based to 0-based index
+        
+        console.log(`✅ Using {options: [...]} format - Options: [${options.join(', ')}], Correct index: ${correctIndex}`);
+        return {
+          options: options.length >= 2 ? options : [...options, ...this.generateDefaultDistractors(options[0] || 'Option', 4 - options.length)],
+          correctIndex: correctIndex >= 0 && correctIndex < options.length ? correctIndex : 0
+        };
+      }
+      
+      // FORMAT 2: {object1: "...", object2: "...", object3: "...", object4: "..."}
+      const objectKeys = Object.keys(vars).filter(k => k.startsWith('object')).sort();
+      if (objectKeys.length >= 2) {
+        const options = objectKeys.map(key => String(vars[key]).trim());
+        const correctValue = String(vars[correct]) || correct; // Try to resolve key first
+        const correctIndex = options.findIndex(opt => 
+          opt === correctValue || 
+          normalizeNum(opt) === normalizeNum(correctValue) ||
+          opt.toLowerCase().includes(correctValue.toLowerCase())
+        );
+        
+        console.log(`✅ Using {object1: ..., object2: ...} format - Options: [${options.join(', ')}], Correct: "${correctValue}", Index: ${correctIndex}`);
+        return {
+          options: options.length >= 2 ? options : [...options, ...this.generateDefaultDistractors(options[0] || 'Option', 4 - options.length)],
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        };
+      }
+      
+      // FORMAT 3: {A: "...", B: "...", C: "...", D: "..."}
+      const allKeys = Object.keys(vars).filter(k => /^[A-Z]$/i.test(k)).sort();
+      if (allKeys.length >= 2) {
+        const allOptions = allKeys.map(key => String(vars[key]).trim());
+        
+        // Check if correct is a key (A, B, C, D) or a value
+        const correctKey = correct.length <= 2 && /^[A-Z]$/i.test(correct) ? correct.toUpperCase() : null;
+        const correctIndex = correctKey 
+          ? allKeys.indexOf(correctKey)
+          : allOptions.findIndex(opt => opt === correct || normalizeNum(opt) === correctNorm);
+        
+        console.log(`✅ Using {A: ..., B: ...} format - Options: [${allOptions.join(', ')}], Correct index: ${correctIndex}`);
+        return {
+          options: allOptions.length >= 2 ? allOptions : [...allOptions, ...this.generateDefaultDistractors(allOptions[0] || 'Option', 4 - allOptions.length)],
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        };
+      }
+    }
+
+    // FALLBACK: Use distractors if no variables format detected
     const distractors: string[] = [];
     const distractorsRaw = template.distractors;
     
     console.log('🔍 Raw distractors from DB:', distractorsRaw);
     
     if (Array.isArray(distractorsRaw)) {
-      // Handle array format - convert all to strings
       for (const distractor of distractorsRaw) {
-        let distractorStr = '';
-        
-        // If we have variables and the distractor looks like a key (single letter), use variables
-        if (hasVariables && typeof distractor === 'string' && distractor.length <= 2 && /^[A-Z]$/i.test(distractor.trim())) {
-          const key = distractor.trim().toUpperCase();
-          if (template.variables[key]) {
-            distractorStr = String(template.variables[key]).trim();
-            console.log(`🔑 Mapped distractor key "${key}" to value "${distractorStr}"`);
-          } else {
-            distractorStr = distractor;
-          }
-        } else if (typeof distractor === 'string') {
-          distractorStr = distractor;
-        } else if (typeof distractor === 'object' && distractor !== null) {
-          // Handle object distractors like {value: "4"} 
-          if (distractor.value !== undefined) distractorStr = String(distractor.value);
-          else if (distractor.answer !== undefined) distractorStr = String(distractor.answer);
-          else distractorStr = String(distractor);
-        } else {
-          distractorStr = String(distractor);
-        }
-        distractorStr = distractorStr.trim();
-        
-        // Skip duplicates that are the same as the correct answer when normalized
-        if (distractorStr && normalizeNum(distractorStr) !== correctNorm) {
+        const distractorStr = String(distractor).trim();
+        // Skip duplicates and irrelevant entries
+        if (distractorStr && 
+            distractorStr !== correct &&
+            normalizeNum(distractorStr) !== correctNorm &&
+            !distractorStr.match(/^[A-D]$/i) && // Skip single letters (likely keys)
+            distractorStr.length > 1) { // Skip too short entries
           distractors.push(distractorStr);
         }
       }
     }
     
-    // If we have variables, also check if correct answer is a key
-    let correctValue = correct;
-    if (hasVariables && correct.length <= 2 && /^[A-Z]$/i.test(correct)) {
-      const key = correct.toUpperCase();
-      if (template.variables[key]) {
-        correctValue = String(template.variables[key]).trim();
-        console.log(`🔑 Mapped correct answer key "${key}" to value "${correctValue}"`);
-      }
-    }
+    console.log(`🎯 Correct: "${correct}", Filtered distractors: [${distractors.join(', ')}]`);
     
-    // If using variables format, build complete options from all keys
-    if (hasVariables) {
-      const allKeys = Object.keys(template.variables).sort();
-      const allOptions = allKeys.map(key => String(template.variables[key]).trim());
-      
-      // Find correct index
-      const correctKey = correct.length <= 2 && /^[A-Z]$/i.test(correct) ? correct.toUpperCase() : null;
-      const correctIndex = correctKey 
-        ? allKeys.indexOf(correctKey)
-        : allOptions.findIndex(opt => opt === correctValue || normalizeNum(opt) === normalizeNum(correctValue));
-      
-      console.log(`✅ Using variables format - Options: [${allOptions.join(', ')}], Correct index: ${correctIndex}`);
-      
-      return {
-        options: allOptions,
-        correctIndex: correctIndex >= 0 ? correctIndex : 0
-      };
-    }
-    
-    console.log(`🎯 Correct: "${correct}", Extracted distractors: [${distractors.join(', ')}]`);
-    
-    // Generate defaults if needed
+    // Generate defaults if needed (only if distractors are insufficient)
     if (distractors.length < 3) {
       const generated = this.generateDefaultDistractors(correct, 3 - distractors.length)
         .filter(d => normalizeNum(d) !== correctNorm);
@@ -437,33 +441,27 @@ export class EnhancedTemplateBankService {
       console.log(`🔧 Added ${generated.length} default distractors: [${generated.join(', ')}]`);
     }
     
-    // Create final options array, dedupe by normalized representation and shuffle
-    const preliminary = [correct, ...distractors.slice(0, 3)];
-    const seen = new Set<string>();
-    const allOptions = preliminary.filter(opt => {
-      const key = normalizeNum(opt.trim());
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    // Enhanced option generation with default distractors
+    // Create final options array (correct + 3 best distractors)
+    const allOptions = [correct, ...distractors.slice(0, 3)];
+    
+    // Ensure minimum 4 options
     while (allOptions.length < 4) {
       const additionalDistractors = this.generateDefaultDistractors(correct, 4 - allOptions.length)
         .filter(d => normalizeNum(d) !== correctNorm && !allOptions.some(opt => normalizeNum(opt) === normalizeNum(d)));
       
+      if (additionalDistractors.length === 0) break;
       allOptions.push(...additionalDistractors);
-      if (additionalDistractors.length === 0) break; // Prevent infinite loop
     }
 
+    // Shuffle options
     const shuffledOptions = [...allOptions.slice(0, 4)].sort(() => Math.random() - 0.5);
-    // Ensure the correct variant exists; if removed by dedupe, reinsert canonical form
-    if (!shuffledOptions.some(o => normalizeNum(o) === correctNorm)) {
-      shuffledOptions.pop(); // remove one distractor if necessary
-      shuffledOptions.push(correct);
-    }
     
-    const correctIndex = shuffledOptions.findIndex(o => normalizeNum(o) === correctNorm);
+    // Find correct index in shuffled array
+    const correctIndex = shuffledOptions.findIndex(o => 
+      normalizeNum(o) === correctNorm || 
+      o === correct ||
+      o.toLowerCase() === correct.toLowerCase()
+    );
     
     console.log(`✅ Final options: [${shuffledOptions.join(', ')}], Correct index: ${correctIndex}`);
     
