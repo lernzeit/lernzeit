@@ -20,43 +20,16 @@ port = 54324
 smtp_port = 54325
 pop3_port = 54326
 
-[functions.generate-questions]
-verify_jwt = false
-
-[functions.batch-generate-questions]
-verify_jwt = false
-
-[functions.test-runner]
-verify_jwt = false
-
-[functions.diagnose]
-verify_jwt = false
-
 [functions.explain-answer]
 verify_jwt = false
 
 [functions.annual-grade-upgrade]
 verify_jwt = false
 
-[functions.test-api]
-verify_jwt = false
-
-[functions.controller]
-verify_jwt = false
-
-[functions.debug-generation]
-verify_jwt = false
-
 [functions.auto-question-generator]
 verify_jwt = false
 
-[functions.test-basic]
-verify_jwt = false
-
 [functions.template-mass-generator]
-verify_jwt = false
-
-[functions.test-openai-connection]
 verify_jwt = false
 
 [functions.openai-proxy]
@@ -75,4 +48,31 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.cleanup-faulty-questions]
+verify_jwt = false
+
+[functions.screen-time-request]
+verify_jwt = false
+
+[functions.auto-template-repair]
+verify_jwt = false
+
+[functions.cleanup-duplicates]
+verify_jwt = false
+
+[functions.cleanup-todays-templates]
+verify_jwt = false
+
+[functions.curriculum-aware-generator]
+verify_jwt = false
+
+[functions.curriculum-coverage-analyzer]
+verify_jwt = false
+
+[functions.recount-template-stats]
+verify_jwt = false
+
+[functions.template-rotator-cron]
+verify_jwt = false
+
+[functions.validate-templates]
 verify_jwt = false
