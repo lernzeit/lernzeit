@@ -186,9 +186,9 @@ export class EnhancedTemplateBankService {
   private async convertTemplateToQuestion(template: any): Promise<SelectionQuestion | null> {
     // FIRST-GRADE RESTRICTIONS: Only allow safe question types
     if (template.grade === 1) {
-      const allowedTypes = ['MULTIPLE_CHOICE', 'TEXT'];
+      const allowedTypes = ['MULTIPLE_CHOICE', 'TEXT', 'FREETEXT'];
       if (!allowedTypes.includes(template.question_type)) {
-        console.warn(`❌ Grade 1: Rejecting unsafe question type "${template.question_type}" for template ${template.id}`);
+        console.warn(`❌ Grade 1: Rejecting unsupported question type "${template.question_type}" for template ${template.id}`);
         return null;
       }
       
@@ -677,25 +677,17 @@ export class EnhancedTemplateBankService {
     
     // Drawing keywords
     const drawingKeywords = [
+      // keep only true drawing/constructive actions
       'zeichne', 'zeichnet', 'zeichnen',
       'male', 'malt', 'malen',
       'skizziere', 'skizziert', 'skizzieren',
       'draw', 'drawing', 'sketch',
       'konstruiere', 'konstruiert', 'konstruieren',
-      'entwirf', 'entwirft', 'entwerfen',
       'bastle', 'bastelt', 'basteln',
       'schneide', 'schneidet', 'schneiden',
       'klebe', 'klebt', 'kleben',
       'falte', 'faltet', 'falten',
-      'markiere', 'markiert', 'markieren',
-      'bild', 'bilder', 'abbildung', 'grafik',
-      'betrachte das bild', 'schaue dir an',
-      'welches bild passt', 'ordne dem bild zu',
-      'ordne richtig zu', 'verbinde mit linien',
-      'netz', 'netze', 'körper', 'diagramm',
-      'miss dein lineal', 'länge deines lineals',
-      'wie lang ist dein', 'größe deines',
-      'miss deinen bleistift'
+      'markiere', 'markiert', 'markieren'
     ];
     
     return drawingKeywords.some(keyword => lowerPrompt.includes(keyword));
