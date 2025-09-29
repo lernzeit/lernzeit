@@ -986,6 +986,44 @@ export class EnhancedTemplateBankService {
    * Clear cache
    */
   /**
+   * NEW: Recent template tracking (local persistence)
+   */
+  private getRecentTemplateIds(userId: string, category: string, grade: number): Set<string> {
+    try {
+      const key = `recentTemplates:${userId}:${category}:${grade}`;
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+      if (!raw) return new Set();
+      const list = JSON.parse(raw) as Array<{ id: string; t: number }>;
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24h window
+      const valid = Array.isArray(list) ? list.filter(e => e && e.id && typeof e.t === 'number' && e.t >= cutoff) : [];
+      if (typeof localStorage !== 'undefined' && valid.length !== list.length) {
+        localStorage.setItem(key, JSON.stringify(valid));
+      }
+      return new Set(valid.map(e => String(e.id)));
+    } catch {
+      return new Set();
+    }
+  }
+
+  private markTemplateRecent(userId: string, category: string, grade: number, templateId: string): void {
+    try {
+      const key = `recentTemplates:${userId}:${category}:${grade}`;
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+      const list: Array<{ id: string; t: number }> = raw ? JSON.parse(raw) : [];
+      const map = new Map<string, { id: string; t: number }>(
+        Array.isArray(list) ? list.map(e => [String(e.id), { id: String(e.id), t: Number(e.t) || 0 }]) : []
+      );
+      map.set(String(templateId), { id: String(templateId), t: Date.now() });
+      const arr = Array.from(map.values()).sort((a, b) => b.t - a.t).slice(0, 100);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, JSON.stringify(arr));
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  /**
    * NEW: Session management integration
    */
   private ensureSessionExists(userId: string, category: string, grade: number): string {
@@ -1017,9 +1055,12 @@ export class EnhancedTemplateBankService {
         ? templates.filter(t => this.matchesMathCategory(t.domain, category))
         : templates;
 
-      // Filter out templates already used in this session
+      // Filter out templates already used in this session and recently used across sessions (24h)
+      const userIdFromSession = (sessionId || '').split('_')[0] || 'anonymous';
+      const recentIds = this.getRecentTemplateIds(userIdFromSession, category, grade);
       const availableTemplates = categoryTemplates.filter(template => 
-        !TemplateSessionManager.isTemplateUsed(sessionId, String(template.id))
+        !TemplateSessionManager.isTemplateUsed(sessionId, String(template.id)) &&
+        !recentIds.has(String(template.id))
       );
 
       console.log(`📚 Found ${availableTemplates.length}/${categoryTemplates.length} available templates for ${category} (session: ${sessionId})`);
@@ -1053,8 +1094,9 @@ export class EnhancedTemplateBankService {
           usedHashes.add(hash);
           usedPrompts.add(normPrompt);
           
-          // Mark as used in session
+          // Mark as used in session and persist in recent list
           TemplateSessionManager.markTemplateUsed(sessionId, String(template.id), converted);
+          this.markTemplateRecent(userIdFromSession, category, grade, String(template.id));
           
           console.log(`✅ Added question from template ${template.id}: ${converted.question.substring(0, 60)}...`);
         }
