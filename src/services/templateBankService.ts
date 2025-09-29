@@ -53,8 +53,9 @@ export class EnhancedTemplateBankService {
     count: number
   ): Promise<SelectionQuestion[]> {
     try {
-      // Fetch more templates for variety
-      const templates = await fetchActiveTemplates({ grade, quarter, limit: 200 });
+      // 🎲 FIXED: Fetch much larger pool for better variety (80% of available templates)
+      // For grade 1 with ~1000 templates, this fetches 800 instead of 200
+      const templates = await fetchActiveTemplates({ grade, quarter, limit: 800 });
       
       console.log(`📚 Fetched ${templates.length} active templates from database`);
       

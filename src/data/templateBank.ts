@@ -16,11 +16,13 @@ function qIndex(q: Quarter){ return ["Q1","Q2","Q3","Q4"].indexOf(q); }
 export async function fetchActiveTemplates(params: {
   grade: number; quarter?: Quarter; limit?: number;
 }) {
-  const { grade, quarter = getCurrentSchoolQuarter(), limit = 200 } = params;
+  // 🎲 FIXED: Increase limit and add randomization for better variety
+  // Default to 800 templates (80% of ~1000 available for grade 1) instead of 200
+  const { grade, quarter = getCurrentSchoolQuarter(), limit = 800 } = params;
   
-  console.log(`🎯 PHASE 1: Fetching from high-quality TEMPLATES table for Grade ${grade} ${quarter}`);
+  console.log(`🎯 Fetching from TEMPLATES table for Grade ${grade} ${quarter} (limit: ${limit})`);
   
-  // ✅ PHASE 1: Use high-quality templates table (659 premium templates)
+  // ✅ PHASE 1: Use high-quality templates table
   let query = supabase
     .from("templates")
     .select("*")
@@ -64,13 +66,25 @@ export async function fetchActiveTemplates(params: {
       .neq("status", "ARCHIVED");
   }
 
-  let { data, error } = await query
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  // 🎲 FIXED: Fetch large pool first, then randomize client-side for better variety
+  // Remove .order() to get results in random DB order, then shuffle client-side
+  let { data, error } = await query.limit(limit * 2); // Fetch 2x limit for better randomization
   
   if (error) {
     console.error('❌ Templates fetch error:', error);
     return [];
+  }
+  
+  // 🎲 FIXED: Shuffle the entire result set to ensure random selection
+  if (data && data.length > 0) {
+    // Fisher-Yates shuffle for true randomization
+    for (let i = data.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [data[i], data[j]] = [data[j], data[i]];
+    }
+    // Take only the requested limit after shuffling
+    data = data.slice(0, limit);
+    console.log(`🎲 Shuffled and selected ${data.length} random templates from pool`);
   }
   
   if (!data || data.length === 0) {
@@ -84,18 +98,22 @@ export async function fetchActiveTemplates(params: {
         .select("*")
         .eq("status", "ACTIVE")
         .eq("grade", fallbackGrade)
-        .order("created_at", { ascending: false })
         .limit(limit);
         
       if (fallbackData && fallbackData.length > 0) {
-        console.log(`✅ Using ${fallbackData.length} templates from Grade ${fallbackGrade} fallback`);
+        // Shuffle fallback data too
+        for (let i = fallbackData.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [fallbackData[i], fallbackData[j]] = [fallbackData[j], fallbackData[i]];
+        }
+        console.log(`✅ Using ${fallbackData.length} shuffled templates from Grade ${fallbackGrade} fallback`);
         data = fallbackData;
         break;
       }
     }
   }
   
-  console.log(`🎯 Found ${data?.length || 0} high-quality templates from TEMPLATES table`);
+  console.log(`🎯 Final: ${data?.length || 0} randomized templates from TEMPLATES table`);
   return data ? data.map(mapTemplateToInterface) : [];
 }
 
