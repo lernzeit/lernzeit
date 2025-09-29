@@ -503,17 +503,15 @@ export function CategoryMathProblem({
                     <p className="text-sm font-semibold text-green-800">
                       {(() => {
                         const mcQuestion = currentQuestion as any;
-                        if (mcQuestion.template && mcQuestion.params) {
-                          const calculationResult = AnswerCalculator.calculateAnswer(
-                            mcQuestion.template, 
-                            mcQuestion.params, 
-                            mcQuestion.question
-                          );
-                          if (calculationResult.isValid && (calculationResult.confidence || 0) >= 0.7) {
-                            return String(calculationResult.answer);
-                          }
+                        // Always prefer the canonical DB value if present
+                        if (mcQuestion.answer) {
+                          return String(mcQuestion.answer);
                         }
-                        return mcQuestion.options?.[mcQuestion.correctAnswer] || mcQuestion.answer || 'Siehe Erklärung';
+                        // Otherwise show the option at the correct index
+                        if (Array.isArray(mcQuestion.options) && typeof mcQuestion.correctAnswer === 'number') {
+                          return mcQuestion.options[mcQuestion.correctAnswer] || 'Siehe Erklärung';
+                        }
+                        return 'Siehe Erklärung';
                       })()}
                     </p>
                   ) : currentQuestion.questionType === 'SORT' || currentQuestion.questionType === 'sort' ? (

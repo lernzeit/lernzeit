@@ -286,6 +286,8 @@ export class EnhancedTemplateBankService {
         questionType: 'multiple-choice',
         options: optionsData.options,
         correctAnswer: optionsData.correctIndex,
+        // Always keep the canonical correct value from DB (solution.value)
+        answer: this.extractSolutionValue(template.solution),
         explanation: template.explanation || "",
         templateId: String(template.id)
       } as MultipleChoiceQuestion;
