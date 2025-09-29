@@ -49,13 +49,11 @@ const Index = () => {
   };
 
   const handleProblemComplete = (minutes: number, category: string) => {
-    // Don't show success screen - go directly back to profile/grade selection
+    // Go directly back to profile/grade selection
     if (user) {
-      // For logged in users, go back to profile
+      // For logged in users, go back to profile (stats reload automatically)
       setSelectedGrade(null);
       setSelectedCategory(null);
-      // Force reload of user profile when returning to update stats
-      window.location.hash = 'reload-stats';
     } else {
       // For guest users, go back to grade selection
       setSelectedCategory(null);
