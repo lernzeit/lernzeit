@@ -423,24 +423,9 @@ export class EnhancedTemplateBankService {
       const allDistractorOptions = distractorsRaw.map((d: any) => String(d).trim()).filter(Boolean);
       console.log('🔍 All distractor options (ordered):', allDistractorOptions);
 
-      // If the solution encodes the position (A-D or 1-4), respect original order
-      const letterToIndex: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
-      const isLetterKey = /^[A-D]$/i.test(correct);
-      const isNumberKey = /^\d+$/.test(correct);
-
-      if (isLetterKey) {
-        const key = correct.toUpperCase();
-        const idx = letterToIndex[key];
-        if (idx !== undefined && idx < allDistractorOptions.length) {
-          console.log(`✅ Correct answer provided as key "${key}" → index ${idx}`);
-          return {
-            options: allDistractorOptions,
-            correctIndex: idx
-          };
-        }
-      // We do NOT treat numeric or letter solutions (1-4 / A-D) as indices here,
-      // because we don't know the original option ordering for this template.
-      // Only rely on text matching and, as a heuristic, explanation content.
+      // We intentionally ignore letter keys (A–D) in distractor-array mode, because
+      // we don't have a reliable mapping from letter → option in DB here.
+      // We'll determine the correct index via text matching and heuristics below.
 
       // Otherwise, try to locate the correct answer by text within the options array
       const textIndex = allDistractorOptions.findIndex(opt => {
