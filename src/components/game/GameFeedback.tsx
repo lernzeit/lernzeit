@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Check, X, Flag, ArrowRight } from 'lucide-react';
+import { Check, X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface GameFeedbackProps {
@@ -8,7 +8,7 @@ interface GameFeedbackProps {
   explanation?: string;
   correctAnswer?: string;
   userAnswer?: string;
-  onReportIssue?: () => void;
+  onQuestionFeedback?: (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => void;
   onSkipFeedback?: () => void;
 }
 
@@ -17,7 +17,7 @@ export function GameFeedback({
   explanation,
   correctAnswer,
   userAnswer,
-  onReportIssue,
+  onQuestionFeedback,
   onSkipFeedback
 }: GameFeedbackProps) {
   if (!feedback) return null;
@@ -68,19 +68,52 @@ export function GameFeedback({
         </div>
       )}
 
+      {/* Simple Emoji Feedback Buttons */}
+      {onQuestionFeedback && (
+        <div className="mt-4 border-t pt-4">
+          <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
+          <div className="flex gap-2 justify-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => onQuestionFeedback('thumbs_up')}
+              className="text-2xl hover:bg-green-100 hover:border-green-300"
+              title="Gut"
+            >
+              👍
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => onQuestionFeedback('thumbs_down')}
+              className="text-2xl hover:bg-red-100 hover:border-red-300"
+              title="Schlecht"
+            >
+              👎
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => onQuestionFeedback('too_hard')}
+              className="text-2xl hover:bg-orange-100 hover:border-orange-300"
+              title="Zu schwer"
+            >
+              😰
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => onQuestionFeedback('too_easy')}
+              className="text-2xl hover:bg-blue-100 hover:border-blue-300"
+              title="Zu leicht"
+            >
+              😴
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2 mt-4 justify-center">
-        {onReportIssue && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onReportIssue}
-            className="flex items-center gap-1"
-          >
-            <Flag className="w-4 h-4" />
-            Problem melden
-          </Button>
-        )}
-        
         {onSkipFeedback && (
           <Button 
             variant="outline" 
