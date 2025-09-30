@@ -276,6 +276,80 @@ export function useAdaptiveDifficultySystem(
     setPerformanceHistory(prev => [...prev.slice(-9), newMetrics]); // Keep last 10 records
   }, []);
 
+  // Apply user emoji feedback to adjust difficulty immediately
+  const applyUserFeedback = useCallback(async (
+    feedbackType: 'too_hard' | 'too_easy' | 'thumbs_up' | 'thumbs_down'
+  ) => {
+    if (!difficultyProfile) return;
+
+    let adjustment = 0;
+    let reason = '';
+    
+    switch (feedbackType) {
+      case 'too_hard':
+        adjustment = -0.15;
+        reason = 'User feedback: Question too difficult';
+        console.log('📉 Too hard - reducing difficulty significantly');
+        break;
+      case 'too_easy':
+        adjustment = 0.15;
+        reason = 'User feedback: Question too easy';
+        console.log('📈 Too easy - increasing difficulty significantly');
+        break;
+      case 'thumbs_down':
+        adjustment = -0.05;
+        reason = 'User feedback: Negative experience';
+        console.log('👎 Thumbs down - slight difficulty reduction');
+        break;
+      case 'thumbs_up':
+        adjustment = 0.05;
+        reason = 'User feedback: Positive experience';
+        console.log('👍 Thumbs up - slight difficulty increase');
+        break;
+    }
+
+    const newLevel = Math.max(0.1, Math.min(0.9, difficultyProfile.current_level + adjustment));
+    
+    const updatedProfile: DifficultyProfile = {
+      ...difficultyProfile,
+      current_level: newLevel,
+      last_updated: new Date()
+    };
+
+    setDifficultyProfile(updatedProfile);
+
+    // Save to database
+    try {
+      const { error } = await supabase
+        .from('user_difficulty_profiles')
+        .upsert({
+          user_id: userId,
+          category: category,
+          grade: grade,
+          current_level: newLevel,
+          mastery_score: difficultyProfile.mastery_score,
+          learning_velocity: difficultyProfile.learning_velocity,
+          strengths: difficultyProfile.strengths,
+          weaknesses: difficultyProfile.weaknesses,
+          last_updated: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      setLastAdjustment({
+        previous_level: difficultyProfile.current_level,
+        new_level: newLevel,
+        adjustment_reason: reason,
+        confidence: 0.9,
+        recommended_topics: []
+      });
+
+      console.log(`✅ Difficulty adjusted from ${difficultyProfile.current_level.toFixed(2)} to ${newLevel.toFixed(2)}`);
+    } catch (error) {
+      console.error('Failed to save feedback adjustment:', error);
+    }
+  }, [difficultyProfile, userId, category, grade]);
+
   // Perform adaptive difficulty adjustment
   const performAdaptiveAdjustment = useCallback(async (): Promise<DifficultyAdjustment | null> => {
     if (!difficultyProfile || isAdapting) return null;
@@ -403,6 +477,7 @@ export function useAdaptiveDifficultySystem(
     performAdaptiveAdjustment,
     resetSession,
     getRecommendedDifficulty,
+    applyUserFeedback,
 
     // Computed Properties
     shouldAdjust: performanceHistory.length >= 3 && !isAdapting,

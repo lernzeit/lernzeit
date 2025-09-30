@@ -41,7 +41,7 @@ export function CategoryMathProblem({
   const { addScreenTime } = useScreenTime();
   const { settings } = useChildSettings(user?.id || '');
   const { updateProgress } = useAchievements(user?.id);
-  const { logQuestionAnswer, logQuestionRating } = useQuestionEventLogging();
+  const { logQuestionAnswer, logQuestionRating, logQuestionFeedback } = useQuestionEventLogging();
 
   // Template-Bank system
   const currentQuarter = getCurrentSchoolQuarter();
@@ -97,6 +97,30 @@ export function CategoryMathProblem({
 
   const adaptiveUserId = user?.id || '00000000-0000-0000-0000-000000000000';
   const adaptive = useAdaptiveDifficultySystem(normalizeCategoryForAdaptive(category), grade, adaptiveUserId);
+
+  // Handle emoji feedback from user
+  const handleQuestionFeedback = async (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
+    if (!problems || problems.length === 0) return;
+    const currentQuestion = problems[currentQuestionIndex];
+    const templateId = (currentQuestion as any).templateId;
+    
+    if (templateId && user?.id) {
+      // Log feedback to database
+      await logQuestionFeedback(
+        templateId,
+        feedbackType,
+        user.id,
+        category,
+        grade,
+        currentQuestion.question
+      );
+
+      // Apply feedback to adaptive difficulty system
+      await adaptive.applyUserFeedback(feedbackType);
+
+      console.log(`✅ User feedback "${feedbackType}" processed for template ${templateId}`);
+    }
+  };
 
   const currentQuestion: SelectionQuestion | undefined = problems[currentQuestionIndex];
 
@@ -490,98 +514,35 @@ export function CategoryMathProblem({
 
           {/* Feedback display */}
           {feedback && (
-            <div className={`p-6 rounded-lg border-2 ${
-              feedback === 'correct' 
-                ? 'bg-green-50 text-green-800 border-green-200' 
-                : 'bg-red-50 text-red-800 border-red-200'
-            }`}>
-              <div className="flex items-center justify-center gap-3 mb-3">
-                {feedback === 'correct' ? (
-                  <Check className="w-8 h-8 text-green-600" />
-                ) : (
-                  <X className="w-8 h-8 text-red-600" />
-                )}
-                <span className="font-bold text-lg">
-                  {feedback === 'correct' ? 'Richtig!' : 'Falsch!'}
-                </span>
-              </div>
-              
-              {/* Show correct answer for incorrect responses */}
-              {feedback === 'incorrect' && (
-                <div className="mt-3 p-3 bg-white/50 rounded-md border-l-4 border-green-500">
-                  <p className="text-sm font-medium mb-1 text-green-700">Richtige Antwort:</p>
-                  {currentQuestion.questionType === 'multiple-choice' ? (
-                    <p className="text-sm font-semibold text-green-800">
-                      {(() => {
-                        const mcQuestion = currentQuestion as any;
-                        // Always prefer the canonical DB value if present
-                        if (mcQuestion.answer) {
-                          return String(mcQuestion.answer);
-                        }
-                        // Otherwise show the option at the correct index
-                        if (Array.isArray(mcQuestion.options) && typeof mcQuestion.correctAnswer === 'number') {
-                          return mcQuestion.options[mcQuestion.correctAnswer] || 'Siehe Erklärung';
-                        }
-                        return 'Siehe Erklärung';
-                      })()}
-                    </p>
-                  ) : currentQuestion.questionType === 'SORT' || currentQuestion.questionType === 'sort' ? (
-                    <p className="text-sm font-semibold text-green-800">
-                      {(currentQuestion as any).correctAnswer?.join(', ') || 
-                       (currentQuestion as any).solution?.value?.join(', ') || 
-                       'Siehe Erklärung'}
-                    </p>
-                  ) : (
-                    <p className="text-sm font-semibold text-green-800">
-                      {(currentQuestion as any).answer || 'Siehe Erklärung'}
-                    </p>
-                  )}
-                  <p className="text-xs text-red-600 mt-1">
-                    Deine Antwort: {
-                      currentQuestion.questionType === 'multiple-choice' 
-                        ? (currentQuestion as any).options?.[selectedMultipleChoice || 0] 
-                        : currentQuestion.questionType === 'SORT' || currentQuestion.questionType === 'sort'
-                        ? currentSortOrder?.join(', ') || 'Keine Sortierung'
-                        : userAnswer
+            <GameFeedback
+              feedback={feedback}
+              explanation={currentQuestion.explanation}
+              correctAnswer={
+                currentQuestion.questionType === 'multiple-choice' ? 
+                  (() => {
+                    const mcQuestion = currentQuestion as any;
+                    if (mcQuestion.answer) return String(mcQuestion.answer);
+                    if (Array.isArray(mcQuestion.options) && typeof mcQuestion.correctAnswer === 'number') {
+                      return mcQuestion.options[mcQuestion.correctAnswer] || 'Siehe Erklärung';
                     }
-                  </p>
-                </div>
-              )}
-              
-              {/* Show explanation */}
-              {currentQuestion.explanation && (
-                <div className="mt-3 p-3 bg-white/50 rounded-md">
-                  <p className="text-sm font-medium mb-2">Erklärung:</p>
-                  <div className="text-sm space-y-1">
-                    {currentQuestion.explanation.split('\n').map((line, index) => (
-                      <div key={index}>
-                        {line.trim() ? <p>{line}</p> : <div className="h-1"></div>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Continue button after feedback */}
-              {waitingForNext && (
-                <div className="mt-4 text-center">
-                  <Button onClick={handleNextQuestion} size="lg" className="w-full">
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                    {currentQuestionIndex === problems.length - 1 ? 'Spiel beenden' : 'Weiter'}
-                  </Button>
-                  {grade === 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFeedbackDialog(true)}
-                      className="mt-2 text-gray-500 hover:text-gray-700 text-xs"
-                    >
-                      Problem melden
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
+                    return 'Siehe Erklärung';
+                  })() :
+                currentQuestion.questionType === 'SORT' || currentQuestion.questionType === 'sort' ? 
+                  ((currentQuestion as any).correctAnswer?.join(', ') || 
+                   (currentQuestion as any).solution?.value?.join(', ') || 
+                   'Siehe Erklärung') :
+                  ((currentQuestion as any).answer || 'Siehe Erklärung')
+              }
+              userAnswer={
+                currentQuestion.questionType === 'multiple-choice' 
+                  ? (currentQuestion as any).options?.[selectedMultipleChoice || 0] 
+                  : currentQuestion.questionType === 'SORT' || currentQuestion.questionType === 'sort'
+                  ? currentSortOrder?.join(', ') || 'Keine Sortierung'
+                  : userAnswer
+              }
+              onQuestionFeedback={handleQuestionFeedback}
+              onSkipFeedback={handleNextQuestion}
+            />
           )}
 
           {/* Answer submission button */}

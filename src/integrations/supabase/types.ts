@@ -431,6 +431,7 @@ export type Database = {
           id: string
           question_content: string
           question_type: string
+          template_id: string | null
           user_id: string
         }
         Insert: {
@@ -442,6 +443,7 @@ export type Database = {
           id?: string
           question_content: string
           question_type: string
+          template_id?: string | null
           user_id: string
         }
         Update: {
@@ -453,6 +455,7 @@ export type Database = {
           id?: string
           question_content?: string
           question_type?: string
+          template_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -946,6 +949,18 @@ export type Database = {
       generate_invitation_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_template_feedback_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          negative_ratio: number
+          template_id: string
+          thumbs_down_count: number
+          thumbs_up_count: number
+          too_easy_count: number
+          too_hard_count: number
+          total_feedback: number
+        }[]
       }
       set_user_admin: {
         Args: { user_email: string }

@@ -76,3 +76,7 @@ verify_jwt = false
 
 [functions.validate-templates]
 verify_jwt = false
+
+[functions.cleanup-negative-templates]
+verify_jwt = false
+
