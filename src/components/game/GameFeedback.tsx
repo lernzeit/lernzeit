@@ -2,6 +2,7 @@
 import React from 'react';
 import { Check, X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface GameFeedbackProps {
   feedback: 'correct' | 'incorrect' | null;
@@ -20,6 +21,8 @@ export function GameFeedback({
   onQuestionFeedback,
   onSkipFeedback
 }: GameFeedbackProps) {
+  const isMobile = useIsMobile();
+  
   if (!feedback) return null;
 
   return (
@@ -72,39 +75,39 @@ export function GameFeedback({
       {onQuestionFeedback && (
         <div className="mt-4 border-t pt-4">
           <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-1.5 justify-center">
             <Button
               variant="outline"
-              size="lg"
+              size={isMobile ? "sm" : "lg"}
               onClick={() => onQuestionFeedback('thumbs_up')}
-              className="text-2xl hover:bg-green-100 hover:border-green-300"
+              className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-green-100 hover:border-green-300`}
               title="Gut"
             >
               👍
             </Button>
             <Button
               variant="outline"
-              size="lg"
+              size={isMobile ? "sm" : "lg"}
               onClick={() => onQuestionFeedback('thumbs_down')}
-              className="text-2xl hover:bg-red-100 hover:border-red-300"
+              className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-red-100 hover:border-red-300`}
               title="Schlecht"
             >
               👎
             </Button>
             <Button
               variant="outline"
-              size="lg"
+              size={isMobile ? "sm" : "lg"}
               onClick={() => onQuestionFeedback('too_hard')}
-              className="text-2xl hover:bg-orange-100 hover:border-orange-300"
+              className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-orange-100 hover:border-orange-300`}
               title="Zu schwer"
             >
               😰
             </Button>
             <Button
               variant="outline"
-              size="lg"
+              size={isMobile ? "sm" : "lg"}
               onClick={() => onQuestionFeedback('too_easy')}
-              className="text-2xl hover:bg-blue-100 hover:border-blue-300"
+              className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-blue-100 hover:border-blue-300`}
               title="Zu leicht"
             >
               😴
