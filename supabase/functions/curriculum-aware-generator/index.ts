@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -105,25 +105,26 @@ Erstelle genau **eine** Aufgabe im JSON-Schema:
         `;
         
         try {
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${openAIApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                { role: 'system', content: 'Du bist ein Experte für deutsche Grundschul-Mathematik und erstellst lehrplankonforme Aufgaben.' },
-                { role: 'user', content: prompt }
-              ],
-              max_tokens: 1000,
-              temperature: 0.7,
+              contents: [{
+                parts: [{ 
+                  text: 'Du bist ein Experte für deutsche Grundschul-Mathematik und erstellst lehrplankonforme Aufgaben.\n\n' + prompt 
+                }]
+              }],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1000,
+              }
             }),
           });
 
           const data = await response.json();
-          const generatedText = data.choices[0].message.content.trim();
+          const generatedText = data.candidates[0].content.parts[0].text.trim();
           
           // Clean and parse JSON
           const cleanedText = generatedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
