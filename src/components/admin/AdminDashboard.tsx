@@ -53,42 +53,7 @@ export function AdminDashboard() {
               System Active
             </Badge>
             <Badge variant="secondary">Phase 4 Implementation</Badge>
-            <Button 
-              variant="default"
-              onClick={async () => {
-                toast({ title: '🧪 Teste Gemini-Anbindung...', description: 'Generiere 3 Test-Fragen' });
-                try {
-                  const response = await supabase.functions.invoke('direct-template-generator', {
-                    body: { 
-                      grade: 3, 
-                      domain: 'Zahlen & Operationen', 
-                      count: 3 
-                    }
-                  });
-                  
-                  if (response.error) throw response.error;
-                  
-                  const data = response.data;
-                  toast({
-                    title: '✅ Gemini funktioniert!',
-                    description: `${data.generated_count} Fragen generiert, ${data.inserted_count} in DB gespeichert`
-                  });
-                  console.log('Gemini Test Response:', data);
-                } catch (error: any) {
-                  console.error('Gemini Test Error:', error);
-                  toast({ 
-                    title: '❌ Gemini-Test fehlgeschlagen', 
-                    description: error.message,
-                    variant: 'destructive'
-                  });
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              Test Gemini
-            </Button>
-            <Button 
+            <Button
               variant="outline" 
               onClick={async () => {
                 try {
