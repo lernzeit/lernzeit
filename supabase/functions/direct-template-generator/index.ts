@@ -56,19 +56,12 @@ Erstelle genau ${count} Templates im JSON-Array Format:
 - Liefere NUR das JSON-Array, kein zusätzlicher Text`;
 
     console.log('Calling Gemini API...');
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2000,
-        }
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
       }),
     });
 
@@ -79,7 +72,9 @@ Erstelle genau ${count} Templates im JSON-Array Format:
     }
 
     const aiResponse = await response.json();
-    const content = aiResponse.candidates[0].content.parts[0].text;
+    const content = (aiResponse?.candidates?.[0]?.content?.parts || [])
+      .map((p: any) => p.text || '')
+      .join('');
     
     console.log('Gemini Response received:', content.substring(0, 200) + '...');
 
