@@ -56,7 +56,7 @@ Erstelle genau ${count} Templates im JSON-Array Format:
 - Liefere NUR das JSON-Array, kein zusätzlicher Text`;
 
     console.log('Calling Gemini API...');
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
