@@ -131,9 +131,9 @@ export const ApiStatusPanel = () => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          {allOnline ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          {allOnline ? <Wifi className="w-4 h-4 sm:w-5 sm:h-5" /> : <WifiOff className="w-4 h-4 sm:w-5 sm:h-5" />}
           API Status
         </CardTitle>
         <Button 
@@ -141,35 +141,40 @@ export const ApiStatusPanel = () => {
           size="sm" 
           onClick={checkAllApis} 
           disabled={isChecking}
+          className="w-full sm:w-auto"
         >
-          <RefreshCw className={`w-4 h-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
           Prüfen
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {apiStatuses.map((api) => (
-          <div key={api.name} className="flex items-center justify-between p-3 border rounded-lg">
-            <div className="flex items-center gap-3">
-              {getStatusIcon(api.status)}
-              <div>
-                <div className="font-medium">{api.name}</div>
-                <div className="text-sm text-muted-foreground">
+          <div key={api.name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 border rounded-lg">
+            <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+              <div className="flex-shrink-0">
+                {getStatusIcon(api.status)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm sm:text-base truncate">{api.name}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground break-words">
                   Geprüft: {api.lastChecked.toLocaleTimeString('de-DE')}
                   {api.responseTime && api.status === 'online' && ` • ${api.responseTime}ms`}
                 </div>
                 {api.error && (
-                  <div className="text-xs text-red-600 mt-1">{api.error}</div>
+                  <div className="text-xs text-red-600 mt-1 break-words">{api.error}</div>
                 )}
               </div>
             </div>
-            {getStatusBadge(api.status)}
+            <div className="flex-shrink-0 self-end sm:self-auto">
+              {getStatusBadge(api.status)}
+            </div>
           </div>
         ))}
 
         {!allOnline && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="text-xs sm:text-sm">
               Einige APIs sind nicht verfügbar. Überprüfe die Konfiguration und Edge Function Logs.
             </AlertDescription>
           </Alert>
