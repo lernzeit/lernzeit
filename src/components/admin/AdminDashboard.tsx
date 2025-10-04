@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -7,25 +7,58 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  Settings, 
   BarChart3, 
-  Users, 
   FileText, 
   Zap,
   Target,
-  TrendingUp,
-  CheckCircle,
   LogOut
 } from 'lucide-react';
-import { QualityDashboard } from './QualityDashboard';
-import { QualityMonitoringDashboard } from './QualityMonitoringDashboard';
-import { SystematicGenerationControl } from './SystematicGenerationControl';
+import { ApiStatusPanel } from './ApiStatusPanel';
 import { TemplateBankDashboard } from './TemplateBankDashboard';
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState({
+    totalTemplates: 0,
+    activeTemplates: 0,
+    avgQuality: 0,
+    recentGenerated: 0
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const { data: templates } = await supabase
+        .from('templates')
+        .select('quality_score, created_at, status')
+        .eq('status', 'ACTIVE');
+
+      if (templates) {
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const recentCount = templates.filter(t => 
+          new Date(t.created_at) > weekAgo
+        ).length;
+
+        const avgQuality = templates.length > 0
+          ? templates.reduce((sum, t) => sum + (t.quality_score || 0), 0) / templates.length
+          : 0;
+
+        setStats({
+          totalTemplates: templates.length,
+          activeTemplates: templates.length,
+          avgQuality,
+          recentGenerated: recentCount
+        });
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -44,93 +77,25 @@ export function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             <p className="text-muted-foreground">
-              Systematic Template Generation & Quality Management System
+              Template Management & Quality Control
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="gap-1">
-              <CheckCircle className="w-3 h-3 text-green-600" />
-              System Active
-            </Badge>
-            <Badge variant="secondary">Phase 4 Implementation</Badge>
-            <Button
-              variant="outline" 
-              onClick={async () => {
-                try {
-                  const response = await supabase.functions.invoke('cleanup-todays-templates', {
-                    body: { action: 'analyze', days: 7 }
-                  });
-                  if (response.data?.analysis) {
-                    const analysis = response.data.analysis;
-                    toast({
-                      title: `Template-Analyse (7 Tage)`,
-                      description: `${analysis.total_templates} Templates im Zeitraum. ${analysis.problematic_count} problematisch.`
-                    });
-                  }
-                } catch (error) {
-                  toast({ title: 'Fehler bei Analyse', description: error.message });
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <Target className="w-4 h-4" />
-              Template Analyse
-            </Button>
-              <Button 
-                variant="destructive"
-                onClick={async () => {
-                  const input = prompt('Problematische Templates der letzten N Tage löschen. N =', '7');
-                  const days = input ? Math.max(1, parseInt(input)) : 1;
-                  if (confirm(`Wirklich alle problematischen Templates der letzten ${days} Tage löschen?`)) {
-                    try {
-                      const response = await supabase.functions.invoke('cleanup-todays-templates', {
-                        body: { action: 'cleanup', days }
-                      });
-                      if (response.data?.cleanup_result) {
-                        toast({
-                          title: 'Bereinigung abgeschlossen',
-                          description: `${response.data.cleanup_result.deleted_count} Templates gelöscht (Zeitraum: ${days} Tage)`
-                        });
-                      }
-                    } catch (error: any) {
-                      toast({ title: 'Fehler bei Bereinigung', description: error.message });
-                    }
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                Template Cleanup
-              </Button>
-            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </div>
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="quality" className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              Quality Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="monitoring" className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Live Monitoring
-            </TabsTrigger>
-            <TabsTrigger value="generation" className="flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              Generation Control
+              Übersicht
             </TabsTrigger>
             <TabsTrigger value="templates" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Template Bank
+              Template Management
             </TabsTrigger>
           </TabsList>
 
@@ -141,12 +106,12 @@ export function AdminDashboard() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    Total Templates
+                    Aktive Templates
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2,847</div>
-                  <p className="text-xs text-muted-foreground">+124 this week</p>
+                  <div className="text-2xl font-bold">{stats.activeTemplates.toLocaleString('de-DE')}</div>
+                  <p className="text-xs text-muted-foreground">+{stats.recentGenerated} diese Woche</p>
                 </CardContent>
               </Card>
 
@@ -154,56 +119,45 @@ export function AdminDashboard() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Target className="w-4 h-4" />
-                    Coverage Rate
+                    Durchschn. Qualität
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">87%</div>
-                  <p className="text-xs text-muted-foreground">Curriculum compliance</p>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {(stats.avgQuality * 100).toFixed(1)}%
+                  </div>
+                  <p className="text-xs text-muted-foreground">Template Quality Score</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    Quality Score
+                    <Zap className="w-4 h-4" />
+                    Stündliche Generation
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">8.4/10</div>
-                  <p className="text-xs text-muted-foreground">Average quality</p>
+                  <div className="text-2xl font-bold text-green-600">Aktiv</div>
+                  <p className="text-xs text-muted-foreground">5 Templates pro Stunde</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Active Users
+                    <BarChart3 className="w-4 h-4" />
+                    Gesamt Erstellungen
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">1,234</div>
-                  <p className="text-xs text-muted-foreground">Learning this week</p>
+                  <div className="text-2xl font-bold">{stats.totalTemplates.toLocaleString('de-DE')}</div>
+                  <p className="text-xs text-muted-foreground">Alle Templates</p>
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
 
-          {/* Live Monitoring Tab */}
-          <TabsContent value="monitoring">
-            <QualityMonitoringDashboard />
-          </TabsContent>
-
-          {/* Quality Dashboard Tab */}
-          <TabsContent value="quality">
-            <QualityDashboard />
-          </TabsContent>
-
-          {/* Generation Control Tab */}
-          <TabsContent value="generation">
-            <SystematicGenerationControl />
+            <ApiStatusPanel />
           </TabsContent>
 
           {/* Template Bank Tab */}
