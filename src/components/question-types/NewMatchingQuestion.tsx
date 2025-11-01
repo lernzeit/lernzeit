@@ -104,61 +104,93 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
   };
 
   return (
-    <div className="space-y-6">
-      <p className="text-xl font-medium mb-6 text-center">
-        {question.question}
-      </p>
-      
-      {!hasCompleted && (
-        <p className="text-sm text-muted-foreground text-center mb-4">
-          Klicke auf ein Element links und dann auf das passende Element rechts
-        </p>
-      )}
+    <div className="w-full max-w-4xl mx-auto space-y-6 px-4">
+      {/* Question */}
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+          {question.question}
+        </h2>
+        
+        {!hasCompleted && (
+          <p className="text-base text-muted-foreground">
+            Tippe links auf ein Element, dann rechts auf die passende Zuordnung
+          </p>
+        )}
 
-      {hasCompleted && (
-        <p className="text-sm text-success text-center mb-4 font-medium">
-          🎉 Aufgabe abgeschlossen! Weiter zur nächsten Frage...
-        </p>
-      )}
+        {hasCompleted && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full">
+            <Check className="h-5 w-5" />
+            <span className="font-medium">Aufgabe abgeschlossen!</span>
+          </div>
+        )}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left column */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Left column: Items to match */}
         <div className="space-y-4">
-          <h3 className="font-medium text-center text-lg">Begriffe</h3>
+          <div className="flex items-center justify-center gap-2 pb-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">
+              Begriffe
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
           
-          <div className="space-y-2">
+          <div className="space-y-3">
             {question.leftItems.filter(item => !matches[item]).map(leftItem => (
-              <div
+              <button
                 key={leftItem}
                 onClick={() => handleLeftClick(leftItem)}
-                className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
-                  disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : ''
-                } ${getLeftItemClass(leftItem)}`}
+                disabled={disabled || hasCompleted}
+                className={`
+                  w-full p-4 rounded-xl border-2 transition-all text-left
+                  ${disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.02]'}
+                  ${selectedLeft === leftItem 
+                    ? 'border-primary bg-primary/10 shadow-lg' 
+                    : 'border-border hover:border-primary/50'
+                  }
+                `}
               >
                 <div className="flex items-center justify-between">
-                  <span>{leftItem}</span>
+                  <span className="font-medium text-base">{leftItem}</span>
                   {selectedLeft === leftItem && (
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary">
+                      <div className="h-3 w-3 rounded-full bg-white" />
+                    </div>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
           
-          {/* Show matched items */}
+          {/* Matched items summary */}
           {Object.keys(matches).length > 0 && (
-            <div className="space-y-2 border-t pt-4">
-              <h4 className="text-sm font-medium text-muted-foreground">Zugeordnet:</h4>
+            <div className="mt-6 space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Zugeordnet ({Object.keys(matches).length})
+              </div>
               {Object.entries(matches).map(([left, right]) => {
                 const isCorrect = right === question.correctMatches[left];
                 return (
-                  <div key={left} className={`p-2 rounded border ${isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>{left} → {right}</span>
+                  <div 
+                    key={left} 
+                    className={`
+                      p-3 rounded-lg border-2 text-sm
+                      ${isCorrect 
+                        ? 'border-green-300 bg-green-50' 
+                        : 'border-red-300 bg-red-50'
+                      }
+                    `}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{left}</div>
+                        <div className="text-xs text-muted-foreground truncate">→ {right}</div>
+                      </div>
                       {isCorrect ? (
-                        <Check className="w-4 h-4 text-green-600" />
+                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
                       ) : (
-                        <X className="w-4 h-4 text-red-600" />
+                        <X className="h-5 w-5 text-red-600 flex-shrink-0" />
                       )}
                     </div>
                   </div>
@@ -168,44 +200,65 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
           )}
         </div>
 
-        {/* Right column */}
+        {/* Right column: Options */}
         <div className="space-y-4">
-          <h3 className="font-medium text-center text-lg">Definitionen</h3>
+          <div className="flex items-center justify-center gap-2 pb-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">
+              Zuordnungen
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
           
-          <div className="space-y-2">
+          <div className="space-y-3">
             {question.rightItems.map(rightItem => {
               const isMatched = Object.values(matches).includes(rightItem);
               const matchKey = selectedLeft ? `${selectedLeft}-${rightItem}` : '';
               const feedbackState = feedback[matchKey];
               
               return (
-                <div
+                <button
                   key={rightItem}
                   onClick={() => handleRightClick(rightItem)}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    disabled || hasCompleted || isMatched ? 'cursor-not-allowed' : 
-                    selectedLeft ? 'cursor-pointer' : 'cursor-default'
-                  } ${getRightItemClass(rightItem)}`}
+                  disabled={disabled || hasCompleted || isMatched || !selectedLeft}
+                  className={`
+                    w-full p-4 rounded-xl border-2 transition-all text-left
+                    ${disabled || hasCompleted || isMatched ? 'opacity-30 cursor-not-allowed' : ''}
+                    ${!selectedLeft ? 'cursor-default' : 'cursor-pointer hover:scale-[1.02]'}
+                    ${feedbackState === 'correct' ? 'border-green-500 bg-green-50' : ''}
+                    ${feedbackState === 'incorrect' ? 'border-red-500 bg-red-50' : ''}
+                    ${!feedbackState && !isMatched && selectedLeft ? 'hover:border-primary/50 hover:bg-primary/5' : ''}
+                    ${!feedbackState && !isMatched && !selectedLeft ? 'border-border' : ''}
+                  `}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className={isMatched ? 'opacity-50' : ''}>{rightItem}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`font-medium text-base ${isMatched ? 'line-through opacity-50' : ''}`}>
+                      {rightItem}
+                    </span>
                     {feedbackState === 'correct' && (
-                      <Check className="w-5 h-5 text-green-600" />
+                      <Check className="h-6 w-6 text-green-600 flex-shrink-0" />
                     )}
                     {feedbackState === 'incorrect' && (
-                      <X className="w-5 h-5 text-red-600" />
+                      <X className="h-6 w-6 text-red-600 flex-shrink-0" />
                     )}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
       </div>
 
-      {/* Progress indicator */}
-      <div className="text-center text-sm text-muted-foreground">
-        {Object.keys(matches).length} von {question.leftItems.length} zugeordnet
+      {/* Progress */}
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <div className="text-center">
+          <div className="text-3xl font-bold text-primary">
+            {Object.keys(matches).length}
+          </div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider">
+            von {question.leftItems.length}
+          </div>
+        </div>
       </div>
     </div>
   );

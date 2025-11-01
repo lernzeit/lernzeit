@@ -158,107 +158,151 @@ export function MatchingQuestion({ question, onComplete, disabled = false }: Mat
   };
 
   return (
-    <div className="space-y-6">
-      <p className="text-xl font-medium mb-6 text-center">
-        {question.question}
-      </p>
-      
-      {!hasCompleted && (
-        <p className="text-sm text-muted-foreground text-center mb-4">
-          Klicke auf ein Element und dann auf die passende Kategorie
-        </p>
-      )}
+    <div className="w-full max-w-4xl mx-auto space-y-6 px-4">
+      {/* Question */}
+      <div className="text-center space-y-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+          {question.question}
+        </h2>
+        
+        {!hasCompleted && (
+          <p className="text-base text-muted-foreground">
+            Tippe auf ein Element und dann auf die passende Kategorie
+          </p>
+        )}
 
-      {hasCompleted && (
-        <p className="text-sm text-success text-center mb-4 font-medium">
-          🎉 Aufgabe abgeschlossen! Weiter zur nächsten Frage...
-        </p>
-      )}
+        {hasCompleted && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full">
+            <Check className="h-5 w-5" />
+            <span className="font-medium">Aufgabe abgeschlossen!</span>
+          </div>
+        )}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left column: Items to match */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Left column: Items */}
         <div className="space-y-4">
-          <h3 className="font-medium text-center text-lg">Elemente</h3>
+          <div className="flex items-center justify-center gap-2 pb-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">
+              Elemente
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
           
-          {/* Unmatched items */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {getUnmatchedItems().map(item => (
-              <div
+              <button
                 key={item.id}
                 onClick={() => handleItemClick(item.id)}
-                className={`p-4 border-2 rounded-lg transition-all select-none ${
-                  disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                } ${getItemFeedbackClass(item.id)}`}
-                style={{ userSelect: 'none' }}
+                disabled={disabled || hasCompleted}
+                className={`
+                  w-full p-4 rounded-xl border-2 transition-all text-left
+                  ${disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-[1.02]'}
+                  ${selectedItem === item.id
+                    ? 'border-primary bg-primary/10 shadow-lg'
+                    : 'border-border hover:border-primary/50'
+                  }
+                `}
               >
                 <div className="flex items-center justify-between">
-                  <span>{item.content}</span>
-                  {selectedItem === item.id && !hasCompleted && (
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="font-medium text-base">{item.content}</span>
+                  {selectedItem === item.id && (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary">
+                      <div className="h-3 w-3 rounded-full bg-white" />
+                    </div>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
 
         {/* Right column: Categories */}
         <div className="space-y-4">
-          <h3 className="font-medium text-center text-lg">Kategorien</h3>
+          <div className="flex items-center justify-center gap-2 pb-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground px-2">
+              Kategorien
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             {question.categories.map(category => {
               const itemsInCategory = getItemsInCategory(category.id);
               const matchKey = selectedItem ? `${selectedItem}-${category.id}` : '';
               const feedbackState = feedback[matchKey];
               
               return (
-                <div
+                <button
                   key={category.id}
                   onClick={() => handleCategoryClick(category.id)}
-                  className={`min-h-[100px] p-4 border-2 rounded-lg transition-all ${
-                    disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : 
-                    selectedItem ? 'cursor-pointer' : 'cursor-default'
-                  } ${getCategoryFeedbackClass(category.id)}`}
+                  disabled={disabled || hasCompleted || !selectedItem}
+                  className={`
+                    w-full min-h-[120px] p-4 rounded-xl border-2 transition-all text-left
+                    ${disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : ''}
+                    ${!selectedItem ? 'cursor-default' : 'cursor-pointer hover:scale-[1.02]'}
+                    ${feedbackState === 'correct' ? 'border-green-500 bg-green-50' : ''}
+                    ${feedbackState === 'incorrect' ? 'border-red-500 bg-red-50' : ''}
+                    ${!feedbackState && selectedItem ? 'hover:border-primary/50 hover:bg-primary/5' : ''}
+                    ${!feedbackState && !selectedItem ? 'border-border' : ''}
+                  `}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium">{category.name}</h4>
+                    <h4 className="font-bold text-base">{category.name}</h4>
                     {feedbackState === 'correct' && (
-                      <Check className="w-5 h-5 text-green-600" />
+                      <Check className="h-6 w-6 text-green-600 flex-shrink-0" />
                     )}
                     {feedbackState === 'incorrect' && (
-                      <X className="w-5 h-5 text-red-600" />
+                      <X className="h-6 w-6 text-red-600 flex-shrink-0" />
                     )}
                   </div>
                   
-                  {/* Matched items in this category */}
+                  {/* Items in category */}
                   <div className="space-y-2">
-                    {itemsInCategory.map(item => (
-                      <div
-                        key={item.id}
-                        className={`p-2 rounded border ${getItemFeedbackClass(item.id)}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">{item.content}</span>
-                          {matches[item.id] === item.category ? (
-                            <Check className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <X className="w-4 h-4 text-red-600" />
-                          )}
+                    {itemsInCategory.map(item => {
+                      const isCorrect = matches[item.id] === item.category;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`
+                            p-2 rounded-lg border-2 text-sm
+                            ${isCorrect 
+                              ? 'border-green-300 bg-green-50' 
+                              : 'border-red-300 bg-red-50'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{item.content}</span>
+                            {isCorrect ? (
+                              <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <X className="h-4 w-4 text-red-600 flex-shrink-0" />
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
       </div>
 
-      {/* Progress indicator */}
-      <div className="text-center text-sm text-muted-foreground">
-        {Object.keys(matches).length} von {question.items.length} zugeordnet
+      {/* Progress */}
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <div className="text-center">
+          <div className="text-3xl font-bold text-primary">
+            {Object.keys(matches).length}
+          </div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider">
+            von {question.items.length}
+          </div>
+        </div>
       </div>
     </div>
   );
