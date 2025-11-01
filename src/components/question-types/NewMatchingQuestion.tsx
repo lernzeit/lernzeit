@@ -211,8 +211,11 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
           </div>
           
           <div className="space-y-3">
-            {question.rightItems.map(rightItem => {
+            {question.rightItems.filter(rightItem => {
+              // Only show items that haven't been matched yet
               const isMatched = Object.values(matches).includes(rightItem);
+              return !isMatched;
+            }).map(rightItem => {
               const matchKey = selectedLeft ? `${selectedLeft}-${rightItem}` : '';
               const feedbackState = feedback[matchKey];
               
@@ -220,19 +223,19 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                 <button
                   key={rightItem}
                   onClick={() => handleRightClick(rightItem)}
-                  disabled={disabled || hasCompleted || isMatched || !selectedLeft}
+                  disabled={disabled || hasCompleted || !selectedLeft}
                   className={`
                     w-full p-4 rounded-xl border-2 transition-all text-left
-                    ${disabled || hasCompleted || isMatched ? 'opacity-30 cursor-not-allowed' : ''}
+                    ${disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : ''}
                     ${!selectedLeft ? 'cursor-default' : 'cursor-pointer hover:scale-[1.02]'}
                     ${feedbackState === 'correct' ? 'border-green-500 bg-green-50' : ''}
                     ${feedbackState === 'incorrect' ? 'border-red-500 bg-red-50' : ''}
-                    ${!feedbackState && !isMatched && selectedLeft ? 'hover:border-primary/50 hover:bg-primary/5' : ''}
-                    ${!feedbackState && !isMatched && !selectedLeft ? 'border-border' : ''}
+                    ${!feedbackState && selectedLeft ? 'hover:border-primary/50 hover:bg-primary/5' : ''}
+                    ${!feedbackState && !selectedLeft ? 'border-border' : ''}
                   `}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`font-medium text-base ${isMatched ? 'line-through opacity-50' : ''}`}>
+                    <span className="font-medium text-base">
                       {rightItem}
                     </span>
                     {feedbackState === 'correct' && (
