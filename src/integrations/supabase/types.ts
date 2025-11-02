@@ -502,6 +502,59 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          correct_answer: Json
+          correct_count: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          options: Json | null
+          plays: number | null
+          quality_score: number | null
+          question_text: string
+          question_type: string
+          topic_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          correct_answer: Json
+          correct_count?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          options?: Json | null
+          plays?: number | null
+          quality_score?: number | null
+          question_text: string
+          question_type: string
+          topic_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          correct_answer?: Json
+          correct_count?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          options?: Json | null
+          plays?: number | null
+          quality_score?: number | null
+          question_text?: string
+          question_type?: string
+          topic_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scenario_families: {
         Row: {
           base_template: string
@@ -682,6 +735,39 @@ export type Database = {
           updated_at?: string | null
           validation_status?: string | null
           variables?: Json
+        }
+        Relationships: []
+      }
+      topics: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          grade: number
+          id: string
+          is_active: boolean | null
+          subject: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          grade: number
+          id?: string
+          is_active?: boolean | null
+          subject: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          grade?: number
+          id?: string
+          is_active?: boolean | null
+          subject?: string
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -904,7 +990,7 @@ export type Database = {
     }
     Functions: {
       analyze_template_solutions: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           count: number
           example_prompt: string
@@ -924,20 +1010,11 @@ export type Database = {
         Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json
       }
-      cleanup_expired_codes: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_screen_time_requests: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_question_history: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_expired_codes: { Args: never; Returns: undefined }
+      cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
+      cleanup_old_question_history: { Args: never; Returns: undefined }
       find_duplicate_templates: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           all_ids: string
           duplicate_count: number
@@ -946,12 +1023,9 @@ export type Database = {
           original_prompts: string
         }[]
       }
-      generate_invitation_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_invitation_code: { Args: never; Returns: string }
       get_template_feedback_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           negative_ratio: number
           template_id: string
@@ -962,42 +1036,15 @@ export type Database = {
           total_feedback: number
         }[]
       }
-      set_user_admin: {
-        Args: { user_email: string }
-        Returns: undefined
-      }
-      trigger_auto_question_generation: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_batch_generation: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_cleanup_faulty_questions: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_curriculum_template_generation: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_duplicate_cleanup: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_grade_upgrade: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_math_curriculum_seeder: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      trigger_template_generation: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      set_user_admin: { Args: { user_email: string }; Returns: undefined }
+      trigger_auto_question_generation: { Args: never; Returns: Json }
+      trigger_batch_generation: { Args: never; Returns: Json }
+      trigger_cleanup_faulty_questions: { Args: never; Returns: Json }
+      trigger_curriculum_template_generation: { Args: never; Returns: Json }
+      trigger_duplicate_cleanup: { Args: never; Returns: Json }
+      trigger_grade_upgrade: { Args: never; Returns: Json }
+      trigger_math_curriculum_seeder: { Args: never; Returns: Json }
+      trigger_template_generation: { Args: never; Returns: Json }
       update_achievement_progress: {
         Args: {
           p_category: string
