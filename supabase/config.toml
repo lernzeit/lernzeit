@@ -86,3 +86,6 @@ verify_jwt = false
 [functions.question-generator-cron]
 verify_jwt = false
 
+[functions.generate-question-realtime]
+verify_jwt = false
+
