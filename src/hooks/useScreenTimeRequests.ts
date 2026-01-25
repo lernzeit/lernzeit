@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export interface ScreenTimeRequest {
   id: string;
@@ -26,8 +27,9 @@ interface UseScreenTimeRequestsResult {
 export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRequestsResult {
   const [requests, setRequests] = useState<ScreenTimeRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const previousRequestsRef = useRef<ScreenTimeRequest[]>([]);
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     try {
       const { data, error } = await supabase.functions.invoke('screen-time-request', {
         body: { action: 'get_requests', role }
@@ -41,7 +43,7 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
     } finally {
       setLoading(false);
     }
-  };
+  }, [role]);
 
   const createRequest = async (
     parentId: string, 
@@ -75,7 +77,7 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       return { success: false, error: data.error || 'Failed to create request' };
     } catch (error) {
       console.error('Error creating screen time request:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
   };
 
@@ -104,13 +106,85 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       return { success: false, error: 'Failed to respond to request' };
     } catch (error) {
       console.error('Error responding to screen time request:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
   };
 
+  // Check for newly approved requests and show notification
+  const checkForApprovals = useCallback((newRequests: ScreenTimeRequest[]) => {
+    if (role !== 'child' || previousRequestsRef.current.length === 0) {
+      previousRequestsRef.current = newRequests;
+      return;
+    }
+
+    // Find requests that were pending but are now approved
+    for (const newReq of newRequests) {
+      if (newReq.status === 'approved') {
+        const oldReq = previousRequestsRef.current.find(r => r.id === newReq.id);
+        if (oldReq && oldReq.status === 'pending') {
+          // This request was just approved!
+          toast.success(`🎉 Bildschirmzeit genehmigt!`, {
+            description: `Deine Eltern haben ${newReq.requested_minutes} Minuten Bildschirmzeit freigegeben!`,
+            duration: 8000,
+          });
+        }
+      } else if (newReq.status === 'denied') {
+        const oldReq = previousRequestsRef.current.find(r => r.id === newReq.id);
+        if (oldReq && oldReq.status === 'pending') {
+          // This request was just denied
+          toast.error(`Bildschirmzeit abgelehnt`, {
+            description: newReq.parent_response || 'Deine Anfrage wurde leider abgelehnt.',
+            duration: 8000,
+          });
+        }
+      }
+    }
+
+    previousRequestsRef.current = newRequests;
+  }, [role]);
+
+  // Subscribe to realtime updates for children
   useEffect(() => {
     loadRequests();
-  }, [role]);
+
+    if (role === 'child') {
+      // Get current user ID for filtering
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (!user) return;
+
+        // Subscribe to changes on screen_time_requests table
+        const channel = supabase
+          .channel('screen-time-updates')
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'screen_time_requests',
+              filter: `child_id=eq.${user.id}`
+            },
+            async (payload) => {
+              console.log('🔔 Screen time request updated:', payload);
+              
+              // Reload requests and check for approvals
+              const { data } = await supabase.functions.invoke('screen-time-request', {
+                body: { action: 'get_requests', role: 'child' }
+              });
+              
+              if (data?.requests) {
+                checkForApprovals(data.requests);
+                setRequests(data.requests);
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      });
+    }
+  }, [role, loadRequests, checkForApprovals]);
 
   return {
     requests,
