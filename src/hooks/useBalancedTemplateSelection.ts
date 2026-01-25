@@ -4,6 +4,7 @@ import { SelectionQuestion } from '@/types/questionTypes';
 import { supabase } from '@/lib/supabase';
 import { parseTemplateContentUniversal } from '../utils/templates/universalTemplateParser';
 import { EnhancedFallbackGenerator } from '@/utils/templates/enhancedFallbackGenerator';
+import { safeMathEvaluate } from '@/utils/safeMathEvaluator';
 
 interface TemplateSelectionConfig {
   qualityThreshold: number;
@@ -362,7 +363,6 @@ export function useBalancedTemplateSelection(
           }
           
           // Use safe math evaluator instead of eval
-          const { safeMathEvaluate } = await import('@/utils/safeMathEvaluator');
           const result = safeMathEvaluate(expression);
           
           if (result !== null) {
