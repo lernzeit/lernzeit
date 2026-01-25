@@ -111,27 +111,13 @@ export class FamilyLinkService {
 
   /**
    * Send usage report to parent
+   * TODO: Implement proper backend endpoint using Supabase Edge Functions
+   * Currently returns false as the feature is not implemented
    */
-  async sendUsageReport(parentEmail: string, usage: AppUsage): Promise<boolean> {
-    try {
-      // This would integrate with your backend to send reports
-      const response = await fetch('/api/send-usage-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          parentEmail,
-          usage,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Error sending usage report:', error);
-      return false;
-    }
+  async sendUsageReport(_parentEmail: string, _usage: AppUsage): Promise<boolean> {
+    // Feature not yet implemented - requires Supabase Edge Function
+    console.warn('sendUsageReport: Feature not yet implemented');
+    return false;
   }
 
   // Private Android-specific methods

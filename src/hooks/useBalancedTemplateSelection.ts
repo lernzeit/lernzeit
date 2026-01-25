@@ -361,15 +361,11 @@ export function useBalancedTemplateSelection(
             }
           }
           
-          // Normalize math operators
-          expression = expression
-            .replace(/×/g, '*')
-            .replace(/÷/g, '/')
-            .replace(/:/g, '/')
-            .replace(/\s+/g, '');
+          // Use safe math evaluator instead of eval
+          const { safeMathEvaluate } = await import('@/utils/safeMathEvaluator');
+          const result = safeMathEvaluate(expression);
           
-          if (/^[\d+\-*/.(),\s]+$/.test(expression)) {
-            const result = eval(expression);
+          if (result !== null) {
             const answer = Number.isInteger(result) ? result.toString() : result.toFixed(2);
             
             return {
