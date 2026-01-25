@@ -6,6 +6,53 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation schemas and helpers
+const VALID_ACTIONS = ['create_request', 'respond_to_request', 'get_requests'] as const;
+const VALID_STATUSES = ['approved', 'denied'] as const;
+const VALID_ROLES = ['child', 'parent'] as const;
+
+type ValidAction = typeof VALID_ACTIONS[number];
+
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return typeof str === 'string' && uuidRegex.test(str);
+}
+
+function isValidAction(action: unknown): action is ValidAction {
+  return typeof action === 'string' && VALID_ACTIONS.includes(action as ValidAction);
+}
+
+function isValidNumber(val: unknown, min: number, max: number): val is number {
+  return typeof val === 'number' && !isNaN(val) && val >= min && val <= max;
+}
+
+function sanitizeString(str: unknown, maxLength: number = 500): string {
+  if (typeof str !== 'string') return '';
+  return str.trim().slice(0, maxLength);
+}
+
+// Sanitize error messages to prevent information leakage
+function getSafeErrorMessage(error: Error): string {
+  const message = error.message?.toLowerCase() || '';
+  
+  // Map internal errors to generic messages
+  if (message.includes('auth') || message.includes('token') || message.includes('jwt')) {
+    return 'Authentifizierungsfehler. Bitte melde dich erneut an.';
+  }
+  if (message.includes('database') || message.includes('sql') || message.includes('pg_')) {
+    return 'Datenbankfehler. Bitte versuche es später erneut.';
+  }
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+    return 'Netzwerkfehler. Bitte prüfe deine Verbindung.';
+  }
+  if (message.includes('validation') || message.includes('invalid')) {
+    return 'Ungültige Eingabe. Bitte überprüfe deine Daten.';
+  }
+  
+  // Return generic error for unknown cases
+  return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -17,18 +64,52 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    const { action, ...body } = await req.json();
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Parse and validate request body
+    let requestBody: unknown;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Ungültiges Anfrageformat' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (typeof requestBody !== 'object' || requestBody === null) {
+      return new Response(JSON.stringify({ error: 'Ungültiges Anfrageformat' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = requestBody as Record<string, unknown>;
+    const action = body.action;
+
+    // Validate action
+    if (!isValidAction(action)) {
+      return new Response(JSON.stringify({ error: 'Ungültige Aktion' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     switch (action) {
       case 'create_request':
@@ -38,22 +119,49 @@ serve(async (req) => {
       case 'get_requests':
         return await getRequests(supabase, user.id, body);
       default:
-        return new Response(JSON.stringify({ error: 'Invalid action' }), {
+        return new Response(JSON.stringify({ error: 'Ungültige Aktion' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
     }
   } catch (error) {
     console.error('Screen time request error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: getSafeErrorMessage(error as Error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
 
-async function createScreenTimeRequest(supabase: any, childId: string, body: any) {
-  const { parentId, requestedMinutes, earnedMinutes, message } = body;
+async function createScreenTimeRequest(supabase: any, childId: string, body: Record<string, unknown>) {
+  // Validate required fields
+  const parentId = body.parentId;
+  const requestedMinutes = body.requestedMinutes;
+  const earnedMinutes = body.earnedMinutes;
+  const message = body.message;
+
+  if (!isValidUUID(parentId as string)) {
+    return new Response(JSON.stringify({ error: 'Ungültige Eltern-ID' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!isValidNumber(requestedMinutes, 1, 480)) {
+    return new Response(JSON.stringify({ error: 'Ungültige Minutenanzahl (1-480)' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (!isValidNumber(earnedMinutes, 0, 9999)) {
+    return new Response(JSON.stringify({ error: 'Ungültige verdiente Minuten' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const sanitizedMessage = sanitizeString(message, 500);
 
   // Verify parent-child relationship
   const { data: relationship } = await supabase
@@ -64,7 +172,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     .single();
 
   if (!relationship) {
-    return new Response(JSON.stringify({ error: 'Parent-child relationship not found' }), {
+    return new Response(JSON.stringify({ error: 'Eltern-Kind-Beziehung nicht gefunden' }), {
       status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -98,7 +206,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     .lte('created_at', todayEnd.toISOString());
 
   // Check if there's already a pending request
-  const pendingRequest = todayRequests?.find(req => req.status === 'pending');
+  const pendingRequest = todayRequests?.find((req: any) => req.status === 'pending');
   if (pendingRequest) {
     return new Response(JSON.stringify({ 
       error: 'Es gibt bereits eine ausstehende Bildschirmzeit-Anfrage. Bitte warte auf die Antwort deiner Eltern.' 
@@ -109,12 +217,12 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
   }
 
   // Calculate total minutes already requested/approved today
-  const totalRequestedToday = todayRequests?.reduce((sum, req) => sum + req.requested_minutes, 0) || 0;
-  const totalApprovedToday = todayRequests?.filter(req => req.status === 'approved')
-    .reduce((sum, req) => sum + req.requested_minutes, 0) || 0;
+  const totalRequestedToday = todayRequests?.reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
+  const totalApprovedToday = todayRequests?.filter((req: any) => req.status === 'approved')
+    .reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
 
   // Validate request doesn't exceed daily limit
-  if (totalRequestedToday + requestedMinutes > dailyLimit) {
+  if (totalRequestedToday + (requestedMinutes as number) > dailyLimit) {
     return new Response(JSON.stringify({ 
       error: `Die Anfrage würde das Tageslimit von ${dailyLimit} Minuten überschreiten. Bereits heute beantragt: ${totalRequestedToday} Minuten.` 
     }), {
@@ -130,10 +238,10 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     .eq('user_id', childId)
     .gt('minutes_remaining', 0);
 
-  const totalAvailableMinutes = earnedMinutesData?.reduce((sum, record) => sum + record.minutes_remaining, 0) || 0;
+  const totalAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) => sum + record.minutes_remaining, 0) || 0;
 
   // Validate enough earned minutes available
-  if (requestedMinutes > totalAvailableMinutes) {
+  if ((requestedMinutes as number) > totalAvailableMinutes) {
     return new Response(JSON.stringify({ 
       error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${totalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.` 
     }), {
@@ -150,13 +258,14 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
       parent_id: parentId,
       requested_minutes: requestedMinutes,
       earned_minutes: earnedMinutes,
-      request_message: message
+      request_message: sanitizedMessage
     })
     .select()
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Database insert error:', error);
+    return new Response(JSON.stringify({ error: 'Anfrage konnte nicht erstellt werden' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -168,14 +277,14 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     .upsert({
       user_id: childId,
       request_date: todayStart.toISOString().split('T')[0],
-      total_minutes_requested: totalRequestedToday + requestedMinutes,
+      total_minutes_requested: totalRequestedToday + (requestedMinutes as number),
       total_minutes_approved: totalApprovedToday
     }, {
       onConflict: 'user_id,request_date'
     });
 
   // Reserve the requested minutes (mark as requested but not yet consumed)
-  let remainingToReserve = requestedMinutes;
+  let remainingToReserve = requestedMinutes as number;
   const { data: availableEarnedMinutes } = await supabase
     .from('user_earned_minutes')
     .select('*')
@@ -212,17 +321,36 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: any
     request,
     validation: {
       dailyLimit,
-      totalRequestedToday: totalRequestedToday + requestedMinutes,
-      availableMinutes: totalAvailableMinutes - requestedMinutes
+      totalRequestedToday: totalRequestedToday + (requestedMinutes as number),
+      availableMinutes: totalAvailableMinutes - (requestedMinutes as number)
     },
-    deep_links: generateDeepLinks(requestedMinutes)
+    deep_links: generateDeepLinks(requestedMinutes as number)
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }
 
-async function respondToRequest(supabase: any, parentId: string, body: any) {
-  const { requestId, status, response } = body;
+async function respondToRequest(supabase: any, parentId: string, body: Record<string, unknown>) {
+  // Validate required fields
+  const requestId = body.requestId;
+  const status = body.status;
+  const response = body.response;
+
+  if (!isValidUUID(requestId as string)) {
+    return new Response(JSON.stringify({ error: 'Ungültige Anfrage-ID' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (typeof status !== 'string' || !VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {
+    return new Response(JSON.stringify({ error: 'Ungültiger Status' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const sanitizedResponse = sanitizeString(response, 500);
 
   // Verify the request belongs to this parent
   const { data: request } = await supabase
@@ -234,7 +362,7 @@ async function respondToRequest(supabase: any, parentId: string, body: any) {
     .single();
 
   if (!request) {
-    return new Response(JSON.stringify({ error: 'Request not found or already processed' }), {
+    return new Response(JSON.stringify({ error: 'Anfrage nicht gefunden oder bereits bearbeitet' }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -245,7 +373,7 @@ async function respondToRequest(supabase: any, parentId: string, body: any) {
     .from('screen_time_requests')
     .update({
       status,
-      parent_response: response,
+      parent_response: sanitizedResponse,
       responded_at: new Date().toISOString()
     })
     .eq('id', requestId)
@@ -253,7 +381,8 @@ async function respondToRequest(supabase: any, parentId: string, body: any) {
     .single();
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Database update error:', error);
+    return new Response(JSON.stringify({ error: 'Anfrage konnte nicht aktualisiert werden' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -312,8 +441,16 @@ async function respondToRequest(supabase: any, parentId: string, body: any) {
   });
 }
 
-async function getRequests(supabase: any, userId: string, body: any) {
-  const { role } = body;
+async function getRequests(supabase: any, userId: string, body: Record<string, unknown>) {
+  // Validate role
+  const role = body.role;
+
+  if (typeof role !== 'string' || !VALID_ROLES.includes(role as typeof VALID_ROLES[number])) {
+    return new Response(JSON.stringify({ error: 'Ungültige Rolle' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 
   let query = supabase.from('screen_time_requests').select('*');
 
@@ -326,7 +463,8 @@ async function getRequests(supabase: any, userId: string, body: any) {
   const { data: requests, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Database query error:', error);
+    return new Response(JSON.stringify({ error: 'Anfragen konnten nicht geladen werden' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

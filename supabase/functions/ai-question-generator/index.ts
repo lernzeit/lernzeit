@@ -5,11 +5,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation constants
+const VALID_GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const VALID_SUBJECTS = ['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin', 'science'] as const;
+const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+const VALID_QUESTION_TYPES = ['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MATCH', 'DRAG_DROP', 'FILL_BLANK'] as const;
+
+type ValidGrade = typeof VALID_GRADES[number];
+type ValidSubject = typeof VALID_SUBJECTS[number];
+type ValidDifficulty = typeof VALID_DIFFICULTIES[number];
+type ValidQuestionType = typeof VALID_QUESTION_TYPES[number];
+
 interface QuestionRequest {
-  grade: number;
-  subject: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  questionType?: 'MULTIPLE_CHOICE' | 'FREETEXT' | 'SORT' | 'MATCH' | 'DRAG_DROP' | 'FILL_BLANK';
+  grade: ValidGrade;
+  subject: ValidSubject;
+  difficulty?: ValidDifficulty;
+  questionType?: ValidQuestionType;
+}
+
+// Validation helpers
+function isValidGrade(val: unknown): val is ValidGrade {
+  return typeof val === 'number' && VALID_GRADES.includes(val as ValidGrade);
+}
+
+function isValidSubject(val: unknown): val is ValidSubject {
+  return typeof val === 'string' && VALID_SUBJECTS.includes(val.toLowerCase() as ValidSubject);
+}
+
+function isValidDifficulty(val: unknown): val is ValidDifficulty {
+  return typeof val === 'string' && VALID_DIFFICULTIES.includes(val as ValidDifficulty);
+}
+
+function isValidQuestionType(val: unknown): val is ValidQuestionType {
+  return typeof val === 'string' && VALID_QUESTION_TYPES.includes(val as ValidQuestionType);
+}
+
+// Sanitize error messages to prevent information leakage
+function getSafeErrorMessage(error: Error): string {
+  const message = error.message?.toLowerCase() || '';
+  
+  if (message.includes('api key') || message.includes('apikey') || message.includes('lovable_api')) {
+    return 'Konfigurationsfehler. Bitte kontaktiere den Support.';
+  }
+  if (message.includes('rate limit') || message.includes('429')) {
+    return 'Zu viele Anfragen. Bitte warte einen Moment.';
+  }
+  if (message.includes('credits') || message.includes('402')) {
+    return 'API-Kontingent erschöpft. Bitte kontaktiere den Support.';
+  }
+  if (message.includes('parse') || message.includes('json')) {
+    return 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.';
+  }
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+    return 'Netzwerkfehler. Bitte prüfe deine Verbindung.';
+  }
+  
+  return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
 
 serve(async (req) => {
@@ -18,13 +69,79 @@ serve(async (req) => {
   }
 
   try {
-    const { grade, subject, difficulty = 'medium', questionType }: QuestionRequest = await req.json();
+    // Parse and validate request body
+    let requestBody: unknown;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Ungültiges Anfrageformat' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (typeof requestBody !== 'object' || requestBody === null) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Ungültiges Anfrageformat' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = requestBody as Record<string, unknown>;
+
+    // Validate grade
+    if (!isValidGrade(body.grade)) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Ungültige Klassenstufe (1-10)' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Validate subject
+    if (!isValidSubject(body.subject)) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Ungültiges Fach' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Validate optional difficulty
+    const difficulty: ValidDifficulty = isValidDifficulty(body.difficulty) 
+      ? body.difficulty as ValidDifficulty 
+      : 'medium';
+
+    // Validate optional questionType
+    const questionType: ValidQuestionType | undefined = isValidQuestionType(body.questionType) 
+      ? body.questionType as ValidQuestionType 
+      : undefined;
+
+    const grade = body.grade as ValidGrade;
+    const subject = (body.subject as string).toLowerCase() as ValidSubject;
     
     console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+      console.error('LOVABLE_API_KEY is not configured');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Konfigurationsfehler. Bitte kontaktiere den Support.' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType);
@@ -49,7 +166,7 @@ serve(async (req) => {
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
           success: false, 
-          error: 'Rate limit exceeded. Please try again in a moment.' 
+          error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
         }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -58,22 +175,34 @@ serve(async (req) => {
       if (response.status === 402) {
         return new Response(JSON.stringify({ 
           success: false, 
-          error: 'API credits exhausted. Please contact support.' 
+          error: 'API-Kontingent erschöpft. Bitte kontaktiere den Support.' 
         }), {
           status: 402,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      const errorText = await response.text();
-      console.error('AI Gateway error:', response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
+      console.error('AI Gateway error:', response.status);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const result = await response.json();
     const content = result.choices?.[0]?.message?.content;
 
     if (!content) {
-      throw new Error('No content in AI response');
+      console.error('No content in AI response');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('🤖 AI Response received');
@@ -88,8 +217,13 @@ serve(async (req) => {
       question = JSON.parse(jsonMatch[0]);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Raw content:', content);
-      throw new Error('Failed to parse AI response');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Validate and enhance question structure
@@ -119,7 +253,7 @@ serve(async (req) => {
     console.error('❌ Question generation error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Unknown error'
+      error: getSafeErrorMessage(error as Error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
