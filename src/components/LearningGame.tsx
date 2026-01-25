@@ -7,6 +7,10 @@ import { Progress } from '@/components/ui/progress';
 import { useQuestionPreloader, type PreloadedQuestion } from '@/hooks/useQuestionPreloader';
 import { useAIExplanation } from '@/hooks/useAIExplanation';
 import { useActiveTimer } from '@/hooks/useActiveTimer';
+import { useGameSessionSaver } from '@/hooks/useGameSessionSaver';
+import { useChildSettings } from '@/hooks/useChildSettings';
+import { useAuth } from '@/hooks/useAuth';
+import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -29,6 +33,9 @@ interface GameStats {
   subject: string;
 }
 
+// Default seconds per correct answer by subject
+const DEFAULT_SECONDS_PER_TASK = 60;
+
 export const LearningGame: React.FC<LearningGameProps> = ({
   grade,
   subject,
@@ -36,6 +43,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   onBack,
   totalQuestions = 5
 }) => {
+  const { user } = useAuth();
+  const { saveSession, isSaving } = useGameSessionSaver();
+  const { settings: childSettings } = useChildSettings(user?.id || '');
+  
   // Use preloader instead of single question loader
   const { 
     questions, 
@@ -60,6 +71,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isCorrect, setIsCorrect] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+  const [sessionSaved, setSessionSaved] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   
   // Answer states for different question types
@@ -68,6 +81,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [sortOrder, setSortOrder] = useState<string[]>([]);
   const [matches, setMatches] = useState<Record<string, string>>({});
   const [dragDropPlacements, setDragDropPlacements] = useState<Record<string, string[]>>({});
+  
+  // Get seconds per task from child settings or use default
+  const getSecondsPerTask = (): number => {
+    if (!childSettings) return DEFAULT_SECONDS_PER_TASK;
+    
+    const settingsKey = `${subject}_seconds_per_task` as keyof typeof childSettings;
+    const value = childSettings[settingsKey];
+    return typeof value === 'number' ? value : DEFAULT_SECONDS_PER_TASK;
+  };
   const [fillBlanks, setFillBlanks] = useState<string[]>([]);
 
   // Get current question from preloaded questions
@@ -261,19 +283,37 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (currentIndex + 1 >= totalQuestions) {
-      // Game complete - use active elapsed time (only time spent answering)
-      const timeSpent = Math.floor(elapsedTime / 1000);
-      const earnedMinutes = Math.ceil(score * 0.5); // 30 seconds per correct answer
+      // Game complete - show completion screen and save to DB
+      pauseTimer(); // Make sure timer is paused
+      setShowCompletionScreen(true);
       
-      onComplete({
-        correct: score,
-        total: totalQuestions,
-        timeSpent,
-        earnedMinutes,
-        subject
-      });
+      // Calculate earned time based on child settings
+      const timeSpentSeconds = Math.floor(elapsedTime / 1000);
+      const secondsPerTask = getSecondsPerTask();
+      const earnedSeconds = score * secondsPerTask;
+      
+      // Save session to database
+      if (user && !sessionSaved) {
+        const result = await saveSession({
+          category: subject,
+          grade,
+          correctAnswers: score,
+          totalQuestions,
+          timeSpentSeconds,
+          earnedSeconds, // Store in seconds for consistency
+          questionSource: 'template-bank'
+        });
+        
+        if (result.success) {
+          console.log('✅ Session saved with ID:', result.sessionId);
+          setSessionSaved(true);
+        } else {
+          console.error('❌ Failed to save session:', result.error);
+          toast.error('Fehler beim Speichern der Session');
+        }
+      }
     } else {
       setCurrentIndex(prev => prev + 1);
       resetAnswerState();
@@ -283,6 +323,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
   };
 
+  // Handle completion screen continue button
+  const handleCompletionContinue = () => {
+    const timeSpentSeconds = Math.floor(elapsedTime / 1000);
+    const secondsPerTask = getSecondsPerTask();
+    const earnedSeconds = score * secondsPerTask;
+    const earnedMinutes = Math.ceil(earnedSeconds / 60);
+    
+    onComplete({
+      correct: score,
+      total: totalQuestions,
+      timeSpent: timeSpentSeconds,
+      earnedMinutes,
+      subject
+    });
+  };
+
   // Move sort item
   const moveSortItem = (fromIndex: number, toIndex: number) => {
     const newOrder = [...sortOrder];
@@ -290,6 +346,24 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     newOrder.splice(toIndex, 0, removed);
     setSortOrder(newOrder);
   };
+
+  // Game completion screen
+  if (showCompletionScreen) {
+    const secondsPerTask = getSecondsPerTask();
+    return (
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+        <GameCompletionScreen
+          score={score}
+          totalQuestions={totalQuestions}
+          sessionDuration={elapsedTime}
+          timePerTask={secondsPerTask}
+          achievementBonusMinutes={0}
+          perfectSessionBonus={score === totalQuestions ? 1 : 0}
+          onContinue={handleCompletionContinue}
+        />
+      </div>
+    );
+  }
 
   // Initial loading screen with progress
   if (isInitialLoading) {
