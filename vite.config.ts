@@ -15,17 +15,20 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'app-icon-1024.png'],
       manifest: {
         name: 'LernZeit - Verdiene Dir Bildschirm-Zeit',
         short_name: 'LernZeit',
         description: 'Verdiene Handyzeit durch das Lösen von Aufgaben. Spielerisches Lernen für alle Klassenstufen.',
-        theme_color: '#3b82f6',
+        theme_color: '#22d3ee',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        categories: ['education', 'kids'],
+        lang: 'de',
+        dir: 'ltr',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -42,12 +45,47 @@ export default defineConfig(({ mode }) => ({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
+          },
+          {
+            src: 'app-icon-1024.png',
+            sizes: '1024x1024',
+            type: 'image/png'
+          }
+        ],
+        screenshots: [
+          {
+            src: 'screenshots/home.png',
+            sizes: '1290x2796',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Startseite'
+          },
+          {
+            src: 'screenshots/categories.png',
+            sizes: '1290x2796',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Fächerauswahl'
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fsmgynpdfxkaiiuguqyr\.supabase\.co/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 // 1 day
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
           {
             urlPattern: /^https:\/\/api\./i,
             handler: 'NetworkFirst',
