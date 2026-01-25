@@ -518,18 +518,10 @@ export function useBalancedQuestionGeneration(
 
   const calculateSafeExpression = (expression: string): number => {
     try {
-      const normalized = expression
-        .replace(/×/g, '*')
-        .replace(/÷/g, '/')
-        .replace(/\s+/g, '');
-      
-      // Nur sichere Zeichen erlauben
-      if (!/^[\d+\-*\/().]+$/.test(normalized)) {
-        return 0;
-      }
-      
-      const result = Function(`"use strict"; return (${normalized})`)();
-      return isFinite(result) ? Math.round(result * 100) / 100 : 0;
+      // Use safe math evaluator instead of Function() constructor
+      const { safeMathEvaluate } = require('@/utils/safeMathEvaluator');
+      const result = safeMathEvaluate(expression);
+      return result !== null && isFinite(result) ? Math.round(result * 100) / 100 : 0;
     } catch (e) {
       return 0;
     }
