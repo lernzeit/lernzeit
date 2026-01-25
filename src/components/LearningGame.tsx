@@ -397,7 +397,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           <Card className="mb-6">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl leading-relaxed">{question.questionText}</CardTitle>
+                {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
+                {question.questionType !== 'FILL_BLANK' && (
+                  <CardTitle className="text-xl leading-relaxed">{question.questionText}</CardTitle>
+                )}
+                {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
                 <Badge variant={difficulty === 'easy' ? 'secondary' : difficulty === 'hard' ? 'destructive' : 'default'}>
                   {difficulty === 'easy' ? '⭐' : difficulty === 'hard' ? '⭐⭐⭐' : '⭐⭐'}
                 </Badge>
@@ -455,6 +459,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   options={question.options || []}
                   correctAnswers={question.correctAnswer?.blanks || []}
                   hasAnswered={hasAnswered}
+                  subject={subject}
                   onChange={(index, value) => {
                     const newBlanks = [...fillBlanks];
                     newBlanks[index] = value;
@@ -774,39 +779,149 @@ const FillBlankRenderer: React.FC<{
   options: string[];
   correctAnswers: string[];
   hasAnswered: boolean;
+  subject?: string;
   onChange: (index: number, value: string) => void;
-}> = ({ text, answers, options, correctAnswers, hasAnswered, onChange }) => {
+}> = ({ text, answers, options, correctAnswers, hasAnswered, subject, onChange }) => {
+  const [activeGapIndex, setActiveGapIndex] = useState<number | null>(null);
   const parts = text.split('___');
+  
+  // Determine if this is a language subject (should use keyboard input)
+  const isLanguageSubject = ['german', 'english', 'latin', 'french', 'spanish'].includes(subject || '');
+  const hasOptions = options.length > 0;
+  const useChipSelection = hasOptions && !isLanguageSubject;
+
+  // Get available options (not yet used)
+  const getAvailableOptions = () => {
+    const usedAnswers = answers.filter(a => a !== '');
+    return options.filter(opt => !usedAnswers.includes(opt));
+  };
+
+  // Handle clicking on a gap
+  const handleGapClick = (index: number) => {
+    if (hasAnswered) return;
+    
+    // If clicking an already filled gap, clear it
+    if (answers[index]) {
+      onChange(index, '');
+      return;
+    }
+    
+    // For chip selection mode, set this as active gap
+    if (useChipSelection) {
+      setActiveGapIndex(index);
+    }
+  };
+
+  // Handle selecting a chip to fill the active gap
+  const handleChipSelect = (option: string) => {
+    if (activeGapIndex !== null && !hasAnswered) {
+      onChange(activeGapIndex, option);
+      
+      // Move to next empty gap or clear active
+      const nextEmptyIndex = answers.findIndex((a, i) => i > activeGapIndex && a === '');
+      setActiveGapIndex(nextEmptyIndex >= 0 ? nextEmptyIndex : null);
+    }
+  };
+
+  // Render a single gap/blank
+  const renderGap = (index: number) => {
+    const value = answers[index] || '';
+    const isActive = activeGapIndex === index;
+    const isCorrect = hasAnswered && value.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim();
+    const isWrong = hasAnswered && value && value.toLowerCase().trim() !== correctAnswers[index]?.toLowerCase().trim();
+
+    // For language subjects or when no options: show input field
+    if (isLanguageSubject || !hasOptions) {
+      return (
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(index, e.target.value)}
+          disabled={hasAnswered}
+          className={cn(
+            "inline-block w-32 mx-1 h-8 text-center",
+            isCorrect && "border-green-500 bg-green-50 dark:bg-green-950",
+            isWrong && "border-red-500 bg-red-50 dark:bg-red-950"
+          )}
+          placeholder="..."
+        />
+      );
+    }
+
+    // For non-language subjects with options: show clickable gap
+    return (
+      <button
+        type="button"
+        onClick={() => handleGapClick(index)}
+        disabled={hasAnswered}
+        className={cn(
+          "inline-flex items-center justify-center min-w-20 px-3 py-1 mx-1 rounded-md border-2 border-dashed transition-all",
+          "text-base font-medium",
+          !value && !isActive && "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
+          !value && isActive && "border-primary bg-primary/10 text-primary animate-pulse",
+          value && !hasAnswered && "border-primary bg-primary/20 text-foreground cursor-pointer hover:bg-primary/30",
+          isCorrect && "border-green-500 bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300",
+          isWrong && "border-red-500 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300",
+          hasAnswered && "cursor-default"
+        )}
+      >
+        {value || '...'}
+      </button>
+    );
+  };
   
   return (
     <div className="space-y-4">
-      <div className="text-lg leading-relaxed">
+      {/* Text with inline gaps */}
+      <div className="text-lg leading-loose">
         {parts.map((part, index) => (
           <React.Fragment key={index}>
-            {part}
-            {index < parts.length - 1 && (
-              <Input
-                type="text"
-                value={answers[index] || ''}
-                onChange={(e) => onChange(index, e.target.value)}
-                disabled={hasAnswered}
-                className={cn(
-                  "inline-block w-32 mx-1 h-8",
-                  hasAnswered && answers[index]?.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim() && "border-green-500",
-                  hasAnswered && answers[index]?.toLowerCase().trim() !== correctAnswers[index]?.toLowerCase().trim() && "border-red-500"
-                )}
-                placeholder="..."
-              />
-            )}
+            <span>{part}</span>
+            {index < parts.length - 1 && renderGap(index)}
           </React.Fragment>
         ))}
       </div>
-      {options.length > 0 && !hasAnswered && (
-        <div className="flex flex-wrap gap-2">
-          <span className="text-sm text-muted-foreground">Wörter:</span>
-          {options.map((option) => (
-            <Badge key={option} variant="secondary">{option}</Badge>
-          ))}
+
+      {/* Word chips for selection (only for non-language subjects with options) */}
+      {useChipSelection && !hasAnswered && (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            {activeGapIndex !== null 
+              ? '👆 Tippe auf ein Wort zum Einsetzen:' 
+              : '👆 Tippe zuerst auf eine Lücke:'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {options.map((option) => {
+              const isUsed = answers.includes(option);
+              const isAvailable = !isUsed && activeGapIndex !== null;
+              
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => isAvailable && handleChipSelect(option)}
+                  disabled={isUsed || activeGapIndex === null}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                    isAvailable && "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-sm hover:shadow-md active:scale-95",
+                    isUsed && "bg-muted text-muted-foreground/50 line-through cursor-not-allowed",
+                    !isUsed && activeGapIndex === null && "bg-secondary text-secondary-foreground opacity-60"
+                  )}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Show correct answers after answering */}
+      {hasAnswered && correctAnswers.some((correct, i) => 
+        answers[i]?.toLowerCase().trim() !== correct?.toLowerCase().trim()
+      ) && (
+        <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-lg">
+          <strong>Richtige Lösung:</strong> {correctAnswers.join(', ')}
         </div>
       )}
     </div>
