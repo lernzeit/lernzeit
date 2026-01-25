@@ -934,6 +934,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       template_scores: {
@@ -1036,7 +1057,13 @@ export type Database = {
           total_feedback: number
         }[]
       }
-      set_user_admin: { Args: { user_email: string }; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       trigger_auto_question_generation: { Args: never; Returns: Json }
       trigger_batch_generation: { Args: never; Returns: Json }
       trigger_cleanup_faulty_questions: { Args: never; Returns: Json }
@@ -1110,6 +1137,7 @@ export type Database = {
         | "time_traveler"
         | "knowledge_thirst"
         | "supernova"
+      app_role: "admin" | "moderator" | "user"
       question_variant: "MULTIPLE_CHOICE" | "SORT" | "MATCH" | "FREETEXT"
     }
     CompositeTypes: {
@@ -1290,6 +1318,7 @@ export const Constants = {
         "knowledge_thirst",
         "supernova",
       ],
+      app_role: ["admin", "moderator", "user"],
       question_variant: ["MULTIPLE_CHOICE", "SORT", "MATCH", "FREETEXT"],
     },
   },
