@@ -10,7 +10,9 @@ import { useActiveTimer } from '@/hooks/useActiveTimer';
 import { useGameSessionSaver } from '@/hooks/useGameSessionSaver';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
+import { useAchievementTracker } from '@/hooks/useAchievementTracker';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
+import { AchievementPopup } from '@/components/AchievementPopup';
 import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -46,6 +48,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { user } = useAuth();
   const { saveSession, isSaving } = useGameSessionSaver();
   const { settings: childSettings } = useChildSettings(user?.id || '');
+  const { trackAllAchievements } = useAchievementTracker(user?.id);
   
   // Use preloader instead of single question loader
   const { 
@@ -74,6 +77,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [sessionSaved, setSessionSaved] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showAchievementPopup, setShowAchievementPopup] = useState(false);
+  const [achievementBonusMinutes, setAchievementBonusMinutes] = useState(0);
   
   // Answer states for different question types
   const [userTextAnswer, setUserTextAnswer] = useState('');
@@ -290,6 +296,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       const timeSpentSeconds = Math.floor(elapsedTime / 1000);
       const secondsPerTask = getSecondsPerTask();
       const earnedSeconds = score * secondsPerTask;
+      const accuracyScore = Math.round((score / totalQuestions) * 100);
       
       // Save session to database
       if (user && !sessionSaved) {
@@ -306,6 +313,30 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         if (result.success) {
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
+          
+          // Track ALL achievements after session is saved
+          try {
+            const { newAchievements: earned } = await trackAllAchievements({
+              userId: user.id,
+              category: subject,
+              correctAnswers: score,
+              totalQuestions,
+              timeSpentSeconds,
+              earnedSeconds,
+              score: accuracyScore
+            });
+            
+            if (earned && earned.length > 0) {
+              console.log('🏆 New achievements earned:', earned);
+              setNewAchievements(earned);
+              setShowAchievementPopup(true);
+              // Calculate bonus minutes from achievements
+              const bonusMinutes = earned.reduce((sum, a) => sum + (a.reward_minutes || 0), 0);
+              setAchievementBonusMinutes(bonusMinutes);
+            }
+          } catch (error) {
+            console.error('❌ Error tracking achievements:', error);
+          }
         } else {
           console.error('❌ Failed to save session:', result.error);
           toast.error('Fehler beim Speichern der Session');
@@ -354,10 +385,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           totalQuestions={totalQuestions}
           sessionDuration={elapsedTime}
           timePerTask={secondsPerTask}
-          achievementBonusMinutes={0}
+          achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
           onContinue={handleCompletionContinue}
         />
+        
+        {/* Achievement Popup */}
+        {showAchievementPopup && newAchievements.length > 0 && (
+          <AchievementPopup
+            achievements={newAchievements}
+            onClose={() => setShowAchievementPopup(false)}
+          />
+        )}
       </div>
     );
   }
