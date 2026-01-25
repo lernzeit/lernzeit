@@ -42,13 +42,14 @@ export function useScreenTimeLimit(userId: string) {
       ]);
 
       // Aggregate today's earned time across sources
+      // IMPORTANT: time_earned is ALWAYS stored in SECONDS
       const gameValues = (gameSessionsRes.data ?? []).map((s: any) => Number(s.time_earned) || 0);
       const learningValues = (learningSessionsRes.data ?? []).map((s: any) => Number(s.time_earned) || 0);
       const allValues = [...gameValues, ...learningValues];
 
-      const total = allValues.reduce((sum: number, v: number) => sum + (Number.isFinite(v) ? v : 0), 0);
-      const treatAsSeconds = allValues.some((v) => v > 60);
-      const minutesEarned = treatAsSeconds ? Math.ceil(total / 60) : Math.round(total);
+      // Sum all seconds and convert to minutes
+      const totalSeconds = allValues.reduce((sum: number, v: number) => sum + (Number.isFinite(v) ? v : 0), 0);
+      const minutesEarned = Math.ceil(totalSeconds / 60);
 
       setTodayMinutesUsed(minutesEarned);
 
@@ -60,7 +61,13 @@ export function useScreenTimeLimit(userId: string) {
       setRemainingMinutes(remaining);
       setIsAtLimit(remaining <= 0);
 
-      console.info('⏱️ ScreenTime (today):', { allValues, minutesEarned, dailyLimit, treatAsSeconds });
+      console.info('⏱️ ScreenTime (today):', { 
+        sessions: allValues.length, 
+        totalSeconds, 
+        minutesEarned, 
+        dailyLimit, 
+        remaining 
+      });
 
     } catch (error) {
       console.error('Error loading today\'s usage:', error);
