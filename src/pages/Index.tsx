@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import LegalFooter from '@/components/layout/LegalFooter';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then(m => ({ default: m.GradeSelector })));
@@ -296,12 +297,14 @@ const Index = () => {
           </Card>
         </div>
 
-        <div className="text-center text-sm text-muted-foreground animate-fade-in">
+        <div className="text-center text-sm text-muted-foreground animate-fade-in mb-6">
           <p className="flex items-center justify-center gap-2">
             <Shield className="w-4 h-4" />
             Sicher, lehrreich und motivierend für alle Klassenstufen
           </p>
         </div>
+
+        <LegalFooter className="mt-8" />
       </div>
     </div>
   );
