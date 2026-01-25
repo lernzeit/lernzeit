@@ -185,6 +185,40 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     );
   };
 
+  // Handle "Show Answer" button - marks as incorrect and shows answer + explanation
+  const handleShowAnswer = async () => {
+    if (!question) return;
+    
+    // Mark as answered but incorrect
+    setIsCorrect(false);
+    setHasAnswered(true);
+    
+    // Pause timer
+    pauseTimer();
+    
+    // Decrease difficulty since the child couldn't answer
+    if (difficulty === 'hard') setDifficulty('medium');
+    else if (difficulty === 'medium') setDifficulty('easy');
+    
+    // Show toast indicating the question was skipped
+    toast.info('Antwort wird angezeigt', { 
+      description: 'Diese Frage wird als nicht beantwortet gewertet.' 
+    });
+    
+    // Automatically show explanation
+    setShowExplanation(true);
+    
+    const correctAnswerText = getCorrectAnswerText();
+    
+    await fetchExplanation(
+      question.questionText,
+      correctAnswerText,
+      grade,
+      subject,
+      'Ich konnte die Antwort nicht finden.'
+    );
+  };
+
   const getCorrectAnswerText = (): string => {
     if (!question) return '';
     
@@ -499,15 +533,26 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3">
                 {!hasAnswered ? (
-                  <Button 
-                    onClick={checkAnswer} 
-                    className="flex-1"
-                    disabled={!canSubmitAnswer()}
-                  >
-                    Antwort prüfen
-                  </Button>
+                  <>
+                    <Button 
+                      onClick={checkAnswer} 
+                      className="flex-1"
+                      disabled={!canSubmitAnswer()}
+                    >
+                      Antwort prüfen
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={handleShowAnswer}
+                      disabled={isLoadingExplanation}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Lightbulb className="w-4 h-4 mr-2" />
+                      Antwort anzeigen
+                    </Button>
+                  </>
                 ) : (
                   <>
                     {!isCorrect && !showExplanation && (
