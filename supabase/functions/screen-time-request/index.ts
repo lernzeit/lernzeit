@@ -231,14 +231,39 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     });
   }
 
-  // Get total available earned minutes (not yet requested)
+  // Get total available earned minutes from user_earned_minutes table
   const { data: earnedMinutesData } = await supabase
     .from('user_earned_minutes')
     .select('minutes_remaining')
     .eq('user_id', childId)
     .gt('minutes_remaining', 0);
 
-  const totalAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) => sum + record.minutes_remaining, 0) || 0;
+  let totalAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) => 
+    sum + (record.minutes_remaining || 0), 0) || 0;
+
+  // Fallback: If user_earned_minutes is empty, calculate from today's game_sessions
+  // This handles the transition period for existing sessions
+  if (totalAvailableMinutes === 0) {
+    console.log('No user_earned_minutes found, checking game_sessions fallback...');
+    
+    const { data: gameSessions } = await supabase
+      .from('game_sessions')
+      .select('time_earned')
+      .eq('user_id', childId)
+      .gte('session_date', todayStart.toISOString())
+      .lte('session_date', todayEnd.toISOString());
+
+    // time_earned is stored in SECONDS, convert to minutes
+    const sessionMinutes = gameSessions?.reduce((sum: number, s: any) => 
+      sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
+
+    // Subtract already approved requests from session minutes
+    const approvedToday = todayRequests?.filter((r: any) => r.status === 'approved')
+      .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
+
+    totalAvailableMinutes = Math.max(0, sessionMinutes - approvedToday);
+    console.log('Fallback calculation:', { sessionMinutes, approvedToday, totalAvailableMinutes });
+  }
 
   // Validate enough earned minutes available
   if ((requestedMinutes as number) > totalAvailableMinutes) {

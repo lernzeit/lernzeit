@@ -23,6 +23,7 @@ interface SaveSessionResult {
  * Handles all DB operations for completed learning sessions.
  * 
  * IMPORTANT: time_earned is ALWAYS stored in SECONDS for consistency.
+ * This hook also creates entries in user_earned_minutes for screen time requests.
  */
 export function useGameSessionSaver() {
   const { user } = useAuth();
@@ -72,8 +73,35 @@ export function useGameSessionSaver() {
         return { success: false, error: error.message };
       }
 
-      console.log('✅ Game session saved successfully:', data.id);
-      return { success: true, sessionId: data.id };
+      const sessionId = data.id;
+      console.log('✅ Game session saved successfully:', sessionId);
+
+      // Convert earned seconds to minutes for screen time tracking
+      const earnedMinutes = Math.ceil(earnedSeconds / 60);
+      
+      if (earnedMinutes > 0) {
+        // Create entry in user_earned_minutes for screen time requests
+        // Note: minutes_remaining is a generated column (minutes_earned - minutes_requested)
+        const { error: earnedError } = await supabase
+          .from('user_earned_minutes')
+          .insert({
+            user_id: user.id,
+            session_id: sessionId,
+            session_type: 'game',
+            minutes_earned: earnedMinutes,
+            minutes_requested: 0,
+            earned_at: new Date().toISOString()
+          });
+
+        if (earnedError) {
+          console.error('⚠️ Error saving earned minutes (session saved):', earnedError);
+          // Don't fail the whole operation - session is saved
+        } else {
+          console.log('✅ Earned minutes tracked:', earnedMinutes, 'min');
+        }
+      }
+
+      return { success: true, sessionId };
     } catch (error) {
       console.error('❌ Exception saving game session:', error);
       return { success: false, error: String(error) };
