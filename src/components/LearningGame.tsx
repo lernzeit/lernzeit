@@ -107,7 +107,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
   }, [question, hasAnswered, isInitialLoading, startTimer]);
 
-  // Initialize answer state when question changes
+  // Initialize answer state when question changes and scroll to top
   useEffect(() => {
     if (question) {
       resetAnswerState();
@@ -117,6 +117,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       if (question.questionType === 'FILL_BLANK' && question.correctAnswer?.blanks) {
         setFillBlanks(new Array(question.correctAnswer.blanks.length).fill(''));
       }
+      // Scroll to top when new question loads
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [question]);
 
@@ -185,12 +187,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       // Increase difficulty on correct answers
       if (difficulty === 'easy') setDifficulty('medium');
       else if (difficulty === 'medium' && Math.random() > 0.5) setDifficulty('hard');
-      toast.success('Richtig! 🎉');
+      // No toast for correct - UI already shows green feedback inline
     } else {
       // Decrease difficulty on wrong answers
       if (difficulty === 'hard') setDifficulty('medium');
       else if (difficulty === 'medium') setDifficulty('easy');
-      toast.error('Nicht ganz richtig');
+      // No toast for incorrect - UI already shows red feedback inline
     }
   };
 
@@ -224,11 +226,6 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     // Decrease difficulty since the child couldn't answer
     if (difficulty === 'hard') setDifficulty('medium');
     else if (difficulty === 'medium') setDifficulty('easy');
-    
-    // Show toast indicating the question was skipped
-    toast.info('Antwort wird angezeigt', { 
-      description: 'Diese Frage wird als nicht beantwortet gewertet.' 
-    });
     
     // Automatically show explanation
     setShowExplanation(true);
