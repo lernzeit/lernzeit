@@ -467,22 +467,9 @@ const parseLanguageContent = (content: string) => {
 
 // Sichere Math-Berechnung
 const calculateMathExpression = (expression: string): number | null => {
-  try {
-    let expr = expression
-      .replace(/×/g, '*')
-      .replace(/÷/g, '/')
-      .replace(/\s+/g, '')
-      .trim();
-
-    if (!/^[\d+\-*\/().]+$/.test(expr)) {
-      return null;
-    }
-
-    const result = Function(`"use strict"; return (${expr})`)();
-    return isFinite(result) ? Math.round(result * 100) / 100 : null;
-  } catch (e) {
-    return null;
-  }
+  // Use safe math evaluator instead of Function constructor
+  const { safeMathEvaluateRounded } = require('@/utils/safeMathEvaluator');
+  return safeMathEvaluateRounded(expression, 2);
 };
 
 // Intelligente Antwort-Extraktion

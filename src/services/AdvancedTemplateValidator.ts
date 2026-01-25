@@ -326,15 +326,9 @@ class AdvancedTemplateValidator {
   }
 
   private validateMathExpression(expression: string): boolean {
-    try {
-      // Simple validation - replace × with * and ÷ with /
-      const normalized = expression.replace(/×/g, '*').replace(/÷/g, '/');
-      // Use Function constructor to safely evaluate simple math expressions
-      const result = new Function(`return ${normalized}`)();
-      return typeof result === 'number' && !isNaN(result);
-    } catch {
-      return false;
-    }
+    // Use safe math evaluator instead of Function constructor
+    const { validateMathExpression: safeValidate } = require('@/utils/safeMathEvaluator');
+    return safeValidate(expression);
   }
 
   private calculateExpectedSolution(template: any, context: ValidationContext): any {

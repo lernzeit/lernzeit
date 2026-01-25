@@ -296,18 +296,9 @@ export class QualityAssurancePipeline {
   }
 
   private static evaluateMathExpression(expression: string): number | null {
-    try {
-      // Replace German decimal comma with dot and math symbols
-      const normalized = expression
-        .replace(',', '.')
-        .replace('×', '*')
-        .replace('÷', '/');
-      
-      // Simple evaluation (in production, use a proper math parser)
-      return Function(`"use strict"; return (${normalized})`)();
-    } catch {
-      return null;
-    }
+    // Use safe math evaluator instead of Function constructor
+    const { safeMathEvaluate } = require('@/utils/safeMathEvaluator');
+    return safeMathEvaluate(expression);
   }
 
   static async batchValidateTemplates(templateIds: string[]): Promise<Map<string, QualityCheckResult>> {
