@@ -69,7 +69,7 @@ export const useQuestionPreloader = ({
     }
   }, [grade, subject]);
 
-  // Start preloading all questions
+  // Start preloading all questions - PARALLEL loading for speed
   const startPreloading = useCallback(async () => {
     if (isLoadingRef.current) return;
     isLoadingRef.current = true;
@@ -82,68 +82,52 @@ export const useQuestionPreloader = ({
     setQuestions([]);
     setLoadingProgress(0);
 
-    const loadedQuestions: PreloadedQuestion[] = [];
-    const difficulties: ('easy' | 'medium' | 'hard')[] = ['medium', 'medium', 'medium', 'easy', 'hard'];
+    const difficulties: ('easy' | 'medium' | 'hard')[] = ['medium', 'medium', 'easy', 'medium', 'hard'];
 
-    // Load first question and show immediately
+    // STRATEGY: Load FIRST question immediately, then load REST in PARALLEL
     const firstQuestion = await generateSingleQuestion(currentDifficultyRef.current, signal);
     
-    if (signal.aborted) return;
-    
-    if (firstQuestion) {
-      loadedQuestions.push(firstQuestion);
-      setQuestions([firstQuestion]);
-      setLoadingProgress(1);
-      setIsInitialLoading(false); // First question ready, game can start!
-    } else {
-      setError('Frage konnte nicht geladen werden. Bitte versuche es erneut.');
-      setIsInitialLoading(false);
+    if (signal.aborted) {
       isLoadingRef.current = false;
       return;
     }
-
-    // Load remaining questions in background
-    for (let i = 1; i < totalQuestions; i++) {
-      if (signal.aborted) break;
+    
+    if (firstQuestion) {
+      setQuestions([firstQuestion]);
+      setLoadingProgress(1);
+      setIsInitialLoading(false); // First question ready - game can start!
       
-      const difficulty = difficulties[i] || 'medium';
-      const question = await generateSingleQuestion(difficulty, signal);
-      
-      if (signal.aborted) break;
-      
-      if (question) {
-        loadedQuestions.push(question);
-        setQuestions([...loadedQuestions]);
-        setLoadingProgress(loadedQuestions.length);
+      // Now load remaining questions IN PARALLEL (not sequentially!)
+      if (totalQuestions > 1) {
+        const remainingPromises = [];
+        for (let i = 1; i < totalQuestions; i++) {
+          const difficulty = difficulties[i] || 'medium';
+          remainingPromises.push(generateSingleQuestion(difficulty, signal));
+        }
+        
+        // Process results as they complete (Promise.allSettled for resilience)
+        const results = await Promise.allSettled(remainingPromises);
+        
+        if (!signal.aborted) {
+          const successfulQuestions = results
+            .filter((r): r is PromiseFulfilledResult<PreloadedQuestion | null> => 
+              r.status === 'fulfilled' && r.value !== null
+            )
+            .map(r => r.value as PreloadedQuestion);
+          
+          setQuestions(prev => [...prev, ...successfulQuestions]);
+          setLoadingProgress(1 + successfulQuestions.length);
+        }
       }
+    } else {
+      setError('Frage konnte nicht geladen werden. Bitte versuche es erneut.');
+      setIsInitialLoading(false);
     }
 
     isLoadingRef.current = false;
   }, [generateSingleQuestion, totalQuestions]);
 
-  // Generate a replacement question (when difficulty changes)
-  const generateReplacementQuestion = useCallback(async (
-    index: number,
-    difficulty: 'easy' | 'medium' | 'hard'
-  ): Promise<PreloadedQuestion | null> => {
-    currentDifficultyRef.current = difficulty;
-    const question = await generateSingleQuestion(difficulty);
-    
-    if (question) {
-      setQuestions(prev => {
-        const updated = [...prev];
-        // Add or replace at the specified index
-        if (index < updated.length) {
-          // Update difficulty for future questions if we have spare capacity
-        }
-        return updated;
-      });
-    }
-    
-    return question;
-  }, [generateSingleQuestion]);
-
-  // Get question at index, or generate if not available
+  // Get question at index
   const getQuestion = useCallback((index: number): PreloadedQuestion | null => {
     return questions[index] || null;
   }, [questions]);
@@ -181,7 +165,6 @@ export const useQuestionPreloader = ({
     error,
     getQuestion,
     isQuestionReady,
-    generateReplacementQuestion,
     updateDifficulty,
     cancelLoading,
     reload: startPreloading
