@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useQuestionPreloader, type PreloadedQuestion } from '@/hooks/useQuestionPreloader';
 import { useAIExplanation } from '@/hooks/useAIExplanation';
-import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy } from 'lucide-react';
+import { useActiveTimer } from '@/hooks/useActiveTimer';
+import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -48,12 +49,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   
+  // Active timer - only counts time spent answering questions
+  const { elapsedTime, isRunning, start: startTimer, pause: pauseTimer, reset: resetTimer, formattedTime } = useActiveTimer();
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [startTime] = useState(Date.now());
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   
   // Answer states for different question types
@@ -71,6 +74,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   useEffect(() => {
     return () => cancelLoading();
   }, [cancelLoading]);
+
+  // Start timer when question is ready, stop when answered
+  useEffect(() => {
+    if (question && !hasAnswered && !isInitialLoading) {
+      startTimer();
+    }
+  }, [question, hasAnswered, isInitialLoading, startTimer]);
 
   // Initialize answer state when question changes
   useEffect(() => {
@@ -141,6 +151,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
     setIsCorrect(correct);
     setHasAnswered(true);
+    
+    // PAUSE timer when question is answered
+    pauseTimer();
 
     if (correct) {
       setScore(prev => prev + 1);
@@ -213,8 +226,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   const handleNextQuestion = () => {
     if (currentIndex + 1 >= totalQuestions) {
-      // Game complete
-      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+      // Game complete - use active elapsed time (only time spent answering)
+      const timeSpent = Math.floor(elapsedTime / 1000);
       const earnedMinutes = Math.ceil(score * 0.5); // 30 seconds per correct answer
       
       onComplete({
@@ -227,7 +240,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     } else {
       setCurrentIndex(prev => prev + 1);
       resetAnswerState();
-      // Update difficulty for future questions (already preloaded, but affects any new ones)
+      // Timer will auto-start via useEffect when new question loads
+      // Update difficulty for future questions
       updateDifficulty(difficulty);
     }
   };
@@ -310,8 +324,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           </div>
         </div>
 
-        {/* Progress */}
+        {/* Progress with Active Timer */}
         <div className="mb-6">
+          {/* Timer Display */}
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
+            <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
+            <span className={cn(
+              "font-mono text-lg transition-colors",
+              isRunning ? "text-foreground" : "text-muted-foreground/70"
+            )}>
+              {formattedTime}
+            </span>
+            {!isRunning && hasAnswered && (
+              <span className="text-xs text-muted-foreground">(pausiert)</span>
+            )}
+          </div>
+          
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span className="flex items-center gap-2">
               Frage {currentIndex + 1} von {totalQuestions}
