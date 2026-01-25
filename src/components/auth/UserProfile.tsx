@@ -23,6 +23,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { ScreenTimeRequestCard } from '@/components/ScreenTimeRequestCard';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface UserProfileProps {
   user: any;
@@ -58,6 +59,14 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const { streak, loading: streakLoading } = useStreak(
     profile?.role === 'child' ? user?.id : undefined
   );
+
+  // Initialize push notifications for children
+  // This handles local notifications when the app is in background
+  usePushNotifications({
+    userId: user?.id,
+    role: profile?.role as 'child' | 'parent',
+    enabled: profile?.role === 'child',
+  });
 
   // Check for parent-child relationship
   const checkParentLink = async () => {
