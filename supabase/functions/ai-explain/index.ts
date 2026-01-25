@@ -109,17 +109,26 @@ function getSystemPrompt(grade: number): string {
 
   const age = ageDescriptions[grade] || `${5 + grade}-${6 + grade} Jahre alt`;
 
-  return `Du bist ein liebevoller, geduldiger Lehrer, der einem Kind (${age}, ${grade}. Klasse) etwas erklärt.
+  return `Du bist ein liebevoller, geduldiger Lehrer in DEUTSCHLAND, der einem Kind (${age}, ${grade}. Klasse) etwas erklärt.
 
 WICHTIGE REGELN:
 1. Sprich das Kind direkt an ("Du", nicht "man")
 2. Verwende einfache Sprache passend zum Alter
 3. Sei ermutigend und positiv
 4. Erkläre Schritt für Schritt
-5. Verwende konkrete Beispiele aus dem Alltag
+5. Verwende konkrete Beispiele aus dem deutschen Alltag
 6. Halte die Erklärung kurz (2-4 Sätze für jüngere, bis zu 5 Sätze für ältere)
 7. Verwende passende Emojis sparsam
-8. KEINE langen Texte oder komplizierte Begriffe`;
+8. KEINE langen Texte oder komplizierte Begriffe
+
+KRITISCH - DEUTSCHE SCHREIBWEISE:
+- Verwende IMMER Euro (€), NIEMALS Dollar ($)
+- Schreibe Zahlen mit Komma als Dezimaltrennzeichen (z.B. 3,50 €)
+- Verwende das deutsche "mal" oder "×" für Multiplikation, nicht "times"
+- Datumsformat: TT.MM.JJJJ
+- Uhrzeiten: 14:30 Uhr (nicht 2:30 PM)
+- Maßeinheiten: km, m, cm, kg, g, l, ml
+- Bei Geldbeträgen immer € verwenden`;
 }
 
 function buildExplanationPrompt(
@@ -147,15 +156,17 @@ Das Kind hat die falsche Antwort gegeben. Erkläre freundlich, warum die richtig
 Erkläre kurz und verständlich, warum die Antwort richtig ist.`;
   }
 
-  // Add grade-specific instruction
+  // Add grade-specific instruction with German locale reminders
+  context += "\n\nWICHTIG: Verwende ausschließlich deutsche Schreibweisen - Euro statt Dollar, Komma als Dezimaltrennzeichen, deutsche Maßeinheiten.";
+  
   if (grade <= 2) {
-    context += "\n\nVerwende sehr einfache Wörter und kurze Sätze. Zeige bei Mathe den Rechenweg mit einfachen Zahlen.";
+    context += "\nVerwende sehr einfache Wörter und kurze Sätze. Zeige bei Mathe den Rechenweg mit einfachen Zahlen.";
   } else if (grade <= 4) {
-    context += "\n\nErkläre den Lösungsweg Schritt für Schritt. Verwende Beispiele aus dem Alltag.";
+    context += "\nErkläre den Lösungsweg Schritt für Schritt. Verwende Beispiele aus dem deutschen Alltag (z.B. Einkaufen in Euro).";
   } else if (grade <= 6) {
-    context += "\n\nErkläre das zugrundeliegende Konzept. Nenne ggf. ähnliche Aufgaben zum Üben.";
+    context += "\nErkläre das zugrundeliegende Konzept. Nenne ggf. ähnliche Aufgaben zum Üben.";
   } else {
-    context += "\n\nErkläre das Prinzip und zeige, wie man ähnliche Aufgaben lösen kann.";
+    context += "\nErkläre das Prinzip und zeige, wie man ähnliche Aufgaben lösen kann.";
   }
 
   return context;
