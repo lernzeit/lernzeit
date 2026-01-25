@@ -264,7 +264,7 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <BookOpen className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Alle Schulfächer</h3>
+              <h2 className="font-bold text-lg mb-2">Alle Schulfächer</h2>
               <p className="text-muted-foreground text-sm">
                 Mathematik, Deutsch, Englisch, Naturwissenschaften und mehr
               </p>
@@ -276,7 +276,7 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Clock className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Belohnungssystem</h3>
+              <h2 className="font-bold text-lg mb-2">Belohnungssystem</h2>
               <p className="text-muted-foreground text-sm">
                 Verdiene Handyzeit durch das Lösen von Lernaufgaben
               </p>
@@ -288,7 +288,7 @@ const Index = () => {
               <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Fortschritt verfolgen</h3>
+              <h2 className="font-bold text-lg mb-2">Fortschritt verfolgen</h2>
               <p className="text-muted-foreground text-sm">
                 Erfolge sammeln und Lernfortschritte dokumentieren
               </p>
