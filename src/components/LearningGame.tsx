@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useAIQuestion, type AIQuestion } from '@/hooks/useAIQuestion';
+import { useQuestionPreloader, type PreloadedQuestion } from '@/hooks/useQuestionPreloader';
 import { useAIExplanation } from '@/hooks/useAIExplanation';
 import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,7 +33,19 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   onBack,
   totalQuestions = 5
 }) => {
-  const { question, isLoading, error, generateQuestion } = useAIQuestion();
+  // Use preloader instead of single question loader
+  const { 
+    questions, 
+    isInitialLoading, 
+    loadingProgress, 
+    error: preloadError, 
+    getQuestion,
+    isQuestionReady,
+    updateDifficulty,
+    reload,
+    cancelLoading
+  } = useQuestionPreloader({ grade, subject, totalQuestions });
+  
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,10 +64,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [dragDropPlacements, setDragDropPlacements] = useState<Record<string, string[]>>({});
   const [fillBlanks, setFillBlanks] = useState<string[]>([]);
 
-  // Load first question
+  // Get current question from preloaded questions
+  const question = useMemo(() => getQuestion(currentIndex), [getQuestion, currentIndex, questions]);
+
+  // Cleanup on unmount
   useEffect(() => {
-    generateQuestion(grade, subject, difficulty);
-  }, []);
+    return () => cancelLoading();
+  }, [cancelLoading]);
 
   // Initialize answer state when question changes
   useEffect(() => {
@@ -212,7 +227,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     } else {
       setCurrentIndex(prev => prev + 1);
       resetAnswerState();
-      generateQuestion(grade, subject, difficulty);
+      // Update difficulty for future questions (already preloaded, but affects any new ones)
+      updateDifficulty(difficulty);
     }
   };
 
@@ -224,36 +240,55 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setSortOrder(newOrder);
   };
 
-  if (isLoading && !question) {
+  // Initial loading screen with progress
+  if (isInitialLoading) {
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-12 text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Frage wird erstellt...</p>
+            <p className="mt-4 text-lg text-muted-foreground">Deine Fragen werden vorbereitet...</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Das dauert nur einen Moment ✨
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (error && !question) {
+  // Error state
+  if (preloadError && !question) {
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <p className="text-lg mb-4">{error}</p>
+            <p className="text-lg mb-4">{preloadError}</p>
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Zurück
               </Button>
-              <Button onClick={() => generateQuestion(grade, subject, difficulty)}>
+              <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Nochmal versuchen
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Waiting for next question (edge case if user is faster than preloading)
+  if (!question && !isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardContent className="p-12 text-center">
+            <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
+            <p className="mt-4 text-lg text-muted-foreground">Nächste Frage wird geladen...</p>
           </CardContent>
         </Card>
       </div>
@@ -278,7 +313,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         {/* Progress */}
         <div className="mb-6">
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Frage {currentIndex + 1} von {totalQuestions}</span>
+            <span className="flex items-center gap-2">
+              Frage {currentIndex + 1} von {totalQuestions}
+              {loadingProgress < totalQuestions && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  {loadingProgress}/{totalQuestions}
+                </span>
+              )}
+            </span>
             <span className="flex items-center gap-1">
               <Trophy className="w-4 h-4 text-primary" />
               {score} richtig
