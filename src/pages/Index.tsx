@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { GradeSelector } from '@/components/GradeSelector';
 import { CategorySelector } from '@/components/CategorySelector';
-import { CategoryMathProblem as CategoryLearningProblem } from '@/components/CategoryMathProblem';
-import { MathProblemOptimized } from '@/components/MathProblemOptimized';
+import { LearningGame } from '@/components/LearningGame';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { UserProfile } from '@/components/auth/UserProfile';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Trophy, Clock, RotateCcw, BookOpen, Sparkles, User, Shield } from 'lucide-react';
+import { Trophy, Clock, BookOpen, Sparkles, User, Shield } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
@@ -48,14 +48,23 @@ const Index = () => {
     setEarnedCategory('');
   };
 
-  const handleProblemComplete = (minutes: number, category: string) => {
-    // Go directly back to profile/grade selection
+  const handleGameComplete = (stats: { correct: number; total: number; timeSpent: number; earnedMinutes: number; subject: string }) => {
+    // Show completion toast
+    if (stats.correct === stats.total) {
+      toast.success(`Perfekt! 🎉 Alle ${stats.total} Fragen richtig!`);
+    } else {
+      toast.success(`Gut gemacht! ${stats.correct} von ${stats.total} richtig`);
+    }
+    
+    if (stats.earnedMinutes > 0) {
+      toast.success(`+${stats.earnedMinutes} Minuten verdient! ⏰`, { duration: 3000 });
+    }
+
+    // Go back to grade/category selection
     if (user) {
-      // For logged in users, go back to profile (stats reload automatically)
       setSelectedGrade(null);
       setSelectedCategory(null);
     } else {
-      // For guest users, go back to grade selection
       setSelectedCategory(null);
     }
   };
@@ -150,17 +159,15 @@ const Index = () => {
   }
 
 
-  // Show math problems if grade and category are selected - FIXED: Pass German category name
+  // Show learning game if grade and category are selected
   if (selectedGrade && selectedCategory) {
-    const germanCategoryName = convertCategoryToGerman(selectedCategory);
-    console.log('🔄 Converting category:', selectedCategory, '→', germanCategoryName);
-    
     return (
-      <CategoryLearningProblem 
+      <LearningGame 
         grade={selectedGrade}
-        category={germanCategoryName}
-        onComplete={handleProblemComplete}
+        subject={selectedCategory}
+        onComplete={handleGameComplete}
         onBack={() => setSelectedCategory(null)}
+        totalQuestions={5}
       />
     );
   }
