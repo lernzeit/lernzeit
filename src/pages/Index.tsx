@@ -1,15 +1,28 @@
-import React, { useState } from 'react';
-import { GradeSelector } from '@/components/GradeSelector';
-import { CategorySelector } from '@/components/CategorySelector';
-import { LearningGame } from '@/components/LearningGame';
-import { AuthForm } from '@/components/auth/AuthForm';
-import { UserProfile } from '@/components/auth/UserProfile';
-
+import React, { useState, Suspense, lazy } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Trophy, Clock, BookOpen, Sparkles, User, Shield } from 'lucide-react';
+import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Lazy load heavy components that aren't needed on initial page render
+const GradeSelector = lazy(() => import('@/components/GradeSelector').then(m => ({ default: m.GradeSelector })));
+const CategorySelector = lazy(() => import('@/components/CategorySelector').then(m => ({ default: m.CategorySelector })));
+const LearningGame = lazy(() => import('@/components/LearningGame').then(m => ({ default: m.LearningGame })));
+const AuthForm = lazy(() => import('@/components/auth/AuthForm').then(m => ({ default: m.AuthForm })));
+const UserProfile = lazy(() => import('@/components/auth/UserProfile').then(m => ({ default: m.UserProfile })));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+    <Card className="w-full max-w-md shadow-card">
+      <CardContent className="p-8 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+        <p className="mt-4 text-muted-foreground">Lädt...</p>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
@@ -144,17 +157,23 @@ const Index = () => {
 
   // Show auth form if no user and auth is requested
   if (!user && showAuth) {
-    return <AuthForm onAuthSuccess={handleAuthSuccess} />;
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <AuthForm onAuthSuccess={handleAuthSuccess} />
+      </Suspense>
+    );
   }
 
   // Show user profile if user is logged in and no game is active
   if (user && !selectedGrade) {
     return (
-      <UserProfile 
-        user={user} 
-        onSignOut={handleSignOut} 
-        onStartGame={handleStartGame} 
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <UserProfile 
+          user={user} 
+          onSignOut={handleSignOut} 
+          onStartGame={handleStartGame} 
+        />
+      </Suspense>
     );
   }
 
@@ -162,24 +181,28 @@ const Index = () => {
   // Show learning game if grade and category are selected
   if (selectedGrade && selectedCategory) {
     return (
-      <LearningGame 
-        grade={selectedGrade}
-        subject={selectedCategory}
-        onComplete={handleGameComplete}
-        onBack={() => setSelectedCategory(null)}
-        totalQuestions={5}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <LearningGame 
+          grade={selectedGrade}
+          subject={selectedCategory}
+          onComplete={handleGameComplete}
+          onBack={() => setSelectedCategory(null)}
+          totalQuestions={5}
+        />
+      </Suspense>
     );
   }
 
   // Show category selector if grade is selected but not category
   if (selectedGrade) {
     return (
-      <CategorySelector
-        grade={selectedGrade}
-        onCategorySelect={handleCategorySelect}
-        onBack={handleBack}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <CategorySelector
+          grade={selectedGrade}
+          onCategorySelect={handleCategorySelect}
+          onBack={handleBack}
+        />
+      </Suspense>
     );
   }
 
