@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { triggerCelebrationConfetti } from '@/utils/confetti';
 
 export interface ScreenTimeRequest {
   id: string;
@@ -122,7 +123,9 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       if (newReq.status === 'approved') {
         const oldReq = previousRequestsRef.current.find(r => r.id === newReq.id);
         if (oldReq && oldReq.status === 'pending') {
-          // This request was just approved!
+          // This request was just approved! Trigger celebration!
+          triggerCelebrationConfetti();
+          
           toast.success(`🎉 Bildschirmzeit genehmigt!`, {
             description: `Deine Eltern haben ${newReq.requested_minutes} Minuten Bildschirmzeit freigegeben!`,
             duration: 8000,
