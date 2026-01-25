@@ -30,6 +30,9 @@ verify_jwt = false
 [functions.ai-explain]
 verify_jwt = false
 
+[functions.validate-question]
+verify_jwt = false
+
 # ============================================
 # UTILITY FUNCTIONS (Keep)
 # ============================================

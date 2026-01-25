@@ -7,9 +7,11 @@ import { Progress } from '@/components/ui/progress';
 import { useQuestionPreloader, type PreloadedQuestion } from '@/hooks/useQuestionPreloader';
 import { useAIExplanation } from '@/hooks/useAIExplanation';
 import { useActiveTimer } from '@/hooks/useActiveTimer';
-import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock } from 'lucide-react';
+import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useQuestionReport } from '@/hooks/useQuestionReport';
+import { QuestionReportDialog } from '@/components/game/QuestionReportDialog';
 
 interface LearningGameProps {
   grade: number;
@@ -57,6 +59,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   
   // Answer states for different question types
@@ -516,6 +519,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
+                  {/* Report Button for incorrect answers */}
+                  {!isCorrect && question && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowReportDialog(true)}
+                      className="mt-2 w-full text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
+                    >
+                      <Flag className="w-4 h-4 mr-2" />
+                      Frage melden (Antwort falsch?)
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -590,6 +605,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           </Card>
         )}
       </div>
+
+      {/* Question Report Dialog */}
+      {question && (
+        <QuestionReportDialog
+          open={showReportDialog}
+          onOpenChange={setShowReportDialog}
+          questionText={question.questionText}
+          correctAnswer={getCorrectAnswerText()}
+          userAnswer={getUserAnswerText()}
+          explanation={explanation || undefined}
+          grade={grade}
+          subject={subject}
+          templateId={question.id}
+        />
+      )}
     </div>
   );
 
