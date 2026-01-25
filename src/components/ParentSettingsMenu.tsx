@@ -83,13 +83,22 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
   } = useFamilyLinking();
 
   useEffect(() => {
-    // No need to load parent settings anymore - we work directly with child settings
-    loadFamilyData(userId);
-    loadProfileName();
+    const initializeData = async () => {
+      setLoading(true);
+      try {
+        await loadFamilyData(userId);
+        await loadProfileName();
+      } finally {
+        setLoading(false);
+      }
+    };
+    initializeData();
   }, [userId]);
 
   useEffect(() => {
-    loadChildSettings();
+    if (linkedChildren.length > 0) {
+      loadChildSettings();
+    }
   }, [linkedChildren]);
 
   // Removed loadSettings and saveInitialSettings - no longer needed
