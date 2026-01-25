@@ -1,0 +1,155 @@
+workflows:
+  # Android Release Build
+  android-release:
+    name: Android Release
+    max_build_duration: 60
+    instance_type: linux_x2
+    
+    environment:
+      android_signing:
+        - lernzeit_keystore
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "de.lernzeit.app"
+      node: 18
+      java: 17
+    
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      
+      - name: Build web app
+        script: npm run build
+      
+      - name: Add Android platform
+        script: |
+          npx cap add android || true
+          npx cap sync android
+      
+      - name: Set Android version
+        script: |
+          LATEST_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "$PACKAGE_NAME" --tracks=production) || LATEST_BUILD_NUMBER=0
+          NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          echo "Setting versionCode to $NEW_BUILD_NUMBER"
+          
+          cd android
+          ./gradlew -PversionCode=$NEW_BUILD_NUMBER -PversionName="1.0.$NEW_BUILD_NUMBER"
+      
+      - name: Build Android AAB
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/mapping.txt
+    
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: production
+        submit_as_draft: true
+
+  # iOS Release Build
+  ios-release:
+    name: iOS Release
+    max_build_duration: 90
+    instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: lernzeit_asc
+    
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.lernzeit.app
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        APP_STORE_APP_ID: "YOUR_APP_STORE_APP_ID"
+      node: 18
+      xcode: latest
+      cocoapods: default
+    
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      
+      - name: Build web app
+        script: npm run build
+      
+      - name: Add iOS platform
+        script: |
+          npx cap add ios || true
+          npx cap sync ios
+      
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install
+      
+      - name: Set iOS version
+        script: |
+          cd ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID") || LATEST_BUILD_NUMBER=0
+          NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+          echo "Setting build number to $NEW_BUILD_NUMBER"
+          
+          agvtool new-version -all $NEW_BUILD_NUMBER
+      
+      - name: Build iOS
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - ios/App/App.xcarchive
+    
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  # Development Build (für Testing)
+  development:
+    name: Development Build
+    max_build_duration: 30
+    instance_type: linux_x2
+    
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'develop'
+          include: true
+    
+    environment:
+      node: 18
+      java: 17
+    
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+      
+      - name: Run tests
+        script: npm run test --if-present
+      
+      - name: Build web app
+        script: npm run build
+      
+      - name: Add Android platform
+        script: |
+          npx cap add android || true
+          npx cap sync android
+      
+      - name: Build debug APK
+        script: |
+          cd android
+          ./gradlew assembleDebug
+    
+    artifacts:
+      - android/app/build/outputs/**/*.apk
