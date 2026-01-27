@@ -11,6 +11,7 @@ export interface PreloadedQuestion {
   correctAnswer: any;
   options?: any;
   hint?: string;
+  task?: string; // Task/instruction for FILL_BLANK questions
   createdAt: string;
 }
 

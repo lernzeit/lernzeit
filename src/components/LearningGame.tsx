@@ -564,6 +564,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
               {question.questionType === 'FILL_BLANK' && (
                 <FillBlankRenderer
+                  task={question.task || ''}
                   text={question.questionText}
                   answers={fillBlanks}
                   options={question.options || []}
@@ -911,6 +912,7 @@ const MatchRenderer: React.FC<{
 };
 
 const FillBlankRenderer: React.FC<{
+  task: string;
   text: string;
   answers: string[];
   options: string[];
@@ -918,7 +920,7 @@ const FillBlankRenderer: React.FC<{
   hasAnswered: boolean;
   subject?: string;
   onChange: (index: number, value: string) => void;
-}> = ({ text, answers, options, correctAnswers, hasAnswered, subject, onChange }) => {
+}> = ({ task, text, answers, options, correctAnswers, hasAnswered, subject, onChange }) => {
   const [activeGapIndex, setActiveGapIndex] = useState<number | null>(null);
   const parts = text.split('___');
   
@@ -1009,8 +1011,17 @@ const FillBlankRenderer: React.FC<{
   
   return (
     <div className="space-y-4">
+      {/* Task/Instruction - prominently displayed */}
+      {task && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+          <p className="text-base font-medium text-foreground">
+            📝 <span className="font-semibold">Aufgabe:</span> {task}
+          </p>
+        </div>
+      )}
+      
       {/* Text with inline gaps */}
-      <div className="text-lg leading-loose">
+      <div className="text-lg leading-loose bg-muted/30 rounded-lg p-4">
         {parts.map((part, index) => (
           <React.Fragment key={index}>
             <span>{part}</span>

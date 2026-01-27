@@ -237,6 +237,7 @@ serve(async (req) => {
       correctAnswer: question.correct_answer || question.correctAnswer,
       options: question.options || null,
       hint: question.hint || null,
+      task: question.task || null, // Task/instruction for FILL_BLANK questions
       createdAt: new Date().toISOString()
     };
 
@@ -491,16 +492,33 @@ function getTypeSpecificInstructions(questionType: string): string {
 
     case 'FILL_BLANK':
       return `**Format FILL_BLANK:**
-WICHTIG für Sprachfächer (Deutsch, Englisch, etc.): Die Grundform des einzusetzenden Wortes MUSS in Klammern nach der Lücke stehen!
-Beispiel: "Gestern ___ (machen) die Kinder ein Picknick."
+WICHTIG: 
+1. Das Feld "task" enthält die klare Aufgabenstellung (z.B. "Setze die Verben in die richtige Zeitform")
+2. Für Sprachfächer: Die Grundform des einzusetzenden Wortes MUSS in Klammern DIREKT NACH der Lücke stehen!
+3. Das Feld "hint" ist optional und enthält zusätzliche Tipps
+
+Beispiel für Deutsch (Verben konjugieren):
 {
-  "question_text": "Gestern ___ (machen) die Kinder ein Picknick. Sie ___ (singen) zusammen Lieder.",
+  "task": "Setze die Verben in das Präteritum (1. Vergangenheit). Achte auf die richtige Form!",
+  "question_text": "Gestern ___ (machen) die Kinder ein Picknick. Sie ___ (singen) zusammen Lieder und ___ (lachen) viel.",
   "question_type": "FILL_BLANK",
   "correct_answer": { 
-    "blanks": ["machten", "sangen"]
+    "blanks": ["machten", "sangen", "lachten"]
   },
   "options": [],
-  "hint": "Achte darauf, dass die Verben in der Vergangenheit (Präteritum) stehen müssen."
+  "hint": "Bei 'wir', 'sie' und 'Sie' ist die Endung im Präteritum oft '-en'."
+}
+
+Beispiel für Mathe (Einsetzen):
+{
+  "task": "Setze die passenden Zahlen ein, damit die Gleichung stimmt.",
+  "question_text": "5 + ___ = 12 und 12 - ___ = 7",
+  "question_type": "FILL_BLANK",
+  "correct_answer": { 
+    "blanks": ["7", "5"]
+  },
+  "options": ["5", "7", "3", "8"],
+  "hint": ""
 }`;
 
     default:
