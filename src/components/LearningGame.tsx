@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAchievementTracker } from '@/hooks/useAchievementTracker';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AchievementPopup } from '@/components/AchievementPopup';
-import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag } from 'lucide-react';
+import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useQuestionReport } from '@/hooks/useQuestionReport';
@@ -517,7 +517,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
               </div>
               {question.hint && !hasAnswered && (
-                <p className="text-sm text-muted-foreground mt-2">💡 Tipp: {question.hint}</p>
+                <HintToggle hint={question.hint} />
               )}
             </CardHeader>
             <CardContent className="space-y-6">
@@ -852,6 +852,29 @@ const SortRenderer: React.FC<{
   </div>
 );
 
+// Collapsible hint component
+const HintToggle: React.FC<{ hint: string }> = ({ hint }) => {
+  const [showHint, setShowHint] = useState(false);
+  
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setShowHint(!showHint)}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Lightbulb className="w-4 h-4" />
+        <span>{showHint ? 'Tipp ausblenden' : 'Tipp anzeigen'}</span>
+        <ChevronDown className={cn("w-4 h-4 transition-transform", showHint && "rotate-180")} />
+      </button>
+      {showHint && (
+        <p className="text-sm text-muted-foreground mt-2 pl-5 border-l-2 border-primary/30">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const MatchRenderer: React.FC<{
   leftItems: string[];
   rightItems: string[];
@@ -866,46 +889,103 @@ const MatchRenderer: React.FC<{
     return correctPairs.some(([l, r]) => l === left && r === right);
   };
 
+  // Get unmatched items for cleaner UI
+  const unmatchedLeftItems = leftItems.filter(item => !matches[item]);
+  const usedRightItems = Object.values(matches);
+  const availableRightItems = rightItems.filter(item => !usedRightItems.includes(item));
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Wähle links, dann rechts um zuzuordnen:</p>
-      <div className="grid grid-cols-2 gap-4">
+      
+      {/* Stacked layout for better mobile UX */}
+      <div className="space-y-6">
+        {/* Left items - terms to match */}
         <div className="space-y-2">
-          {leftItems.map((item) => (
-            <Button
-              key={item}
-              variant={selectedLeft === item ? 'default' : matches[item] ? 'secondary' : 'outline'}
-              className={cn(
-                "w-full justify-start",
-                hasAnswered && matches[item] && isCorrectMatch(item, matches[item]) && "border-green-500",
-                hasAnswered && matches[item] && !isCorrectMatch(item, matches[item]) && "border-red-500"
-              )}
-              onClick={() => !hasAnswered && setSelectedLeft(item)}
-              disabled={hasAnswered}
-            >
-              {item}
-              {matches[item] && <span className="ml-auto text-xs">→ {matches[item]}</span>}
-            </Button>
-          ))}
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Begriffe</div>
+          <div className="flex flex-wrap gap-2">
+            {unmatchedLeftItems.map((item) => (
+              <Button
+                key={item}
+                variant={selectedLeft === item ? 'default' : 'outline'}
+                size="sm"
+                className={cn(
+                  "h-auto py-2 px-3 text-sm whitespace-normal text-left",
+                  selectedLeft === item && "ring-2 ring-primary ring-offset-2"
+                )}
+                onClick={() => !hasAnswered && setSelectedLeft(selectedLeft === item ? null : item)}
+                disabled={hasAnswered}
+              >
+                {item}
+              </Button>
+            ))}
+          </div>
         </div>
-        <div className="space-y-2">
-          {rightItems.map((item) => (
-            <Button
-              key={item}
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                if (!hasAnswered && selectedLeft) {
-                  onMatch(selectedLeft, item);
-                  setSelectedLeft(null);
-                }
-              }}
-              disabled={hasAnswered || !selectedLeft}
-            >
-              {item}
-            </Button>
-          ))}
-        </div>
+
+        {/* Right items - targets to match to */}
+        {selectedLeft && (
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Ordne „{selectedLeft}" zu:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableRightItems.map((item) => (
+                <Button
+                  key={item}
+                  variant="outline"
+                  size="sm"
+                  className="h-auto py-2 px-3 text-sm whitespace-normal text-left hover:bg-primary/10 hover:border-primary"
+                  onClick={() => {
+                    onMatch(selectedLeft, item);
+                    setSelectedLeft(null);
+                  }}
+                >
+                  {item}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Already matched pairs */}
+        {Object.keys(matches).length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Zugeordnet ({Object.keys(matches).length})
+            </div>
+            <div className="space-y-2">
+              {Object.entries(matches).map(([left, right]) => {
+                const isCorrect = hasAnswered && isCorrectMatch(left, right);
+                const isWrong = hasAnswered && !isCorrectMatch(left, right);
+                return (
+                  <div 
+                    key={left}
+                    className={cn(
+                      "flex items-start gap-2 p-2 rounded-lg border text-sm",
+                      isCorrect && "bg-green-50 border-green-300 dark:bg-green-950",
+                      isWrong && "bg-red-50 border-red-300 dark:bg-red-950",
+                      !hasAnswered && "bg-muted/50"
+                    )}
+                  >
+                    <span className="font-medium flex-shrink-0">{left}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="flex-1">{right}</span>
+                    {!hasAnswered && (
+                      <button 
+                        onClick={() => onMatch(left, '')} 
+                        className="text-muted-foreground hover:text-destructive ml-auto"
+                      >
+                        ✕
+                      </button>
+                    )}
+                    {isCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                    {isWrong && <X className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
