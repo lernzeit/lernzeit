@@ -491,14 +491,16 @@ function getTypeSpecificInstructions(questionType: string): string {
 
     case 'FILL_BLANK':
       return `**Format FILL_BLANK:**
+WICHTIG für Sprachfächer (Deutsch, Englisch, etc.): Die Grundform des einzusetzenden Wortes MUSS in Klammern nach der Lücke stehen!
+Beispiel: "Gestern ___ (machen) die Kinder ein Picknick."
 {
-  "question_text": "Der Hund ___ schnell. Die Katze ___ langsam.",
+  "question_text": "Gestern ___ (machen) die Kinder ein Picknick. Sie ___ (singen) zusammen Lieder.",
   "question_type": "FILL_BLANK",
   "correct_answer": { 
-    "blanks": ["läuft", "schleicht"]
+    "blanks": ["machten", "sangen"]
   },
-  "options": ["läuft", "schleicht", "fliegt", "schwimmt"],
-  "hint": "Optionaler Hinweis"
+  "options": [],
+  "hint": "Achte darauf, dass die Verben in der Vergangenheit (Präteritum) stehen müssen."
 }`;
 
     default:

@@ -515,9 +515,6 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   <CardTitle className="text-xl leading-relaxed">{question.questionText}</CardTitle>
                 )}
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
-                <Badge variant={difficulty === 'easy' ? 'secondary' : difficulty === 'hard' ? 'destructive' : 'default'}>
-                  {difficulty === 'easy' ? '⭐' : difficulty === 'hard' ? '⭐⭐⭐' : '⭐⭐'}
-                </Badge>
               </div>
               {question.hint && !hasAnswered && (
                 <p className="text-sm text-muted-foreground mt-2">💡 Tipp: {question.hint}</p>
