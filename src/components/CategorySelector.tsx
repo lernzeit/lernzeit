@@ -23,6 +23,9 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   useEffect(() => {
     if (user?.id) {
       loadSubjectVisibility();
+    } else {
+      // No user (demo mode) - show all subjects
+      setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
     }
   }, [user?.id]);
 

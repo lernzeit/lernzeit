@@ -23,6 +23,22 @@ export function useChildSettings(childId: string) {
   useEffect(() => {
     if (childId) {
       loadChildSettings();
+    } else {
+      // No user - set default settings for demo mode
+      setSettings({
+        math_seconds_per_task: 30,
+        german_seconds_per_task: 30,
+        english_seconds_per_task: 30,
+        geography_seconds_per_task: 30,
+        history_seconds_per_task: 30,
+        physics_seconds_per_task: 30,
+        biology_seconds_per_task: 30,
+        chemistry_seconds_per_task: 30,
+        latin_seconds_per_task: 30,
+        weekday_max_minutes: 30,
+        weekend_max_minutes: 60,
+      });
+      setLoading(false);
     }
   }, [childId]);
 
