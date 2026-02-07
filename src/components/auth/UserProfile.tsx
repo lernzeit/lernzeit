@@ -12,7 +12,7 @@ import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
-import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
+// ParentSettingsMenu removed - functionality now integrated into ParentDashboard
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AchievementQuickView } from '@/components/AchievementQuickView';
 import { EarnedTimeWidget } from '@/components/EarnedTimeWidget';
@@ -277,15 +277,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     );
   }
 
-  // Show settings menu for parents
-  if (profile?.role === 'parent' && showSettingsMenu) {
-    return (
-      <ParentSettingsMenu 
-        userId={user.id}
-        onBack={() => setShowSettingsMenu(false)}
-      />
-    );
-  }
+  // Parent settings now handled by the ParentDashboard tabs
+  // No separate ParentSettingsMenu needed
 
   // Show profile edit for children
   if (profile?.role === 'child' && showProfileEdit) {
@@ -493,18 +486,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                     <Badge variant="secondary">Elternteil</Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowSettingsMenu(true)}
-                >
-                  <Settings className="w-4 h-4" />
-                </Button>
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4" />
                 </Button>
-              </div>
             </div>
           </CardHeader>
         </Card>
