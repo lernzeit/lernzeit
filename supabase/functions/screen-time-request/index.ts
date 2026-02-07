@@ -241,11 +241,12 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   let totalAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) => 
     sum + (record.minutes_remaining || 0), 0) || 0;
 
-  // Fallback: If user_earned_minutes is empty, calculate from today's game_sessions
+  // Fallback: If user_earned_minutes is empty, calculate from today's sessions + achievements
   // This handles the transition period for existing sessions
   if (totalAvailableMinutes === 0) {
-    console.log('No user_earned_minutes found, checking game_sessions fallback...');
+    console.log('No user_earned_minutes found, checking sessions + achievements fallback...');
     
+    // Get today's game sessions
     const { data: gameSessions } = await supabase
       .from('game_sessions')
       .select('time_earned')
@@ -253,16 +254,52 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
       .gte('session_date', todayStart.toISOString())
       .lte('session_date', todayEnd.toISOString());
 
-    // time_earned is stored in SECONDS, convert to minutes
-    const sessionMinutes = gameSessions?.reduce((sum: number, s: any) => 
-      sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
+    // Get today's learning sessions
+    const { data: learningSessions } = await supabase
+      .from('learning_sessions')
+      .select('time_earned')
+      .eq('user_id', childId)
+      .gte('session_date', todayStart.toISOString())
+      .lte('session_date', todayEnd.toISOString());
 
-    // Subtract already approved requests from session minutes
+    // time_earned is stored in SECONDS, convert to minutes
+    const gameMinutes = gameSessions?.reduce((sum: number, s: any) => 
+      sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
+    const learningMinutes = learningSessions?.reduce((sum: number, s: any) => 
+      sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
+    const sessionMinutes = gameMinutes + learningMinutes;
+
+    // Get today's completed achievements with bonus minutes
+    const { data: todayAchievements } = await supabase
+      .from('user_achievements')
+      .select(`
+        achievements_template (reward_minutes)
+      `)
+      .eq('user_id', childId)
+      .eq('is_completed', true)
+      .gte('earned_at', todayStart.toISOString())
+      .lte('earned_at', todayEnd.toISOString());
+
+    const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) => 
+      sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
+
+    // Total earned = sessions + achievements
+    const totalEarnedToday = sessionMinutes + achievementMinutes;
+
+    // Subtract already approved requests
     const approvedToday = todayRequests?.filter((r: any) => r.status === 'approved')
       .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
 
-    totalAvailableMinutes = Math.max(0, sessionMinutes - approvedToday);
-    console.log('Fallback calculation:', { sessionMinutes, approvedToday, totalAvailableMinutes });
+    totalAvailableMinutes = Math.max(0, totalEarnedToday - approvedToday);
+    console.log('Fallback calculation:', { 
+      gameMinutes, 
+      learningMinutes,
+      sessionMinutes, 
+      achievementMinutes,
+      totalEarnedToday,
+      approvedToday, 
+      totalAvailableMinutes 
+    });
   }
 
   // Validate enough earned minutes available
