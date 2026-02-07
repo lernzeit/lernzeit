@@ -23,7 +23,7 @@ import {
   BarChart3,
   Loader2
 } from 'lucide-react';
-import { ChildErrorAnalysis } from '@/components/ChildErrorAnalysis';
+import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 
@@ -401,7 +401,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           {linkedChildren.length > 0 ? (
             <div className="space-y-4">
               {linkedChildren.map((child) => (
-                <ChildErrorAnalysis 
+                <ChildLearningAnalysis 
                   key={child.id} 
                   childId={child.id} 
                   childName={child.name || 'Unbenannt'} 
