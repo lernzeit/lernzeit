@@ -270,18 +270,38 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     const sessionMinutes = gameMinutes + learningMinutes;
 
     // Get today's completed achievements with bonus minutes
-    const { data: todayAchievements } = await supabase
+    // Use explicit join through achievement_id
+    const { data: todayAchievements, error: achievementError } = await supabase
       .from('user_achievements')
       .select(`
-        achievements_template (reward_minutes)
+        achievement_id,
+        earned_at,
+        achievements_template!inner (
+          name,
+          reward_minutes
+        )
       `)
       .eq('user_id', childId)
       .eq('is_completed', true)
       .gte('earned_at', todayStart.toISOString())
       .lte('earned_at', todayEnd.toISOString());
 
-    const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) => 
-      sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
+    console.log('Today achievements query result:', { 
+      todayStart: todayStart.toISOString(),
+      todayEnd: todayEnd.toISOString(),
+      achievementError,
+      count: todayAchievements?.length,
+      achievements: todayAchievements
+    });
+
+    const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) => {
+      const rewardMinutes = ua.achievements_template?.reward_minutes || 0;
+      console.log('Processing achievement:', { 
+        name: ua.achievements_template?.name,
+        rewardMinutes 
+      });
+      return sum + rewardMinutes;
+    }, 0) || 0;
 
     // Total earned = sessions + achievements
     const totalEarnedToday = sessionMinutes + achievementMinutes;
