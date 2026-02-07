@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -290,15 +291,22 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={13}
-                    value={grade}
-                    onChange={(e) => setGrade(parseInt(e.target.value) || 1)}
-                    className="w-24"
-                  />
-                  <span className="text-sm text-muted-foreground">Klasse</span>
+                  <Label className="text-sm">Klasse</Label>
+                  <Select 
+                    value={grade.toString()} 
+                    onValueChange={(value) => setGrade(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Klasse wählen" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+                        <SelectItem key={g} value={g.toString()}>
+                          Klasse {g}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
