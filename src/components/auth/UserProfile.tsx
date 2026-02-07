@@ -371,12 +371,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </Card>
           ) : (
             <>
-              {/* Combined Earned Time + Screen Time Request Widget */}
-              <EarnedTimeWidget 
-                userId={user.id}
-                hasParentLink={hasParentLink}
-              />
-
+              {/* Game Start Card - Now First */}
               <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
                 <CardContent className="p-6">
                   <div className="text-center mb-4">
@@ -395,6 +390,12 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Combined Earned Time + Screen Time Request Widget */}
+              <EarnedTimeWidget 
+                userId={user.id}
+                hasParentLink={hasParentLink}
+              />
             </>
           )}
 
