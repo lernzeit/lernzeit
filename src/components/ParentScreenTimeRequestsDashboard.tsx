@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle, Baby } from 'lucide-react';
-import { useScreenTimeRequests } from '@/hooks/useScreenTimeRequests';
+import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle, Baby, ExternalLink } from 'lucide-react';
+import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { parentalControlsService } from '@/services/parentalControlsService';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
@@ -18,24 +18,77 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   const [responseMessage, setResponseMessage] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isResponding, setIsResponding] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
   
   const { requests, loading, respondToRequest } = useScreenTimeRequests('parent');
   const { toast } = useToast();
 
+  const platform = parentalControlsService.getPlatform();
+  const isNative = parentalControlsService.isNativePlatform();
+  const appName = parentalControlsService.getParentalControlAppName();
+
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 5);
 
-  const handleResponse = async (requestId: string, status: 'approved' | 'denied', response?: string) => {
+  // Step 1: User clicks approve → show dialog with option to open parental app
+  const handleApproveClick = (request: ScreenTimeRequest) => {
+    setPendingApprovalRequest(request);
+    setShowApprovalDialog(true);
+  };
+
+  // Step 2: Actually approve and optionally open parental control app
+  const handleApproveAndOpen = async (openApp: boolean) => {
+    if (!pendingApprovalRequest) return;
+    
     setIsResponding(true);
     try {
-      const result = await respondToRequest(requestId, status, response);
+      // First, approve in our system
+      const result = await respondToRequest(pendingApprovalRequest.id, 'approved');
+      
+      if (result.success) {
+        // Then try to open the parental control app
+        if (openApp && isNative) {
+          const openResult = await parentalControlsService.openParentalControlApp(
+            pendingApprovalRequest.requested_minutes
+          );
+          
+          toast({
+            title: "Anfrage genehmigt! ✅",
+            description: openResult.message,
+          });
+        } else {
+          toast({
+            title: "Anfrage genehmigt! ✅",
+            description: `Bitte vergeben Sie ${pendingApprovalRequest.requested_minutes} Minuten Bildschirmzeit in ${appName}.`,
+          });
+        }
+        
+        setShowApprovalDialog(false);
+        setPendingApprovalRequest(null);
+      } else {
+        throw new Error(result.error || 'Unbekannter Fehler');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: error.message || "Anfrage konnte nicht genehmigt werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
+  const handleDeny = async (requestId: string, response?: string) => {
+    setIsResponding(true);
+    try {
+      const result = await respondToRequest(requestId, 'denied', response);
       
       if (result.success) {
         toast({
-          title: status === 'approved' ? "Anfrage genehmigt! ✅" : "Anfrage abgelehnt",
-          description: status === 'approved' 
-            ? "Die Bildschirmzeit wurde freigegeben. Vergessen Sie nicht, sie in den Geräteeinstellungen zu aktivieren."
-            : "Die Anfrage wurde abgelehnt.",
+          title: "Anfrage abgelehnt",
+          description: "Die Anfrage wurde abgelehnt.",
         });
         setResponseMessage('');
         setSelectedRequestId(null);
@@ -157,7 +210,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                 
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => handleResponse(request.id, 'approved')}
+                    onClick={() => handleApproveClick(request)}
                     disabled={isResponding}
                     className="flex-1 bg-green-500 hover:bg-green-600"
                   >
@@ -197,7 +250,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                         
                         <div className="flex gap-2">
                           <Button
-                            onClick={() => handleResponse(request.id, 'denied', responseMessage || undefined)}
+                            onClick={() => handleDeny(request.id, responseMessage || undefined)}
                             disabled={isResponding}
                             variant="destructive"
                             className="flex-1"
@@ -258,6 +311,88 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
           </div>
         )}
       </CardContent>
+
+      {/* Approval Dialog with option to open parental control app */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              Bildschirmzeit genehmigen
+            </DialogTitle>
+          </DialogHeader>
+          
+          {pendingApprovalRequest && (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800">
+                  Sie genehmigen <strong>{pendingApprovalRequest.requested_minutes} Minuten</strong> Bildschirmzeit für Ihr Kind.
+                </p>
+              </div>
+              
+              {isNative ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Möchten Sie {appName} öffnen, um die Bildschirmzeit direkt freizugeben?
+                  </p>
+                  
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={() => handleApproveAndOpen(true)}
+                      disabled={isResponding}
+                      className="bg-green-500 hover:bg-green-600"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Genehmigen & {appName} öffnen
+                    </Button>
+                    
+                    <Button
+                      onClick={() => handleApproveAndOpen(false)}
+                      disabled={isResponding}
+                      variant="outline"
+                    >
+                      Nur genehmigen (später freigeben)
+                    </Button>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500">
+                    {platform === 'android' 
+                      ? 'In Family Link: [Kind] → Gerätezeit → Heute mehr Zeit'
+                      : 'In Bildschirmzeit: [Kind] → App-Limits → Zeit gewähren'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Nach der Genehmigung müssen Sie die Bildschirmzeit manuell in Ihrer Kindersicherungs-App freigeben.
+                  </p>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                    <div className="font-medium mb-1">So geben Sie Zeit frei:</div>
+                    <div>• <strong>Android:</strong> Family Link → [Kind] → Gerätezeit → Heute mehr Zeit</div>
+                    <div>• <strong>iPhone:</strong> Einstellungen → Bildschirmzeit → [Kind] → App-Limits</div>
+                  </div>
+                  
+                  <Button
+                    onClick={() => handleApproveAndOpen(false)}
+                    disabled={isResponding}
+                    className="w-full bg-green-500 hover:bg-green-600"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Genehmigen
+                  </Button>
+                </div>
+              )}
+              
+              <DialogClose asChild>
+                <Button variant="ghost" className="w-full" disabled={isResponding}>
+                  Abbrechen
+                </Button>
+              </DialogClose>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
