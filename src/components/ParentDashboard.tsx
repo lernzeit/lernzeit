@@ -31,6 +31,12 @@ interface ParentDashboardProps {
   userId: string;
 }
 
+interface LinkedChild {
+  id: string;
+  name: string | null;
+  grade: number;
+}
+
 export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [profileName, setProfileName] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -38,6 +44,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [newCodeLoading, setNewCodeLoading] = useState(false);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   
   const { toast } = useToast();
   const {
@@ -55,6 +62,13 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       loadProfileName();
     }
   }, [userId]);
+
+  // Setze erstes Kind als Standard wenn Kinder geladen werden
+  useEffect(() => {
+    if (linkedChildren.length > 0 && !selectedChildId) {
+      setSelectedChildId(linkedChildren[0].id);
+    }
+  }, [linkedChildren, selectedChildId]);
 
   const loadProfileName = async () => {
     try {
@@ -400,13 +414,43 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         <TabsContent value="analytics" className="space-y-4">
           {linkedChildren.length > 0 ? (
             <div className="space-y-4">
-              {linkedChildren.map((child) => (
-                <ChildLearningAnalysis 
-                  key={child.id} 
-                  childId={child.id} 
-                  childName={child.name || 'Unbenannt'} 
-                />
-              ))}
+              {/* Kinderauswahl */}
+              {linkedChildren.length > 1 && (
+                <Card>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Kind auswählen:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {linkedChildren.map((child) => (
+                          <Button
+                            key={child.id}
+                            variant={selectedChildId === child.id ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedChildId(child.id)}
+                            className="flex items-center gap-2"
+                          >
+                            <GraduationCap className="h-4 w-4" />
+                            {child.name || 'Unbenannt'}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Analyse für ausgewähltes Kind */}
+              {selectedChildId && (() => {
+                const selectedChild = linkedChildren.find(c => c.id === selectedChildId);
+                if (!selectedChild) return null;
+                return (
+                  <ChildLearningAnalysis 
+                    childId={selectedChild.id} 
+                    childName={selectedChild.name || 'Unbenannt'}
+                    childGrade={selectedChild.grade}
+                  />
+                );
+              })()}
             </div>
           ) : (
             <Card>
