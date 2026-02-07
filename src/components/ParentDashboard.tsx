@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { ChildErrorAnalysis } from '@/components/ChildErrorAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
+import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 
 interface ParentDashboardProps {
   userId: string;
@@ -282,34 +283,41 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {linkedChildren.map((child) => (
-                    <div
-                      key={child.id}
-                      className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <GraduationCap className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{child.name || 'Unbenannt'}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Klasse {child.grade}
+                    <Card key={child.id} className="overflow-hidden">
+                      <div className="flex items-center justify-between p-4 bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <GraduationCap className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{child.name || 'Unbenannt'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Klasse {child.grade}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">Verknüpft</Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveChild(child.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">Verknüpft</Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveChild(child.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
+                      <CardContent className="pt-4">
+                        <ChildSettingsEditor 
+                          childId={child.id}
+                          childName={child.name || 'Kind'}
+                          parentId={userId}
+                          onSettingsChanged={() => loadFamilyData(userId)}
+                        />
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
