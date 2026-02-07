@@ -379,7 +379,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                     className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
                   >
                     <BookOpen className="w-6 h-6 mr-2" />
-                    🚀 Lernen starten (Klasse {profile?.grade || 1})
+                    🚀 Lernen starten
                   </Button>
                 </CardContent>
               </Card>
