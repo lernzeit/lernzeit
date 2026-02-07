@@ -314,6 +314,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                           childId={child.id}
                           childName={child.name || 'Kind'}
                           parentId={userId}
+                          currentGrade={child.grade}
                           onSettingsChanged={() => loadFamilyData(userId)}
                         />
                       </CardContent>

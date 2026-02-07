@@ -29,6 +29,7 @@ interface ChildSettingsEditorProps {
   childId: string;
   childName: string;
   parentId: string;
+  currentGrade?: number;
   onSettingsChanged?: () => void;
 }
 
@@ -76,10 +77,11 @@ const DEFAULT_SETTINGS: ChildSettings = {
   latin_seconds_per_task: 30,
 };
 
-export function ChildSettingsEditor({ childId, childName, parentId, onSettingsChanged }: ChildSettingsEditorProps) {
+export function ChildSettingsEditor({ childId, childName, parentId, currentGrade, onSettingsChanged }: ChildSettingsEditorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState<ChildSettings>(DEFAULT_SETTINGS);
   const [visibility, setVisibility] = useState<SubjectVisibility>({});
+  const [grade, setGrade] = useState<number>(currentGrade || 1);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -152,6 +154,14 @@ export function ChildSettingsEditor({ childId, childName, parentId, onSettingsCh
   const saveSettings = async () => {
     setSaving(true);
     try {
+      // Update child grade in profile
+      const { error: gradeError } = await supabase
+        .from('profiles')
+        .update({ grade })
+        .eq('id', childId);
+
+      if (gradeError) throw gradeError;
+
       // Upsert child settings
       const { error: settingsError } = await supabase
         .from('child_settings')
@@ -231,6 +241,32 @@ export function ChildSettingsEditor({ childId, childName, parentId, onSettingsCh
           </div>
         ) : (
           <>
+            {/* Grade Management */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  Klassenstufe
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Aktuelle Klassenstufe von {childName}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={13}
+                    value={grade}
+                    onChange={(e) => setGrade(parseInt(e.target.value) || 1)}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">Klasse</span>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Screen Time Limits */}
             <Card>
               <CardHeader className="pb-3">
