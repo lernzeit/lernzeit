@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useChildSettings } from '@/hooks/useChildSettings';
 
 export function useScreenTimeLimit(userId: string) {
-  const [todayMinutesUsed, setTodayMinutesUsed] = useState(0);
+  const [todayMinutesEarned, setTodayMinutesEarned] = useState(0);
+  const [todayAchievementMinutes, setTodayAchievementMinutes] = useState(0);
   const [remainingMinutes, setRemainingMinutes] = useState(0);
   const [isAtLimit, setIsAtLimit] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -25,8 +26,8 @@ export function useScreenTimeLimit(userId: string) {
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      // Load all earning sessions from today
-      const [gameSessionsRes, learningSessionsRes] = await Promise.all([
+      // Load all earning sessions AND achievements from today
+      const [gameSessionsRes, learningSessionsRes, achievementsRes] = await Promise.all([
         supabase
           .from('game_sessions')
           .select('time_earned')
@@ -38,33 +39,53 @@ export function useScreenTimeLimit(userId: string) {
           .select('time_earned')
           .eq('user_id', userId)
           .gte('session_date', startOfDay.toISOString())
-          .lt('session_date', endOfDay.toISOString())
+          .lt('session_date', endOfDay.toISOString()),
+        supabase
+          .from('user_achievements')
+          .select(`
+            achievements_template (reward_minutes)
+          `)
+          .eq('user_id', userId)
+          .eq('is_completed', true)
+          .gte('earned_at', startOfDay.toISOString())
+          .lt('earned_at', endOfDay.toISOString())
       ]);
 
-      // Aggregate today's earned time across sources
+      // Aggregate today's earned time from sessions
       // IMPORTANT: time_earned is ALWAYS stored in SECONDS
       const gameValues = (gameSessionsRes.data ?? []).map((s: any) => Number(s.time_earned) || 0);
       const learningValues = (learningSessionsRes.data ?? []).map((s: any) => Number(s.time_earned) || 0);
-      const allValues = [...gameValues, ...learningValues];
+      const allSessionValues = [...gameValues, ...learningValues];
 
       // Sum all seconds and convert to minutes
-      const totalSeconds = allValues.reduce((sum: number, v: number) => sum + (Number.isFinite(v) ? v : 0), 0);
-      const minutesEarned = Math.ceil(totalSeconds / 60);
+      const totalSessionSeconds = allSessionValues.reduce((sum: number, v: number) => sum + (Number.isFinite(v) ? v : 0), 0);
+      const sessionMinutes = Math.ceil(totalSessionSeconds / 60);
 
-      setTodayMinutesUsed(minutesEarned);
+      // Calculate achievement bonus minutes
+      const achievementMinutes = (achievementsRes.data ?? []).reduce((sum: number, ua: any) => {
+        return sum + (ua.achievements_template?.reward_minutes || 0);
+      }, 0);
+
+      // Total earned = sessions + achievements
+      const totalMinutesEarned = sessionMinutes + achievementMinutes;
+
+      setTodayMinutesEarned(totalMinutesEarned);
+      setTodayAchievementMinutes(achievementMinutes);
 
       // Calculate limit based on day of week
       const isWeekend = today.getDay() === 0 || today.getDay() === 6; // Sunday = 0, Saturday = 6
       const dailyLimit = isWeekend ? settings.weekend_max_minutes : settings.weekday_max_minutes;
       
-      const remaining = Math.max(0, dailyLimit - minutesEarned);
+      const remaining = Math.max(0, dailyLimit - totalMinutesEarned);
       setRemainingMinutes(remaining);
       setIsAtLimit(remaining <= 0);
 
       console.info('⏱️ ScreenTime (today):', { 
-        sessions: allValues.length, 
-        totalSeconds, 
-        minutesEarned, 
+        sessions: allSessionValues.length, 
+        totalSessionSeconds, 
+        sessionMinutes,
+        achievementMinutes,
+        totalMinutesEarned,
         dailyLimit, 
         remaining 
       });
@@ -89,7 +110,8 @@ export function useScreenTimeLimit(userId: string) {
   };
 
   return {
-    todayMinutesUsed,
+    todayMinutesUsed: todayMinutesEarned,
+    todayAchievementMinutes,
     remainingMinutes,
     isAtLimit,
     loading,

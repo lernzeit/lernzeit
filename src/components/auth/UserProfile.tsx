@@ -49,7 +49,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   );
   
   // Use screen time limit hook for children
-  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
+  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, todayAchievementMinutes, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
     profile?.role === 'child' ? user?.id || '' : ''
   );
   
@@ -378,6 +378,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                       <span className="text-sm text-blue-700">Heute verdient:</span>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
+                        {todayAchievementMinutes > 0 && (
+                          <span className="text-xs text-purple-600">(inkl. {todayAchievementMinutes} Min. Bonus)</span>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
