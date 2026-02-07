@@ -30,12 +30,25 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableMinutes, setAvailableMinutes] = useState(0);
   const [todayRequestedMinutes, setTodayRequestedMinutes] = useState(0);
-  const [minutesBreakdown, setMinutesBreakdown] = useState({
+  const [minutesBreakdown, setMinutesBreakdown] = useState<{
+    todaySessionMinutes: number;
+    todayAchievementMinutes: number;
+    totalEarnedToday: number;
+    todayApprovedMinutes: number;
+    availableMinutes: number;
+    achievementDetails: Array<{
+      name: string;
+      icon: string;
+      reward_minutes: number;
+      earned_at: string;
+    }>;
+  }>({
     todaySessionMinutes: 0,
     todayAchievementMinutes: 0,
     totalEarnedToday: 0,
     todayApprovedMinutes: 0,
-    availableMinutes: 0
+    availableMinutes: 0,
+    achievementDetails: []
   });
   
   // Get pending request and recent requests
@@ -239,18 +252,35 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
                       <span>Heute erspielt:</span>
                       <span className="font-medium text-green-700">{minutesBreakdown.todaySessionMinutes} Min.</span>
                     </div>
-                     <div className="flex justify-between">
-                       <span>Achievement-Belohnungen (heute):</span>
-                       <span className="font-medium text-green-700">{minutesBreakdown.todayAchievementMinutes} Min.</span>
-                     </div>
-                     <div className="flex justify-between border-t pt-1">
-                       <span>Gesamt heute:</span>
-                       <span className="font-medium text-green-700">{minutesBreakdown.totalEarnedToday} Min.</span>
-                     </div>
-                     <div className="flex justify-between text-orange-600">
-                       <span>Heute genehmigt:</span>
-                       <span className="font-medium">-{minutesBreakdown.todayApprovedMinutes} Min.</span>
-                     </div>
+                    
+                    {/* Achievement breakdown with details */}
+                    <div className="flex justify-between">
+                      <span>Achievement-Belohnungen (heute):</span>
+                      <span className="font-medium text-purple-700">{minutesBreakdown.todayAchievementMinutes} Min.</span>
+                    </div>
+                    
+                    {/* Show individual achievements */}
+                    {minutesBreakdown.achievementDetails && minutesBreakdown.achievementDetails.length > 0 && (
+                      <div className="ml-2 pl-2 border-l-2 border-purple-200 space-y-0.5">
+                        {minutesBreakdown.achievementDetails.map((achievement, index) => (
+                          <div key={index} className="flex justify-between text-purple-600">
+                            <span className="truncate max-w-[160px]">
+                              {achievement.icon} {achievement.name}
+                            </span>
+                            <span className="font-medium">+{achievement.reward_minutes} Min.</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between border-t pt-1">
+                      <span>Gesamt heute:</span>
+                      <span className="font-medium text-green-700">{minutesBreakdown.totalEarnedToday} Min.</span>
+                    </div>
+                    <div className="flex justify-between text-orange-600">
+                      <span>Heute genehmigt:</span>
+                      <span className="font-medium">-{minutesBreakdown.todayApprovedMinutes} Min.</span>
+                    </div>
                     <div className="flex justify-between border-t pt-1 font-semibold">
                       <span>Noch verfügbar:</span>
                       <span className="text-green-800">{availableMinutes} Min.</span>
