@@ -127,6 +127,52 @@ export function useEarnedMinutesTracker() {
     }
   };
 
+  interface TodayAchievementDetail {
+    name: string;
+    icon: string;
+    reward_minutes: number;
+    earned_at: string;
+  }
+
+  const getTodayAchievementDetails = async (userId: string): Promise<TodayAchievementDetail[]> => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get achievements completed TODAY with full details
+      const { data: userAchievements, error } = await supabase
+        .from('user_achievements')
+        .select(`
+          earned_at,
+          achievements_template (name, icon, reward_minutes)
+        `)
+        .eq('user_id', userId)
+        .eq('is_completed', true)
+        .gte('earned_at', today)
+        .lt('earned_at', today + 'T23:59:59.999Z')
+        .order('earned_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting today achievement details:', error);
+        return [];
+      }
+
+      const details: TodayAchievementDetail[] = (userAchievements || [])
+        .filter((ua: any) => ua.achievements_template?.reward_minutes > 0)
+        .map((ua: any) => ({
+          name: ua.achievements_template?.name || 'Unbekannt',
+          icon: ua.achievements_template?.icon || '🏆',
+          reward_minutes: ua.achievements_template?.reward_minutes || 0,
+          earned_at: ua.earned_at
+        }));
+
+      console.log('Today achievement details:', details);
+      return details;
+    } catch (error) {
+      console.error('Error in getTodayAchievementDetails:', error);
+      return [];
+    }
+  };
+
   const getTodayApprovedMinutes = async (userId: string): Promise<number> => {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -210,10 +256,11 @@ export function useEarnedMinutesTracker() {
 
   const getAvailableMinutesBreakdown = async (userId: string) => {
     try {
-      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes] = await Promise.all([
+      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes, achievementDetails] = await Promise.all([
         getTodaySessionMinutes(userId),
         getTodayAchievementMinutes(userId),
-        getTodayApprovedMinutes(userId)
+        getTodayApprovedMinutes(userId),
+        getTodayAchievementDetails(userId)
       ]);
 
       const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
@@ -224,7 +271,8 @@ export function useEarnedMinutesTracker() {
         todayAchievementMinutes,
         totalEarnedToday,
         todayApprovedMinutes,
-        availableMinutes
+        availableMinutes,
+        achievementDetails
       };
     } catch (error) {
       console.error('Error in getAvailableMinutesBreakdown:', error);
@@ -233,7 +281,8 @@ export function useEarnedMinutesTracker() {
         todayAchievementMinutes: 0,
         totalEarnedToday: 0,
         todayApprovedMinutes: 0,
-        availableMinutes: 0
+        availableMinutes: 0,
+        achievementDetails: []
       };
     }
   };
@@ -245,6 +294,7 @@ export function useEarnedMinutesTracker() {
     getAvailableMinutesBreakdown,
     getTodaySessionMinutes,
     getTodayAchievementMinutes,
-    getTodayApprovedMinutes
+    getTodayApprovedMinutes,
+    getTodayAchievementDetails
   };
 }

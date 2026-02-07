@@ -49,7 +49,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   );
   
   // Use screen time limit hook for children
-  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, todayAchievementMinutes, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
+  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, todayAchievementMinutes, todayAchievementDetails, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
     profile?.role === 'child' ? user?.id || '' : ''
   );
   
@@ -373,8 +373,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             <>
               <Card className="shadow-card bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-200">
                 <CardContent className="p-4">
-                  <div className="text-center">
-                    <div className="flex justify-between items-center mb-2">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-700">Heute verdient:</span>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
@@ -383,6 +383,22 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                         )}
                       </div>
                     </div>
+                    
+                    {/* Show achievement details if any */}
+                    {todayAchievementDetails && todayAchievementDetails.length > 0 && (
+                      <div className="text-xs bg-purple-50 rounded p-2 space-y-1">
+                        <div className="text-purple-700 font-medium mb-1">Bonus-Achievements heute:</div>
+                        {todayAchievementDetails.map((achievement, index) => (
+                          <div key={index} className="flex justify-between text-purple-600">
+                            <span className="truncate max-w-[180px]">
+                              {achievement.icon} {achievement.name}
+                            </span>
+                            <span className="font-medium">+{achievement.reward_minutes} Min.</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-700">Noch verfügbar:</span>
                       <span className="font-bold text-blue-800">{remainingMinutes} Min.</span>

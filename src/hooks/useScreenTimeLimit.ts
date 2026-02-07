@@ -2,9 +2,17 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useChildSettings } from '@/hooks/useChildSettings';
 
+export interface TodayAchievementDetail {
+  name: string;
+  icon: string;
+  reward_minutes: number;
+  earned_at: string;
+}
+
 export function useScreenTimeLimit(userId: string) {
   const [todayMinutesEarned, setTodayMinutesEarned] = useState(0);
   const [todayAchievementMinutes, setTodayAchievementMinutes] = useState(0);
+  const [todayAchievementDetails, setTodayAchievementDetails] = useState<TodayAchievementDetail[]>([]);
   const [remainingMinutes, setRemainingMinutes] = useState(0);
   const [isAtLimit, setIsAtLimit] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,12 +51,14 @@ export function useScreenTimeLimit(userId: string) {
         supabase
           .from('user_achievements')
           .select(`
-            achievements_template (reward_minutes)
+            earned_at,
+            achievements_template (name, icon, reward_minutes)
           `)
           .eq('user_id', userId)
           .eq('is_completed', true)
           .gte('earned_at', startOfDay.toISOString())
           .lt('earned_at', endOfDay.toISOString())
+          .order('earned_at', { ascending: false })
       ]);
 
       // Aggregate today's earned time from sessions
@@ -61,9 +71,18 @@ export function useScreenTimeLimit(userId: string) {
       const totalSessionSeconds = allSessionValues.reduce((sum: number, v: number) => sum + (Number.isFinite(v) ? v : 0), 0);
       const sessionMinutes = Math.ceil(totalSessionSeconds / 60);
 
-      // Calculate achievement bonus minutes
-      const achievementMinutes = (achievementsRes.data ?? []).reduce((sum: number, ua: any) => {
-        return sum + (ua.achievements_template?.reward_minutes || 0);
+      // Calculate achievement bonus minutes and extract details
+      const achievementDetails: TodayAchievementDetail[] = (achievementsRes.data ?? [])
+        .filter((ua: any) => ua.achievements_template?.reward_minutes > 0)
+        .map((ua: any) => ({
+          name: ua.achievements_template?.name || 'Unbekannt',
+          icon: ua.achievements_template?.icon || '🏆',
+          reward_minutes: ua.achievements_template?.reward_minutes || 0,
+          earned_at: ua.earned_at
+        }));
+
+      const achievementMinutes = achievementDetails.reduce((sum: number, detail) => {
+        return sum + detail.reward_minutes;
       }, 0);
 
       // Total earned = sessions + achievements
@@ -71,6 +90,7 @@ export function useScreenTimeLimit(userId: string) {
 
       setTodayMinutesEarned(totalMinutesEarned);
       setTodayAchievementMinutes(achievementMinutes);
+      setTodayAchievementDetails(achievementDetails);
 
       // Calculate limit based on day of week
       const isWeekend = today.getDay() === 0 || today.getDay() === 6; // Sunday = 0, Saturday = 6
@@ -85,6 +105,7 @@ export function useScreenTimeLimit(userId: string) {
         totalSessionSeconds, 
         sessionMinutes,
         achievementMinutes,
+        achievementDetails,
         totalMinutesEarned,
         dailyLimit, 
         remaining 
@@ -112,6 +133,7 @@ export function useScreenTimeLimit(userId: string) {
   return {
     todayMinutesUsed: todayMinutesEarned,
     todayAchievementMinutes,
+    todayAchievementDetails,
     remainingMinutes,
     isAtLimit,
     loading,
