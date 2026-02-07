@@ -375,6 +375,9 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
 
   console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Available: ${totalAvailableMinutes})`);
 
+  // Send email notification to parent
+  await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', requestedMinutes as number, sanitizedMessage, request.id);
+
   return new Response(JSON.stringify({ 
     success: true, 
     request,
@@ -540,4 +543,144 @@ function generateDeepLinks(minutes: number) {
     android_family_link: `https://families.google.com/supervision/time-limits/request?minutes=${minutes}`,
     fallback_web: `https://support.apple.com/en-us/HT201304` // Apple Screen Time support
   };
+}
+
+/**
+ * Send email notification to parent when child creates a screen time request
+ */
+async function sendParentNotification(
+  supabase: any, 
+  parentId: string, 
+  childName: string, 
+  requestedMinutes: number,
+  message: string,
+  requestId: string
+) {
+  try {
+    // Get parent's email from auth.users table
+    const { data: parentUser, error: userError } = await supabase.auth.admin.getUserById(parentId);
+    
+    if (userError || !parentUser?.user?.email) {
+      console.log('Could not get parent email:', userError?.message || 'No email found');
+      return;
+    }
+
+    const parentEmail = parentUser.user.email;
+    
+    // Get the app URL for deep linking
+    const appUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://lernzeit.lovable.app';
+    
+    // Create approval link that opens the app
+    const approvalLink = `${appUrl}?action=approve_request&request_id=${requestId}`;
+    
+    // Format the email content
+    const emailSubject = `📱 ${childName} möchte Bildschirmzeit`;
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bildschirmzeit-Anfrage</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px;">
+  <div style="max-width: 480px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 24px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px;">📱 Bildschirmzeit-Anfrage</h1>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding: 24px;">
+      <p style="font-size: 16px; color: #374151; margin-bottom: 16px;">
+        <strong>${childName}</strong> hat heute fleißig gelernt und möchte nun Bildschirmzeit einlösen:
+      </p>
+      
+      <!-- Minutes Card -->
+      <div style="background-color: #dbeafe; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 48px; font-weight: bold; color: #1d4ed8;">${requestedMinutes}</div>
+        <div style="color: #1e40af; font-size: 14px;">Minuten angefragt</div>
+      </div>
+      
+      ${message ? `
+      <!-- Child's Message -->
+      <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Nachricht von ${childName}:</div>
+        <div style="font-size: 14px; color: #374151;">"${message}"</div>
+      </div>
+      ` : ''}
+      
+      <!-- Action Button -->
+      <a href="${approvalLink}" style="display: block; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; text-decoration: none; padding: 16px 24px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 16px;">
+        ✓ In der App antworten
+      </a>
+      
+      <!-- Instructions -->
+      <div style="background-color: #fef3c7; border-radius: 12px; padding: 16px; margin-top: 20px;">
+        <div style="font-size: 14px; font-weight: bold; color: #92400e; margin-bottom: 8px;">So funktioniert's:</div>
+        <ol style="margin: 0; padding-left: 20px; color: #78350f; font-size: 13px;">
+          <li style="margin-bottom: 4px;">Öffnen Sie die LernZeit App</li>
+          <li style="margin-bottom: 4px;">Genehmigen oder lehnen Sie die Anfrage ab</li>
+          <li>Geben Sie die Zeit in Family Link / Bildschirmzeit frei</li>
+        </ol>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background-color: #f4f4f5; padding: 16px; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #6b7280;">
+        LernZeit - Lernen wird belohnt 📚
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    // Use Supabase's auth.admin API to send email
+    // Note: This uses the built-in Supabase email functionality
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    
+    if (RESEND_API_KEY) {
+      // Use Resend if available for better deliverability
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'LernZeit <noreply@lernzeit.app>',
+          to: [parentEmail],
+          subject: emailSubject,
+          html: emailHtml,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Resend email error:', errorText);
+      } else {
+        console.log(`📧 Email notification sent to parent: ${parentEmail}`);
+      }
+    } else {
+      // Fallback: Log that email would be sent (can integrate with Supabase Edge Functions email later)
+      console.log(`📧 Email notification would be sent to: ${parentEmail}`);
+      console.log(`Subject: ${emailSubject}`);
+      console.log(`Request: ${childName} requests ${requestedMinutes} minutes`);
+      
+      // Store notification in database for in-app display
+      await supabase
+        .from('screen_time_requests')
+        .update({
+          // Mark that parent should be notified in-app
+          request_message: message || `${childName} möchte ${requestedMinutes} Minuten Bildschirmzeit.`
+        })
+        .eq('id', requestId);
+    }
+  } catch (error) {
+    // Don't fail the request if email fails - just log it
+    console.error('Failed to send parent notification:', error);
+  }
 }
