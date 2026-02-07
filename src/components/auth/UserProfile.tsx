@@ -15,6 +15,7 @@ import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { ParentSettingsMenu } from '@/components/ParentSettingsMenu';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AchievementQuickView } from '@/components/AchievementQuickView';
+import { EarnedTimeWidget } from '@/components/EarnedTimeWidget';
 
 import { ProfileEdit } from '@/components/ProfileEdit';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,7 +23,6 @@ import { getAvatarById } from '@/data/avatars';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
-import { ScreenTimeRequestCard } from '@/components/ScreenTimeRequestCard';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface UserProfileProps {
@@ -371,44 +371,11 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </Card>
           ) : (
             <>
-              <Card className="shadow-card bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">Heute verdient:</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-blue-800">{todayMinutesUsed} Min.</span>
-                        {todayAchievementMinutes > 0 && (
-                          <span className="text-xs text-purple-600">(inkl. {todayAchievementMinutes} Min. Bonus)</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Show achievement details if any */}
-                    {todayAchievementDetails && todayAchievementDetails.length > 0 && (
-                      <div className="text-xs bg-purple-50 rounded p-2 space-y-1">
-                        <div className="text-purple-700 font-medium mb-1">Bonus-Achievements heute:</div>
-                        {todayAchievementDetails.map((achievement, index) => (
-                          <div key={index} className="flex justify-between text-purple-600">
-                            <span className="truncate max-w-[180px]">
-                              {achievement.icon} {achievement.name}
-                            </span>
-                            <span className="font-medium">+{achievement.reward_minutes} Min.</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">Noch verfügbar:</span>
-                      <span className="font-bold text-blue-800">{remainingMinutes} Min.</span>
-                    </div>
-                    {usageLoading && (
-                      <div className="text-xs text-blue-600 mt-1">Daten werden aktualisiert...</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Combined Earned Time + Screen Time Request Widget */}
+              <EarnedTimeWidget 
+                userId={user.id}
+                hasParentLink={hasParentLink}
+              />
 
               <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
                 <CardContent className="p-6">
@@ -454,12 +421,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           </div>
 
 
-          {/* Screen Time Request Card */}
-          <ScreenTimeRequestCard 
-            userId={user.id}
-            earnedMinutes={totalTimeEarned}
-            hasParentLink={hasParentLink}
-          />
 
           {/* Quick Actions */}
           <div className="grid grid-cols-2 gap-4">
