@@ -231,101 +231,78 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     });
   }
 
-  // Get total available earned minutes from user_earned_minutes table
+  // Get total available earned minutes from user_earned_minutes table (legacy/optional)
   const { data: earnedMinutesData } = await supabase
     .from('user_earned_minutes')
     .select('minutes_remaining')
     .eq('user_id', childId)
     .gt('minutes_remaining', 0);
 
-  let totalAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) => 
+  const legacyAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) =>
     sum + (record.minutes_remaining || 0), 0) || 0;
 
-  // Fallback: If user_earned_minutes is empty, calculate from today's sessions + achievements
-  // This handles the transition period for existing sessions
-  if (totalAvailableMinutes === 0) {
-    console.log('No user_earned_minutes found, checking sessions + achievements fallback...');
-    
-    // Get today's game sessions
-    const { data: gameSessions } = await supabase
-      .from('game_sessions')
-      .select('time_earned')
-      .eq('user_id', childId)
-      .gte('session_date', todayStart.toISOString())
-      .lte('session_date', todayEnd.toISOString());
+  // Canonical availability calculation (matches frontend):
+  // Sessions (seconds -> minutes, rounded up) + today's achievement bonus minutes - today's approved requests
+  const { data: gameSessionsForDay } = await supabase
+    .from('game_sessions')
+    .select('time_earned')
+    .eq('user_id', childId)
+    .gte('session_date', todayStart.toISOString())
+    .lte('session_date', todayEnd.toISOString());
 
-    // Get today's learning sessions
-    const { data: learningSessions } = await supabase
-      .from('learning_sessions')
-      .select('time_earned')
-      .eq('user_id', childId)
-      .gte('session_date', todayStart.toISOString())
-      .lte('session_date', todayEnd.toISOString());
+  const { data: learningSessionsForDay } = await supabase
+    .from('learning_sessions')
+    .select('time_earned')
+    .eq('user_id', childId)
+    .gte('session_date', todayStart.toISOString())
+    .lte('session_date', todayEnd.toISOString());
 
-    // time_earned is stored in SECONDS, convert to minutes
-    const gameMinutes = gameSessions?.reduce((sum: number, s: any) => 
-      sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
-    const learningMinutes = learningSessions?.reduce((sum: number, s: any) => 
-      sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
-    const sessionMinutes = gameMinutes + learningMinutes;
+  const gameMinutes = gameSessionsForDay?.reduce((sum: number, s: any) =>
+    sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
+  const learningMinutes = learningSessionsForDay?.reduce((sum: number, s: any) =>
+    sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
+  const sessionMinutes = gameMinutes + learningMinutes;
 
-    // Get today's completed achievements with bonus minutes
-    // Use explicit join through achievement_id
-    const { data: todayAchievements, error: achievementError } = await supabase
-      .from('user_achievements')
-      .select(`
-        achievement_id,
-        earned_at,
-        achievements_template!inner (
-          name,
-          reward_minutes
-        )
-      `)
-      .eq('user_id', childId)
-      .eq('is_completed', true)
-      .gte('earned_at', todayStart.toISOString())
-      .lte('earned_at', todayEnd.toISOString());
+  const { data: todayAchievements, error: achievementError } = await supabase
+    .from('user_achievements')
+    .select(`
+      achievements_template!inner (
+        name,
+        reward_minutes
+      )
+    `)
+    .eq('user_id', childId)
+    .eq('is_completed', true)
+    .gte('earned_at', todayStart.toISOString())
+    .lte('earned_at', todayEnd.toISOString());
 
-    console.log('Today achievements query result:', { 
-      todayStart: todayStart.toISOString(),
-      todayEnd: todayEnd.toISOString(),
-      achievementError,
-      count: todayAchievements?.length,
-      achievements: todayAchievements
-    });
+  const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) =>
+    sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
 
-    const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) => {
-      const rewardMinutes = ua.achievements_template?.reward_minutes || 0;
-      console.log('Processing achievement:', { 
-        name: ua.achievements_template?.name,
-        rewardMinutes 
-      });
-      return sum + rewardMinutes;
-    }, 0) || 0;
+  const approvedToday = todayRequests?.filter((r: any) => r.status === 'approved')
+    .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
 
-    // Total earned = sessions + achievements
-    const totalEarnedToday = sessionMinutes + achievementMinutes;
+  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - approvedToday);
 
-    // Subtract already approved requests
-    const approvedToday = todayRequests?.filter((r: any) => r.status === 'approved')
-      .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
+  // Use the canonical value for validation (prevents false negatives when legacy table is out of sync)
+  const totalAvailableMinutes = Math.max(legacyAvailableMinutes, canonicalAvailableMinutes);
 
-    totalAvailableMinutes = Math.max(0, totalEarnedToday - approvedToday);
-    console.log('Fallback calculation:', { 
-      gameMinutes, 
-      learningMinutes,
-      sessionMinutes, 
-      achievementMinutes,
-      totalEarnedToday,
-      approvedToday, 
-      totalAvailableMinutes 
-    });
-  }
+  console.log('Available minutes (validation):', {
+    legacyAvailableMinutes,
+    canonicalAvailableMinutes,
+    gameMinutes,
+    learningMinutes,
+    sessionMinutes,
+    achievementMinutes,
+    achievementError,
+    approvedToday,
+    totalAvailableMinutes
+  });
 
-  // Validate enough earned minutes available
+  // Validate enough earned minutes available (canonical)
   if ((requestedMinutes as number) > totalAvailableMinutes) {
-    return new Response(JSON.stringify({ 
-      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${totalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.` 
+    return new Response(JSON.stringify({
+      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${totalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.`
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
