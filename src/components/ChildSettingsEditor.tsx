@@ -162,33 +162,69 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
       if (gradeError) throw gradeError;
 
-      // Upsert child settings
-      const { error: settingsError } = await supabase
+      // Check if child settings exist
+      const { data: existingSettings } = await supabase
         .from('child_settings')
-        .upsert({
-          parent_id: parentId,
-          child_id: childId,
-          ...settings,
-        }, {
-          onConflict: 'child_id'
-        });
+        .select('id')
+        .eq('child_id', childId)
+        .maybeSingle();
 
-      if (settingsError) throw settingsError;
+      if (existingSettings) {
+        // Update existing settings
+        const { error: settingsError } = await supabase
+          .from('child_settings')
+          .update({
+            ...settings,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('child_id', childId);
 
-      // Save visibility settings
-      for (const subject of SUBJECTS) {
-        const { error: visibilityError } = await supabase
-          .from('child_subject_visibility')
-          .upsert({
+        if (settingsError) throw settingsError;
+      } else {
+        // Insert new settings
+        const { error: settingsError } = await supabase
+          .from('child_settings')
+          .insert({
             parent_id: parentId,
             child_id: childId,
-            subject: subject.key,
-            is_visible: visibility[subject.key] ?? true,
-          }, {
-            onConflict: 'child_id,subject'
+            ...settings,
           });
 
-        if (visibilityError) throw visibilityError;
+        if (settingsError) throw settingsError;
+      }
+
+      // Save visibility settings - check and update/insert each
+      for (const subject of SUBJECTS) {
+        const { data: existingVisibility } = await supabase
+          .from('child_subject_visibility')
+          .select('id')
+          .eq('child_id', childId)
+          .eq('subject', subject.key)
+          .maybeSingle();
+
+        if (existingVisibility) {
+          const { error: visibilityError } = await supabase
+            .from('child_subject_visibility')
+            .update({
+              is_visible: visibility[subject.key] ?? true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('child_id', childId)
+            .eq('subject', subject.key);
+
+          if (visibilityError) throw visibilityError;
+        } else {
+          const { error: visibilityError } = await supabase
+            .from('child_subject_visibility')
+            .insert({
+              parent_id: parentId,
+              child_id: childId,
+              subject: subject.key,
+              is_visible: visibility[subject.key] ?? true,
+            });
+
+          if (visibilityError) throw visibilityError;
+        }
       }
 
       toast({
