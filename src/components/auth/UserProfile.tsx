@@ -344,24 +344,36 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
           {/* Screen Time Status */}
           {isAtLimit ? (
-            <Card className="shadow-card bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-200">
-              <CardContent className="p-6">
-                <div className="text-center mb-4">
-                  <div className="text-4xl mb-3">⏰</div>
-                  <h3 className="text-xl font-bold text-red-800 mb-2">Tageslimit erreicht!</h3>
-                  <p className="text-red-700 text-sm">
-                    Du hast bereits {getDailyLimit()} Minuten verdient. Du kannst weiter üben, aber keine weitere Zeit verdienen.
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => onStartGame(profile?.grade || 1)} 
-                  className="w-full h-14 text-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-lg"
-                >
-                  <BookOpen className="w-6 h-6 mr-2" />
-                  📚 Trotzdem üben (ohne Belohnung)
-                </Button>
-              </CardContent>
-            </Card>
+            <>
+              {/* Limit Reached Info */}
+              <Card className="shadow-card bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="text-3xl">🎉</div>
+                    <div>
+                      <h3 className="text-lg font-bold text-amber-800">Tagesziel geschafft!</h3>
+                      <p className="text-amber-700 text-sm">
+                        Du hast heute {getDailyLimit()} Minuten verdient.
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => onStartGame(profile?.grade || 1)} 
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                    size="sm"
+                  >
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Weiter üben
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Show EarnedTimeWidget even when limit is reached - for breakdown and request */}
+              <EarnedTimeWidget 
+                userId={user.id}
+                hasParentLink={hasParentLink}
+              />
+            </>
           ) : (
             <>
               {/* Game Start Card - Now First */}
