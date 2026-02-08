@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Smartphone, Clock, AlertCircle, ChevronDown, ChevronUp, Trophy, Calendar, Minus, Plus } from 'lucide-react';
-import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
+import { Smartphone, Clock, AlertCircle, ChevronDown, ChevronUp, Trophy, Calendar } from 'lucide-react';
+import { useScreenTimeRequests } from '@/hooks/useScreenTimeRequests';
 import { useEarnedMinutesTracker } from '@/hooks/useEarnedMinutesTracker';
 import { useScreenTimeLimit, TodayAchievementDetail } from '@/hooks/useScreenTimeLimit';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +18,6 @@ interface EarnedTimeWidgetProps {
 
 export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProps) {
   const [message, setMessage] = useState('');
-  const [requestMinutes, setRequestMinutes] = useState(5);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -42,11 +41,11 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
     getAvailableMinutes(userId).then((mins) => {
       if (isMounted) {
         setAvailableMinutes(mins);
-        // Set default request to all available, or 5 minimum
-        setRequestMinutes(Math.max(5, mins));
       }
     });
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [userId, getAvailableMinutes, requests]);
 
   // Get pending requests - separate today's from older ones
@@ -75,23 +74,16 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
       return;
     }
 
-    if (requestMinutes < 5) {
+    if (availableMinutes < 5) {
       toast({
-        title: "Zu wenig Minuten",
-        description: "Du musst mindestens 5 Minuten beantragen.",
+        title: "Nicht genügend Minuten",
+        description: "Du musst mindestens 5 Minuten verdient haben, um Bildschirmzeit zu beantragen.",
         variant: "destructive",
       });
       return;
     }
 
-    if (requestMinutes > availableMinutes) {
-      toast({
-        title: "Nicht genügend Zeit",
-        description: `Du kannst maximal ${availableMinutes} Minuten beantragen.`,
-        variant: "destructive",
-      });
-      return;
-    }
+    const minutesToRequest = availableMinutes;
 
     setIsSubmitting(true);
 
@@ -113,7 +105,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
 
       const result = await createRequest(
         relationship.parent_id,
-        requestMinutes,
+        minutesToRequest,
         availableMinutes,
         message.trim() || undefined
       );
@@ -121,7 +113,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
       if (result.success) {
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${requestMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${minutesToRequest} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         setMessage('');
         setIsDialogOpen(false);
@@ -307,59 +299,16 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
                         </p>
                       </div>
                       
-                      {/* Minutes Selector */}
-                      <div className="space-y-3">
-                        <Label>Minuten wählen</Label>
-                        <div className="flex items-center justify-center gap-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setRequestMinutes(Math.max(5, requestMinutes - 5))}
-                            disabled={requestMinutes <= 5}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                          <span className="text-3xl font-bold text-purple-600 min-w-[80px] text-center">
-                            {requestMinutes}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setRequestMinutes(Math.min(availableMinutes, requestMinutes + 5))}
-                            disabled={requestMinutes >= availableMinutes}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Min: 5</span>
-                          <span>Max: {availableMinutes}</span>
-                        </div>
-                        {/* Quick select buttons */}
-                        <div className="flex gap-2 justify-center flex-wrap">
-                          {[5, 10, 15, 30].filter(m => m <= availableMinutes).map(mins => (
-                            <Button
-                              key={mins}
-                              type="button"
-                              variant={requestMinutes === mins ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setRequestMinutes(mins)}
-                            >
-                              {mins} Min.
-                            </Button>
-                          ))}
-                          {availableMinutes > 30 && (
-                            <Button
-                              type="button"
-                              variant={requestMinutes === availableMinutes ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setRequestMinutes(availableMinutes)}
-                            >
-                              Alle ({availableMinutes})
-                            </Button>
-                          )}
+                      {/* Requested minutes (simple) */}
+                      <div className="space-y-2">
+                        <Label>Minuten</Label>
+                        <div className="bg-muted rounded-lg p-4 text-center">
+                          <div className="text-3xl font-bold text-foreground">
+                            {availableMinutes}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            (alle heute noch nicht beantragten Minuten)
+                          </div>
                         </div>
                       </div>
                       
@@ -377,10 +326,10 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
                       <div className="flex gap-2">
                         <Button
                           onClick={handleCreateRequest}
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || availableMinutes < 5}
                           className="flex-1"
                         >
-                          {isSubmitting ? 'Wird gesendet...' : `${requestMinutes} Min. anfragen`}
+                          {isSubmitting ? 'Wird gesendet...' : `${availableMinutes} Min. anfragen`}
                         </Button>
                         <Button
                           variant="outline"
