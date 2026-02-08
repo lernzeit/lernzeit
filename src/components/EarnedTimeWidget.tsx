@@ -292,10 +292,10 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
                     <div className="space-y-4">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-blue-800">
-                          <strong>Wähle, wie viele Minuten du beantragen möchtest:</strong>
+                          <strong>Du kannst jetzt {availableMinutes} Minuten beantragen! 🎉</strong>
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
-                          Du hast heute {availableMinutes} Minuten zum Beantragen verfügbar.
+                          Das sind alle Minuten, die du heute verdient und noch nicht beantragt hast.
                         </p>
                       </div>
                       
