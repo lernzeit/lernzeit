@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Smartphone, Clock, AlertCircle, ChevronDown, ChevronUp, Trophy, Calendar } from 'lucide-react';
+import { Smartphone, Clock, AlertCircle, ChevronDown, ChevronUp, Trophy, Calendar, Minus, Plus } from 'lucide-react';
 import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
 import { useEarnedMinutesTracker } from '@/hooks/useEarnedMinutesTracker';
 import { useScreenTimeLimit, TodayAchievementDetail } from '@/hooks/useScreenTimeLimit';
@@ -308,23 +307,59 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
                         </p>
                       </div>
                       
-                      {/* Minutes Slider */}
+                      {/* Minutes Selector */}
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <Label>Minuten</Label>
-                          <span className="text-2xl font-bold text-purple-600">{requestMinutes}</span>
+                        <Label>Minuten wählen</Label>
+                        <div className="flex items-center justify-center gap-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setRequestMinutes(Math.max(5, requestMinutes - 5))}
+                            disabled={requestMinutes <= 5}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <span className="text-3xl font-bold text-purple-600 min-w-[80px] text-center">
+                            {requestMinutes}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setRequestMinutes(Math.min(availableMinutes, requestMinutes + 5))}
+                            disabled={requestMinutes >= availableMinutes}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <Slider
-                          value={[requestMinutes]}
-                          onValueChange={([value]) => setRequestMinutes(value)}
-                          min={5}
-                          max={availableMinutes}
-                          step={5}
-                          className="w-full"
-                        />
                         <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>5 Min.</span>
-                          <span>{availableMinutes} Min.</span>
+                          <span>Min: 5</span>
+                          <span>Max: {availableMinutes}</span>
+                        </div>
+                        {/* Quick select buttons */}
+                        <div className="flex gap-2 justify-center flex-wrap">
+                          {[5, 10, 15, 30].filter(m => m <= availableMinutes).map(mins => (
+                            <Button
+                              key={mins}
+                              type="button"
+                              variant={requestMinutes === mins ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setRequestMinutes(mins)}
+                            >
+                              {mins} Min.
+                            </Button>
+                          ))}
+                          {availableMinutes > 30 && (
+                            <Button
+                              type="button"
+                              variant={requestMinutes === availableMinutes ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setRequestMinutes(availableMinutes)}
+                            >
+                              Alle ({availableMinutes})
+                            </Button>
+                          )}
                         </div>
                       </div>
                       
