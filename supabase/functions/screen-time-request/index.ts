@@ -288,7 +288,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     sessionMinutes,
     achievementMinutes,
     achievementError,
-    approvedToday,
+    claimedToday,
     totalAvailableMinutes
   });
 
