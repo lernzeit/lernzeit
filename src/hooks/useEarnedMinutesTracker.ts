@@ -198,7 +198,38 @@ export function useEarnedMinutesTracker() {
       console.log('Today approved minutes:', approvedMinutes);
       return approvedMinutes;
     } catch (error) {
-      console.error('Error in getTodayApprovedMinutes:', error);  
+      console.error('Error in getTodayApprovedMinutes:', error);
+      return 0;
+    }
+  };
+
+  // NEW: Get today's pending minutes (reserved but not yet approved)
+  const getTodayPendingMinutes = async (userId: string): Promise<number> => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get only PENDING requests from TODAY
+      const { data, error } = await supabase
+        .from('screen_time_requests')
+        .select('requested_minutes')
+        .eq('child_id', userId)
+        .eq('status', 'pending')
+        .gte('created_at', today)
+        .lt('created_at', today + 'T23:59:59.999Z');
+
+      if (error) {
+        console.error('Error getting today pending minutes:', error);
+        return 0;
+      }
+
+      const pendingMinutes = (data || []).reduce((sum: number, request: any) => {
+        return sum + (Number(request.requested_minutes) || 0);
+      }, 0);
+
+      console.log('Today pending minutes:', pendingMinutes);
+      return pendingMinutes;
+    } catch (error) {
+      console.error('Error in getTodayPendingMinutes:', error);
       return 0;
     }
   };
@@ -206,21 +237,25 @@ export function useEarnedMinutesTracker() {
   const getAvailableMinutes = async (userId: string): Promise<number> => {
     try {
       // Get minutes from different sources - TODAY ONLY
-      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes] = await Promise.all([
+      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes, todayPendingMinutes] = await Promise.all([
         getTodaySessionMinutes(userId),
         getTodayAchievementMinutes(userId), 
-        getTodayApprovedMinutes(userId)
+        getTodayApprovedMinutes(userId),
+        getTodayPendingMinutes(userId)
       ]);
 
-      // Total available = today's sessions + today's achievements - today's approved requests
+      // Total available = today's sessions + today's achievements - today's claimed (pending + approved)
       const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
-      const availableMinutes = Math.max(0, totalEarnedToday - todayApprovedMinutes);
+      const totalClaimedToday = todayApprovedMinutes + todayPendingMinutes;
+      const availableMinutes = Math.max(0, totalEarnedToday - totalClaimedToday);
 
       console.log('Available minutes calculation (TODAY ONLY):', {
         todaySessionMinutes,
         todayAchievementMinutes,
         totalEarnedToday,
         todayApprovedMinutes,
+        todayPendingMinutes,
+        totalClaimedToday,
         availableMinutes
       });
 
@@ -256,21 +291,25 @@ export function useEarnedMinutesTracker() {
 
   const getAvailableMinutesBreakdown = async (userId: string) => {
     try {
-      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes, achievementDetails] = await Promise.all([
+      const [todaySessionMinutes, todayAchievementMinutes, todayApprovedMinutes, todayPendingMinutes, achievementDetails] = await Promise.all([
         getTodaySessionMinutes(userId),
         getTodayAchievementMinutes(userId),
         getTodayApprovedMinutes(userId),
+        getTodayPendingMinutes(userId),
         getTodayAchievementDetails(userId)
       ]);
 
       const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
-      const availableMinutes = Math.max(0, totalEarnedToday - todayApprovedMinutes);
+      const totalClaimedToday = todayApprovedMinutes + todayPendingMinutes;
+      const availableMinutes = Math.max(0, totalEarnedToday - totalClaimedToday);
 
       return {
         todaySessionMinutes,
         todayAchievementMinutes,
         totalEarnedToday,
         todayApprovedMinutes,
+        todayPendingMinutes,
+        totalClaimedToday,
         availableMinutes,
         achievementDetails
       };
@@ -281,6 +320,8 @@ export function useEarnedMinutesTracker() {
         todayAchievementMinutes: 0,
         totalEarnedToday: 0,
         todayApprovedMinutes: 0,
+        todayPendingMinutes: 0,
+        totalClaimedToday: 0,
         availableMinutes: 0,
         achievementDetails: []
       };
@@ -295,6 +336,7 @@ export function useEarnedMinutesTracker() {
     getTodaySessionMinutes,
     getTodayAchievementMinutes,
     getTodayApprovedMinutes,
+    getTodayPendingMinutes,
     getTodayAchievementDetails
   };
 }
