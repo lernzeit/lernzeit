@@ -192,7 +192,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     (isWeekend ? childSettings.weekend_max_minutes : childSettings.weekday_max_minutes) : 
     (isWeekend ? 60 : 30);
 
-  // Check existing requests for today
+  // Check existing requests for today - ONLY count today's requests
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date();
@@ -205,26 +205,18 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .gte('created_at', todayStart.toISOString())
     .lte('created_at', todayEnd.toISOString());
 
-  // Check if there's already a pending request
-  const pendingRequest = todayRequests?.find((req: any) => req.status === 'pending');
-  if (pendingRequest) {
-    return new Response(JSON.stringify({ 
-      error: 'Es gibt bereits eine ausstehende Bildschirmzeit-Anfrage. Bitte warte auf die Antwort deiner Eltern.' 
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  // Calculate total minutes already requested/approved today
-  const totalRequestedToday = todayRequests?.reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
-  const totalApprovedToday = todayRequests?.filter((req: any) => req.status === 'approved')
+  // Calculate total minutes already requested (pending + approved) today
+  // Note: We now allow MULTIPLE parallel requests per day
+  const pendingMinutesToday = todayRequests?.filter((req: any) => req.status === 'pending')
     .reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
+  const approvedMinutesToday = todayRequests?.filter((req: any) => req.status === 'approved')
+    .reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
+  const totalClaimedToday = pendingMinutesToday + approvedMinutesToday;
 
-  // Validate request doesn't exceed daily limit
-  if (totalRequestedToday + (requestedMinutes as number) > dailyLimit) {
+  // Validate request doesn't exceed daily limit (only count today's pending + approved)
+  if (totalClaimedToday + (requestedMinutes as number) > dailyLimit) {
     return new Response(JSON.stringify({ 
-      error: `Die Anfrage würde das Tageslimit von ${dailyLimit} Minuten überschreiten. Bereits heute beantragt: ${totalRequestedToday} Minuten.` 
+      error: `Die Anfrage würde das Tageslimit von ${dailyLimit} Minuten überschreiten. Bereits heute beantragt: ${totalClaimedToday} Minuten.` 
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -279,10 +271,11 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) =>
     sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
 
-  const approvedToday = todayRequests?.filter((r: any) => r.status === 'approved')
+  // IMPORTANT: Subtract BOTH pending AND approved today - pending minutes are "reserved"
+  const claimedToday = todayRequests?.filter((r: any) => r.status === 'pending' || r.status === 'approved')
     .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
 
-  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - approvedToday);
+  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - claimedToday);
 
   // Use the canonical value for validation (prevents false negatives when legacy table is out of sync)
   const totalAvailableMinutes = Math.max(legacyAvailableMinutes, canonicalAvailableMinutes);
@@ -336,8 +329,8 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .upsert({
       user_id: childId,
       request_date: todayStart.toISOString().split('T')[0],
-      total_minutes_requested: totalRequestedToday + (requestedMinutes as number),
-      total_minutes_approved: totalApprovedToday
+      total_minutes_requested: totalClaimedToday + (requestedMinutes as number),
+      total_minutes_approved: approvedMinutesToday
     }, {
       onConflict: 'user_id,request_date'
     });
@@ -373,7 +366,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .eq('id', childId)
     .single();
 
-  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Available: ${totalAvailableMinutes})`);
+  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Available: ${totalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
 
   // Send email notification to parent
   await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', requestedMinutes as number, sanitizedMessage, request.id);
@@ -383,7 +376,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     request,
     validation: {
       dailyLimit,
-      totalRequestedToday: totalRequestedToday + (requestedMinutes as number),
+      totalClaimedToday: totalClaimedToday + (requestedMinutes as number),
       availableMinutes: totalAvailableMinutes - (requestedMinutes as number)
     },
     deep_links: generateDeepLinks(requestedMinutes as number)
