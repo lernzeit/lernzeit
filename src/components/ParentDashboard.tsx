@@ -269,7 +269,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       </div>
 
       {/* Trial Banner - top of dashboard */}
-      {isTrialing && trialDaysLeft !== null && (
+      {trialDaysLeft !== null && trialDaysLeft > 0 && !isPremium && (
         <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">
           <CardContent className="flex items-center justify-between gap-4 py-4">
             <div className="flex items-center gap-3">
@@ -615,7 +615,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           </Card>
 
           {/* Trial Info in Abo Tab */}
-          {isTrialing && trialDaysLeft !== null && (
+          {trialDaysLeft !== null && trialDaysLeft > 0 && !isPremium && (
             <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">
               <CardContent className="flex items-center justify-between gap-4 py-4">
                 <div className="flex items-center gap-3">
