@@ -509,12 +509,8 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                         <span>Erweiterte Lernanalyse</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        {isPremium ? (
-                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        )}
-                        <span>Mehrere Kinder</span>
+                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span>Mehrere Kinder verknüpfen</span>
                       </li>
                     </ul>
                   </CardContent>
@@ -571,8 +567,8 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                       <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
                     </tr>
                     <tr className="hover:bg-muted/30">
-                      <td className="py-3 px-4">Mehrere Kinder verwalten</td>
-                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                      <td className="py-3 px-4">Mehrere Kinder verknüpfen</td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
                       <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
                     </tr>
                   </tbody>
