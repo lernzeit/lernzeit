@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, 
   Users, 
@@ -21,7 +22,10 @@ import {
   Baby,
   Settings,
   BarChart3,
-  Loader2
+  Loader2,
+  Crown,
+  Check,
+  X
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -47,6 +51,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   
   const { toast } = useToast();
+  const { isPremium, plan, status, currentPeriodEnd, loading: subLoading } = useSubscription();
   const {
     loading,
     linkedChildren,
@@ -224,7 +229,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
       {/* Main Tabs */}
       <Tabs defaultValue="requests" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="requests" className="flex items-center gap-2">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
@@ -236,6 +241,10 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Analyse</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="flex items-center gap-2">
+            <Crown className="h-4 w-4" />
+            <span className="hidden sm:inline">Abo</span>
           </TabsTrigger>
           <TabsTrigger value="account" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -406,6 +415,182 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                   <li>Die Konten werden verknüpft</li>
                 </ol>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Abonnement */}
+        <TabsContent value="subscription" className="space-y-6">
+          {/* Plan Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5" />
+                Ihr Plan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Current Plan Card */}
+                <Card className={`border-2 ${isPremium ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">
+                        {isPremium ? 'LernZeit Premium' : 'LernZeit Kostenlos'}
+                      </CardTitle>
+                      {isPremium && <Crown className="h-5 w-5 text-primary" />}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Status</p>
+                      <Badge variant={isPremium ? 'default' : 'secondary'}>
+                        {status === 'active' ? 'Aktiv' : status === 'trialing' ? 'Testversion' : 'Inaktiv'}
+                      </Badge>
+                    </div>
+                    
+                    {currentPeriodEnd && isPremium && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Gültig bis</p>
+                        <p className="font-medium">
+                          {new Date(currentPeriodEnd).toLocaleDateString('de-DE', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      {!isPremium ? (
+                        <Button className="w-full" size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Premium aktivieren
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="w-full" size="sm">
+                          Abo verwalten
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Benefits Card */}
+                <Card className="border-primary/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Premium Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        {isPremium ? (
+                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        )}
+                        <span>KI-Tutor mit Erklärungen</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        {isPremium ? (
+                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        )}
+                        <span>Individuelle Zeitlimits</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        {isPremium ? (
+                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        )}
+                        <span>Erweiterte Lernanalyse</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        {isPremium ? (
+                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        )}
+                        <span>Mehrere Kinder</span>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Feature Comparison Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Feature-Vergleich</CardTitle>
+              <CardDescription>Alle Features im Überblick</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-semibold">Feature</th>
+                      <th className="text-center py-3 px-4 font-semibold">Kostenlos</th>
+                      <th className="text-center py-3 px-4 font-semibold">Premium</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4">Fragen beantworten</td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4">Bildschirmzeit-Anfragen</td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4">KI-Tutor & Erklärungen</td>
+                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4">Individuelle Zeitlimits pro Fach</td>
+                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4">Fächersichtbarkeit konfigurierbar</td>
+                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                    <tr className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4">Erweiterte Lernanalyse</td>
+                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                    <tr className="hover:bg-muted/30">
+                      <td className="py-3 px-4">Mehrere Kinder verwalten</td>
+                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
+                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Info Box */}
+          <Card className="bg-accent/50 border-accent">
+            <CardHeader>
+              <CardTitle className="text-base">Kostenlos testen</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Premium-Features stehen Ihnen während einer 14-tägigen kostenlosen Testphase zur Verfügung. 
+                Danach benötigen Sie ein aktives Abonnement. Sie können jederzeit kündigen.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
