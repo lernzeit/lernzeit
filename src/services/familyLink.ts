@@ -140,7 +140,7 @@ export class FamilyLinkService {
   private async getAndroidUsage(): Promise<AppUsage | null> {
     // Get usage stats using Android UsageStatsManager
     return {
-      appId: 'app.lovable.4386b5039ba843128a0f77100fb5c6d8',
+      appId: 'de.lernzeit.app',
       timeSpent: 45, // mock data
       sessionCount: 3,
       lastUsed: new Date(),
@@ -167,7 +167,7 @@ export class FamilyLinkService {
   private async getIOSUsage(): Promise<AppUsage | null> {
     // Get usage stats using iOS DeviceActivity framework
     return {
-      appId: 'app.lovable.4386b5039ba843128a0f77100fb5c6d8',
+      appId: 'de.lernzeit.app',
       timeSpent: 45, // mock data
       sessionCount: 3,
       lastUsed: new Date(),
