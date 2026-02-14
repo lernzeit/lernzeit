@@ -13,11 +13,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAchievementTracker } from '@/hooks/useAchievementTracker';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AchievementPopup } from '@/components/AchievementPopup';
-import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X } from 'lucide-react';
+import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, Sparkles, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useQuestionReport } from '@/hooks/useQuestionReport';
 import { QuestionReportDialog } from '@/components/game/QuestionReportDialog';
+import { KITutorDialog } from '@/components/game/KITutorDialog';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface LearningGameProps {
   grade: number;
@@ -74,6 +76,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isCorrect, setIsCorrect] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showTutorDialog, setShowTutorDialog] = useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [sessionSaved, setSessionSaved] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -87,6 +90,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [sortOrder, setSortOrder] = useState<string[]>([]);
   const [matches, setMatches] = useState<Record<string, string>>({});
   const [dragDropPlacements, setDragDropPlacements] = useState<Record<string, string[]>>({});
+  const { isPremium } = useSubscription();
   
   // Get seconds per task from child settings or use default
   const getSecondsPerTask = (): number => {
@@ -639,6 +643,31 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Frage melden (Antwort falsch?)
                     </Button>
                   )}
+                  {/* KI-Tutor Premium Hint */}
+                  {!isCorrect && question && (
+                    <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                      {isPremium ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowTutorDialog(true)}
+                          className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                        >
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          KI-Tutor fragen
+                        </Button>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-1">
+                          <Sparkles className="w-4 h-4 text-warning" />
+                          <span>KI-Tutor erklärt dir den Lösungsweg</span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                            <Crown className="h-3 w-3" />
+                            Premium
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -726,6 +755,19 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           grade={grade}
           subject={subject}
           templateId={question.id}
+        />
+      )}
+
+      {/* KI-Tutor Dialog */}
+      {question && (
+        <KITutorDialog
+          open={showTutorDialog}
+          onOpenChange={setShowTutorDialog}
+          questionText={question.questionText}
+          correctAnswer={getCorrectAnswerText()}
+          userAnswer={getUserAnswerText()}
+          grade={grade}
+          subject={subject}
         />
       )}
     </div>
