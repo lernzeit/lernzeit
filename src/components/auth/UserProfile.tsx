@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen } from 'lucide-react';
+import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen, Crown } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
@@ -42,6 +43,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [hasParentLink, setHasParentLink] = useState(false);
   const [checkingParentLink, setCheckingParentLink] = useState(true);
   const { toast } = useToast();
+  const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
   // Use the existing useChildSettings hook for children
   const { settings: childSettings, loading: childSettingsLoading } = useChildSettings(
@@ -300,6 +302,30 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     return (
       <div className="min-h-screen bg-gradient-bg p-4">
         <div className="max-w-md mx-auto space-y-6">
+          {/* Trial Expired Banner */}
+          {trialJustExpired && (
+            <Card className="shadow-card border-warning bg-warning/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Crown className="w-6 h-6 text-warning shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">Deine Testphase ist abgelaufen</p>
+                  <p className="text-xs text-muted-foreground">Premium-Funktionen wie KI-Tutor und individuelle Einstellungen sind jetzt deaktiviert.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Trial Active Badge */}
+          {isTrialing && trialDaysLeft !== null && (
+            <Card className="shadow-card border-primary/30 bg-primary/5">
+              <CardContent className="p-3 flex items-center gap-3">
+                <Crown className="w-5 h-5 text-primary shrink-0" />
+                <p className="text-sm">
+                  <span className="font-semibold">Premium-Test aktiv</span> — noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'}
+                </p>
+              </CardContent>
+            </Card>
+          )}
           {/* Header */}
           <Card className="shadow-card bg-gradient-to-r from-purple-500/10 to-blue-500/10">
             <CardHeader>
@@ -483,7 +509,30 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     return (
       <div className="min-h-screen bg-gradient-bg p-4">
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Header */}
+          {/* Trial Expired Banner */}
+          {trialJustExpired && (
+            <Card className="shadow-card border-warning bg-warning/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Crown className="w-6 h-6 text-warning shrink-0" />
+                <div>
+                  <p className="font-semibold text-sm">Die Testphase ist abgelaufen</p>
+                  <p className="text-xs text-muted-foreground">Premium-Funktionen wie KI-Tutor und individuelle Einstellungen wurden deaktiviert. Einstellungen wurden auf Standard zurückgesetzt.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Trial Active Badge */}
+          {isTrialing && trialDaysLeft !== null && (
+            <Card className="shadow-card border-primary/30 bg-primary/5">
+              <CardContent className="p-3 flex items-center gap-3">
+                <Crown className="w-5 h-5 text-primary shrink-0" />
+                <p className="text-sm">
+                  <span className="font-semibold">Premium-Test aktiv</span> — noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'}
+                </p>
+              </CardContent>
+            </Card>
+          )}
           <Card className="shadow-card">
             <CardHeader>
               <div className="flex items-center justify-between">

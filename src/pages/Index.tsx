@@ -308,15 +308,15 @@ const Index = () => {
                 <h2 className="text-xl font-bold">LernZeit Premium</h2>
               </div>
               <p className="text-muted-foreground mb-6">
-                Mehr Kontrolle, individuelle Einstellungen und smarte Lernhilfen für Ihr Kind.
+                Nach der Anmeldung stehen dir 4 Wochen lang alle Premium-Funktionen kostenlos zur Verfügung!
               </p>
-              <div className="grid sm:grid-cols-2 gap-3 mb-6">
+              <div className="grid sm:grid-cols-2 gap-3">
                 {[
                   'KI-Tutor für Erklärungen',
                   'Individuelle Zeitlimits pro Fach',
                   'Fächersichtbarkeit konfigurierbar',
                   'Erweiterte Lernanalyse',
-                  '14 Tage kostenlos testen',
+                  '4 Wochen kostenlos nach Anmeldung',
                 ].map((feature) => (
                   <div key={feature} className="flex items-center gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0" />
@@ -324,13 +324,6 @@ const Index = () => {
                   </div>
                 ))}
               </div>
-              <Button
-                onClick={() => setShowAuth(true)}
-                className="bg-warning text-warning-foreground hover:bg-warning/90 shadow-md"
-              >
-                <Crown className="w-4 h-4 mr-2" />
-                Kostenlos testen
-              </Button>
             </div>
           </CardContent>
         </Card>
