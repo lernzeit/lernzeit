@@ -1,11 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.51.0'
 
-const supabaseUrl = 'https://fsmgynpdfxkaiiuguqyr.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q'
-
 Deno.serve(async (req) => {
   try {
-    // Erstelle Supabase Client mit Service Role für Admin-Zugriff
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     console.log('🎓 Jährlicher Klassenwechsel gestartet...')
