@@ -50,7 +50,47 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const { isPremium, plan, status, currentPeriodEnd, loading: subLoading } = useSubscription();
+  const { isPremium, isTrialing, trialDaysLeft, plan, status, currentPeriodEnd, loading: subLoading } = useSubscription();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    try {
+      setCheckoutLoading(true);
+      const { data, error } = await supabase.functions.invoke('create-checkout');
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      toast({
+        title: 'Fehler',
+        description: 'Checkout konnte nicht gestartet werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      setPortalLoading(true);
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      toast({
+        title: 'Fehler',
+        description: 'Portal konnte nicht geöffnet werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
   const {
     loading,
     linkedChildren,
@@ -462,13 +502,20 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                     )}
 
                     <div className="pt-2">
-                      {!isPremium ? (
-                        <Button className="w-full" size="sm">
-                          <Plus className="h-4 w-4 mr-2" />
+                    {!isPremium ? (
+                        <Button className="w-full" size="sm" onClick={handleUpgrade} disabled={checkoutLoading}>
+                          {checkoutLoading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4 mr-2" />
+                          )}
                           Premium aktivieren
                         </Button>
                       ) : (
-                        <Button variant="outline" className="w-full" size="sm">
+                        <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
+                          {portalLoading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : null}
                           Abo verwalten
                         </Button>
                       )}
