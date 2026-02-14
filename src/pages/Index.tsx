@@ -2,7 +2,7 @@ import React, { useState, Suspense, lazy } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2 } from 'lucide-react';
+import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2, Crown, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import LegalFooter from '@/components/layout/LegalFooter';
 
@@ -296,6 +296,45 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Premium teaser */}
+        <Card className="mb-8 shadow-card border-0 backdrop-blur-sm bg-card/80 overflow-hidden animate-slide-up">
+          <CardContent className="p-0">
+            <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-warning" />
+                </div>
+                <h2 className="text-xl font-bold">LernZeit Premium</h2>
+              </div>
+              <p className="text-muted-foreground mb-6">
+                Mehr Kontrolle, individuelle Einstellungen und smarte Lernhilfen für Ihr Kind.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3 mb-6">
+                {[
+                  'KI-Tutor für Erklärungen',
+                  'Individuelle Zeitlimits pro Fach',
+                  'Fächersichtbarkeit konfigurierbar',
+                  'Erweiterte Lernanalyse',
+                  'Mehrere Kinder verwalten',
+                  '14 Tage kostenlos testen',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-2 text-sm">
+                    <Check className="w-4 h-4 text-primary shrink-0" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+              <Button
+                onClick={() => setShowAuth(true)}
+                className="bg-warning text-warning-foreground hover:bg-warning/90 shadow-md"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Kostenlos testen
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="text-center text-sm text-muted-foreground animate-fade-in mb-6">
           <p className="flex items-center justify-center gap-2">
