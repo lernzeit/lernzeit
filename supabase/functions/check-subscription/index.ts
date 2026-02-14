@@ -113,15 +113,31 @@ serve(async (req) => {
     if (customers.data.length === 0) {
       logStep("No Stripe customer found");
 
-      // Check if there was a previous premium subscription that needs resetting
+      // Check local subscriptions table for trial info
       const { data: existingSub } = await supabaseClient
         .from('subscriptions')
-        .select('plan, status')
+        .select('*')
         .eq('user_id', parentOrUserId)
         .maybeSingle();
 
       if (existingSub && existingSub.plan === 'premium' && existingSub.status !== 'canceled') {
-        logStep("Previous premium subscription detected, resetting settings");
+        // Active trial without Stripe customer (local trial)
+        const trialEnd = existingSub.trial_end;
+        if (trialEnd && new Date(trialEnd) > new Date()) {
+          logStep("Local trial still active", { trialEnd, status: existingSub.status });
+          return new Response(JSON.stringify({
+            subscribed: true,
+            status: existingSub.status,
+            subscription_end: existingSub.current_period_end,
+            trial_end: trialEnd,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+
+        // Trial expired – reset settings
+        logStep("Local trial expired, resetting settings");
         await resetPremiumSettings(supabaseClient, parentOrUserId);
         await supabaseClient
           .from('subscriptions')
@@ -129,7 +145,9 @@ serve(async (req) => {
           .eq('user_id', parentOrUserId);
       }
 
-      return new Response(JSON.stringify({ subscribed: false }), {
+      // Also return trial_end for expired trial banner
+      const trialEnd = existingSub?.trial_end || null;
+      return new Response(JSON.stringify({ subscribed: false, trial_end: trialEnd }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
