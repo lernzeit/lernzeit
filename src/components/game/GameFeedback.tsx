@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Check, X, ArrowRight, Flag, AlertTriangle, Loader2 } from 'lucide-react';
+import { Check, X, ArrowRight, Flag, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   Dialog,
   DialogContent,
@@ -52,7 +53,9 @@ export function GameFeedback({
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason | ''>('');
   const [reportDetails, setReportDetails] = useState('');
+  const [showTutorDialog, setShowTutorDialog] = useState(false);
   const { isReporting, isValidating, reportAndValidate } = useQuestionReport();
+  const { isPremium } = useSubscription();
   
   if (!feedback) return null;
 
@@ -74,6 +77,12 @@ export function GameFeedback({
     setShowReportDialog(false);
     setReportReason('');
     setReportDetails('');
+  };
+
+  const handleTutorClick = () => {
+    // Placeholder: Would open KI-Tutor dialog/sheet
+    // Implementation follows in next phase
+    setShowTutorDialog(true);
   };
 
   return (
@@ -123,20 +132,35 @@ export function GameFeedback({
           </div>
         )}
 
-        {/* Report Button - especially visible for incorrect answers */}
-        {feedback === 'incorrect' && questionText && (
+        {/* Premium AI Tutor Button - visible for incorrect answers if premium */}
+        {feedback === 'incorrect' && questionText && isPremium && (
           <div className="mt-4 pt-3 border-t border-red-200">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowReportDialog(true)}
-              className="w-full text-red-600 hover:text-red-700 hover:bg-red-100"
+              onClick={() => setShowTutorDialog(true)}
+              className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-100"
             >
-              <Flag className="w-4 h-4 mr-2" />
-              Frage melden (Antwort falsch?)
+              <Sparkles className="w-4 h-4 mr-2" />
+              KI-Tutor fragen
             </Button>
           </div>
         )}
+
+        {/* Report Button - especially visible for incorrect answers */}
+         {feedback === 'incorrect' && questionText && (
+           <div className="mt-4 pt-3 border-t border-red-200">
+             <Button
+               variant="ghost"
+               size="sm"
+               onClick={() => setShowReportDialog(true)}
+               className="w-full text-red-600 hover:text-red-700 hover:bg-red-100"
+             >
+               <Flag className="w-4 h-4 mr-2" />
+               Frage melden (Antwort falsch?)
+             </Button>
+           </div>
+         )}
 
         {/* Simple Emoji Feedback Buttons */}
         {onQuestionFeedback && (
