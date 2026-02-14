@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Check, X, ArrowRight, Flag, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+import { KITutorDialog } from './KITutorDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -297,6 +298,17 @@ export function GameFeedback({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* KI-Tutor Dialog */}
+      <KITutorDialog
+        open={showTutorDialog}
+        onOpenChange={setShowTutorDialog}
+        questionText={questionText || ''}
+        correctAnswer={correctAnswer || ''}
+        userAnswer={userAnswer}
+        grade={grade || 1}
+        subject={subject}
+      />
     </>
   );
 }
