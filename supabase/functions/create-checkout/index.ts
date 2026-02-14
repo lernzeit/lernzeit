@@ -53,7 +53,7 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/`,
+      success_url: `${req.headers.get("origin")}/?checkout=success`,
       cancel_url: `${req.headers.get("origin")}/`,
     });
     logStep("Checkout session created", { sessionId: session.id });

@@ -1,9 +1,10 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2, Crown, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 import LegalFooter from '@/components/layout/LegalFooter';
 
 // Lazy load heavy components that aren't needed on initial page render
@@ -29,12 +30,26 @@ type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physi
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+
+  // Detect checkout success redirect
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      toast.success('Premium aktiviert! 🎉', {
+        description: 'Dein LernZeit Premium Abo ist jetzt aktiv. Viel Spaß mit allen Funktionen!',
+        duration: 6000,
+      });
+      // Clean up URL
+      searchParams.delete('checkout');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleGradeSelect = (grade: number) => {
     setSelectedGrade(grade);
