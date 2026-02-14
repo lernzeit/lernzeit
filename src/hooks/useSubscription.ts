@@ -87,9 +87,16 @@ export function useSubscription(): SubscriptionState {
 
         const plan = (subscription.plan as 'free' | 'premium') || 'free';
         const status = (subscription.status as SubscriptionState['status']) || null;
+
+        // Check if trial has expired
+        const now = new Date();
+        const trialEnd = subscription.trial_end ? new Date(subscription.trial_end) : null;
+        const trialExpired = trialEnd ? now > trialEnd : false;
+
         const isPremium =
           plan === 'premium' && subscription.status === 'active';
-        const isTrialing = subscription.status === 'trialing';
+        const isTrialing =
+          subscription.status === 'trialing' && !trialExpired;
 
         setState({
           isPremium,
