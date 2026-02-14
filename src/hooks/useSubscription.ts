@@ -19,6 +19,8 @@ export interface SubscriptionData {
 export interface SubscriptionState {
   isPremium: boolean;
   isTrialing: boolean;
+  trialJustExpired: boolean;
+  trialDaysLeft: number | null;
   plan: 'free' | 'premium';
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | null;
   currentPeriodEnd: string | null;
@@ -33,9 +35,46 @@ export interface SubscriptionState {
  */
 export function useSubscription(): SubscriptionState {
   const { user } = useAuth();
+
+  // Reset premium settings (child_settings + subject visibility) to defaults when trial expires
+  const resetPremiumSettings = async (userId: string) => {
+    try {
+      // Check if user is a parent – reset their children's settings
+      const { data: children } = await supabase
+        .from('parent_child_relationships')
+        .select('child_id')
+        .eq('parent_id', userId);
+
+      const childIds = children?.map(c => c.child_id).filter(Boolean) as string[] || [];
+
+      // Also check if the user themselves is a child
+      const allIds = [...childIds, userId];
+
+      for (const childId of allIds) {
+        // Delete custom subject visibility (defaults to all visible)
+        await supabase
+          .from('child_subject_visibility')
+          .delete()
+          .eq('child_id', childId);
+
+        // Reset child_settings to defaults
+        await supabase
+          .from('child_settings')
+          .delete()
+          .eq('child_id', childId);
+      }
+
+      console.log('🔄 Premium settings reset to defaults for expired trial');
+    } catch (err) {
+      console.error('❌ Error resetting premium settings:', err);
+    }
+  };
+
   const [state, setState] = useState<SubscriptionState>({
     isPremium: false,
     isTrialing: false,
+    trialJustExpired: false,
+    trialDaysLeft: null,
     plan: 'free',
     status: null,
     currentPeriodEnd: null,
@@ -93,14 +132,32 @@ export function useSubscription(): SubscriptionState {
         const trialEnd = subscription.trial_end ? new Date(subscription.trial_end) : null;
         const trialExpired = trialEnd ? now > trialEnd : false;
 
+        // Calculate days left in trial
+        let trialDaysLeft: number | null = null;
+        if (trialEnd && !trialExpired) {
+          trialDaysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        // Check if trial just expired (within 7 days after expiry)
+        const trialJustExpired = trialExpired && trialEnd
+          ? (now.getTime() - trialEnd.getTime()) < 7 * 24 * 60 * 60 * 1000
+          : false;
+
         const isPremium =
           plan === 'premium' && subscription.status === 'active';
         const isTrialing =
           subscription.status === 'trialing' && !trialExpired;
 
+        // If trial just expired and status is still 'trialing', reset premium settings
+        if (trialExpired && subscription.status === 'trialing') {
+          resetPremiumSettings(userIdToCheck);
+        }
+
         setState({
           isPremium,
           isTrialing,
+          trialJustExpired,
+          trialDaysLeft,
           plan,
           status,
           currentPeriodEnd: subscription.current_period_end,
