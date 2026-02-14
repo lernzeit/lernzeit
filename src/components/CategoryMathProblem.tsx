@@ -517,6 +517,10 @@ export function CategoryMathProblem({
             <GameFeedback
               feedback={feedback}
               explanation={currentQuestion.explanation}
+              questionText={currentQuestion.question || (currentQuestion as any).student_prompt}
+              grade={grade}
+              subject={toEnglishCategory(category)}
+              templateId={(currentQuestion as any).templateId}
               correctAnswer={
                 currentQuestion.questionType === 'multiple-choice' ? 
                   (() => {
