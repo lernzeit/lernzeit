@@ -143,48 +143,8 @@ export function useFamilyLinking() {
         throw new Error('Benutzer ist nicht authentifiziert');
       }
 
-      // STEP 1: Query the code first to see current state
-      console.log('🔍 STEP 1: Checking current code state...');
-      const { data: currentCodeState, error: queryError } = await supabase
-        .from('invitation_codes')
-        .select('*')
-        .eq('code', code)
-        .maybeSingle();
-      
-      console.log('📋 Current code state:', { currentCodeState, queryError });
-      
-      if (queryError) {
-        console.log('❌ Code query failed:', queryError);
-        throw new Error('Code konnte nicht gefunden werden');
-      }
-
-      // STEP 2: Check all conditions manually
-      console.log('🔍 STEP 2: Manual condition checks...');
-      const now = new Date().toISOString();
-      const conditions = {
-        code_exists: !!currentCodeState,
-        is_not_used: currentCodeState?.is_used === false,
-        not_expired: currentCodeState?.expires_at > now,
-        child_id_null: currentCodeState?.child_id === null,
-        user_authenticated: !!user?.id
-      };
-      console.log('✅ Condition checks:', conditions);
-      
-      const allConditionsMet = Object.values(conditions).every(Boolean);
-      console.log('🎯 All conditions met:', allConditionsMet);
-      
-      if (!allConditionsMet) {
-        console.log('❌ Conditions not met, cannot proceed');
-        toast({
-          title: "Ungültiger Code",
-          description: "Der Code ist nicht gültig, bereits verwendet oder abgelaufen.",
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      // STEP 3: Use SECURITY DEFINER function to bypass RLS completely
-      console.log('🔍 STEP 3: Using database function to claim code...');
+      // Use SECURITY DEFINER function to bypass RLS completely
+      console.log('🔍 Using database function to claim code...');
       
       const { data: functionResult, error: functionError } = await supabase.rpc(
         'claim_invitation_code',
