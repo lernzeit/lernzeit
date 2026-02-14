@@ -270,18 +270,18 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
       {/* Trial Banner - top of dashboard */}
       {isTrialing && trialDaysLeft !== null && (
-        <Card className="border-warning/50 bg-gradient-to-r from-warning/10 to-warning/5">
+        <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">
           <CardContent className="flex items-center justify-between gap-4 py-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
-                <Clock className="h-5 w-5 text-warning" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="font-semibold text-sm">
-                  Testphase: noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'}
+                  🎁 Testphase: noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} kostenlos
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Sichern Sie sich jetzt Premium und nutzen Sie alle Funktionen dauerhaft.
+                  Sichern Sie sich jetzt Premium – monatlich kündbar.
                 </p>
               </div>
             </div>
@@ -616,32 +616,46 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
           {/* Trial Info in Abo Tab */}
           {isTrialing && trialDaysLeft !== null && (
-            <Card className="border-warning/50 bg-gradient-to-r from-warning/10 to-warning/5">
-              <CardContent className="flex items-center gap-4 py-4">
-                <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
-                  <Clock className="h-5 w-5 text-warning" />
+            <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">
+              <CardContent className="flex items-center justify-between gap-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">
+                      🎁 Noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} kostenlos testen
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Nach Ablauf werden Premium-Features deaktiviert und Einstellungen zurückgesetzt.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">
-                    Ihre Testphase endet in {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tagen'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Nach Ablauf werden Premium-Features deaktiviert. Aktivieren Sie jetzt Ihr Abo, um nahtlos weiterzunutzen.
-                  </p>
-                </div>
+                <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+                  {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
+                  Premium aktivieren
+                </Button>
               </CardContent>
             </Card>
           )}
 
-          <Card className="bg-accent/50 border-accent">
-            <CardHeader>
-              <CardTitle className="text-base">Kostenlos testen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung. 
-                Danach benötigen Sie ein aktives Abonnement. Sie können jederzeit kündigen.
-              </p>
+          <Card className="border-muted bg-card">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Crown className="h-4 w-4 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-semibold text-sm text-foreground">Kostenlos testen</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung. 
+                    Danach benötigen Sie ein aktives Abonnement.
+                  </p>
+                  <p className="text-xs text-muted-foreground/80 font-medium">
+                    ✓ Monatlich kündbar · Keine Mindestlaufzeit
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
