@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle, Ba
 import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
 import { useToast } from '@/hooks/use-toast';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { supabase } from '@/lib/supabase';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
@@ -20,6 +21,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   const [isResponding, setIsResponding] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
+  const [childNames, setChildNames] = useState<Record<string, string>>({});
   
   const { requests, loading, respondToRequest } = useScreenTimeRequests('parent');
   const { toast } = useToast();
@@ -27,6 +29,26 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   const platform = parentalControlsService.getPlatform();
   const isNative = parentalControlsService.isNativePlatform();
   const appName = parentalControlsService.getParentalControlAppName();
+
+  // Fetch child names for all unique child_ids in requests
+  useEffect(() => {
+    const childIds = [...new Set(requests.map(r => r.child_id))];
+    if (childIds.length === 0) return;
+    
+    supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', childIds)
+      .then(({ data }) => {
+        if (data) {
+          const names: Record<string, string> = {};
+          data.forEach(p => { names[p.id] = p.name || 'Kind'; });
+          setChildNames(names);
+        }
+      });
+  }, [requests]);
+
+  const getChildName = (childId: string) => childNames[childId] || 'Kind';
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 5);
@@ -173,7 +195,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">
-                        Bildschirmzeit-Anfrage
+                        Bildschirmzeit-Anfrage von {getChildName(request.child_id)}
                       </p>
                       <p className="text-sm text-gray-600">
                         Vor {Math.round((Date.now() - new Date(request.created_at).getTime()) / (1000 * 60))} Min.
@@ -203,7 +225,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                     <span className="text-sm font-medium text-blue-800">Verdiente Zeit</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    Ihr Kind hat durch Lernen <strong>{request.earned_minutes} Minuten</strong> verdient 
+                    {getChildName(request.child_id)} hat durch Lernen <strong>{request.earned_minutes} Minuten</strong> verdient 
                     und möchte diese als Bildschirmzeit nutzen.
                   </p>
                 </div>
@@ -296,6 +318,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                 <div key={request.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-100">
                   <div className="flex items-center gap-2">
                     {getStatusIcon(request.status)}
+                    <span className="text-sm font-medium">{getChildName(request.child_id)}</span>
                     <span className="text-sm">{request.requested_minutes} Min.</span>
                     <span className="text-xs text-gray-500">
                       {new Date(request.created_at).toLocaleDateString()}
@@ -326,7 +349,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-sm text-green-800">
-                  Sie genehmigen <strong>{pendingApprovalRequest.requested_minutes} Minuten</strong> Bildschirmzeit für Ihr Kind.
+                  Sie genehmigen <strong>{pendingApprovalRequest.requested_minutes} Minuten</strong> Bildschirmzeit für {getChildName(pendingApprovalRequest.child_id)}.
                 </p>
               </div>
               
