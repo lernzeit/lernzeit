@@ -1,0 +1,1 @@
+UPDATE public.subscriptions SET trial_end = NOW() - INTERVAL '1 day', current_period_end = NOW() - INTERVAL '1 day' WHERE user_id = '3afdb42b-f653-4361-95a4-31ddf41a3861';
