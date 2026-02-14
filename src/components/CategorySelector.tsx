@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, Star } from 'lucide-react';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -17,14 +18,12 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const { user } = useAuth();
   const { settings, loading } = useChildSettings(user?.id || '');
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
-
-  console.log('🔍 CategorySelector render:', { user: user?.id, settings, loading });
+  const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user?.id) {
       loadSubjectVisibility();
     } else {
-      // No user (demo mode) - show all subjects
       setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
     }
   }, [user?.id]);
@@ -44,35 +43,33 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         // Get subject visibility settings
         const { data: visibilitySettings } = await supabase
           .from('child_subject_visibility')
-          .select('subject, is_visible')
+          .select('subject, is_visible, is_priority')
           .eq('parent_id', relationships.parent_id)
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
-          // Create a set of all subjects (default: all visible)
           const allSubjects = new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']);
+          const priorities = new Set<string>();
           
-          // Remove subjects that are explicitly set to invisible
           visibilitySettings.forEach(setting => {
             if (!setting.is_visible) {
               allSubjects.delete(setting.subject);
             }
+            if (setting.is_priority) {
+              priorities.add(setting.subject);
+            }
           });
           
-          console.log('🔍 Subject visibility logic:', { visibilitySettings, allSubjects });
           setVisibleSubjects(allSubjects);
+          setPrioritySubjects(priorities);
         } else {
-          // If no settings exist, show all subjects (default behavior)
-          console.log('🔍 No visibility settings found, showing all subjects');
           setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
         }
       } else {
-        // If no parent relationship, show all subjects (default behavior)
         setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
       }
     } catch (error) {
       console.error('Error loading subject visibility:', error);
-      // On error, show all subjects (default behavior)
       setVisibleSubjects(new Set(['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin']));
     }
   };
@@ -207,14 +204,20 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         <div className="grid grid-cols-1 gap-4">
           {categories
             .filter(category => visibleSubjects.has(category.id))
+            .sort((a, b) => {
+              const aPri = prioritySubjects.has(a.id) ? 0 : 1;
+              const bPri = prioritySubjects.has(b.id) ? 0 : 1;
+              return aPri - bPri;
+            })
             .map((category) => {
               const IconComponent = category.icon;
               const seconds = getMinutesForCategory(category.id);
+              const isPriority = prioritySubjects.has(category.id);
               
               return (
               <Card
                 key={category.id}
-                className="shadow-card hover:shadow-lg transition-all duration-300 cursor-pointer"
+                className={`shadow-card hover:shadow-lg transition-all duration-300 cursor-pointer ${isPriority ? 'ring-2 ring-primary border-primary' : ''}`}
                 onClick={() => onCategorySelect(category.id)}
               >
                 <CardContent className="p-4">
@@ -223,7 +226,15 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                       {category.emoji}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-bold mb-1">{category.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold">{category.name}</h3>
+                        {isPriority && (
+                          <Badge variant="default" className="text-xs gap-1">
+                            <Star className="w-3 h-3" />
+                            Schwerpunkt
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <Clock className="w-4 h-4 text-green-600" />
