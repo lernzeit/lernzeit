@@ -25,6 +25,8 @@ import {
   Settings2,
   Calendar
 } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PremiumFeature } from '@/components/PremiumGate';
 
 interface ChildSettingsEditorProps {
   childId: string;
@@ -86,6 +88,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { isPremium } = useSubscription();
 
   useEffect(() => {
     if (isOpen && childId) {
@@ -312,119 +315,138 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             </Card>
 
             {/* Screen Time Limits */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Bildschirmzeit-Limits
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Maximale tägliche Lernzeit
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Wochentags (Min)</Label>
-                    <Input
-                      type="number"
-                      min={5}
-                      max={180}
-                      value={settings.weekday_max_minutes}
-                      onChange={(e) => updateSetting('weekday_max_minutes', parseInt(e.target.value) || 30)}
-                    />
+            <PremiumFeature 
+              featureName="Anpassbare Bildschirmzeit-Limits"
+              onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Bildschirmzeit-Limits
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Maximale tägliche Lernzeit
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Wochentags (Min)</Label>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={settings.weekday_max_minutes}
+                        onChange={(e) => updateSetting('weekday_max_minutes', parseInt(e.target.value) || 30)}
+                        disabled={!isPremium}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Wochenende (Min)</Label>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={settings.weekend_max_minutes}
+                        onChange={(e) => updateSetting('weekend_max_minutes', parseInt(e.target.value) || 60)}
+                        disabled={!isPremium}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Wochenende (Min)</Label>
-                    <Input
-                      type="number"
-                      min={5}
-                      max={180}
-                      value={settings.weekend_max_minutes}
-                      onChange={(e) => updateSetting('weekend_max_minutes', parseInt(e.target.value) || 60)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </PremiumFeature>
 
             {/* Subject Visibility */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Sichtbare Fächer
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Welche Fächer soll {childName} sehen?
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  {SUBJECTS.map((subject) => {
-                    const Icon = subject.icon;
-                    return (
-                      <div 
-                        key={subject.key}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{subject.name}</span>
+            <PremiumFeature 
+              featureName="Individuelle Fächerkonfiguration"
+              onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Sichtbare Fächer
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Welche Fächer soll {childName} sehen?
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {SUBJECTS.map((subject) => {
+                      const Icon = subject.icon;
+                      return (
+                        <div 
+                          key={subject.key}
+                          className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{subject.name}</span>
+                          </div>
+                          <Switch
+                            checked={visibility[subject.key] ?? true}
+                            onCheckedChange={() => toggleSubjectVisibility(subject.key)}
+                            disabled={!isPremium}
+                          />
                         </div>
-                        <Switch
-                          checked={visibility[subject.key] ?? true}
-                          onCheckedChange={() => toggleSubjectVisibility(subject.key)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </PremiumFeature>
 
             {/* Time Per Task */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Zeit pro Aufgabe
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Sekunden Bildschirmzeit pro richtig gelöster Aufgabe
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {SUBJECTS.map((subject) => {
-                    const Icon = subject.icon;
-                    const settingKey = `${subject.key}_seconds_per_task` as keyof ChildSettings;
-                    return (
-                      <div 
-                        key={subject.key}
-                        className="flex items-center justify-between gap-4"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm truncate">{subject.name}</span>
+            <PremiumFeature 
+              featureName="Anpassbare Zeit pro Aufgabe"
+              onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Zeit pro Aufgabe
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Sekunden Bildschirmzeit pro richtig gelöster Aufgabe
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {SUBJECTS.map((subject) => {
+                      const Icon = subject.icon;
+                      const settingKey = `${subject.key}_seconds_per_task` as keyof ChildSettings;
+                      return (
+                        <div 
+                          key={subject.key}
+                          className="flex items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm truncate">{subject.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min={5}
+                              max={300}
+                              value={settings[settingKey]}
+                              onChange={(e) => updateSetting(settingKey, parseInt(e.target.value) || 30)}
+                              className="w-20 text-right"
+                              disabled={!isPremium}
+                            />
+                            <span className="text-xs text-muted-foreground w-8">Sek</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min={5}
-                            max={300}
-                            value={settings[settingKey]}
-                            onChange={(e) => updateSetting(settingKey, parseInt(e.target.value) || 30)}
-                            className="w-20 text-right"
-                          />
-                          <span className="text-xs text-muted-foreground w-8">Sek</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </PremiumFeature>
 
             {/* Save Button */}
             <Button 
