@@ -295,22 +295,32 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
       {trialJustExpired && !isPremium && (
         <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="flex items-center justify-between gap-4 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
+          <CardContent className="py-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Testphase abgelaufen – Einstellungen zurückgesetzt</p>
+                  <p className="text-xs text-muted-foreground">
+                    Ihre kostenlose Testphase ist beendet. Individuelle Einstellungen wurden auf Standardwerte zurückgesetzt.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-sm">Testphase abgelaufen</p>
-                <p className="text-xs text-muted-foreground">
-                  Ihre kostenlose Testphase ist beendet. Aktivieren Sie Premium, um alle Funktionen weiter zu nutzen.
-                </p>
-              </div>
+              <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+                {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
+                Jetzt upgraden
+              </Button>
             </div>
-            <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
-              {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
-              Jetzt upgraden
-            </Button>
+            <div className="ml-13 pl-[52px] text-xs text-muted-foreground space-y-1">
+              <p>Folgende Änderungen wurden vorgenommen:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>Zeitlimits: 30 Min (werktags) / 60 Min (Wochenende)</li>
+                <li>Belohnungszeit pro Aufgabe: 30 Sekunden (alle Fächer)</li>
+                <li>Fächersichtbarkeit: Alle Fächer wieder sichtbar</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       )}
