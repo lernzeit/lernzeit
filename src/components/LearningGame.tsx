@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAchievementTracker } from '@/hooks/useAchievementTracker';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AchievementPopup } from '@/components/AchievementPopup';
-import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, Sparkles, Crown } from 'lucide-react';
+import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, Sparkles, Crown, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useQuestionReport } from '@/hooks/useQuestionReport';
@@ -77,6 +77,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [showExplanation, setShowExplanation] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showTutorDialog, setShowTutorDialog] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [sessionSaved, setSessionSaved] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
@@ -91,7 +92,25 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [matches, setMatches] = useState<Record<string, string>>({});
   const [dragDropPlacements, setDragDropPlacements] = useState<Record<string, string[]>>({});
   const { isPremium } = useSubscription();
-  
+
+  // Browser TTS for explanations
+  const speakText = (text: string) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'de-DE';
+    utterance.rate = grade <= 2 ? 0.85 : 0.95;
+    utterance.pitch = 1.1;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  };
+
   // Get seconds per task from child settings or use default
   const getSecondsPerTask = (): number => {
     if (!childSettings) return DEFAULT_SECONDS_PER_TASK;
@@ -674,9 +693,25 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               {/* Explanation */}
               {showExplanation && (
                 <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lightbulb className="w-5 h-5 text-blue-600" />
-                    <span className="font-semibold text-blue-700 dark:text-blue-400">Erklärung</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="w-5 h-5 text-blue-600" />
+                      <span className="font-semibold text-blue-700 dark:text-blue-400">Erklärung</span>
+                    </div>
+                    {explanation && !isLoadingExplanation && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => isSpeaking ? stopSpeaking() : speakText(explanation)}
+                        className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                      >
+                        {isSpeaking ? (
+                          <><VolumeX className="w-4 h-4 mr-1" /> Stopp</>
+                        ) : (
+                          <><Volume2 className="w-4 h-4 mr-1" /> Vorlesen</>
+                        )}
+                      </Button>
+                    )}
                   </div>
                   {isLoadingExplanation ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
