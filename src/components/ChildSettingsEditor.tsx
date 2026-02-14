@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -23,7 +24,9 @@ import {
   Save,
   Loader2,
   Settings2,
-  Calendar
+  Calendar,
+  Crown,
+  Target
 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumFeature } from '@/components/PremiumGate';
@@ -53,6 +56,17 @@ interface ChildSettings {
 interface SubjectVisibility {
   [subject: string]: boolean;
 }
+
+interface SubjectPriority {
+  [subject: string]: boolean;
+}
+
+const PremiumBadge = () => (
+  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
+    <Crown className="h-2.5 w-2.5" />
+    Premium
+  </Badge>
+);
 
 const SUBJECTS = [
   { key: 'math', name: 'Mathematik', icon: BookOpen },
@@ -84,6 +98,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState<ChildSettings>(DEFAULT_SETTINGS);
   const [visibility, setVisibility] = useState<SubjectVisibility>({});
+  const [priorities, setPriorities] = useState<SubjectPriority>({});
   const [grade, setGrade] = useState<number>(currentGrade || 1);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -143,6 +158,29 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
       });
 
       setVisibility(visibilityMap);
+
+      // Load subject priorities (from separate query to handle missing column gracefully)
+      const priorityMap: SubjectPriority = {};
+      SUBJECTS.forEach(s => {
+        priorityMap[s.key] = false;
+      });
+      
+      try {
+        const { data: priorityData } = await supabase
+          .from('child_subject_visibility')
+          .select('subject, is_priority')
+          .eq('child_id', childId) as any;
+
+        if (priorityData) {
+          priorityData.forEach((p: any) => {
+            priorityMap[p.subject] = p.is_priority ?? false;
+          });
+        }
+      } catch {
+        // Column may not exist yet
+      }
+
+      setPriorities(priorityMap);
 
     } catch (error) {
       console.error('Error loading child settings:', error);
@@ -212,8 +250,9 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             .from('child_subject_visibility')
             .update({
               is_visible: visibility[subject.key] ?? true,
+              is_priority: priorities[subject.key] ?? false,
               updated_at: new Date().toISOString(),
-            })
+            } as any)
             .eq('child_id', childId)
             .eq('subject', subject.key);
 
@@ -226,7 +265,8 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               child_id: childId,
               subject: subject.key,
               is_visible: visibility[subject.key] ?? true,
-            });
+              is_priority: priorities[subject.key] ?? false,
+            } as any);
 
           if (visibilityError) throw visibilityError;
         }
@@ -257,6 +297,10 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
   const toggleSubjectVisibility = (subject: string) => {
     setVisibility(prev => ({ ...prev, [subject]: !prev[subject] }));
+  };
+
+  const toggleSubjectPriority = (subject: string) => {
+    setPriorities(prev => ({ ...prev, [subject]: !prev[subject] }));
   };
 
   return (
@@ -322,10 +366,13 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             >
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Bildschirmzeit-Limits
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Bildschirmzeit-Limits
+                    </CardTitle>
+                    <PremiumBadge />
+                  </div>
                   <CardDescription className="text-xs">
                     Maximale tägliche Lernzeit
                   </CardDescription>
@@ -366,10 +413,13 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             >
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Sichtbare Fächer
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Sichtbare Fächer
+                    </CardTitle>
+                    <PremiumBadge />
+                  </div>
                   <CardDescription className="text-xs">
                     Welche Fächer soll {childName} sehen?
                   </CardDescription>
@@ -400,17 +450,64 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               </Card>
             </PremiumFeature>
 
-            {/* Time Per Task */}
+            {/* Subject Priorities */}
             <PremiumFeature 
-              featureName="Anpassbare Zeit pro Aufgabe"
+              featureName="Themen-Schwerpunkte"
               onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
             >
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Zeit pro Aufgabe
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Themen-Schwerpunkte
+                    </CardTitle>
+                    <PremiumBadge />
+                  </div>
+                  <CardDescription className="text-xs">
+                    Schwächen-Fächer priorisieren – diese werden häufiger vorgeschlagen
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {SUBJECTS.map((subject) => {
+                      const Icon = subject.icon;
+                      return (
+                        <div 
+                          key={subject.key}
+                          className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{subject.name}</span>
+                          </div>
+                          <Switch
+                            checked={priorities[subject.key] ?? false}
+                            onCheckedChange={() => toggleSubjectPriority(subject.key)}
+                            disabled={!hasPremiumAccess}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </PremiumFeature>
+
+            {/* Bonus Per Task */}
+            <PremiumFeature 
+              featureName="Anpassbarer Bonus je Aufgabe"
+              onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
+            >
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Bonus je Aufgabe
+                    </CardTitle>
+                    <PremiumBadge />
+                  </div>
                   <CardDescription className="text-xs">
                     Sekunden Bildschirmzeit pro richtig gelöster Aufgabe
                   </CardDescription>

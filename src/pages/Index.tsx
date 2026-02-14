@@ -315,6 +315,7 @@ const Index = () => {
                   'KI-Tutor für Erklärungen',
                   'Individuelle Zeitlimits pro Fach',
                   'Fächersichtbarkeit konfigurierbar',
+                  'Themen-Schwerpunkte setzen',
                   'Erweiterte Lernanalyse',
                   '4 Wochen kostenlos nach Anmeldung',
                 ].map((feature) => (

@@ -115,6 +115,7 @@ export type Database = {
           child_id: string
           created_at: string
           id: string
+          is_priority: boolean
           is_visible: boolean
           parent_id: string
           subject: string
@@ -124,6 +125,7 @@ export type Database = {
           child_id: string
           created_at?: string
           id?: string
+          is_priority?: boolean
           is_visible?: boolean
           parent_id: string
           subject: string
@@ -133,6 +135,7 @@ export type Database = {
           child_id?: string
           created_at?: string
           id?: string
+          is_priority?: boolean
           is_visible?: boolean
           parent_id?: string
           subject?: string

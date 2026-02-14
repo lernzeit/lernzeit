@@ -24,8 +24,7 @@ import {
   BarChart3,
   Loader2,
   Crown,
-  Check,
-  X
+  Check
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -477,102 +476,34 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                   </CardContent>
                 </Card>
 
-                {/* Benefits Card */}
-                <Card className="border-primary/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Premium Features</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-start gap-2">
-                        {isPremium ? (
-                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        )}
-                        <span>KI-Tutor mit Erklärungen</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        {isPremium ? (
-                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        )}
-                        <span>Individuelle Zeitlimits</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        {isPremium ? (
-                          <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        )}
-                        <span>Erweiterte Lernanalyse</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span>Mehrere Kinder verknüpfen</span>
-                      </li>
-                    </ul>
+                {/* Premium Features Card - matching landing page style */}
+                <Card className="border-0 overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center">
+                          <Crown className="w-5 h-5 text-warning" />
+                        </div>
+                        <h3 className="text-lg font-bold">Premium Features</h3>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {[
+                          'KI-Tutor für Erklärungen',
+                          'Individuelle Zeitlimits pro Fach',
+                          'Fächersichtbarkeit konfigurierbar',
+                          'Themen-Schwerpunkte setzen',
+                          'Erweiterte Lernanalyse',
+                          'Bonus je Aufgabe anpassen',
+                        ].map((feature) => (
+                          <div key={feature} className="flex items-center gap-2 text-sm">
+                            <Check className="w-4 h-4 text-primary shrink-0" />
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Feature Comparison Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Feature-Vergleich</CardTitle>
-              <CardDescription>Alle Features im Überblick</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-semibold">Feature</th>
-                      <th className="text-center py-3 px-4 font-semibold">Kostenlos</th>
-                      <th className="text-center py-3 px-4 font-semibold">Premium</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4">Fragen beantworten</td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                    <tr className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4">Bildschirmzeit-Anfragen</td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                    <tr className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4">KI-Tutor & Erklärungen</td>
-                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                    <tr className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4">Individuelle Zeitlimits pro Fach</td>
-                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                    <tr className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4">Fächersichtbarkeit konfigurierbar</td>
-                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                    <tr className="border-b hover:bg-muted/30">
-                      <td className="py-3 px-4">Erweiterte Lernanalyse</td>
-                      <td className="text-center"><X className="h-4 w-4 text-muted-foreground mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                    <tr className="hover:bg-muted/30">
-                      <td className="py-3 px-4">Mehrere Kinder verknüpfen</td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                      <td className="text-center"><Check className="h-4 w-4 text-primary mx-auto" /></td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
             </CardContent>
           </Card>
@@ -584,7 +515,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Premium-Features stehen Ihnen während einer 14-tägigen kostenlosen Testphase zur Verfügung. 
+                Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung. 
                 Danach benötigen Sie ein aktives Abonnement. Sie können jederzeit kündigen.
               </p>
             </CardContent>
