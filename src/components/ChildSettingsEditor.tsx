@@ -88,7 +88,8 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { isPremium } = useSubscription();
+  const { isPremium, isTrialing } = useSubscription();
+  const hasPremiumAccess = isPremium || isTrialing;
 
   useEffect(() => {
     if (isOpen && childId) {
@@ -339,7 +340,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                         max={180}
                         value={settings.weekday_max_minutes}
                         onChange={(e) => updateSetting('weekday_max_minutes', parseInt(e.target.value) || 30)}
-                        disabled={!isPremium}
+                        disabled={!hasPremiumAccess}
                       />
                     </div>
                     <div className="space-y-2">
@@ -350,7 +351,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                         max={180}
                         value={settings.weekend_max_minutes}
                         onChange={(e) => updateSetting('weekend_max_minutes', parseInt(e.target.value) || 60)}
-                        disabled={!isPremium}
+                        disabled={!hasPremiumAccess}
                       />
                     </div>
                   </div>
@@ -389,7 +390,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                           <Switch
                             checked={visibility[subject.key] ?? true}
                             onCheckedChange={() => toggleSubjectVisibility(subject.key)}
-                            disabled={!isPremium}
+                            disabled={!hasPremiumAccess}
                           />
                         </div>
                       );
@@ -436,7 +437,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                               value={settings[settingKey]}
                               onChange={(e) => updateSetting(settingKey, parseInt(e.target.value) || 30)}
                               className="w-20 text-right"
-                              disabled={!isPremium}
+                              disabled={!hasPremiumAccess}
                             />
                             <span className="text-xs text-muted-foreground w-8">Sek</span>
                           </div>
