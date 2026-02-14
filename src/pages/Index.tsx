@@ -316,7 +316,6 @@ const Index = () => {
                   'Individuelle Zeitlimits pro Fach',
                   'Fächersichtbarkeit konfigurierbar',
                   'Erweiterte Lernanalyse',
-                  'Mehrere Kinder verwalten',
                   '14 Tage kostenlos testen',
                 ].map((feature) => (
                   <div key={feature} className="flex items-center gap-2 text-sm">
