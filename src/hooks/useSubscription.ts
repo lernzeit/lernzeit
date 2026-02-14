@@ -99,11 +99,25 @@ export function useSubscription(): SubscriptionState {
         if (sub) {
           const plan = (sub.plan as 'free' | 'premium') || 'free';
           const isPremium = plan === 'premium' && (sub.status === 'active' || sub.status === 'trialing');
+          
+          // Calculate trial days from local DB
+          let fallbackTrialDaysLeft: number | null = null;
+          let fallbackTrialJustExpired = false;
+          const now = new Date();
+          if (sub.trial_end) {
+            const trialEndDate = new Date(sub.trial_end);
+            if (now < trialEndDate) {
+              fallbackTrialDaysLeft = Math.ceil((trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            } else {
+              fallbackTrialJustExpired = (now.getTime() - trialEndDate.getTime()) < 7 * 24 * 60 * 60 * 1000;
+            }
+          }
+          
           setState({
             isPremium,
             isTrialing: sub.status === 'trialing',
-            trialJustExpired: false,
-            trialDaysLeft: null,
+            trialJustExpired: !isPremium && fallbackTrialJustExpired,
+            trialDaysLeft: fallbackTrialDaysLeft,
             plan,
             status: sub.status as SubscriptionState['status'],
             currentPeriodEnd: sub.current_period_end,
