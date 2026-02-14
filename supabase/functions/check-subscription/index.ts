@@ -14,6 +14,54 @@ const logStep = (step: string, details?: any) => {
 
 const PREMIUM_PRODUCT_ID = "prod_TyldQAhtysrjzz";
 
+// Default values matching the DB column defaults
+const DEFAULT_CHILD_SETTINGS = {
+  weekday_max_minutes: 30,
+  weekend_max_minutes: 60,
+  math_seconds_per_task: 30,
+  german_seconds_per_task: 30,
+  english_seconds_per_task: 30,
+  geography_seconds_per_task: 30,
+  history_seconds_per_task: 30,
+  latin_seconds_per_task: 30,
+  chemistry_seconds_per_task: 30,
+  biology_seconds_per_task: 30,
+  physics_seconds_per_task: 30,
+};
+
+/**
+ * Resets premium settings for all children of a parent when subscription lapses.
+ * - child_settings → default values
+ * - child_subject_visibility → deleted (all subjects become visible by default)
+ */
+async function resetPremiumSettings(supabaseClient: any, parentId: string) {
+  logStep("Resetting premium settings for parent", { parentId });
+
+  // Reset child_settings to defaults
+  const { data: settingsData, error: settingsError } = await supabaseClient
+    .from('child_settings')
+    .update(DEFAULT_CHILD_SETTINGS)
+    .eq('parent_id', parentId);
+
+  if (settingsError) {
+    logStep("Error resetting child_settings", { error: settingsError.message });
+  } else {
+    logStep("child_settings reset to defaults");
+  }
+
+  // Delete all custom subject visibility entries (defaults = all visible)
+  const { error: visibilityError } = await supabaseClient
+    .from('child_subject_visibility')
+    .delete()
+    .eq('parent_id', parentId);
+
+  if (visibilityError) {
+    logStep("Error deleting child_subject_visibility", { error: visibilityError.message });
+  } else {
+    logStep("child_subject_visibility entries deleted");
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -57,11 +105,30 @@ serve(async (req) => {
       }
     }
 
+    const parentOrUserId = relationship?.parent_id || user.id;
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: emailToCheck, limit: 1 });
 
     if (customers.data.length === 0) {
       logStep("No Stripe customer found");
+
+      // Check if there was a previous premium subscription that needs resetting
+      const { data: existingSub } = await supabaseClient
+        .from('subscriptions')
+        .select('plan, status')
+        .eq('user_id', parentOrUserId)
+        .maybeSingle();
+
+      if (existingSub && existingSub.plan === 'premium' && existingSub.status !== 'canceled') {
+        logStep("Previous premium subscription detected, resetting settings");
+        await resetPremiumSettings(supabaseClient, parentOrUserId);
+        await supabaseClient
+          .from('subscriptions')
+          .update({ plan: 'free', status: 'canceled', updated_at: new Date().toISOString() })
+          .eq('user_id', parentOrUserId);
+      }
+
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -90,6 +157,29 @@ serve(async (req) => {
 
     if (!activeSub) {
       logStep("No active/trialing subscription found");
+
+      // Premium lapsed – check if we need to reset settings
+      const { data: existingSub } = await supabaseClient
+        .from('subscriptions')
+        .select('plan, status')
+        .eq('user_id', parentOrUserId)
+        .maybeSingle();
+
+      if (existingSub && existingSub.plan === 'premium' &&
+          existingSub.status !== 'canceled' && existingSub.status !== 'expired') {
+        logStep("Subscription lapsed, resetting premium settings");
+        await resetPremiumSettings(supabaseClient, parentOrUserId);
+
+        await supabaseClient
+          .from('subscriptions')
+          .update({
+            plan: 'free',
+            status: 'canceled',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', parentOrUserId);
+      }
+
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -113,7 +203,7 @@ serve(async (req) => {
     await supabaseClient
       .from('subscriptions')
       .upsert({
-        user_id: relationship?.parent_id || user.id,
+        user_id: parentOrUserId,
         plan: isPremium ? 'premium' : 'free',
         status: activeSub.status,
         stripe_customer_id: customerId,
