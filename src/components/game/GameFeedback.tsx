@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, X, ArrowRight, Flag, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+import { Check, X, ArrowRight, Flag, AlertTriangle, Loader2, Sparkles, Crown } from 'lucide-react';
 import { KITutorDialog } from './KITutorDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -133,18 +133,29 @@ export function GameFeedback({
           </div>
         )}
 
-        {/* Premium AI Tutor Button - visible for incorrect answers if premium */}
-        {feedback === 'incorrect' && questionText && isPremium && (
+        {/* Premium AI Tutor Button - visible for incorrect answers */}
+        {feedback === 'incorrect' && questionText && (
           <div className="mt-4 pt-3 border-t border-red-200">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTutorDialog(true)}
-              className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              KI-Tutor fragen
-            </Button>
+            {isPremium ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTutorDialog(true)}
+                className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                KI-Tutor fragen
+              </Button>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-1">
+                <Sparkles className="w-4 h-4 text-warning" />
+                <span>KI-Tutor erklärt dir den Lösungsweg</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                  <Crown className="h-3 w-3" />
+                  Premium
+                </span>
+              </div>
+            )}
           </div>
         )}
 
