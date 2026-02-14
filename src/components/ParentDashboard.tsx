@@ -24,7 +24,9 @@ import {
   BarChart3,
   Loader2,
   Crown,
-  Check
+  Check,
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -50,7 +52,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const { isPremium, isTrialing, trialDaysLeft, plan, status, currentPeriodEnd, loading: subLoading } = useSubscription();
+  const { isPremium, isTrialing, trialJustExpired, trialDaysLeft, plan, status, currentPeriodEnd, loading: subLoading } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -265,6 +267,53 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           Aktualisieren
         </Button>
       </div>
+
+      {/* Trial Banner - top of dashboard */}
+      {isTrialing && trialDaysLeft !== null && (
+        <Card className="border-warning/50 bg-gradient-to-r from-warning/10 to-warning/5">
+          <CardContent className="flex items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">
+                  Testphase: noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Sichern Sie sich jetzt Premium und nutzen Sie alle Funktionen dauerhaft.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+              {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
+              Premium aktivieren
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {trialJustExpired && !isPremium && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="flex items-center justify-between gap-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Testphase abgelaufen</p>
+                <p className="text-xs text-muted-foreground">
+                  Ihre kostenlose Testphase ist beendet. Aktivieren Sie Premium, um alle Funktionen weiter zu nutzen.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+              {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
+              Jetzt upgraden
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Tabs */}
       <Tabs defaultValue="requests" className="space-y-6">
@@ -555,7 +604,25 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
             </CardContent>
           </Card>
 
-          {/* Info Box */}
+          {/* Trial Info in Abo Tab */}
+          {isTrialing && trialDaysLeft !== null && (
+            <Card className="border-warning/50 bg-gradient-to-r from-warning/10 to-warning/5">
+              <CardContent className="flex items-center gap-4 py-4">
+                <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">
+                    Ihre Testphase endet in {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tagen'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Nach Ablauf werden Premium-Features deaktiviert. Aktivieren Sie jetzt Ihr Abo, um nahtlos weiterzunutzen.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="bg-accent/50 border-accent">
             <CardHeader>
               <CardTitle className="text-base">Kostenlos testen</CardTitle>
