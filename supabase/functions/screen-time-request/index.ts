@@ -74,14 +74,8 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Create auth client to verify token
-    const authClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    
-    const { data: { user }, error: userError } = await authClient.auth.getUser(token);
+    // Use service-role client to verify the token
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
       console.error('Auth error:', userError?.message);
