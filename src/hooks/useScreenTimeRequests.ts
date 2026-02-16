@@ -32,6 +32,13 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
 
   const loadRequests = useCallback(async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setRequests([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('screen-time-request', {
         body: { action: 'get_requests', role }
       });
