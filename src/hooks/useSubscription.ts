@@ -36,8 +36,15 @@ export function useSubscription(): SubscriptionState {
   });
 
   const checkSubscription = useCallback(async () => {
-    if (!user) {
-      setState((prev) => ({ ...prev, loading: false }));
+    if (!user?.id) {
+      setState((prev) => ({ ...prev, loading: false, isPremium: false, plan: 'free' }));
+      return;
+    }
+
+    // Ensure we have a valid session before calling the edge function
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setState((prev) => ({ ...prev, loading: false, isPremium: false, plan: 'free' }));
       return;
     }
 
