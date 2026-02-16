@@ -81,7 +81,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
     
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
+    const { data: { user }, error: userError } = await authClient.auth.getUser(token);
 
     if (userError || !user) {
       console.error('Auth error:', userError?.message);
