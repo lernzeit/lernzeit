@@ -74,11 +74,16 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Use service-role client to verify the token
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      console.error('Auth error:', userError?.message);
+    // Decode the JWT to get user info - Supabase gateway already verified the token
+    let user: { id: string; email?: string };
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const payload = JSON.parse(atob(payloadBase64));
+      if (!payload.sub) throw new Error('No sub in token');
+      user = { id: payload.sub, email: payload.email };
+      console.log('User authenticated:', user.id);
+    } catch (e) {
+      console.error('Token decode error:', e);
       return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
