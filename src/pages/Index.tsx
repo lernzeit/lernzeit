@@ -8,23 +8,23 @@ import { useSearchParams } from 'react-router-dom';
 import LegalFooter from '@/components/layout/LegalFooter';
 
 // Lazy load heavy components that aren't needed on initial page render
-const GradeSelector = lazy(() => import('@/components/GradeSelector').then(m => ({ default: m.GradeSelector })));
-const CategorySelector = lazy(() => import('@/components/CategorySelector').then(m => ({ default: m.CategorySelector })));
-const LearningGame = lazy(() => import('@/components/LearningGame').then(m => ({ default: m.LearningGame })));
-const AuthForm = lazy(() => import('@/components/auth/AuthForm').then(m => ({ default: m.AuthForm })));
-const UserProfile = lazy(() => import('@/components/auth/UserProfile').then(m => ({ default: m.UserProfile })));
+const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
+const CategorySelector = lazy(() => import('@/components/CategorySelector').then((m) => ({ default: m.CategorySelector })));
+const LearningGame = lazy(() => import('@/components/LearningGame').then((m) => ({ default: m.LearningGame })));
+const AuthForm = lazy(() => import('@/components/auth/AuthForm').then((m) => ({ default: m.AuthForm })));
+const UserProfile = lazy(() => import('@/components/auth/UserProfile').then((m) => ({ default: m.UserProfile })));
 
 // Loading fallback component
-const LoadingFallback = () => (
-  <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+const LoadingFallback = () =>
+<div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
     <Card className="w-full max-w-md shadow-card">
       <CardContent className="p-8 text-center">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
         <p className="mt-4 text-muted-foreground">Lädt...</p>
       </CardContent>
     </Card>
-  </div>
-);
+  </div>;
+
 
 type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
@@ -43,7 +43,7 @@ const Index = () => {
     if (searchParams.get('checkout') === 'success') {
       toast.success('Premium aktiviert! 🎉', {
         description: 'Dein LernZeit Premium Abo ist jetzt aktiv. Viel Spaß mit allen Funktionen!',
-        duration: 6000,
+        duration: 6000
       });
       // Clean up URL
       searchParams.delete('checkout');
@@ -77,14 +77,14 @@ const Index = () => {
     setEarnedCategory('');
   };
 
-  const handleGameComplete = (stats: { correct: number; total: number; timeSpent: number; earnedMinutes: number; subject: string }) => {
+  const handleGameComplete = (stats: {correct: number;total: number;timeSpent: number;earnedMinutes: number;subject: string;}) => {
     // Show completion toast
     if (stats.correct === stats.total) {
       toast.success(`Perfekt! 🎉 Alle ${stats.total} Fragen richtig!`);
     } else {
       toast.success(`Gut gemacht! ${stats.correct} von ${stats.total} richtig`);
     }
-    
+
     if (stats.earnedMinutes > 0) {
       toast.success(`+${stats.earnedMinutes} Minuten verdient! ⏰`, { duration: 3000 });
     }
@@ -114,46 +114,46 @@ const Index = () => {
   // Convert English category types to German display names
   const convertCategoryToGerman = (category: Category): string => {
     switch (category) {
-      case 'math': return 'Mathematik';
-      case 'german': return 'Deutsch';
-      case 'english': return 'Englisch';
-      case 'geography': return 'Geographie';
-      case 'history': return 'Geschichte';
-      case 'physics': return 'Physik';
-      case 'biology': return 'Biologie';
-      case 'chemistry': return 'Chemie';
-      case 'latin': return 'Latein';
-      default: return 'Mathematik';
+      case 'math':return 'Mathematik';
+      case 'german':return 'Deutsch';
+      case 'english':return 'Englisch';
+      case 'geography':return 'Geographie';
+      case 'history':return 'Geschichte';
+      case 'physics':return 'Physik';
+      case 'biology':return 'Biologie';
+      case 'chemistry':return 'Chemie';
+      case 'latin':return 'Latein';
+      default:return 'Mathematik';
     }
   };
 
   const getCategoryName = (category: string) => {
     switch (category) {
-      case 'math': return 'Mathematik';
-      case 'german': return 'Deutsch';
-      case 'english': return 'Englisch';
-      case 'geography': return 'Geographie';
-      case 'history': return 'Geschichte';
-      case 'physics': return 'Physik';
-      case 'biology': return 'Biologie';
-      case 'chemistry': return 'Chemie';
-      case 'latin': return 'Latein';
-      default: return 'Lernen';
+      case 'math':return 'Mathematik';
+      case 'german':return 'Deutsch';
+      case 'english':return 'Englisch';
+      case 'geography':return 'Geographie';
+      case 'history':return 'Geschichte';
+      case 'physics':return 'Physik';
+      case 'biology':return 'Biologie';
+      case 'chemistry':return 'Chemie';
+      case 'latin':return 'Latein';
+      default:return 'Lernen';
     }
   };
 
   const getCategoryEmoji = (category: string) => {
     switch (category) {
-      case 'math': return '🔢';
-      case 'german': return '📚';
-      case 'english': return '🇬🇧';
-      case 'geography': return '🌍';
-      case 'history': return '🏛️';
-      case 'physics': return '⚡';
-      case 'biology': return '🌱';
-      case 'chemistry': return '🧪';
-      case 'latin': return '🏺';
-      default: return '📖';
+      case 'math':return '🔢';
+      case 'german':return '📚';
+      case 'english':return '🇬🇧';
+      case 'geography':return '🌍';
+      case 'history':return '🏛️';
+      case 'physics':return '⚡';
+      case 'biology':return '🌱';
+      case 'chemistry':return '🧪';
+      case 'latin':return '🏺';
+      default:return '📖';
     }
   };
 
@@ -167,8 +167,8 @@ const Index = () => {
             <p className="mt-4 text-muted-foreground">App wird geladen...</p>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>);
+
   }
 
   // Show auth form if no user and auth is requested
@@ -176,21 +176,21 @@ const Index = () => {
     return (
       <Suspense fallback={<LoadingFallback />}>
         <AuthForm onAuthSuccess={handleAuthSuccess} />
-      </Suspense>
-    );
+      </Suspense>);
+
   }
 
   // Show user profile if user is logged in and no game is active
   if (user && !selectedGrade) {
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <UserProfile 
-          user={user} 
-          onSignOut={handleSignOut} 
-          onStartGame={handleStartGame} 
-        />
-      </Suspense>
-    );
+        <UserProfile
+          user={user}
+          onSignOut={handleSignOut}
+          onStartGame={handleStartGame} />
+
+      </Suspense>);
+
   }
 
 
@@ -198,15 +198,15 @@ const Index = () => {
   if (selectedGrade && selectedCategory) {
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <LearningGame 
+        <LearningGame
           grade={selectedGrade}
           subject={selectedCategory}
           onComplete={handleGameComplete}
           onBack={() => setSelectedCategory(null)}
-          totalQuestions={5}
-        />
-      </Suspense>
-    );
+          totalQuestions={5} />
+
+      </Suspense>);
+
   }
 
   // Show category selector if grade is selected but not category
@@ -216,10 +216,10 @@ const Index = () => {
         <CategorySelector
           grade={selectedGrade}
           onCategorySelect={handleCategorySelect}
-          onBack={handleBack}
-        />
-      </Suspense>
-    );
+          onBack={handleBack} />
+
+      </Suspense>);
+
   }
 
   return (
@@ -227,8 +227,8 @@ const Index = () => {
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/20 rounded-full animate-pulse blur-3xl" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-accent/30 rounded-full animate-pulse blur-xl" style={{animationDelay: '2s'}}></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/20 rounded-full animate-pulse blur-3xl" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-accent/30 rounded-full animate-pulse blur-xl" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto">
@@ -248,25 +248,25 @@ const Index = () => {
           
           <div className="flex items-center justify-center gap-3 mb-8 text-muted-foreground">
             <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-            <span className="text-lg">Alle Schulfächer • Individuelle Belohnungen • Fortschritt speichern</span>
+            <span className="text-lg">Schulwissen vertiefen •Bildschirmzeit verdienen • Medienkompetenz stärken</span>
             <Sparkles className="w-5 h-5 text-primary animate-pulse" />
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
-            <Button 
-              onClick={() => setShowAuth(true)} 
-              size="lg" 
-              className="h-14 px-8 text-lg font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-            >
+            <Button
+              onClick={() => setShowAuth(true)}
+              size="lg"
+              className="h-14 px-8 text-lg font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">
+
               <User className="w-5 h-5 mr-2" />
               Anmelden / Registrieren
             </Button>
-            <Button 
-              onClick={() => setSelectedGrade(3)} 
-              variant="outline" 
+            <Button
+              onClick={() => setSelectedGrade(3)}
+              variant="outline"
               size="lg"
-              className="h-14 px-8 text-lg font-medium border-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105"
-            >
+              className="h-14 px-8 text-lg font-medium border-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105">
+
               <Trophy className="w-5 h-5 mr-2" />
               Demo starten
             </Button>
@@ -327,18 +327,18 @@ const Index = () => {
               </p>
               <div className="grid sm:grid-cols-2 gap-3">
                 {[
-                  'KI-Tutor für Erklärungen',
-                  'Individuelle Zeitlimits pro Fach',
-                  'Fächersichtbarkeit konfigurierbar',
-                  'Themen-Schwerpunkte setzen',
-                  'Erweiterte Lernanalyse',
-                  '4 Wochen kostenlos nach Anmeldung',
-                ].map((feature) => (
-                  <div key={feature} className="flex items-center gap-2 text-sm">
+                'KI-Tutor für Erklärungen',
+                'Individuelle Zeitlimits pro Fach',
+                'Fächersichtbarkeit konfigurierbar',
+                'Themen-Schwerpunkte setzen',
+                'Erweiterte Lernanalyse',
+                '4 Wochen kostenlos nach Anmeldung'].
+                map((feature) =>
+                <div key={feature} className="flex items-center gap-2 text-sm">
                     <Check className="w-4 h-4 text-primary shrink-0" />
                     <span>{feature}</span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </CardContent>
@@ -353,8 +353,8 @@ const Index = () => {
 
         <LegalFooter className="mt-8" />
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
