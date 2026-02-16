@@ -20,6 +20,28 @@ serve(async (req) => {
   }
 
   try {
+    // Authentication: verify the user's JWT
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    try {
+      const payloadBase64 = token.split('.')[1];
+      if (!payloadBase64) throw new Error('Invalid token');
+      const payload = JSON.parse(atob(payloadBase64));
+      if (!payload.sub) throw new Error('No user ID');
+      console.log('Tutor: authenticated user', payload.sub);
+    } catch {
+      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { messages, question, correctAnswer, userAnswer, grade, subject }: TutorRequest = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
