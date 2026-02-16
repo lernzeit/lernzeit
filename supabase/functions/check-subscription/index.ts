@@ -185,31 +185,43 @@ serve(async (req) => {
     }
 
     if (!activeSub) {
-      logStep("No active/trialing subscription found");
+      logStep("No active/trialing Stripe subscription found, checking local trial");
 
-      // Premium lapsed – check if we need to reset settings
+      // Check local subscriptions table for an active local trial
       const { data: existingSub } = await supabaseClient
         .from('subscriptions')
-        .select('plan, status')
+        .select('*')
         .eq('user_id', parentOrUserId)
         .maybeSingle();
 
       if (existingSub && existingSub.plan === 'premium' &&
           existingSub.status !== 'canceled' && existingSub.status !== 'expired') {
-        logStep("Subscription lapsed, resetting premium settings");
-        await resetPremiumSettings(supabaseClient, parentOrUserId);
+        const trialEnd = existingSub.trial_end;
+        if (trialEnd && new Date(trialEnd) > new Date()) {
+          // Local trial is still active
+          logStep("Local trial still active (with Stripe customer)", { trialEnd, status: existingSub.status });
+          return new Response(JSON.stringify({
+            subscribed: true,
+            status: existingSub.status,
+            subscription_end: existingSub.current_period_end,
+            trial_end: trialEnd,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
 
+        // Trial expired – reset settings
+        logStep("Local trial expired, resetting premium settings");
+        await resetPremiumSettings(supabaseClient, parentOrUserId);
         await supabaseClient
           .from('subscriptions')
-          .update({
-            plan: 'free',
-            status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
+          .update({ plan: 'free', status: 'canceled', updated_at: new Date().toISOString() })
           .eq('user_id', parentOrUserId);
       }
 
-      return new Response(JSON.stringify({ subscribed: false }), {
+      const trialEnd = existingSub?.trial_end || null;
+      return new Response(JSON.stringify({ subscribed: false, trial_end: trialEnd }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
