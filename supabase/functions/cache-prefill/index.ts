@@ -504,6 +504,36 @@ serve(async (req) => {
 
   console.log(`🎯 ${targets.length} combos below threshold. Generating up to ${maxQuestions} questions...`);
 
+  // ── Step 2b: Load existing questions per target for deduplication ────────
+  function normalizeMathExpr(text: string): string {
+    return text.replace(/(\d+)\s*([+×*])\s*(\d+)/g, (_match, a, op, b) => {
+      const sorted = [a, b].sort();
+      return `${sorted[0]}${op}${sorted[1]}`;
+    }).toLowerCase().trim();
+  }
+
+  function isDuplicate(newText: string, existingTexts: string[], subject: string): boolean {
+    const normalizedNew = subject === 'math' ? normalizeMathExpr(newText) : newText.toLowerCase().trim();
+    return existingTexts.some(existing => {
+      const normalizedExisting = subject === 'math' ? normalizeMathExpr(existing) : existing.toLowerCase().trim();
+      return normalizedNew === normalizedExisting;
+    });
+  }
+
+  const existingQuestionsMap = new Map<string, string[]>();
+  for (const target of targets) {
+    const key = `${target.grade}-${target.subject}`;
+    if (!existingQuestionsMap.has(key)) {
+      const { data } = await adminClient
+        .from('ai_question_cache')
+        .select('question_text')
+        .eq('grade', target.grade)
+        .eq('subject', target.subject)
+        .limit(200);
+      existingQuestionsMap.set(key, (data ?? []).map(r => r.question_text));
+    }
+  }
+
   // ── Step 3: Generate questions with rate-limit-safe delays ───────────────
   const systemPrompt = buildSystemPrompt();
   let generated = 0;
@@ -520,10 +550,18 @@ serve(async (req) => {
     const questionType = getQuestionType(subject, slotIndex);
     const difficulty = getDifficulty(slotIndex);
 
-    console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | KI wählt Unterthema...`);
+    const cacheKey = `${grade}-${subject}`;
+    const existingTexts = existingQuestionsMap.get(cacheKey) ?? [];
+    const excludeSample = existingTexts.slice(-15);
+
+    console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | Existing: ${existingTexts.length}`);
 
     try {
-      const userPrompt = buildQuestionPrompt(grade, subject, difficulty, questionType);
+      let userPrompt = buildQuestionPrompt(grade, subject, difficulty, questionType);
+      if (excludeSample.length > 0) {
+        userPrompt += `\n\nWICHTIG – Diese Fragen existieren bereits. Erstelle eine VÖLLIG ANDERE Frage:\n${excludeSample.map(t => `- "${t.substring(0, 80)}"`).join('\n')}`;
+      }
+
       const rawJson = await callGemini(systemPrompt, userPrompt, GEMINI_API_KEY);
 
       if (!rawJson) {
@@ -541,6 +579,15 @@ serve(async (req) => {
         continue;
       }
 
+      // ── Deduplication check ──
+      const newText = validated.question_text as string;
+      if (isDuplicate(newText, existingTexts, subject)) {
+        console.warn(`⚠️ Duplicate detected, skipping: "${newText.substring(0, 60)}..."`);
+        failed++;
+        results.push({ grade, subject, type: questionType, status: 'duplicate_skipped' });
+        continue;
+      }
+
       // ── Save to cache ──
       const { error: insertErr } = await adminClient.from('ai_question_cache').insert(validated);
       if (insertErr) {
@@ -549,6 +596,7 @@ serve(async (req) => {
         results.push({ grade, subject, type: questionType, status: 'insert_failed' });
       } else {
         generated++;
+        existingTexts.push(newText);
         results.push({ grade, subject, type: questionType, status: 'ok' });
         console.log(`✅ Saved: G${grade} ${subject} ${questionType} (${difficulty})`);
       }
