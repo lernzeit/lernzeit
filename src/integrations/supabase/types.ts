@@ -713,16 +713,14 @@ export type Database = {
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       generate_invitation_code: { Args: never; Returns: string }
-      get_template_feedback_stats: {
+      get_cache_stats: {
         Args: never
         Returns: {
-          negative_ratio: number
-          template_id: string
-          thumbs_down_count: number
-          thumbs_up_count: number
-          too_easy_count: number
-          too_hard_count: number
-          total_feedback: number
+          avg_times_served: number
+          grade: number
+          last_added_at: string
+          subject: string
+          total_questions: number
         }[]
       }
       has_role: {
