@@ -40,6 +40,9 @@ verify_jwt = false
 # UTILITY FUNCTIONS
 # ============================================
 
+[functions.cache-prefill]
+verify_jwt = false
+
 [functions.screen-time-request]
 verify_jwt = false
 
