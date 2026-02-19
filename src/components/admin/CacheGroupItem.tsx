@@ -45,7 +45,7 @@ export function CacheGroupItem({ grade, subject, count, avgServed }: CacheGroupI
 
   const formatAnswer = (q: CachedQuestion) => {
     try {
-      if (q.question_type === 'multiple-choice' && q.options) {
+      if (q.question_type?.toUpperCase() === 'MULTIPLE_CHOICE' && q.options) {
         const opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
         const idx = typeof q.correct_answer === 'string' ? parseInt(q.correct_answer) : q.correct_answer;
         if (Array.isArray(opts) && typeof idx === 'number' && opts[idx]) {
