@@ -472,59 +472,6 @@ export type Database = {
         }
         Relationships: []
       }
-      questions: {
-        Row: {
-          correct_answer: Json
-          correct_count: number | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          options: Json | null
-          plays: number | null
-          quality_score: number | null
-          question_text: string
-          question_type: string
-          topic_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          correct_answer: Json
-          correct_count?: number | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          options?: Json | null
-          plays?: number | null
-          quality_score?: number | null
-          question_text: string
-          question_type: string
-          topic_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          correct_answer?: Json
-          correct_count?: number | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          options?: Json | null
-          plays?: number | null
-          quality_score?: number | null
-          question_text?: string
-          question_type?: string
-          topic_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "questions_topic_id_fkey"
-            columns: ["topic_id"]
-            isOneToOne: false
-            referencedRelation: "topics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       screen_time_requests: {
         Row: {
           child_id: string
@@ -616,39 +563,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      topics: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          grade: number
-          id: string
-          is_active: boolean | null
-          subject: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          grade: number
-          id?: string
-          is_active?: boolean | null
-          subject: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          grade?: number
-          id?: string
-          is_active?: boolean | null
-          subject?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -792,40 +706,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      analyze_template_solutions: {
-        Args: never
-        Returns: {
-          count: number
-          example_prompt: string
-          example_solution: string
-          solution_format: string
-        }[]
-      }
-      apply_template_rating: {
-        Args: { stars: number; tid: string }
-        Returns: undefined
-      }
-      apply_template_stat: {
-        Args: { is_correct: boolean; tid: string }
-        Returns: undefined
-      }
       claim_invitation_code: {
         Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json
       }
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
-      cleanup_old_question_history: { Args: never; Returns: undefined }
-      find_duplicate_templates: {
-        Args: never
-        Returns: {
-          all_ids: string
-          duplicate_count: number
-          earliest_created: string
-          normalized_prompt: string
-          original_prompts: string
-        }[]
-      }
       generate_invitation_code: { Args: never; Returns: string }
       get_template_feedback_stats: {
         Args: never
@@ -847,14 +733,7 @@ export type Database = {
         Returns: boolean
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
-      trigger_auto_question_generation: { Args: never; Returns: Json }
-      trigger_batch_generation: { Args: never; Returns: Json }
-      trigger_cleanup_faulty_questions: { Args: never; Returns: Json }
-      trigger_curriculum_template_generation: { Args: never; Returns: Json }
-      trigger_duplicate_cleanup: { Args: never; Returns: Json }
       trigger_grade_upgrade: { Args: never; Returns: Json }
-      trigger_math_curriculum_seeder: { Args: never; Returns: Json }
-      trigger_template_generation: { Args: never; Returns: Json }
       update_achievement_progress: {
         Args: {
           p_category: string
@@ -862,10 +741,6 @@ export type Database = {
           p_type: string
           p_user_id: string
         }
-        Returns: Json
-      }
-      validate_template_solution: {
-        Args: { current_solution: Json; prompt: string; template_id: string }
         Returns: Json
       }
     }
