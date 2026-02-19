@@ -30,7 +30,7 @@ export const ApiStatusPanel = () => {
     try {
       const startTime = Date.now();
       const { error } = await supabase.functions.invoke('ai-question-generator', {
-        body: { grade: 1, subject: 'Mathematik', difficulty: 'easy', test: true }
+        body: { grade: 1, subject: 'math', difficulty: 'easy', test: true }
       });
       const responseTime = Date.now() - startTime;
 
