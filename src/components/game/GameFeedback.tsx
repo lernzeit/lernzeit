@@ -55,7 +55,7 @@ export function GameFeedback({
   const [reportReason, setReportReason] = useState<ReportReason | ''>('');
   const [reportDetails, setReportDetails] = useState('');
   const [showTutorDialog, setShowTutorDialog] = useState(false);
-  const { isReporting, isValidating, reportAndValidate } = useQuestionReport();
+  const { isReporting, reportQuestion } = useQuestionReport();
   const { isPremium } = useSubscription();
   
   if (!feedback) return null;
@@ -63,7 +63,7 @@ export function GameFeedback({
   const handleSubmitReport = async () => {
     if (!reportReason || !questionText) return;
 
-    await reportAndValidate({
+    await reportQuestion({
       reason: reportReason,
       details: reportDetails || undefined,
       question: questionText,
@@ -287,19 +287,19 @@ export function GameFeedback({
                 variant="outline"
                 onClick={() => setShowReportDialog(false)}
                 className="flex-1"
-                disabled={isReporting || isValidating}
+                disabled={isReporting}
               >
                 Abbrechen
               </Button>
               <Button
                 onClick={handleSubmitReport}
-                disabled={!reportReason || isReporting || isValidating}
+                disabled={!reportReason || isReporting}
                 className="flex-1"
               >
-                {isReporting || isValidating ? (
+                {isReporting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {isValidating ? 'KI prüft...' : 'Senden...'}
+                    Senden...
                   </>
                 ) : (
                   'Melden'

@@ -21,7 +21,7 @@ smtp_port = 54325
 pop3_port = 54326
 
 # ============================================
-# NEW CORE API FUNCTIONS (Lovable AI Gateway)
+# CORE AI FUNCTIONS
 # ============================================
 
 [functions.ai-question-generator]
@@ -37,26 +37,13 @@ verify_jwt = false
 verify_jwt = false
 
 # ============================================
-# UTILITY FUNCTIONS (Keep)
+# UTILITY FUNCTIONS
 # ============================================
 
 [functions.screen-time-request]
 verify_jwt = false
 
 [functions.annual-grade-upgrade]
-verify_jwt = false
-
-# ============================================
-# LEGACY FUNCTIONS (To be removed later)
-# ============================================
-
-[functions.explain-answer]
-verify_jwt = false
-
-[functions.generate-question-realtime]
-verify_jwt = false
-
-[functions.generate-questions]
 verify_jwt = false
 
 # ============================================
