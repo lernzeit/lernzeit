@@ -11,231 +11,159 @@ const DELAY_BETWEEN_REQUESTS_MS = 13_000; // ~4.6/min → under 5 RPM limit
 const MAX_QUESTIONS_PER_RUN = 15;         // conserves daily quota (leaves buffer)
 const MIN_CACHE_THRESHOLD = 20;           // generate until each combo has this many
 
-// ── Curriculum: grade → subject → skill list (aligned with Lehrplan) ──
-const CURRICULUM: Record<number, Record<string, string[]>> = {
-  1: {
-    math: [
-      'Zählen bis 10; Anzahlen vergleichen und darstellen',
-      'Addition und Subtraktion im Zahlenraum 10 ohne Übergang',
-      'Zahlen bis 20 darstellen, ordnen und vergleichen',
-      'Addition und Subtraktion im Zahlenraum 20 mit Zehnerübergang',
-      'Zahlen bis 100 erkunden; Zehner und Einheiten',
-      'Halbschriftliche Verfahren im Zahlenraum 100 ohne Übergang',
-      'Längen schätzen und vergleichen (unstandardisiert)',
-      'Einfache Strichlisten und Bilddiagramme lesen',
+// ── Subject Domain Hints: all 10 subjects with open thematic categories ──
+// Instead of fixed skill lists, we provide broad domain hints.
+// Gemini autonomously selects a concrete sub-topic appropriate for the grade.
+const SUBJECT_DOMAINS: Record<string, {
+  domains: string[];
+  ageHints: string;
+  minGrade: number;
+  maxGrade: number;
+}> = {
+  math: {
+    domains: [
+      'Zahlen & Operationen (Zählen, Grundrechenarten, Stellenwert)',
+      'Brüche, Dezimalzahlen & Prozentrechnung',
+      'Algebra: Terme, Gleichungen, Gleichungssysteme, Funktionen',
+      'Geometrie: Flächen, Körper, Koordinaten, Winkel, Symmetrie',
+      'Größen & Messen: Länge, Zeit, Geld, Gewicht, Volumen',
+      'Daten & Zufall: Statistik, Wahrscheinlichkeit, Diagramme',
     ],
-    german: [
-      'Buchstaben und Laute; Laut-Buchstaben-Zuordnung',
-      'Einfache Wörter lesen und schreiben',
-      'Satzzeichen: Punkt, Fragezeichen, Ausrufezeichen',
-      'Groß- und Kleinschreibung: Nomen erkennen',
-    ],
+    ageHints: 'Zahlenräume wachsen mit der Klasse: ZR10 (Kl.1) → ZR100 (Kl.2) → ZR1000 (Kl.3) → Mio (Kl.4+). Ab Kl.5: negative Zahlen, Bruchrechnung, Algebra. Ab Kl.8: lineare Funktionen, Quadratik, Trigonometrie.',
+    minGrade: 1,
+    maxGrade: 10,
   },
-  2: {
-    math: [
-      'Addition und Subtraktion im Zahlenraum 100 halbschriftlich mit Übergang',
-      'Einmaleins: 2er-, 5er-, 10er-Reihe; Tausch- und Verbundaufgaben',
-      'Kleines Einmaleins vollständig (1–10); Umkehraufgaben',
-      'Division als Aufteilen und Verteilen',
-      'Standardverfahren Addition und Subtraktion (Zahlenraum 1000 vorbereiten)',
-      'Geld: Einkaufssituationen bis 100 € (ohne Komma)',
-      'Einheiten: cm–m; min–h; €–Cent (ganzzahlig)',
-      'Säulen- und Bilddiagramme interpretieren',
+  german: {
+    domains: [
+      'Grammatik: Wortarten, Satzglieder, Kasus, Zeiten, Modus',
+      'Rechtschreibung & Zeichensetzung: Regeln und Ausnahmen',
+      'Textkompetenz: Lesen, Verstehen, Analysieren',
+      'Schreiben: Textsorten (Erzählen, Beschreiben, Erörtern, Analysieren)',
+      'Literatur: Gedichte, Kurzgeschichten, Romane, Dramen',
+      'Sprache & Kommunikation: Stilmittel, Rhetorik, Sprachgeschichte',
     ],
-    german: [
-      'Wortarten: Nomen, Verben, Adjektive unterscheiden',
-      'Satzglieder: Subjekt und Prädikat erkennen',
-      'Rechtschreibung: Dehnung, Schärfung, Auslautverhärtung',
-      'Texte lesen und Fragen dazu beantworten',
-    ],
+    ageHints: 'Kl.1–2: Laut-Buchstaben-Zuordnung, einfache Sätze. Kl.3–4: Wortarten, einfache Analyse. Kl.5–7: Satzglieder, Literaturanalyse, Erörterung. Kl.8–10: Stilmittel, Rhetorik, komplexe Textanalyse.',
+    minGrade: 1,
+    maxGrade: 10,
   },
-  3: {
-    math: [
-      'Zahlenraum 1000: Ordnen, Runden, Zahlstrahl',
-      'Schriftliche Addition und Subtraktion mit Übergang im Zahlenraum 1000',
-      'Multiplikation: 1×n mit Strategie (ohne schriftlichen Algorithmus)',
-      'Division mit Rest; Beziehungen zwischen Multiplikation und Division',
-      'Schriftliche Multiplikation mit einstelligem Faktor',
-      'Brüche als Teile vom Ganzen; einfache gleichnamige Vergleiche',
-      'Fläche und Umfang: Formelverständnis U=2(a+b), A=a·b (ganzzahlig)',
-      'Zeitspannen über Tagesgrenzen; Kalender',
+  english: {
+    domains: [
+      'Grammar: tenses (Present, Past, Future, Perfect, Progressive)',
+      'Grammar: modal verbs, conditionals, passive voice, reported speech',
+      'Vocabulary: everyday topics, school, travel, technology, society',
+      'Reading comprehension: texts, articles, stories, dialogues',
+      'Writing skills: emails, essays, summaries, opinion texts',
+      'Listening & speaking: phrases, functions, pragmatics',
     ],
-    german: [
-      'Satzarten und Satzzeichen; direkte Rede',
-      'Verben konjugieren: Präsens, Präteritum, Perfekt',
-      'Steigerung von Adjektiven (Komparativ, Superlativ)',
-      'Texte strukturieren: Einleitung, Hauptteil, Schluss',
-    ],
+    ageHints: 'Kl.5–6: Simple Present/Past, basic vocabulary, short texts. Kl.7–8: modals, conditionals type 1–2, passive. Kl.9–10: advanced grammar, complex texts, academic writing.',
+    minGrade: 5,
+    maxGrade: 10,
   },
-  4: {
-    math: [
-      'Zahlenraum bis 1 Million: Stellenwert, Runden, Zahlbeziehungen',
-      'Schriftliche Multiplikation: mehrstellig × mehrstellig',
-      'Schriftliche Division: mehrstelliger Divisor (Standardverfahren)',
-      'Brüche: Erweitern, Kürzen, gleichnamig addieren',
-      'Dezimalzahlen: Brüche als Dezimalzahlen (endliche)',
-      'Rechnen mit Dezimalzahlen: + − × ÷ (einfach, sachbezogen)',
-      'Einheiten und Umrechnungen: mm–cm–m–km; g–kg; ml–l; € mit Komma',
-      'Koordinatensystem (1. Quadrant): Punkte lesen und setzen',
+  geography: {
+    domains: [
+      'Orientierung: Karten, Himmelsrichtungen, Maßstab, Koordinaten',
+      'Deutschland: Bundesländer, Städte, Flüsse, Gebirge, Wirtschaft',
+      'Europa: Länder, Hauptstädte, Gebirge, Flüsse, Klimazonen',
+      'Weltgeografie: Kontinente, Ozeane, Länder, Großlandschaften',
+      'Naturgeografie: Erosion, Tektonik, Vulkanismus, Klimasysteme',
+      'Humangeografie: Bevölkerung, Migration, Globalisierung, Nachhaltigkeit',
     ],
-    german: [
-      'Kommasetzung bei Aufzählungen und Nebensätzen',
-      'Kasus (Fälle): Nominativ, Genitiv, Dativ, Akkusativ',
-      'Satzgefüge: Haupt- und Nebensätze',
-      'Aufsatz: Berichten, Beschreiben, Erzählen',
-    ],
+    ageHints: 'Kl.5–6: Deutschland, Europa, einfache Kartenarbeit. Kl.7–8: Weltgeografie, Klimazonen, Naturgefahren. Kl.9–10: Globalisierung, Entwicklungsländer, komplexe Wechselwirkungen.',
+    minGrade: 5,
+    maxGrade: 10,
   },
-  5: {
-    math: [
-      'Negative Zahlen: Zahlengerade, Vergleiche, Addition und Subtraktion',
-      'Brüche und Dezimalzahlen: Erweitern, Kürzen, Vergleich, Umwandlung',
-      'Bruchrechnung: Addition, Subtraktion, Multiplikation, Division (sachbezogen)',
-      'Proportionalität und Dreisatz: direkt proportional, Skalen',
-      'Prozentrechnung (Grundideen): Prozentwert, Grundwert, Prozentsatz',
-      'Lineare Gleichungen: ax + b = c lösen (einfach)',
-      'Koordinatensystem: Tabellen ↔ Graphs',
-      'Kreis: Umfang und Fläche (einfach)',
+  history: {
+    domains: [
+      'Antike: Griechenland, Rom, Ägypten, Mesopotamien',
+      'Mittelalter: Feudalismus, Kirche, Kreuzzüge, Städte',
+      'Frühe Neuzeit: Reformation, Entdeckungen, Absolutismus',
+      'Neuzeit 19. Jh.: Industrialisierung, Nationalismus, Imperialismus',
+      'Weltkriege & Weimarer Republik: Ursachen, Verlauf, Folgen',
+      'Zeitgeschichte: Kalter Krieg, Teilung Deutschlands, Gegenwart',
     ],
-    german: [
-      'Satzanalyse: Satzglieder (Subjekt, Prädikat, Objekte, Adverbiale)',
-      'Wortbildung: Komposition, Derivation',
-      'Rechtschreibstrategien: Wortverlängerung, Ableitungen',
-      'Erörterung: Argumente strukturieren und belegen',
-    ],
-    english: [
-      'Simple Present and Simple Past: regular and irregular verbs',
-      'Questions and negations with do/does/did',
-      'Vocabulary: school, hobbies, daily routine, family',
-      'Reading comprehension: short texts about everyday topics',
-    ],
+    ageHints: 'Kl.6–7: Antike und Mittelalter. Kl.8: Neuzeit, Industrialisierung. Kl.9: Kaiserreich, WW1, Weimarer Republik. Kl.10: WW2, NS-Zeit, Nachkriegsgeschichte, Gegenwart.',
+    minGrade: 5,
+    maxGrade: 10,
   },
-  6: {
-    math: [
-      'Prozentrechnung (Aufbau): Grundaufgaben, bequeme Prozentsätze',
-      'Verhältnis und Skalierung: Anteile, Mischaufgaben (einfach)',
-      'Rationale Zahlen: Rechnen mit Vorzeichen (einfach)',
-      'Ganzrationale Potenzen: Quadrat, Kubik, Potenzschreibweise',
-      'Lineare Gleichungen mit Klammern und Brüchen',
-      'Direkte und indirekte Proportionalität: grafisch und rechnerisch',
-      'Kreis: Umfang und Fläche mit Sachaufgaben',
-      'Prismen und Zylinder: Oberfläche und Volumen',
+  physics: {
+    domains: [
+      'Mechanik: Kraft, Bewegung, Energie, Arbeit, Leistung, Druck',
+      'Optik: Licht, Reflexion, Brechung, Linsen, Farben',
+      'Elektrik & Magnetismus: Stromkreis, Spannung, Widerstand, Magnete',
+      'Wärmelehre: Temperatur, Wärmeübertragung, Ausdehnung, Aggregatzustände',
+      'Schwingungen & Wellen: Schall, Frequenz, Mechanische Wellen',
+      'Energie & Umwelt: Energieformen, Umwandlung, Erneuerbare Energien',
     ],
-    german: [
-      'Indirekte Rede und Konjunktiv I',
-      'Passiv: Formen und Verwendung',
-      'Literatur: Gedichte analysieren (Metrum, Reim, Stilmittel)',
-      'Argumentieren und Diskutieren: Meinungen begründen',
-    ],
-    english: [
-      'Present Perfect with have/has; since and for',
-      'Comparison of adjectives: comparative and superlative',
-      'Conditional sentences type 1 (If ... will ...)',
-      'Vocabulary: environment, travel, technology',
-    ],
+    ageHints: 'Ab Kl.5: Optik, einfache Mechanik, Elektrik. Kl.7–8: Kraftgesetze, Energie, Wärme. Kl.9–10: Schwingungen, komplexe Mechanik, Energieerhaltung.',
+    minGrade: 5,
+    maxGrade: 10,
   },
-  7: {
-    math: [
-      'Prozent und Zins: Zins, Tageszins, Zinseszins (iterativ)',
-      'Terme umformen: Ausklammern, Klammerregeln, Distributivgesetz',
-      'Rationale Zahlen sicher: + − × ÷ mit Brüchen und Dezimalzahlen',
-      'Lineare Gleichungen sichern: mit Brüchen und Klammern',
-      'Zuordnungen und Funktionen: direkt/indirekt proportional; Steigung',
-      'Zylinder und Prismen: Netze, Schrägbild',
-      'Prozentanwendung: Rabatt und Preiserhöhung',
-      'Baumdiagramme (1–2 Stufen): absolute und relative Häufigkeit',
+  biology: {
+    domains: [
+      'Zelle & Zellbiologie: Aufbau, Organellen, Zellteilung',
+      'Pflanzen: Aufbau, Photosynthese, Fortpflanzung, Ökosystem',
+      'Tiere: Systematik, Verhalten, Anpassung, Ökologie',
+      'Menschlicher Körper: Organsysteme, Gesundheit, Ernährung',
+      'Genetik & Evolution: Vererbung, DNA, Mutation, Selektion',
+      'Ökosysteme & Umwelt: Nahrungsnetze, Stoffkreisläufe, Naturschutz',
     ],
-    german: [
-      'Epochen der Literatur: Märchen, Fabeln, Novellen',
-      'Rhetorische Mittel: Metapher, Vergleich, Personifikation, Ironie',
-      'Erörterung: lineare und dialektische Argumentation',
-      'Sprachgeschichte: Fremdwörter und Lehnwörter',
-    ],
-    english: [
-      'Simple Past vs. Present Perfect: differences and usage',
-      'Modal verbs: can, could, may, might, must, should, would',
-      'Passive voice: Present and Past Passive',
-      'Reading comprehension: articles, stories, dialogues',
-    ],
+    ageHints: 'Kl.5–6: Pflanzen, Tiere, einfache Ökosysteme. Kl.7–8: Zelle, Körper, Ökologie. Kl.9–10: Genetik, Evolution, komplexe Ökosysteme.',
+    minGrade: 5,
+    maxGrade: 10,
   },
-  8: {
-    math: [
-      'Lineare Funktionen: Darstellung, Steigung, Achsenabschnitt',
-      'Lineare Gleichungssysteme: grafisch, Einsetz-, Gleichsetzungsverfahren',
-      'Termumformungen (Routine): Distributivgesetz, Binomische Formeln',
-      'Ähnlichkeit und Strahlensätze: Streckung, Verhältnisse, Anwendungen',
-      'Kreis und Zylinder: Berechnungen und Anwendungen',
-      'Modellieren mit linearen Funktionen',
-      'Prozent und Zins (vertiefen): Tabellenkalkulation für Zinsen',
-      'Stochastik: Vierfeldertafel, bedingte Häufigkeiten (einfach)',
+  chemistry: {
+    domains: [
+      'Stoffe & Stoffeigenschaften: Reinstoffe, Gemische, Trennverfahren',
+      'Chemische Reaktionen: Verbrennung, Oxidation, Reduktion, Energetik',
+      'Atombau & Periodensystem: Atomaufbau, Ionisierung, PSE-Trends',
+      'Chemische Bindungen: Ionenbindung, Atombindung, Metallbindung',
+      'Säuren, Basen & Salze: pH-Wert, Neutralisation, Eigenschaften',
+      'Organische Chemie: Kohlenwasserstoffe, Alkohole, Alltagschemie',
     ],
-    german: [
-      'Dramenanalyse: Struktur, Konflikt, Figuren',
-      'Sprachebenen: Dialekt, Standardsprache, Fachsprache',
-      'Protokoll und Zusammenfassung schreiben',
-      'Analyse von Sachtexten und Medientexten',
-    ],
-    english: [
-      'Conditional sentences type 2 (If ... would ...)',
-      'Reported speech: statements and questions',
-      'Vocabulary: media, society, global issues',
-      'Writing: argumentative essays and formal letters',
-    ],
+    ageHints: 'Ab Kl.7: Stoffe und einfache Reaktionen. Kl.8: Atombau, PSE, Bindungen. Kl.9: Säuren/Basen, Salze. Kl.10: Organische Chemie, komplexe Reaktionen.',
+    minGrade: 7,
+    maxGrade: 10,
   },
-  9: {
-    math: [
-      'Pythagoras (Anwendung): Strecken berechnen, Orthogonalität',
-      'Trigonometrie: Sinus, Kosinus, Tangens im rechtwinkligen Dreieck',
-      'Quadratische Gleichungen: x²=a; pq-Formel',
-      'Quadratische Funktionen: Scheitel, Nullstellen, Graphen',
-      'Kreisgeometrie: Kreissektor, zusammengesetzte Figuren',
-      'Wurzeln und Potenzen: Potenzgesetze (einfach)',
-      'Baumdiagramme (mehrstufig): erwartete Werte (einfach)',
-      'Vektoren (Basis): Längen (Betrag) mit Pythagoras',
+  latin: {
+    domains: [
+      'Vokabular: Kernwortschatz, Wortfamilien, Fremdwortbedeutung',
+      'Morphologie: Deklination (Nomen, Adjektive, Pronomen), Komparation',
+      'Verbformen: Konjugation, Tempora (Präsens bis Plusquamperfekt), Modi',
+      'Syntax: Satzglieder, Ablativus absolutus, AcI, Konjunktionssätze',
+      'Textarbeit: Übersetzung, Interpretation, Literaturkenntnisse',
+      'Antike Kultur & Geschichte: Rom, Mythologie, Alltagsleben',
     ],
-    german: [
-      'Romananalyse: Perspektive, Erzählhaltung, Charakterentwicklung',
-      'Argumentation und Rhetorik: Rede und Gegenrede',
-      'Sprachwandel: historische Entwicklung des Deutschen',
-      'Interpretation lyrischer Texte (moderne Lyrik)',
-    ],
-    english: [
-      'Conditional sentences type 3 (If ... had ... would have ...)',
-      'Vocabulary in context: global challenges, technology, culture',
-      'Analysing poems and short stories in English',
-      'Writing: opinion essays and narrative texts',
-    ],
+    ageHints: 'Ab Kl.5: Grundvokabular, einfache Sätze, 1.–2. Deklination. Kl.7: alle Deklinationen, Tempora. Kl.9–10: komplexe Syntax, Lektüre (Caesar, Cicero, Ovid).',
+    minGrade: 5,
+    maxGrade: 10,
   },
-  10: {
-    math: [
-      'Quadratische Funktionen (vertiefen): Scheitel-/Normalform, Transformationen',
-      'Exponentialfunktionen: Wachstum (einfach), Parameter deuten',
-      'Lineare und quadratische Gleichungssysteme (einfach)',
-      'Zinseszins: Effektivzins (einfach)',
-      'Ähnlichkeit und Strahlensätze: komplexe Anwendungen',
-      'Bruchterme: Definitionsmenge, Bruchgleichungen (einfach)',
-      'Wahrscheinlichkeit: Pfadregeln, einfache Formeln',
-      'Statistik (vertieft): Streuungsmaße, Ausreißer, kritische Bewertung',
+  science: {
+    domains: [
+      'Natur & Lebewesen: Tiere, Pflanzen, Jahreszeiten, Lebensräume',
+      'Menschlicher Körper & Gesundheit: Sinne, Organe, Ernährung, Hygiene',
+      'Technik & Medien: einfache Maschinen, Werkzeuge, digitale Medien',
+      'Gesellschaft & Gemeinschaft: Familie, Schule, Berufe, Regeln',
+      'Raum & Zeit: Heimat, Deutschland, Jahreszeiten, Uhrzeit, Kalender',
+      'Umwelt & Nachhaltigkeit: Müll, Energie, Wasser, Naturschutz',
     ],
-    german: [
-      'Abiturrelevante Textformen: Textgebundene Erörterung',
-      'Sprachkritik und Sprachmanipulation erkennen',
-      'Literaturgeschichte: Weimarer Klassik bis Gegenwart',
-      'Wissenschaftliches Schreiben: Zitieren, Belegen, Strukturieren',
-    ],
-    english: [
-      'Advanced grammar: mixed conditionals, complex tenses',
-      'Academic vocabulary and collocations',
-      'Text analysis: newspapers, speeches, literary texts',
-      'Writing: analytical essays and summaries in English',
-    ],
+    ageHints: 'Nur Sachkunde (Kl.1–4): altersgerechte, anschauliche Aufgaben. Kl.1–2: direkte Erfahrungswelt. Kl.3–4: erste systematische Betrachtungen.',
+    minGrade: 1,
+    maxGrade: 4,
   },
 };
 
-// Question type rotation — ensures variety per grade/subject combination
+// Question type rotation — ensures variety per subject
 const TYPE_ROTATION: Record<string, string[]> = {
   math:      ['MULTIPLE_CHOICE', 'FREETEXT', 'FILL_BLANK', 'MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MULTIPLE_CHOICE', 'FILL_BLANK'],
   german:    ['MULTIPLE_CHOICE', 'FILL_BLANK', 'SORT', 'FREETEXT', 'MULTIPLE_CHOICE', 'MATCH', 'FILL_BLANK', 'FREETEXT'],
   english:   ['MULTIPLE_CHOICE', 'FILL_BLANK', 'FREETEXT', 'SORT', 'MULTIPLE_CHOICE', 'MATCH', 'FREETEXT', 'FILL_BLANK'],
+  geography: ['MULTIPLE_CHOICE', 'MATCH', 'FREETEXT', 'MULTIPLE_CHOICE', 'SORT', 'MATCH'],
+  history:   ['MULTIPLE_CHOICE', 'SORT', 'MATCH', 'FREETEXT', 'MULTIPLE_CHOICE', 'FILL_BLANK'],
+  physics:   ['MULTIPLE_CHOICE', 'FREETEXT', 'FILL_BLANK', 'MULTIPLE_CHOICE', 'FREETEXT'],
+  biology:   ['MULTIPLE_CHOICE', 'MATCH', 'FILL_BLANK', 'FREETEXT', 'MULTIPLE_CHOICE', 'SORT'],
+  chemistry: ['MULTIPLE_CHOICE', 'FILL_BLANK', 'MATCH', 'FREETEXT', 'MULTIPLE_CHOICE'],
+  latin:     ['MULTIPLE_CHOICE', 'FILL_BLANK', 'MATCH', 'SORT', 'FREETEXT', 'MULTIPLE_CHOICE'],
+  science:   ['MULTIPLE_CHOICE', 'MATCH', 'FILL_BLANK', 'FREETEXT', 'MULTIPLE_CHOICE'],
   default:   ['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MULTIPLE_CHOICE', 'MATCH', 'FREETEXT'],
 };
 
@@ -254,12 +182,6 @@ function getQuestionType(subject: string, slotIndex: number): string {
 
 function getDifficulty(slotIndex: number): 'easy' | 'medium' | 'hard' {
   return DIFFICULTIES[slotIndex % DIFFICULTIES.length];
-}
-
-function pickSkill(grade: number, subject: string, slotIndex: number): string {
-  const skills = CURRICULUM[grade]?.[subject] ?? [];
-  if (skills.length === 0) return '';
-  return skills[slotIndex % skills.length];
 }
 
 function getSubjectGerman(subject: string): string {
@@ -287,19 +209,26 @@ DEINE QUALITÄTSSTANDARDS:
 - Fachlich korrekt – überprüfe deine eigenen Antworten vor der Ausgabe
 - Sprachlich klar, eindeutig und motivierend formuliert
 - Aufgabenvielfalt: verschiedene kognitive Anforderungsbereiche (AFB I: Reproduzieren, AFB II: Zusammenhänge herstellen, AFB III: Reflektieren)
+- Wähle eigenständig ein konkretes, abwechslungsreiches Unterthema aus den gegebenen Domänen
 - Antwort NUR als gültiges JSON-Objekt, ohne Markdown, ohne Erklärungen außerhalb des JSON`;
 }
 
 function buildQuestionPrompt(
   grade: number,
   subject: string,
-  skill: string,
   difficulty: 'easy' | 'medium' | 'hard',
   questionType: string,
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const ageContext = getAgeContext(grade);
-  const difficultyLabel = { easy: 'AFB I (Grundwissen, Reproduzieren)', medium: 'AFB II (Anwenden, Verknüpfen)', hard: 'AFB III (Problemlösen, Reflektieren)' }[difficulty];
+  const difficultyLabel = {
+    easy:   'AFB I (Grundwissen, Reproduzieren)',
+    medium: 'AFB II (Anwenden, Verknüpfen)',
+    hard:   'AFB III (Problemlösen, Reflektieren)',
+  }[difficulty];
+
+  const domainInfo = SUBJECT_DOMAINS[subject];
+  const domainsHint = domainInfo.domains.map((d, i) => `  ${i + 1}. ${d}`).join('\n');
 
   const typeInstructions = getTypeInstructions(questionType);
 
@@ -307,15 +236,21 @@ function buildQuestionPrompt(
 
 KLASSENSTUFE: ${ageContext}
 FACH: ${subjectGerman}
-THEMA/KOMPETENZ: ${skill}
 SCHWIERIGKEITSGRAD: ${difficulty} → ${difficultyLabel}
 AUFGABENTYP: ${questionType}
+
+THEMENBEREICH – Wähle eigenständig ein konkretes, lehrplangerechtes Unterthema aus diesen Domänen:
+${domainsHint}
+
+ALTERSHINWEIS: ${domainInfo.ageHints}
+
+Wichtig: Das gewählte Unterthema muss exakt zur Klassenstufe ${grade} passen. Wähle ein möglichst abwechslungsreiches Thema, das nicht zu generisch ist.
 
 ${typeInstructions}
 
 QUALITÄTSPRÜFUNG (vor der Ausgabe selbst durchführen):
-□ Ist die Frage/Aufgabe für die Klassenstufe angemessen?
-□ Ist die angegebene Antwort mathematisch/fachlich korrekt?
+□ Ist die Frage/Aufgabe für Klasse ${grade} angemessen?
+□ Ist die angegebene Antwort fachlich korrekt?
 □ Ist die Aufgabe eindeutig und missverständnisfrei formuliert?
 □ Passt der Fragetyp zur Aufgabenstellung?
 
@@ -375,10 +310,10 @@ async function callGemini(systemPrompt: string, userPrompt: string, apiKey: stri
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
-      temperature: 0.7,       // slight creativity for variety, not too random
+      temperature: 0.75,      // slightly higher → more topic variety
       topP: 0.9,
       maxOutputTokens: 1024,
-      responseMimeType: 'application/json', // request JSON directly
+      responseMimeType: 'application/json',
     },
   };
 
@@ -527,16 +462,24 @@ serve(async (req) => {
   }
 
   // ── Step 2: Build priority target list ───────────────────────────────────
-  // All possible grade×subject combos that have curriculum data
+  // All grade×subject combinations covered by SUBJECT_DOMAINS, with school-logic constraints
   interface PrefillTarget { grade: number; subject: string; currentCount: number }
   const targets: PrefillTarget[] = [];
 
-  const grades = targetGrades ?? Object.keys(CURRICULUM).map(Number);
-  for (const grade of grades) {
-    const subjectsForGrade = Object.keys(CURRICULUM[grade] ?? {});
-    const subjects = targetSubjects ?? subjectsForGrade;
-    for (const subject of subjects) {
-      if (!CURRICULUM[grade]?.[subject]) continue;
+  const ALL_GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const ALL_SUBJECTS = Object.keys(SUBJECT_DOMAINS);
+
+  const gradesToCheck = targetGrades ?? ALL_GRADES;
+  const subjectsToCheck = targetSubjects ?? ALL_SUBJECTS;
+
+  for (const grade of gradesToCheck) {
+    for (const subject of subjectsToCheck) {
+      const domainInfo = SUBJECT_DOMAINS[subject];
+      if (!domainInfo) continue;
+
+      // School-logic grade constraints
+      if (grade < domainInfo.minGrade || grade > domainInfo.maxGrade) continue;
+
       const current = cacheMap.get(`${grade}-${subject}`) ?? 0;
       if (current < MIN_CACHE_THRESHOLD) {
         targets.push({ grade, subject, currentCount: current });
@@ -568,18 +511,14 @@ serve(async (req) => {
     const target = targets[i % targets.length];
     const { grade, subject } = target;
 
-    // Track slot per combo for type & difficulty rotation
     const slotIndex = generated;
     const questionType = getQuestionType(subject, slotIndex);
     const difficulty = getDifficulty(slotIndex);
-    const skill = pickSkill(grade, subject, slotIndex);
 
-    if (!skill) continue;
-
-    console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | "${skill.substring(0, 40)}..."`);
+    console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | KI wählt Unterthema...`);
 
     try {
-      const userPrompt = buildQuestionPrompt(grade, subject, skill, difficulty, questionType);
+      const userPrompt = buildQuestionPrompt(grade, subject, difficulty, questionType);
       const rawJson = await callGemini(systemPrompt, userPrompt, GEMINI_API_KEY);
 
       if (!rawJson) {
