@@ -13,6 +13,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
+import { CacheGroupItem } from './CacheGroupItem';
 
 interface CacheStats {
   totalCached: number;
@@ -208,16 +209,13 @@ export function AdminDashboard() {
                 ) : (
                   <div className="space-y-2">
                     {combinationStats.map((stat, i) => (
-                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                        <div className="w-16 text-xs font-medium text-center">
-                          Kl. {stat.grade}
-                        </div>
-                        <div className="flex-1 text-sm capitalize">{stat.subject}</div>
-                        <div className="text-sm font-bold">{stat.count}</div>
-                        <div className="text-xs text-muted-foreground w-20 text-right">
-                          Ø {stat.avg_served}× genutzt
-                        </div>
-                      </div>
+                      <CacheGroupItem
+                        key={i}
+                        grade={stat.grade}
+                        subject={stat.subject}
+                        count={stat.count}
+                        avgServed={stat.avg_served}
+                      />
                     ))}
                   </div>
                 )}
