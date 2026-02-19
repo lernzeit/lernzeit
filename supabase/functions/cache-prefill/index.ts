@@ -304,13 +304,13 @@ function getTypeInstructions(questionType: string): string {
 // ── Gemini 2.5 Pro API Call ───────────────────────────────────────────────────
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
-      temperature: 0.75,      // slightly higher → more topic variety
+      temperature: 0.75,
       topP: 0.9,
       maxOutputTokens: 1024,
       responseMimeType: 'application/json',
@@ -325,14 +325,19 @@ async function callGemini(systemPrompt: string, userPrompt: string, apiKey: stri
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error(`Gemini API error ${response.status}:`, errText);
+    console.error(`Gemini API error ${response.status}:`, errText.substring(0, 300));
     if (response.status === 429) throw new Error('RATE_LIMIT');
     if (response.status === 403 || response.status === 401) throw new Error('AUTH_ERROR');
     return null;
   }
 
   const result = await response.json();
-  return result?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+  if (!text) {
+    const blockReason = result?.candidates?.[0]?.finishReason ?? result?.promptFeedback?.blockReason ?? 'unknown';
+    console.warn('Empty Gemini response. Reason:', blockReason, JSON.stringify(result).substring(0, 300));
+  }
+  return text;
 }
 
 // ── Question Parser & Validator ───────────────────────────────────────────────
