@@ -47,12 +47,12 @@ export function QuestionReportDialog({
 }: QuestionReportDialogProps) {
   const [reportReason, setReportReason] = useState<ReportReason | ''>('');
   const [reportDetails, setReportDetails] = useState('');
-  const { isReporting, isValidating, reportAndValidate } = useQuestionReport();
+  const { isReporting, reportQuestion } = useQuestionReport();
 
   const handleSubmitReport = async () => {
     if (!reportReason) return;
 
-    await reportAndValidate({
+    await reportQuestion({
       reason: reportReason,
       details: reportDetails || undefined,
       question: questionText,
@@ -122,19 +122,19 @@ export function QuestionReportDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               className="flex-1"
-              disabled={isReporting || isValidating}
+              disabled={isReporting}
             >
               Abbrechen
             </Button>
             <Button
               onClick={handleSubmitReport}
-              disabled={!reportReason || isReporting || isValidating}
+              disabled={!reportReason || isReporting}
               className="flex-1"
             >
-              {isReporting || isValidating ? (
+              {isReporting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {isValidating ? 'KI prüft...' : 'Senden...'}
+                  Senden...
                 </>
               ) : (
                 'Melden'

@@ -53,6 +53,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_question_cache: {
+        Row: {
+          correct_answer: Json
+          created_at: string
+          difficulty: string
+          grade: number
+          hint: string | null
+          id: string
+          last_served_at: string | null
+          options: Json | null
+          question_text: string
+          question_type: string
+          subject: string
+          task: string | null
+          times_served: number
+        }
+        Insert: {
+          correct_answer: Json
+          created_at?: string
+          difficulty: string
+          grade: number
+          hint?: string | null
+          id?: string
+          last_served_at?: string | null
+          options?: Json | null
+          question_text: string
+          question_type: string
+          subject: string
+          task?: string | null
+          times_served?: number
+        }
+        Update: {
+          correct_answer?: Json
+          created_at?: string
+          difficulty?: string
+          grade?: number
+          hint?: string | null
+          id?: string
+          last_served_at?: string | null
+          options?: Json | null
+          question_text?: string
+          question_type?: string
+          subject?: string
+          task?: string | null
+          times_served?: number
+        }
+        Relationships: []
+      }
       child_settings: {
         Row: {
           biology_seconds_per_task: number
@@ -140,45 +188,6 @@ export type Database = {
           parent_id?: string
           subject?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      curriculum_parameter_rules: {
-        Row: {
-          allowed_contexts: string[] | null
-          complexity_level: string | null
-          created_at: string | null
-          domain: string
-          grade: number
-          id: string
-          operation_types: string[] | null
-          quarter: string
-          zahlenraum_max: number | null
-          zahlenraum_min: number | null
-        }
-        Insert: {
-          allowed_contexts?: string[] | null
-          complexity_level?: string | null
-          created_at?: string | null
-          domain: string
-          grade: number
-          id?: string
-          operation_types?: string[] | null
-          quarter: string
-          zahlenraum_max?: number | null
-          zahlenraum_min?: number | null
-        }
-        Update: {
-          allowed_contexts?: string[] | null
-          complexity_level?: string | null
-          created_at?: string | null
-          domain?: string
-          grade?: number
-          id?: string
-          operation_types?: string[] | null
-          quarter?: string
-          zahlenraum_max?: number | null
-          zahlenraum_min?: number | null
         }
         Relationships: []
       }
@@ -463,48 +472,6 @@ export type Database = {
         }
         Relationships: []
       }
-      question_quality_metrics: {
-        Row: {
-          category: string
-          confidence_level: number
-          created_at: string | null
-          dimension_scores: Json
-          grade: number
-          id: string
-          improvement_suggestions: string[] | null
-          overall_score: number
-          question_id: number
-          session_id: string
-          user_id: string
-        }
-        Insert: {
-          category: string
-          confidence_level?: number
-          created_at?: string | null
-          dimension_scores?: Json
-          grade: number
-          id?: string
-          improvement_suggestions?: string[] | null
-          overall_score: number
-          question_id: number
-          session_id: string
-          user_id: string
-        }
-        Update: {
-          category?: string
-          confidence_level?: number
-          created_at?: string | null
-          dimension_scores?: Json
-          grade?: number
-          id?: string
-          improvement_suggestions?: string[] | null
-          overall_score?: number
-          question_id?: number
-          session_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       questions: {
         Row: {
           correct_answer: Json
@@ -557,48 +524,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      scenario_families: {
-        Row: {
-          base_template: string
-          category: string
-          context_slots: Json
-          created_at: string
-          description: string | null
-          difficulty_level: string
-          grade_max: number
-          grade_min: number
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          base_template: string
-          category: string
-          context_slots?: Json
-          created_at?: string
-          description?: string | null
-          difficulty_level?: string
-          grade_max?: number
-          grade_min?: number
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          base_template?: string
-          category?: string
-          context_slots?: Json
-          created_at?: string
-          description?: string | null
-          difficulty_level?: string
-          grade_max?: number
-          grade_min?: number
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       screen_time_requests: {
         Row: {
@@ -858,53 +783,6 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements_template"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_context_history: {
-        Row: {
-          category: string
-          context_combination: Json
-          context_hash: string
-          created_at: string
-          grade: number
-          id: string
-          question_id: string | null
-          scenario_family_id: string
-          session_date: string
-          user_id: string
-        }
-        Insert: {
-          category: string
-          context_combination: Json
-          context_hash: string
-          created_at?: string
-          grade: number
-          id?: string
-          question_id?: string | null
-          scenario_family_id: string
-          session_date?: string
-          user_id: string
-        }
-        Update: {
-          category?: string
-          context_combination?: Json
-          context_hash?: string
-          created_at?: string
-          grade?: number
-          id?: string
-          question_id?: string | null
-          scenario_family_id?: string
-          session_date?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_context_history_scenario_family_id_fkey"
-            columns: ["scenario_family_id"]
-            isOneToOne: false
-            referencedRelation: "scenario_families"
             referencedColumns: ["id"]
           },
         ]

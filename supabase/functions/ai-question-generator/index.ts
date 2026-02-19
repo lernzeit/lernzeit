@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +22,7 @@ interface QuestionRequest {
   subject: ValidSubject;
   difficulty?: ValidDifficulty;
   questionType?: ValidQuestionType;
+  excludeTexts?: string[];
 }
 
 // Validation helpers
@@ -130,7 +132,14 @@ serve(async (req) => {
     const grade = body.grade as ValidGrade;
     const subject = (body.subject as string).toLowerCase() as ValidSubject;
     
-    console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}`);
+    // Extract exclude list for deduplication (max 20 texts, validated)
+    const excludeTexts: string[] = Array.isArray(body.excludeTexts)
+      ? (body.excludeTexts as unknown[])
+          .filter((t): t is string => typeof t === 'string')
+          .slice(0, 20)
+      : [];
+    
+    console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -144,7 +153,7 @@ serve(async (req) => {
       });
     }
 
-    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType);
+    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -158,7 +167,7 @@ serve(async (req) => {
           { role: 'system', content: getSystemPrompt() },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.8,
+        temperature: 0.9, // Slightly higher for more variety
       }),
     });
 
@@ -237,11 +246,43 @@ serve(async (req) => {
       correctAnswer: question.correct_answer || question.correctAnswer,
       options: question.options || null,
       hint: question.hint || null,
-      task: question.task || null, // Task/instruction for FILL_BLANK questions
+      task: question.task || null,
       createdAt: new Date().toISOString()
     };
 
     console.log(`✅ Generated: ${enhancedQuestion.questionType} - ${enhancedQuestion.questionText?.substring(0, 50)}...`);
+
+    // ── Fire-and-forget cache write ─────────────────────────────────────
+    // Save to ai_question_cache asynchronously — user doesn't wait for this
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && enhancedQuestion.questionText) {
+      const saveToCache = async () => {
+        try {
+          const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+          await adminClient.from('ai_question_cache').insert({
+            grade,
+            subject,
+            difficulty,
+            question_text: enhancedQuestion.questionText,
+            question_type: enhancedQuestion.questionType,
+            correct_answer: enhancedQuestion.correctAnswer,
+            options: enhancedQuestion.options,
+            hint: enhancedQuestion.hint,
+            task: enhancedQuestion.task
+          });
+          console.log('💾 Question saved to cache');
+        } catch (cacheErr) {
+          // Non-critical: cache write failure doesn't affect the user
+          console.warn('Cache write failed (non-critical):', cacheErr);
+        }
+      };
+
+      // Non-blocking: run after response is sent
+      EdgeRuntime.waitUntil(saveToCache());
+    }
+    // ───────────────────────────────────────────────────────────────────
 
     return new Response(JSON.stringify({
       success: true,
@@ -263,46 +304,51 @@ serve(async (req) => {
 });
 
 function getSystemPrompt(): string {
-  return `Du bist ein erfahrener Pädagoge, der kindgerechte Lernfragen für Schüler erstellt.
+  return `Du bist ein erfahrener Grundschul- und Sekundarschulpädagoge aus Deutschland. 
+Deine Aufgabe ist es, qualitativ hochwertige, altersgerechte Lernfragen auf Deutsch zu erstellen.
 
-WICHTIGE REGELN:
-1. Alle Fragen müssen altersgerecht und motivierend sein
-2. Verwende konkrete Beispiele aus dem Alltag der Kinder
-3. Fragen sollen positiv und ermutigend formuliert sein
-4. Keine zu komplexen oder mehrdeutigen Formulierungen
-5. Antworte IMMER mit validem JSON, KEIN Markdown
-
-FRAGETYPEN:
-- MULTIPLE_CHOICE: 4 Optionen, genau 1 richtig, plausible Distraktoren
-- FREETEXT: Kurze Antwort (Zahl, Wort, kurzer Satz)
-- SORT: 4-6 Elemente in richtige Reihenfolge bringen
-- MATCH: 4-6 Paare zuordnen
-- DRAG_DROP: Elemente in Kategorien/Lücken einordnen
-- FILL_BLANK: Lückentext mit Antworten`;
+REGELN:
+- Alle Fragen und Antworten auf Deutsch
+- Altersgerecht und lehrplankonform für die angegebene Klassenstufe
+- Klar formuliert, eindeutig und pädagogisch wertvoll
+- Antworte NUR mit gültigem JSON, ohne Markdown oder Erklärungen`;
 }
 
-function buildQuestionPrompt(grade: number, subject: string, difficulty: string, requestedType?: string): string {
+function buildQuestionPrompt(
+  grade: number, 
+  subject: string, 
+  difficulty: string, 
+  requestedType?: string,
+  excludeTexts?: string[]
+): string {
   const subjectGerman = getSubjectGerman(subject);
   const gradeGuidelines = getGradeGuidelines(grade);
-  const difficultyGuidelines = getDifficultyGuidelines(difficulty, grade);
-  
-  // Select question type based on request or random weighted selection
+  const difficultyGuide = getDifficultyGuidelines(difficulty, grade);
   const questionType = requestedType || selectQuestionType(subject, grade);
+  const typeInstructions = getTypeSpecificInstructions(questionType);
 
-  return `Erstelle EINE ${difficultyGuidelines.label} Lernfrage:
+  let exclusionNote = '';
+  if (excludeTexts && excludeTexts.length > 0) {
+    exclusionNote = `\n\nWICHTIG - Vermeide Fragen die diesen ähnlich sind:\n${excludeTexts.slice(0, 10).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nGeneriere eine völlig andere Frage!`;
+  }
 
-**Klassenstufe:** ${grade}
-**Fach:** ${subjectGerman}
-**Schwierigkeit:** ${difficulty}
-**Fragetyp:** ${questionType}
+  return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
 
-${gradeGuidelines}
+KLASSENSTUFE: ${gradeGuidelines}
+SCHWIERIGKEIT: ${difficultyGuide.description}
+FRAGETYP: ${questionType}${exclusionNote}
 
-${difficultyGuidelines.description}
+${typeInstructions}
 
-${getTypeSpecificInstructions(questionType)}
-
-Antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärung):`;
+Antworte mit diesem JSON-Format:
+{
+  "question_text": "Die Frage hier",
+  "question_type": "${questionType}",
+  "correct_answer": <korrekte Antwort im passenden Format>,
+  "options": <Array von Optionen nur bei MULTIPLE_CHOICE, sonst null>,
+  "hint": "Optionaler Hinweis für schwierige Aufgaben",
+  "task": <Aufgabenstellung für FILL_BLANK, sonst null>
+}`;
 }
 
 function getSubjectGerman(subject: string): string {
@@ -310,7 +356,7 @@ function getSubjectGerman(subject: string): string {
     'math': 'Mathematik',
     'german': 'Deutsch',
     'english': 'Englisch',
-    'geography': 'Geographie',
+    'geography': 'Geografie',
     'history': 'Geschichte',
     'physics': 'Physik',
     'biology': 'Biologie',
@@ -318,210 +364,89 @@ function getSubjectGerman(subject: string): string {
     'latin': 'Latein',
     'science': 'Sachkunde'
   };
-  return map[subject.toLowerCase()] || subject;
+  return map[subject] || subject;
 }
 
 function getGradeGuidelines(grade: number): string {
-  if (grade <= 2) {
-    return `**Anforderungen Klasse 1-2:**
-- Zahlenraum bis 100 (Klasse 1: bis 20)
-- Sehr kurze, einfache Sätze
-- Konkrete Gegenstände (Äpfel, Stifte, Tiere)
-- Grundlegende Rechenarten (+, -)
-- Einfache Buchstaben und Wörter
-- Bilder und Symbole bevorzugen`;
-  } else if (grade <= 4) {
-    return `**Anforderungen Klasse 3-4:**
-- Zahlenraum bis 1.000.000
-- Schriftliche Rechenverfahren
-- Einmaleins, Division
-- Brüche (Grundlagen)
-- Satzarten, Grammatik
-- Sachaufgaben mit mehreren Schritten`;
-  } else if (grade <= 6) {
-    return `**Anforderungen Klasse 5-6:**
-- Große Zahlen, Dezimalzahlen
-- Bruchrechnung, Prozente
-- Geometrie
-- Aufsätze, Textanalyse
-- Fremdsprachen (Grundlagen)
-- Naturwissenschaftliche Grundlagen`;
-  } else if (grade <= 8) {
-    return `**Anforderungen Klasse 7-8:**
-- Algebra, Gleichungen
-- Funktionen, Graphen
-- Grammatik fortgeschritten
-- Literaturanalyse
-- Physik, Chemie, Biologie vertieft
-- Geschichte, Geographie`;
-  } else {
-    return `**Anforderungen Klasse 9-10:**
-- Komplexe mathematische Konzepte
-- Trigonometrie, Stochastik
-- Textinterpretation, Argumentation
-- Wissenschaftliches Arbeiten
-- Prüfungsvorbereitung`;
-  }
+  if (grade <= 2) return 'Grundschule Klasse 1-2: Einfache Konzepte, kurze Sätze, Zahlen bis 100, Buchstaben';
+  if (grade <= 4) return 'Grundschule Klasse 3-4: Grundrechenarten, einfache Texte, Sachkunde';
+  if (grade <= 6) return 'Sekundarstufe I Klasse 5-6: Brüche, Dezimalzahlen, Grammatik, Geschichte';
+  if (grade <= 8) return 'Sekundarstufe I Klasse 7-8: Algebra, Gleichungen, Literatur, Wissenschaften';
+  return 'Sekundarstufe I Klasse 9-10: Erweiterte Algebra, Trigonometrie, komplexe Analysen';
 }
 
 function getDifficultyGuidelines(difficulty: string, grade: number): { label: string; description: string } {
-  switch (difficulty) {
-    case 'easy':
-      return {
-        label: 'einfache',
-        description: `**Einfache Schwierigkeit:**
-- Grundlegende Konzepte
-- Direkte Anwendung von Regeln
-- Eindeutige Lösungen
-- Wenige Schritte nötig`
-      };
-    case 'hard':
-      return {
-        label: 'anspruchsvolle',
-        description: `**Schwere Schwierigkeit:**
-- Komplexe Problemlösung
-- Mehrere Konzepte kombinieren
-- Transfer auf neue Situationen
-- Kreatives Denken erforderlich`
-      };
-    default:
-      return {
-        label: 'mittelschwere',
-        description: `**Mittlere Schwierigkeit:**
-- Anwendung gelernter Konzepte
-- Übertragung auf ähnliche Situationen
-- Mehrere Lösungsschritte
-- Logisches Denken`
-      };
-  }
+  const guidelines: Record<string, { label: string; description: string }> = {
+    'easy': {
+      label: 'leichte',
+      description: `Grundlegendes Verständnis, direkte Anwendung von Konzepten für Klasse ${grade}`
+    },
+    'medium': {
+      label: 'mittelschwere',
+      description: `Anwendung und Verknüpfung von Konzepten, typisches Klassenniveau ${grade}`
+    },
+    'hard': {
+      label: 'schwere',
+      description: `Kritisches Denken, mehrschrittige Probleme, erweiterte Konzepte für Klasse ${grade}`
+    }
+  };
+  return guidelines[difficulty] || guidelines['medium'];
 }
 
 function selectQuestionType(subject: string, grade: number): string {
-  const types = ['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MATCH', 'DRAG_DROP', 'FILL_BLANK'];
+  // Vary question types for diversity
+  const rand = Math.random();
   
-  // Weight based on subject and grade
-  const weights: Record<string, number[]> = {
-    'math': [25, 35, 15, 10, 10, 5],      // More FREETEXT for calculations
-    'german': [20, 15, 10, 15, 15, 25],   // More FILL_BLANK for grammar
-    'english': [20, 20, 10, 20, 15, 15],  // Balanced with matching
-    'default': [30, 20, 15, 15, 10, 10]   // Default weights
-  };
-  
-  const subjectWeights = weights[subject.toLowerCase()] || weights['default'];
-  
-  // For younger grades, prefer simpler types
-  if (grade <= 2) {
-    return Math.random() < 0.6 ? 'MULTIPLE_CHOICE' : 'FREETEXT';
+  if (subject === 'math') {
+    if (grade <= 4) return rand < 0.5 ? 'FREETEXT' : 'MULTIPLE_CHOICE';
+    return rand < 0.4 ? 'FREETEXT' : rand < 0.7 ? 'MULTIPLE_CHOICE' : 'FILL_BLANK';
   }
   
-  // Weighted random selection
-  const totalWeight = subjectWeights.reduce((a, b) => a + b, 0);
-  let random = Math.random() * totalWeight;
-  
-  for (let i = 0; i < types.length; i++) {
-    random -= subjectWeights[i];
-    if (random <= 0) return types[i];
+  if (subject === 'german') {
+    if (rand < 0.35) return 'MULTIPLE_CHOICE';
+    if (rand < 0.65) return 'FREETEXT';
+    if (rand < 0.80) return 'SORT';
+    return 'FILL_BLANK';
   }
   
-  return 'MULTIPLE_CHOICE';
+  // Default: mix of types
+  if (rand < 0.5) return 'MULTIPLE_CHOICE';
+  if (rand < 0.75) return 'FREETEXT';
+  return 'SORT';
 }
 
 function getTypeSpecificInstructions(questionType: string): string {
-  switch (questionType) {
-    case 'MULTIPLE_CHOICE':
-      return `**Format MULTIPLE_CHOICE:**
-{
-  "question_text": "Frage hier?",
-  "question_type": "MULTIPLE_CHOICE",
-  "correct_answer": { "value": "Richtige Antwort" },
-  "options": ["Richtige Antwort", "Falsch 1", "Falsch 2", "Falsch 3"],
-  "hint": "Optionaler Hinweis"
-}`;
-
-    case 'FREETEXT':
-      return `**Format FREETEXT:**
-{
-  "question_text": "Frage hier?",
-  "question_type": "FREETEXT",
-  "correct_answer": { "value": "42", "alternatives": ["42", "zweiundvierzig"] },
-  "hint": "Optionaler Hinweis"
-}`;
-
-    case 'SORT':
-      return `**Format SORT:**
-{
-  "question_text": "Ordne in die richtige Reihenfolge:",
-  "question_type": "SORT",
-  "correct_answer": { "order": ["Erstes", "Zweites", "Drittes", "Viertes"] },
-  "options": ["Drittes", "Erstes", "Viertes", "Zweites"],
-  "hint": "Optionaler Hinweis"
-}`;
-
-    case 'MATCH':
-      return `**Format MATCH:**
-{
-  "question_text": "Ordne richtig zu:",
-  "question_type": "MATCH",
-  "correct_answer": { 
-    "pairs": [["Links1", "Rechts1"], ["Links2", "Rechts2"], ["Links3", "Rechts3"]]
-  },
-  "options": {
-    "leftItems": ["Links1", "Links2", "Links3"],
-    "rightItems": ["Rechts1", "Rechts2", "Rechts3"]
-  },
-  "hint": "Optionaler Hinweis"
-}`;
-
-    case 'DRAG_DROP':
-      return `**Format DRAG_DROP:**
-{
-  "question_text": "Ziehe in die richtige Kategorie:",
-  "question_type": "DRAG_DROP",
-  "correct_answer": {
-    "placements": {
-      "Kategorie1": ["Item1", "Item2"],
-      "Kategorie2": ["Item3", "Item4"]
-    }
-  },
-  "options": {
-    "items": ["Item1", "Item2", "Item3", "Item4"],
-    "categories": ["Kategorie1", "Kategorie2"]
-  },
-  "hint": "Optionaler Hinweis"
-}`;
-
-    case 'FILL_BLANK':
-      return `**Format FILL_BLANK:**
-WICHTIG: 
-1. Das Feld "task" enthält die klare Aufgabenstellung (z.B. "Setze die Verben in die richtige Zeitform")
-2. Für Sprachfächer: Die Grundform des einzusetzenden Wortes MUSS in Klammern DIREKT NACH der Lücke stehen!
-3. Das Feld "hint" ist optional und enthält zusätzliche Tipps
-
-Beispiel für Deutsch (Verben konjugieren):
-{
-  "task": "Setze die Verben in das Präteritum (1. Vergangenheit). Achte auf die richtige Form!",
-  "question_text": "Gestern ___ (machen) die Kinder ein Picknick. Sie ___ (singen) zusammen Lieder und ___ (lachen) viel.",
-  "question_type": "FILL_BLANK",
-  "correct_answer": { 
-    "blanks": ["machten", "sangen", "lachten"]
-  },
-  "options": [],
-  "hint": "Bei 'wir', 'sie' und 'Sie' ist die Endung im Präteritum oft '-en'."
-}
-
-Beispiel für Mathe (Einsetzen):
-{
-  "task": "Setze die passenden Zahlen ein, damit die Gleichung stimmt.",
-  "question_text": "5 + ___ = 12 und 12 - ___ = 7",
-  "question_type": "FILL_BLANK",
-  "correct_answer": { 
-    "blanks": ["7", "5"]
-  },
-  "options": ["5", "7", "3", "8"],
-  "hint": ""
-}`;
-
-    default:
-      return '';
-  }
+  const instructions: Record<string, string> = {
+    'MULTIPLE_CHOICE': `Erstelle eine Multiple-Choice-Frage mit genau 4 Antwortoptionen.
+- correct_answer: Index der korrekten Antwort (0-3)
+- options: Array mit genau 4 Strings ["Option A", "Option B", "Option C", "Option D"]
+- Eine klar korrekte Antwort, plausible Distraktoren`,
+    
+    'FREETEXT': `Erstelle eine offene Frage mit einer klar definierten korrekten Antwort.
+- correct_answer: String mit der erwarteten Antwort
+- options: null
+- Die Frage sollte eine eindeutige kurze Antwort haben`,
+    
+    'SORT': `Erstelle eine Sortieraufgabe.
+- correct_answer: Array von Strings in der richtigen Reihenfolge
+- options: Das gleiche Array, gemischt (für die Anzeige)
+- Beispiel: Ereignisse chronologisch sortieren, Zahlen der Größe nach`,
+    
+    'MATCH': `Erstelle eine Zuordnungsaufgabe.
+- correct_answer: Object mit Schlüssel-Wert-Paaren {"Begriff1": "Definition1", "Begriff2": "Definition2"}
+- options: null
+- Minimum 3, Maximum 5 Zuordnungspaare`,
+    
+    'DRAG_DROP': `Erstelle eine Lückentextaufgabe zum Einsetzen.
+- correct_answer: Array der einzusetzenden Wörter in richtiger Reihenfolge
+- task: Der Satz mit ___ für die Lücken
+- options: Array der verfügbaren Wörter (inklusive 1-2 Distraktoren)`,
+    
+    'FILL_BLANK': `Erstelle eine Lückentextaufgabe.
+- task: Der Satz mit ___ für die Lücke(n)
+- correct_answer: String oder Array mit den fehlenden Wörtern
+- options: null`
+  };
+  
+  return instructions[questionType] || instructions['MULTIPLE_CHOICE'];
 }

@@ -1,31 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   BarChart3, 
-  FileText, 
+  Database, 
   Zap,
-  Target,
+  TrendingUp,
   LogOut
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
-import { TemplateBankDashboard } from './TemplateBankDashboard';
+
+interface CacheStats {
+  totalCached: number;
+  uniqueCombinations: number;
+  avgTimesServed: number;
+  addedThisWeek: number;
+}
+
+interface CombinationStat {
+  grade: number;
+  subject: string;
+  count: number;
+  avg_served: number;
+}
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [stats, setStats] = useState({
-    totalTemplates: 0,
-    activeTemplates: 0,
-    avgQuality: 0,
-    recentGenerated: 0,
-    cronJobActive: false,
-    hoursSinceLastGeneration: 0
+  const [cacheStats, setCacheStats] = useState<CacheStats>({
+    totalCached: 0,
+    uniqueCombinations: 0,
+    avgTimesServed: 0,
+    addedThisWeek: 0
   });
+  const [combinationStats, setCombinationStats] = useState<CombinationStat[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -35,44 +46,49 @@ export function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      // Load all templates
-      const { data: allTemplates } = await supabase
-        .from('templates')
-        .select('quality_score, created_at, status');
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Load active templates
-      const { data: activeTemplates } = await supabase
-        .from('templates')
-        .select('quality_score, created_at')
-        .eq('status', 'ACTIVE');
+      const [{ data: allCache }, { data: recentCache }] = await Promise.all([
+        supabase.from('ai_question_cache').select('grade, subject, times_served'),
+        supabase.from('ai_question_cache').select('id').gte('created_at', weekAgo)
+      ]);
 
-      if (allTemplates && activeTemplates) {
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const recentCount = activeTemplates.filter(t => 
-          new Date(t.created_at) > weekAgo
-        ).length;
-
-        const avgQuality = activeTemplates.length > 0
-          ? activeTemplates.reduce((sum, t) => sum + (t.quality_score || 0), 0) / activeTemplates.length
+      if (allCache) {
+        const totalCached = allCache.length;
+        const avgTimesServed = totalCached > 0
+          ? allCache.reduce((sum, q) => sum + (q.times_served || 0), 0) / totalCached
           : 0;
 
-        // Check cron job status
-        const lastCreated = activeTemplates[0]?.created_at;
-        const hoursSinceLastCreation = lastCreated 
-          ? (Date.now() - new Date(lastCreated).getTime()) / 1000 / 60 / 60
-          : 999;
-
-        setStats({
-          totalTemplates: allTemplates.length,
-          activeTemplates: activeTemplates.length,
-          avgQuality,
-          recentGenerated: recentCount,
-          cronJobActive: hoursSinceLastCreation < 2,
-          hoursSinceLastGeneration: Math.round(hoursSinceLastCreation * 10) / 10
+        // Count unique grade+subject combinations
+        const combos = new Map<string, { count: number; served: number }>();
+        allCache.forEach(q => {
+          const key = `${q.grade}-${q.subject}`;
+          const existing = combos.get(key) || { count: 0, served: 0 };
+          combos.set(key, { count: existing.count + 1, served: existing.served + (q.times_served || 0) });
         });
+
+        const combinationList: CombinationStat[] = Array.from(combos.entries())
+          .map(([key, val]) => {
+            const [grade, ...subjectParts] = key.split('-');
+            return {
+              grade: parseInt(grade),
+              subject: subjectParts.join('-'),
+              count: val.count,
+              avg_served: val.count > 0 ? Math.round(val.served / val.count * 10) / 10 : 0
+            };
+          })
+          .sort((a, b) => b.count - a.count);
+
+        setCacheStats({
+          totalCached,
+          uniqueCombinations: combos.size,
+          avgTimesServed: Math.round(avgTimesServed * 10) / 10,
+          addedThisWeek: recentCache?.length || 0
+        });
+        setCombinationStats(combinationList);
       }
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('Error loading cache stats:', error);
     }
   };
 
@@ -85,6 +101,7 @@ export function AdminDashboard() {
       navigate('/');
     }
   };
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -93,7 +110,7 @@ export function AdminDashboard() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Template Management & Quality Control
+              KI-System & Cache-Übersicht
             </p>
           </div>
           <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2 w-full sm:w-auto">
@@ -107,13 +124,11 @@ export function AdminDashboard() {
           <TabsList className="grid w-full grid-cols-2 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Übersicht</span>
-              <span className="xs:hidden">Stats</span>
+              Übersicht
             </TabsTrigger>
-            <TabsTrigger value="templates" className="flex items-center gap-2 text-xs sm:text-sm py-2">
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">Template Management</span>
-              <span className="xs:hidden">Templates</span>
+            <TabsTrigger value="cache" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Database className="w-3 h-3 sm:w-4 sm:h-4" />
+              Fragen-Cache
             </TabsTrigger>
           </TabsList>
 
@@ -123,47 +138,13 @@ export function AdminDashboard() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                    <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Aktive Templates
+                    <Database className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Fragen im Cache
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">{stats.activeTemplates.toLocaleString('de-DE')}</div>
-                  <p className="text-xs text-muted-foreground">+{stats.recentGenerated} diese Woche</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                    <Target className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Durchschn. Qualität
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                    {(stats.avgQuality * 100).toFixed(1)}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">Template Quality Score</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                    <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Cron Job Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-xl sm:text-2xl font-bold ${stats.cronJobActive ? 'text-green-600' : 'text-red-600'}`}>
-                    {stats.cronJobActive ? 'Aktiv' : 'Inaktiv'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.cronJobActive 
-                      ? `Letzte Gen.: vor ${stats.hoursSinceLastGeneration}h` 
-                      : `Inaktiv seit ${stats.hoursSinceLastGeneration}h`}
-                  </p>
+                  <div className="text-xl sm:text-2xl font-bold">{cacheStats.totalCached.toLocaleString('de-DE')}</div>
+                  <p className="text-xs text-muted-foreground">+{cacheStats.addedThisWeek} diese Woche</p>
                 </CardContent>
               </Card>
 
@@ -171,12 +152,38 @@ export function AdminDashboard() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
                     <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Gesamt Templates
+                    Kombinationen
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold">{stats.totalTemplates.toLocaleString('de-DE')}</div>
-                  <p className="text-xs text-muted-foreground">Aktiv + Inaktiv</p>
+                  <div className="text-xl sm:text-2xl font-bold">{cacheStats.uniqueCombinations}</div>
+                  <p className="text-xs text-muted-foreground">Klasse × Fach</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Ø Nutzungen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold">{cacheStats.avgTimesServed}×</div>
+                  <p className="text-xs text-muted-foreground">pro gecachter Frage</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
+                    <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                    KI-System
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold text-green-600">Aktiv</div>
+                  <p className="text-xs text-muted-foreground">Gemini 3 Flash</p>
                 </CardContent>
               </Card>
             </div>
@@ -184,9 +191,38 @@ export function AdminDashboard() {
             <ApiStatusPanel />
           </TabsContent>
 
-          {/* Template Bank Tab */}
-          <TabsContent value="templates">
-            <TemplateBankDashboard />
+          {/* Cache Tab */}
+          <TabsContent value="cache" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Database className="w-4 h-4" />
+                  Cache-Verteilung nach Klasse & Fach
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {combinationStats.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Noch keine Fragen im Cache. Der Cache füllt sich automatisch wenn Nutzer spielen.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {combinationStats.map((stat, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                        <div className="w-16 text-xs font-medium text-center">
+                          Kl. {stat.grade}
+                        </div>
+                        <div className="flex-1 text-sm capitalize">{stat.subject}</div>
+                        <div className="text-sm font-bold">{stat.count}</div>
+                        <div className="text-xs text-muted-foreground w-20 text-right">
+                          Ø {stat.avg_served}× genutzt
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
