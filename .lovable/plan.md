@@ -1,435 +1,157 @@
 
-# Vollständiger Skalierungs- & Bereinigungsplan
+## Plan: Cache-Prefill auf Subject-Domain-Hints umstellen + Legacy-Lehrplandateien löschen
 
-## Ausgangslage (Was heute aktiv genutzt wird)
+### Analyse des Ist-Zustands
 
-Der aktive Datenpfad der App ist minimal und klar:
+**Warum Live-Fragen besser sind:**
+Der `ai-question-generator` arbeitet mit offenen Grade-Guidelines (`getGradeGuidelines`), die dem Modell breiten Spielraum lassen. Es wird keine feste Skill-Liste vorgegeben — Gemini wählt selbst passende Unterthemen. Das Ergebnis ist hohe Vielfalt und korrekte Altersanpassung.
 
-```text
-Nutzer startet Spiel
-  → Index.tsx → LearningGame.tsx
-    → useQuestionPreloader.ts
-      → Edge Function: ai-question-generator (Gemini 3 Flash)
-        → 5 Fragen per KI generiert
-    → useAIExplanation.ts
-      → Edge Function: ai-explain (bei falscher Antwort)
-    → useGameSessionSaver.ts
-      → Supabase: game_sessions (gespeichert)
-```
+**Was am `cache-prefill` falsch ist:**
+- Die `CURRICULUM`-Konstante ist hardcodiert und deckt nur 3 Fächer ab: `math`, `german`, `english`
+- 6 weitere Fächer (Geografie, Geschichte, Physik, Biologie, Chemie, Latein) haben **null** Einträge — Zeile `if (!skill) continue;` überspringt sie vollständig
+- Feste Skill-Listen führen zu Wiederholungen und schlechter Abdeckung bei begrenztem Stundenpool
+- `pickSkill()` rotiert nur durch eine fixe Liste und liefert dieselben Themen im Kreis
 
-Alles andere — Templates, CategoryMathProblem, MathProblem, MathProblemOptimized, Balancer, CurriculumManager etc. — ist **toter Code**.
+**Tote Dateien:**
+- `public/data/math_curriculum_1-10.json` — kein einziger `import` oder `fetch` im gesamten `src/`-Verzeichnis
+- `public/data/knowledge_cards.jsonl` — kein einziger `import` oder `fetch` im gesamten `src/`-Verzeichnis
+Beide sind Dead-Weight und werden gelöscht.
 
 ---
 
-## Phase 1: Legacy-Bereinigung (Priorität: Hoch)
+### Neues Konzept: Subject-Domain-Hints
 
-### 1A — Edge Functions löschen (25 von 31 sind nicht mehr in Verwendung)
-
-**Aktiv genutzt (behalten):**
-- `ai-question-generator` — Kernfunktion
-- `ai-explain` — Erklärungen
-- `ai-tutor` — KI-Tutor
-- `validate-question` — optional, aber sauber
-- `screen-time-request` — Eltern-Kind-Funktion
-- `annual-grade-upgrade` — Jahresupgrade
-- `create-checkout` — Stripe
-- `check-subscription` — Stripe
-- `customer-portal` — Stripe
-
-**Zu löschen (veraltet, template-basiert):**
-- `auto-question-generator`
-- `auto-template-repair`
-- `batch-generate-questions`
-- `batch-question-generator`
-- `cleanup-duplicates`
-- `cleanup-faulty-questions`
-- `cleanup-negative-templates`
-- `cleanup-todays-templates`
-- `curriculum-aware-generator`
-- `curriculum-coverage-analyzer`
-- `direct-template-generator`
-- `explain-answer` ← alt (ersetzt durch `ai-explain`)
-- `first-grade-cron`
-- `first-grade-math-generator`
-- `generate-question-realtime` ← alt (ersetzt durch `ai-question-generator`)
-- `generate-questions` ← alt
-- `openai-proxy` ← alt
-- `question-generator-cron`
-- `recount-template-stats`
-- `template-mass-generator`
-- `template-rotator-cron`
-
-### 1B — Frontend-Hooks löschen (nicht mehr referenziert oder nur von Legacy-Code verwendet)
+Statt fester Skill-Listen gibt es pro Fach **Domain-Hinweise** — breite thematische Oberkategorien mit Subthemen-Beispielen. Das Modell wählt selbst ein konkretes Unterthema. So wird:
+- kein manueller Pflegeaufwand nötig
+- Vielfalt durch echte KI-Entscheidung sichergestellt
+- Lehrplanbreite für alle 10 Fächer gewährleistet
 
 ```text
-src/hooks/
-  LÖSCHEN:
-  - useAIQuestion.ts           ← alt
-  - useBalancedQuestionGeneration.ts
-  - useBalancedTemplateSelection.ts
-  - useEnhancedCurriculumGeneration.ts
-  - useIntelligentQualitySystem.ts
-  - useParametrizedQuestionGeneration.ts
-  - usePreGenerationValidator.ts
-  - useQuestionEventLogging.ts
-  - useQuestionGenerationManager.ts
-  - useQuestionValidation.ts
-  - useQuestions.ts            ← alt (topics-basiert)
-  - useRealtimeQuestion.ts     ← alt
-  - useSessionDuplicatePrevention.ts
-  - useSystematicTemplateGeneration.ts
-  - useTemplateBankGeneration.ts
-  - useTemplateQuestionGeneration.ts
-  - useTemplateRotation.ts
-  - useTopics.ts               ← alt
-  - useExplanation.ts          ← alt (ersetzt durch useAIExplanation)
-
-  BEHALTEN:
-  - useAIExplanation.ts        ✓ aktiv
-  - useAchievementTracker.ts   ✓ aktiv
-  - useAchievements.ts         ✓ aktiv
-  - useActiveTimer.ts          ✓ aktiv
-  - useAdaptiveDifficultySystem.ts ✓ aktiv (in CategoryMathProblem)
-  - useAuth.ts                 ✓ aktiv
-  - useChildSettings.ts        ✓ aktiv
-  - useEarnedMinutesTracker.ts ✓ aktiv
-  - useFamilyLinking.ts        ✓ aktiv
-  - useGameSessionSaver.ts     ✓ aktiv
-  - use-mobile.tsx             ✓ aktiv
-  - use-toast.ts               ✓ aktiv
-  - usePushNotifications.ts    ✓ aktiv
-  - useQuestionPreloader.ts    ✓ KERNHOOK
-  - useQuestionReport.ts       ✓ aktiv
-  - useScreenTime.ts           ✓ aktiv
-  - useScreenTimeLimit.ts      ✓ aktiv
-  - useScreenTimeRequests.ts   ✓ aktiv
-  - useStreak.ts               ✓ aktiv
-  - useSubscription.ts         ✓ aktiv
-```
-
-### 1C — Frontend-Komponenten löschen
-
-```text
-src/components/
-  LÖSCHEN:
-  - CategoryMathProblem.tsx     ← template-basiert, nicht in Index.tsx genutzt
-  - MathProblem.tsx             ← DEPRECATED (selbst markiert)
-  - MathProblemOptimized.tsx    ← template-basiert
-  - EnhancedGenerationDisplay.tsx
-  - FallbackStatistics.tsx
-  - IntelligentQualityDashboard.tsx
-  - QualityDashboardModal.tsx
-  - RealtimeQuestionGame.tsx    ← alt
-  - SimplifiedQuestionRenderer.tsx ← alt
-  - game/EnhancedTemplateSelector.tsx
-  - game/QuestionGenerationInfo.tsx
-  - admin/QualityDashboard.tsx
-  - admin/QualityMonitoringDashboard.tsx
-  - admin/SimplifiedAdminDashboard.tsx
-  - admin/SystematicGenerationControl.tsx
-  - admin/TemplateBankDashboard.tsx  ← referenziert templates-Tabelle
-  - question-types/FirstGradeQuestionWrapper.tsx ← template-basiert
-
-  BEHALTEN:
-  - LearningGame.tsx            ✓ KERNKOMPONENTE
-  - GameCompletionScreen.tsx    ✓ aktiv
-  - game/QuestionRenderer.tsx   ✓ aktiv
-  - game/GameFeedback.tsx       ✓ aktiv
-  - game/GameTimer.tsx          ✓ aktiv
-  - game/KITutorDialog.tsx      ✓ aktiv
-  - game/QuestionReportDialog.tsx ✓ aktiv
-  - game/AchievementAnimation.tsx ✓ aktiv
-  - admin/AdminDashboard.tsx    ✓ bereinigen (templates-Stats entfernen)
-  - admin/ApiStatusPanel.tsx    ✓ aktiv
-  - alle auth/*, ui/*, layout/* ✓ aktiv
-```
-
-### 1D — Services und Utils löschen
-
-```text
-src/services/
-  LÖSCHEN (alle template-basierten Services):
-  - AdvancedTemplateValidator.ts
-  - BatchTemplateGenerator.ts
-  - ConsolidatedFirstGradeValidator.ts
-  - ContentValidator.ts
-  - CurriculumManager.ts
-  - MultiProviderAIService.ts
-  - ParametrizedTemplateService.ts
-  - PostGenerationReviewer.ts
-  - QualityAssurancePipeline.ts
-  - SessionDuplicatePrevention.ts
-  - SmartTemplateSelector.ts
-  - TemplatePoolManager.ts
-  - TemplateQualityPipeline.ts
-  - TemplateRotator.ts
-  - templateBankService.ts
-
-  BEHALTEN:
-  - familyLink.ts               ✓ aktiv
-  - openAIService.ts            ✓ prüfen ob noch referenziert
-  - parentalControlsService.ts  ✓ aktiv
-
-src/utils/templates/ (gesamtes Verzeichnis löschen):
-  LÖSCHEN: Alle 23 Dateien in diesem Verzeichnis
-
-src/maintenance/ (gesamtes Verzeichnis löschen):
-  LÖSCHEN: Alle 5 Dateien (templateBankRunner, migrationRunner etc.)
-
-src/data/
-  LÖSCHEN:
-  - templateBank.ts
-  - templateMetrics.ts
-  BEHALTEN:
-  - avatars.ts                  ✓ aktiv
-
-src/prompt/ + src/prompts/
-  LÖSCHEN: Alle Prompt-Dateien (Generierung läuft jetzt in Edge Functions)
-
-src/knowledge/
-  LÖSCHEN: knowledge.ts (knowledge-card-basierter Ansatz)
-```
-
-### 1E — Datenbank-Bereinigung
-
-**Tabellen, die nicht mehr benötigt werden (nach Prüfung auf Live-Daten):**
-- `templates` — 24.959 Einträge, aber nicht mehr vom aktiven Code genutzt. Vor dem Löschen: Nutzer sollte im Live-Supabase-Dashboard prüfen, ob irgendwelche Daten erhalten bleiben sollen. Empfehlung: Tabelle deaktivieren (Status: ARCHIVED) statt sofort löschen.
-- `curriculum_parameter_rules` — nur vom CurriculumManager genutzt (wird gelöscht)
-- `scenario_families` — nur vom alten System genutzt
-- `user_context_history` — nur vom alten System genutzt
-- `question_quality_metrics` — nur vom alten System genutzt
-- `template_scores` — View auf templates-Tabelle
-
-**Tabellen behalten:**
-- `game_sessions` ✓
-- `learning_sessions` ✓
-- `profiles` ✓
-- `subscriptions` ✓
-- `user_achievements` + `achievements_template` ✓
-- `question_feedback` ✓ (Feedback-Funktion im Spiel)
-- `screen_time_requests` ✓
-- `parent_child_relationships` ✓
-- `child_settings` ✓
-- `child_subject_visibility` ✓
-- `invitation_codes` ✓
-- `user_earned_minutes` ✓
-- `user_difficulty_profiles` ✓
-- `daily_request_summary` ✓
-- `topics` + `questions` ✓ (für späteres Caching)
-
-**Migrations-SQL vorbereiten (zur manuellen Ausführung im SQL Editor):**
-```sql
--- SCHRITT 1: Templates-Tabelle archivieren (NICHT löschen - Datensicherheit)
--- Erst prüfen, dann entscheiden
-SELECT COUNT(*), status FROM templates GROUP BY status;
-
--- SCHRITT 2: Verwaiste Tabellen löschen
-DROP TABLE IF EXISTS curriculum_parameter_rules CASCADE;
-DROP TABLE IF EXISTS scenario_families CASCADE;
-DROP TABLE IF EXISTS user_context_history CASCADE;
-DROP TABLE IF EXISTS question_quality_metrics CASCADE;
-
--- SCHRITT 3: Templates-Tabelle - Entscheidung nach Prüfung
--- Option A: Alle deaktivieren
-UPDATE templates SET status = 'ARCHIVED';
--- Option B: Tabelle löschen (erst nach Datensicherung)
--- DROP TABLE templates CASCADE;
-```
-
----
-
-## Phase 2: Fragen-Duplikat-Prävention (Kernziel: Keine Wiederholungen)
-
-### Warum die aktuelle Lösung Duplikate nicht verhindert
-
-`useQuestionPreloader` übergibt an `ai-question-generator` nur `grade`, `subject` und `difficulty`. Die KI bekommt keinerlei Information darüber, welche Fragen in der aktuellen Session oder vergangenen Sessions bereits gestellt wurden. Zufällig können die gleichen Fragen entstehen.
-
-### Lösung: Lokale Session-Deduplizierung + DB-gestützte Langzeit-Deduplizierung
-
-**Schritt 2A: Neue Datenbanktabelle `ai_question_cache`**
-
-Diese Tabelle ist der Kern des gesamten Skalierungskonzepts — sie speichert erfolgreich generierte Fragen und verhindert Wiederholungen:
-
-```sql
-CREATE TABLE ai_question_cache (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  grade INTEGER NOT NULL,
-  subject TEXT NOT NULL,
-  difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
-  question_text TEXT NOT NULL,
-  question_type TEXT NOT NULL,
-  correct_answer JSONB NOT NULL,
-  options JSONB,
-  hint TEXT,
-  task TEXT,
-  times_served INTEGER DEFAULT 0,
-  last_served_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Index für schnelle Lookups
-CREATE INDEX idx_ai_question_cache_lookup 
-  ON ai_question_cache(grade, subject, difficulty);
-
--- Index für Rotation (zuletzt gezeigt)
-CREATE INDEX idx_ai_question_cache_rotation 
-  ON ai_question_cache(grade, subject, last_served_at);
-
--- RLS: Jeder eingeloggte Nutzer kann lesen (Fragen sind nicht nutzerspezifisch)
-ALTER TABLE ai_question_cache ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Authenticated users can read cache"
-  ON ai_question_cache FOR SELECT
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Service role manages cache"
-  ON ai_question_cache FOR ALL
-  TO service_role
-  USING (true);
-```
-
-**Schritt 2B: `useQuestionPreloader` — Duplikat-Schutz auf Session-Ebene**
-
-Während einer Sitzung (5 Fragen) wird verhindert, dass die gleiche Frage doppelt erscheint. Dies geschieht lokal via `Set<string>` auf dem `questionText`.
-
-```typescript
-// Neu: Session-Tracking innerhalb des Hooks
-const seenQuestionTextsRef = useRef<Set<string>>(new Set());
-
-// Nach jeder geladenen Frage:
-if (seenQuestionTextsRef.current.has(question.questionText)) {
-  // Neue Frage anfordern
-} else {
-  seenQuestionTextsRef.current.add(question.questionText);
+SUBJECT_DOMAINS["geography"] = {
+  domains: ["Orientierung (Karte, Himmelsrichtungen)", "Europa: Länder, Hauptstädte, Flüsse", ...],
+  hint: "Wähle ein konkretes Thema aus den Oberkategorien, das zum Lernniveau passt"
 }
 ```
 
-**Schritt 2C: `ai-question-generator` — Fire-and-forget Caching + Ausschluss-Liste**
-
-Die Edge Function wird erweitert um:
-
-1. **Zufällige Frage aus Cache laden** (falls Cache voll genug): `SELECT * FROM ai_question_cache WHERE grade=$1 AND subject=$2 ORDER BY last_served_at ASC NULLS FIRST LIMIT 20` → zufällig eine auswählen → `last_served_at` aktualisieren
-2. **Neue Frage generieren** (falls Cache leer oder bei KI-Anteil):
-3. **Frage in Cache speichern** (nicht-blockierend, `waitUntil`):
-
-```typescript
-// In ai-question-generator: Nach erfolgreicher KI-Generierung
-const saveToCache = supabaseAdmin.from('ai_question_cache').insert({
-  grade, subject, difficulty,
-  question_text: enhancedQuestion.questionText,
-  question_type: enhancedQuestion.questionType,
-  correct_answer: enhancedQuestion.correctAnswer,
-  options: enhancedQuestion.options,
-  hint: enhancedQuestion.hint,
-  task: enhancedQuestion.task
-});
-// Non-blocking: Nutzer wartet nicht auf DB-Write
-EdgeRuntime.waitUntil(saveToCache);
-```
-
-**Schritt 2D: Rotations-Logik — Fragen werden "round-robin" ausgespielt**
-
-Um zu verhindern, dass Nutzer immer die gleichen 5 Fragen aus dem Cache bekommen:
-- Sortierung: `ORDER BY last_served_at ASC NULLS FIRST` → zuletzt gesehene kommen zuletzt
-- Nach dem Abrufen: `UPDATE ai_question_cache SET last_served_at = now(), times_served = times_served + 1 WHERE id = $1`
-- So werden Fragen gleichmäßig rotiert
-
-**Schritt 2E: Nutzer-spezifische Session-Deduplizierung (optional, Phase 3)**
-
-Um zu verhindern, dass ein einzelner Nutzer in aufeinanderfolgenden Sitzungen die gleiche Frage sieht, wird eine leichtgewichtige Lösung mit `localStorage` verwendet:
-
-```typescript
-// Im useQuestionPreloader: Letzte 20 gesehene Fragen merken
-const recentQuestions = JSON.parse(
-  localStorage.getItem(`recent_questions_${grade}_${subject}`) || '[]'
-);
-// Beim Laden aus Cache: Exclude these IDs
-// Nach Session: Update localStorage
-```
-
 ---
 
-## Phase 3: Smart Cache — Aktivierung bei Wachstum
+### Änderungen
 
-Dieser Schritt wird erst bei ca. 500+ täglichen aktiven Nutzern aktiviert.
+**1. `supabase/functions/cache-prefill/index.ts` — vollständig überarbeitet**
 
-### Tiered Logik in `useQuestionPreloader`
+Folgendes wird ersetzt/gelöscht:
+- `const CURRICULUM: Record<number, Record<string, string[]>>` (Zeilen 14–232) → **wird gelöscht**
+- `function pickSkill(...)` (Zeilen 259–263) → **wird gelöscht**
+- Die Logik in Step 2 die `CURRICULUM[grade]?.[subject]` prüft → **wird ersetzt**
+
+Folgendes wird neu eingeführt:
 
 ```typescript
-// Pseudo-Code der finalen Logik
-async function determineQuestionSources(grade, subject, totalQuestions=5) {
-  const { count } = await supabase
-    .from('ai_question_cache')
-    .select('*', { count: 'exact', head: true })
-    .eq('grade', grade)
-    .eq('subject', subject);
+// Alle unterstützten Fächer mit Domain-Hinweisen
+const SUBJECT_DOMAINS: Record<string, {
+  domains: string[];
+  ageHints: string;  // Kurzhinweis für Altersanpassung
+}> = {
+  math: {
+    domains: [
+      'Zahlen & Operationen (Zählen, Rechnen, Stellenwert)',
+      'Brüche, Dezimalzahlen & Prozentrechnung',
+      'Algebra: Terme, Gleichungen, Funktionen',
+      'Geometrie: Flächen, Körper, Koordinaten, Winkel',
+      'Größen & Messen: Länge, Zeit, Geld, Gewicht',
+      'Daten & Zufall: Statistik, Wahrscheinlichkeit, Diagramme',
+    ],
+    ageHints: 'Zahlenräume wachsen mit der Klasse: ZR10 (Kl.1) → ZR100 (Kl.2) → ZR1000 (Kl.3) → Mio (Kl.4+)',
+  },
+  german: { ... },
+  english: { ... },
+  geography: {
+    domains: [
+      'Orientierung: Karten, Himmelsrichtungen, Maßstab',
+      'Europa: Länder, Hauptstädte, Gebirge, Flüsse',
+      'Deutschland: Bundesländer, Städte, Landschaften',
+      'Weltgeografie: Kontinente, Ozeane, Klimazonen',
+      'Wirtschaft & Bevölkerung: Ressourcen, Migration',
+      'Naturgeografie: Erosion, Tektonik, Wetter, Klima',
+    ],
+    ageHints: 'Klassen 1-4: Deutschland & Europa; Klassen 5+: Welt, Wirtschaft, Ökologie',
+  },
+  history: { ... },
+  physics: { ... },
+  biology: { ... },
+  chemistry: { ... },
+  latin: { ... },
+  science: { ... },  // Sachkunde Grundschule
+};
+```
 
-  // Schwellenwerte
-  if (count >= 1000) return { dbCount: 5, aiCount: 0 };
-  if (count >= 500)  return { dbCount: 4, aiCount: 1 };
-  if (count >= 200)  return { dbCount: 3, aiCount: 2 };
-  if (count >= 50)   return { dbCount: 2, aiCount: 3 };
-  return { dbCount: 0, aiCount: 5 }; // Noch kein Cache
+Der `buildQuestionPrompt` erhält statt eines `skill`-Strings nun einen `domainsHint`-String:
+
+```typescript
+function buildQuestionPrompt(grade, subject, domainsHint, difficulty, questionType) {
+  return `...
+THEMENBEREICH: Wähle selbst ein konkretes, lehrplangerechtes Unterthema aus diesen Oberkategorien:
+${domainsHint}
+HINWEIS FÜR ALTERSANPASSUNG: ${ageHint}
+
+Das Modell wählt das Unterthema — es muss zur Klassenstufe ${grade} passen und darf sich 
+nicht mit einem bereits bekannten Thema wiederholen.
+...`;
 }
 ```
 
-### Performance durch Parallelladung
+Die Target-Generierung in Step 2 nutzt `SUBJECT_DOMAINS` statt `CURRICULUM`:
 
-DB-Abfrage und KI-Calls werden **gleichzeitig** gestartet:
 ```typescript
-const [dbQuestions, aiQuestion1] = await Promise.all([
-  loadFromCache(grade, subject, dbCount),
-  generateSingleQuestion(difficulty, signal)  // Erste KI-Frage parallel
-]);
+// Alle Klassen 1–10, alle definierten Fächer
+const ALL_GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const ALL_SUBJECTS = Object.keys(SUBJECT_DOMAINS);
+
+for (const grade of (targetGrades ?? ALL_GRADES)) {
+  for (const subject of (targetSubjects ?? ALL_SUBJECTS)) {
+    const current = cacheMap.get(`${grade}-${subject}`) ?? 0;
+    if (current < MIN_CACHE_THRESHOLD) {
+      targets.push({ grade, subject, currentCount: current });
+    }
+  }
+}
 ```
 
----
+Der `if (!skill) continue;`-Check entfällt — jede Kombination ist jetzt gültig.
 
-## Phase 4: Admin Dashboard bereinigen
+**2. Löschen: `public/data/math_curriculum_1-10.json`**
 
-Das aktuelle `AdminDashboard.tsx` zeigt `templates`-Statistiken an. Nach der Bereinigung:
+Datei wird gelöscht — sie wird von keiner Codestelle verwendet und war nur für den alten Template-basierten Ansatz relevant.
 
-**Entfernen:** Templates-Stats, Cron-Job-Status für Template-Generierung
+**3. Löschen: `public/data/knowledge_cards.jsonl`**
 
-**Hinzufügen:** Cache-Statistiken aus `ai_question_cache`:
-- Fragen im Cache pro Fach/Klasse
-- Durchschnittliche `times_served`-Rate
-- Wachstumskurve (Fragen pro Tag)
+Datei wird gelöscht — sie wird von keiner Codestelle verwendet.
 
 ---
 
-## Implementierungsreihenfolge
+### Sequenz der Implementierung
 
 ```text
-Phase 1 (Bereinigung) → Sicherheit + Wartbarkeit
-  └── 1A: Edge Functions löschen (supabase dashboard + config.toml)
-  └── 1B: Legacy-Hooks löschen
-  └── 1C: Legacy-Komponenten löschen
-  └── 1D: Services/Utils löschen
-  └── 1E: DB-Tabellen bereinigen (nach manueller Prüfung)
-
-Phase 2 (Duplikat-Prävention) → Sofortiger Nutzernutzen
-  └── 2A: ai_question_cache Tabelle anlegen (Migration)
-  └── 2B: useQuestionPreloader — Session-Deduplizierung
-  └── 2C: ai-question-generator — Cache-Write (fire-and-forget)
-  └── 2D: Rotations-Logik (last_served_at)
-  └── 2E: localStorage für nutzer-spezifische History
-
-Phase 3 (Skalierung) → Bei 500+ Nutzern/Tag aktivieren
-  └── 3A: Tiered-Logik in useQuestionPreloader
-  └── 3B: Cache-Lesepfad in ai-question-generator
-
-Phase 4 (Admin) → Nach Phase 1+2
-  └── 4A: AdminDashboard auf Cache-Stats umstellen
+1. public/data/math_curriculum_1-10.json  → löschen (leere Datei)
+2. public/data/knowledge_cards.jsonl      → löschen (leere Datei)
+3. supabase/functions/cache-prefill/index.ts → vollständig neu schreiben:
+   a. CURRICULUM-Konstante → durch SUBJECT_DOMAINS ersetzen
+   b. pickSkill() → entfernen
+   c. buildQuestionPrompt() → domain-hint-basiert
+   d. Step 2 Target-Loop → ALL_GRADES × ALL_SUBJECTS
+   e. Aufruf-Logik (Step 3) → kein skill-Check mehr
 ```
 
 ---
 
-## Wichtige Hinweise vor der Ausführung
+### Ergebnis
 
-1. **DB-Tabellen: Vor dem Löschen prüfen** — Im Supabase Dashboard unter "Live" die Tabelle `templates` auf tatsächliche Nutzung prüfen. Die `game_sessions`-Tabelle zeigt, welche Fragen-Quellen (`question_source`) in den letzten Sessions genutzt wurden.
+| Vorher | Nachher |
+|---|---|
+| 3 Fächer (math, german, english) | 10 Fächer (+ geo, history, physics, bio, chem, latin, science) |
+| Feste Skill-Listen → Wiederholungen | Offene Domain-Hints → echte KI-Vielfalt |
+| Klassen 1–10 nur für math/german | Klassen 1–10 × alle Fächer = 100 Kombinationen |
+| 2 tote Dateien in `/public/data/` | Bereinigt |
+| Pflege der Skill-Listen nötig | Kein Pflegeaufwand |
 
-2. **Edge Functions: Erst aus `config.toml` entfernen, dann löschen** — Sonst entstehen 404-Fehler bei Cron-Jobs, die noch aktiv sind.
-
-3. **Kein Breaking Change** — Das aktuelle Spiel (LearningGame + useQuestionPreloader + ai-question-generator) bleibt vollständig funktionsfähig während der gesamten Bereinigung. Die Phasen können unabhängig voneinander ausgeführt werden.
+Die Qualität bleibt auf `gemini-2.5-pro`-Niveau, da das Modell nicht auf schlechte Skill-Strings eingeschränkt wird, sondern eigenständig das optimale Unterthema für Klasse und Fach wählt — genau wie der Live-Generator.
