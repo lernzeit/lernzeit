@@ -155,56 +155,69 @@ serve(async (req) => {
 
     const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: getSystemPrompt() },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.9, // Slightly higher for more variety
-      }),
-    });
+    const models = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'];
+    let content: string | null = null;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    for (const model of models) {
+      try {
+        console.log(`🤖 Trying model: ${model}`);
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: getSystemPrompt() },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.9,
+          }),
         });
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
+            }), {
+              status: 429,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          if (response.status === 402) {
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: 'API-Kontingent erschöpft. Bitte kontaktiere den Support.' 
+            }), {
+              status: 402,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          const errorText = await response.text();
+          console.error(`AI Gateway error with ${model}: ${response.status} - ${errorText}`);
+          continue; // Try next model
+        }
+
+        const result = await response.json();
+        content = result.choices?.[0]?.message?.content || null;
+
+        if (content) {
+          console.log(`✅ Got response from ${model}`);
+          break;
+        } else {
+          console.warn(`⚠️ Empty content from ${model}, trying next...`);
+        }
+      } catch (modelError) {
+        console.error(`Error with model ${model}:`, modelError);
+        continue;
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'API-Kontingent erschöpft. Bitte kontaktiere den Support.' 
-        }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      console.error('AI Gateway error:', response.status);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content;
-
     if (!content) {
-      console.error('No content in AI response');
+      console.error('All models failed to generate content');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
