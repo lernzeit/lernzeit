@@ -26,16 +26,16 @@ export const ApiStatusPanel = () => {
     setIsChecking(true);
     const statuses: ApiStatus[] = [];
 
-    // Check Gemini API via direct-template-generator
+    // Check Gemini API via ai-question-generator
     try {
       const startTime = Date.now();
-      const { error } = await supabase.functions.invoke('direct-template-generator', {
-        body: { grade: 1, domain: 'Zahlen & Operationen', count: 1, test: true }
+      const { error } = await supabase.functions.invoke('ai-question-generator', {
+        body: { grade: 1, subject: 'Mathematik', difficulty: 'easy', test: true }
       });
       const responseTime = Date.now() - startTime;
 
       statuses.push({
-        name: 'Gemini API (Template Generator)',
+        name: 'Gemini API (KI-Fragen)',
         status: error ? 'error' : 'online',
         responseTime,
         lastChecked: new Date(),
@@ -43,21 +43,21 @@ export const ApiStatusPanel = () => {
       });
     } catch (err: any) {
       statuses.push({
-        name: 'Gemini API (Template Generator)',
+        name: 'Gemini API (KI-Fragen)',
         status: 'offline',
         lastChecked: new Date(),
         error: err.message
       });
     }
 
-    // Check Supabase Database
+    // Check Supabase Database via ai_question_cache
     try {
       const startTime = Date.now();
-      const { error } = await supabase.from('templates').select('id').limit(1);
+      const { error } = await supabase.from('ai_question_cache').select('id').limit(1);
       const responseTime = Date.now() - startTime;
 
       statuses.push({
-        name: 'Supabase Database',
+        name: 'Supabase Datenbank',
         status: error ? 'error' : 'online',
         responseTime,
         lastChecked: new Date(),
@@ -65,36 +65,35 @@ export const ApiStatusPanel = () => {
       });
     } catch (err: any) {
       statuses.push({
-        name: 'Supabase Database',
+        name: 'Supabase Datenbank',
         status: 'offline',
         lastChecked: new Date(),
         error: err.message
       });
     }
 
-    // Check Cron Job (last template creation)
+    // Check Cache growth (last cached question)
     try {
-      const { data, error } = await supabase
-        .from('templates')
+      const { data } = await supabase
+        .from('ai_question_cache')
         .select('created_at')
         .order('created_at', { ascending: false })
         .limit(1);
 
       const lastCreated = data?.[0]?.created_at;
-      const hoursSinceLastCreation = lastCreated 
+      const hoursSinceLast = lastCreated
         ? (Date.now() - new Date(lastCreated).getTime()) / 1000 / 60 / 60
         : 999;
 
       statuses.push({
-        name: 'Hourly Cron Job',
-        status: hoursSinceLastCreation < 2 ? 'online' : hoursSinceLastCreation < 6 ? 'error' : 'offline',
+        name: 'Fragen-Cache',
+        status: hoursSinceLast < 24 ? 'online' : hoursSinceLast < 72 ? 'error' : 'offline',
         lastChecked: new Date(),
-        responseTime: Math.round(hoursSinceLastCreation * 60),
-        error: hoursSinceLastCreation > 2 ? `Letztes Template vor ${Math.round(hoursSinceLastCreation)}h erstellt` : undefined
+        error: hoursSinceLast > 24 ? `Letzte gecachte Frage vor ${Math.round(hoursSinceLast)}h` : undefined
       });
     } catch (err: any) {
       statuses.push({
-        name: 'Hourly Cron Job',
+        name: 'Fragen-Cache',
         status: 'offline',
         lastChecked: new Date(),
         error: err.message
