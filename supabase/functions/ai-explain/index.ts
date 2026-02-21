@@ -142,6 +142,7 @@ WICHTIGE REGELN:
 6. Halte die Erklärung kurz (2-4 Sätze für jüngere, bis zu 5 Sätze für ältere)
 7. Verwende passende Emojis sparsam
 8. KEINE langen Texte oder komplizierte Begriffe
+9. Verwende KEIN Markdown (keine **, keine ##, keine Listen mit -). Schreibe reinen Fließtext. Setze Wörter in Anführungszeichen statt sie fett zu markieren.
 
 KRITISCH - DEUTSCHE SCHREIBWEISE:
 - Verwende IMMER Euro (€), NIEMALS Dollar ($)
