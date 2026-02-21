@@ -164,6 +164,28 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     clearExplanation();
   };
 
+  // Resolve MULTIPLE_CHOICE correctAnswer which can be:
+  // - a number index (from AI/cache): 2 → options[2]
+  // - an object { value: "text" } (legacy)
+  // - a string directly
+  const resolveCorrectAnswerText = (q: PreloadedQuestion): string => {
+    const ca = q.correctAnswer;
+    if (ca == null) return '';
+    // If it's a number (index into options)
+    if (typeof ca === 'number') {
+      return q.options?.[ca] ?? String(ca);
+    }
+    // If it's an object with .value
+    if (typeof ca === 'object' && ca.value != null) {
+      if (typeof ca.value === 'number' && q.options) {
+        return q.options[ca.value] ?? String(ca.value);
+      }
+      return String(ca.value);
+    }
+    // If it's a plain string
+    return String(ca);
+  };
+
   const checkAnswer = () => {
     if (!question) return;
 
@@ -171,13 +193,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
-        correct = selectedOption === question.correctAnswer?.value;
+        const resolvedCorrect = resolveCorrectAnswerText(question);
+        correct = selectedOption === resolvedCorrect;
         break;
 
       case 'FREETEXT':
+        const correctAnswerRaw = question.correctAnswer;
+        const freeTextCorrect = typeof correctAnswerRaw === 'object' && correctAnswerRaw?.value != null
+          ? String(correctAnswerRaw.value) : String(correctAnswerRaw || '');
         const userVal = userTextAnswer.toLowerCase().trim();
-        const correctVal = String(question.correctAnswer?.value || '').toLowerCase().trim();
-        const alternatives = (question.correctAnswer?.alternatives || []).map((a: string) => a.toLowerCase().trim());
+        const correctVal = freeTextCorrect.toLowerCase().trim();
+        const alternatives = (typeof correctAnswerRaw === 'object' ? correctAnswerRaw?.alternatives || [] : []).map((a: string) => a.toLowerCase().trim());
         correct = userVal === correctVal || alternatives.includes(userVal);
         break;
 
@@ -275,8 +301,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
+        return resolveCorrectAnswerText(question);
       case 'FREETEXT':
-        return String(question.correctAnswer?.value || '');
+        return typeof question.correctAnswer === 'object' && question.correctAnswer?.value != null
+          ? String(question.correctAnswer.value) : String(question.correctAnswer || '');
       case 'SORT':
         return (question.correctAnswer?.order || []).join(' → ');
       case 'MATCH':
@@ -549,7 +577,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 <MultipleChoiceRenderer
                   options={question.options || []}
                   selectedOption={selectedOption}
-                  correctAnswer={question.correctAnswer?.value}
+                  correctAnswer={resolveCorrectAnswerText(question)}
                   hasAnswered={hasAnswered}
                   onSelect={setSelectedOption}
                 />
