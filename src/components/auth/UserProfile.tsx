@@ -300,8 +300,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   // Child Dashboard
   if (profile?.role === 'child') {
     return (
-      <div className="min-h-screen bg-gradient-bg p-4">
-        <div className="w-full max-w-md md:max-w-2xl lg:max-w-4xl mx-auto space-y-6">
+      <div className="min-h-screen bg-gradient-bg py-4">
+        <div className="page-container space-y-6">
           {/* Trial Expired Banner */}
           {trialJustExpired && (
             <Card className="shadow-card border-warning bg-warning/10">
@@ -507,8 +507,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   // Parent Dashboard
   if (profile?.role === 'parent') {
     return (
-      <div className="min-h-screen bg-gradient-bg p-4">
-        <div className="w-full max-w-2xl lg:max-w-4xl mx-auto space-y-6">
+      <div className="min-h-screen bg-gradient-bg py-4">
+        <div className="page-container space-y-6">
           {/* Trial Expired Banner */}
           {trialJustExpired && (
             <Card className="shadow-card border-warning bg-warning/10">

@@ -173,8 +173,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-md mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-bg py-4">
+      <div className="page-container space-y-6">
         {/* Header */}
         <Card className="shadow-card">
           <CardHeader>
@@ -201,7 +201,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         </Card>
 
         {/* Categories Grid */}
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categories
             .filter(category => visibleSubjects.has(category.id))
             .sort((a, b) => {
