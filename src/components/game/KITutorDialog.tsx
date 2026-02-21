@@ -215,7 +215,7 @@ export function KITutorDialog({
                     ? 'bg-primary text-primary-foreground rounded-br-md'
                     : 'bg-muted text-foreground rounded-bl-md'
                 }`}>
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <p className="whitespace-pre-wrap">{msg.content.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
                   {msg.role === 'assistant' && msg.content && !isLoading && (
                     <button
                       onClick={() => speakText(msg.content)}

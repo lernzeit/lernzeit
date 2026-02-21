@@ -768,7 +768,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       <span>Erklärung wird erstellt...</span>
                     </div>
                   ) : (
-                    <p className="text-sm">{explanation}</p>
+                    <p className="text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
                   )}
                 </div>
               )}
