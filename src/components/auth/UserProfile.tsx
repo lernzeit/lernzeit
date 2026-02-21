@@ -430,8 +430,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </>
           )}
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Stats & Quick Actions */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
               <CardContent className="p-4 text-center">
                 <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -450,12 +450,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                 <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
               </CardContent>
             </Card>
-          </div>
-
-
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <AchievementQuickView 
               userId={user.id} 
               onClick={() => {
