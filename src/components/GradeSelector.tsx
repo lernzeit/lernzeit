@@ -22,8 +22,8 @@ const grades = [
 
 export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-bg py-4">
+      <div className="page-container">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
             MathTime 📱⏰
@@ -79,7 +79,7 @@ export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
         </div>
 
         <div className="mt-8 text-center">
-          <Card className="max-w-md mx-auto shadow-card">
+          <Card className="max-w-lg mx-auto shadow-card">
             <CardContent className="p-6">
               <div className="text-2xl mb-2">🎮</div>
               <h3 className="font-semibold mb-2">Wie funktioniert's?</h3>

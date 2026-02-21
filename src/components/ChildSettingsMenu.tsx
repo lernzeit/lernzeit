@@ -232,8 +232,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
 
   if (activeSection) {
     return (
-      <div className="min-h-screen bg-gradient-bg p-4">
-        <div className="max-w-md mx-auto">
+        <div className="min-h-screen bg-gradient-bg py-4">
+          <div className="page-container">
           <Button 
             variant="ghost" 
             onClick={() => setActiveSection(null)}
@@ -438,8 +438,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
   }
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
-      <div className="max-w-md mx-auto space-y-6">
+      <div className="min-h-screen bg-gradient-bg py-4">
+        <div className="page-container space-y-6">
         {/* Header */}
         <Card className="shadow-card">
           <CardHeader>

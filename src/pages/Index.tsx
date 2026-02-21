@@ -231,7 +231,7 @@ const Index = () => {
         <div className="absolute top-1/3 right-1/4 w-16 h-16 bg-accent/30 rounded-full animate-pulse blur-xl" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto">
+      <div className="relative z-10 page-container">
         <div className="text-center mb-12 animate-fade-in">
           {/* Logo */}
           <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-primary to-secondary rounded-3xl mb-6 shadow-lg animate-scale-in">

@@ -132,7 +132,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         <div className="absolute top-1/3 left-1/4 w-20 h-20 bg-accent/30 rounded-full animate-pulse blur-xl" style={{animationDelay: '2s'}}></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md lg:max-w-lg">
         {/* Header with logo animation */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-primary to-secondary rounded-3xl mb-4 shadow-lg animate-scale-in">
