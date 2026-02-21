@@ -161,13 +161,38 @@ export function KITutorDialog({
     }
   };
 
-  // Browser TTS
+  // Browser TTS with best German voice selection
+  const getBestGermanVoice = useCallback((): SpeechSynthesisVoice | null => {
+    const voices = window.speechSynthesis.getVoices();
+    const germanVoices = voices.filter(v => v.lang.startsWith('de'));
+    if (germanVoices.length === 0) return null;
+
+    // Prefer natural/premium voices (keywords vary by browser/OS)
+    const preferredKeywords = ['premium', 'enhanced', 'natural', 'neural', 'wavenet', 'google', 'microsoft'];
+    for (const keyword of preferredKeywords) {
+      const match = germanVoices.find(v => v.name.toLowerCase().includes(keyword));
+      if (match) return match;
+    }
+    // Prefer female voices for child-friendliness
+    const femaleVoice = germanVoices.find(v =>
+      /anna|petra|marlene|vicki|female|frau/i.test(v.name)
+    );
+    if (femaleVoice) return femaleVoice;
+
+    // Fallback: first German voice
+    return germanVoices[0];
+  }, []);
+
   const speakText = (text: string) => {
     stopSpeaking();
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Strip markdown/formatting before speaking
+    const cleanText = text.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '').replace(/[*_~`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'de-DE';
-    utterance.rate = grade <= 2 ? 0.85 : 0.95;
-    utterance.pitch = 1.1;
+    const voice = getBestGermanVoice();
+    if (voice) utterance.voice = voice;
+    utterance.rate = grade <= 2 ? 0.82 : 0.92;
+    utterance.pitch = grade <= 4 ? 1.08 : 1.0;
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     setIsSpeaking(true);
