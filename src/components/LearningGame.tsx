@@ -143,8 +143,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       if (question.questionType === 'SORT' && question.options) {
         setSortOrder([...question.options]);
       }
-      if (question.questionType === 'FILL_BLANK' && question.correctAnswer?.blanks) {
-        setFillBlanks(new Array(question.correctAnswer.blanks.length).fill(''));
+      if (question.questionType === 'FILL_BLANK') {
+        const ca = question.correctAnswer;
+        const blanks = ca?.blanks || (Array.isArray(ca) ? ca : (typeof ca === 'string' ? [ca] : []));
+        if (blanks.length > 0) setFillBlanks(new Array(blanks.length).fill(''));
       }
       // Scroll to top when new question loads
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -208,12 +210,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         break;
 
       case 'SORT':
-        correct = JSON.stringify(sortOrder) === JSON.stringify(question.correctAnswer?.order);
+        // correctAnswer can be {order: [...]} or a plain array
+        const sortCorrect = Array.isArray(question.correctAnswer)
+          ? question.correctAnswer
+          : question.correctAnswer?.order || [];
+        correct = JSON.stringify(sortOrder) === JSON.stringify(sortCorrect);
         break;
 
       case 'MATCH':
-        const correctPairs = question.correctAnswer?.pairs || [];
-        correct = correctPairs.every(([left, right]: [string, string]) => matches[left] === right);
+        // correctAnswer can be {pairs: [["a","b"],...]} or a plain object {"a":"b",...}
+        const ca = question.correctAnswer;
+        if (ca?.pairs && Array.isArray(ca.pairs)) {
+          correct = ca.pairs.every(([left, right]: [string, string]) => matches[left] === right);
+        } else if (ca && typeof ca === 'object' && !Array.isArray(ca)) {
+          correct = Object.entries(ca).every(([left, right]) => matches[left] === String(right));
+        }
         break;
 
       case 'DRAG_DROP':
@@ -224,9 +235,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         break;
 
       case 'FILL_BLANK':
-        const correctBlanks = question.correctAnswer?.blanks || [];
+        const caFill = question.correctAnswer;
+        const correctBlanks = caFill?.blanks || (Array.isArray(caFill) ? caFill : (typeof caFill === 'string' ? [caFill] : []));
         correct = fillBlanks.every((answer, i) => 
-          answer.toLowerCase().trim() === correctBlanks[i]?.toLowerCase().trim()
+          answer.toLowerCase().trim() === String(correctBlanks[i] || '').toLowerCase().trim()
         );
         break;
     }
@@ -306,13 +318,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         return typeof question.correctAnswer === 'object' && question.correctAnswer?.value != null
           ? String(question.correctAnswer.value) : String(question.correctAnswer || '');
       case 'SORT':
-        return (question.correctAnswer?.order || []).join(' → ');
+        const sortCA = question.correctAnswer;
+        const sortArr = Array.isArray(sortCA) ? sortCA : sortCA?.order || [];
+        return sortArr.join(' → ');
       case 'MATCH':
-        return (question.correctAnswer?.pairs || [])
-          .map(([a, b]: [string, string]) => `${a} = ${b}`)
-          .join(', ');
+        const matchCA = question.correctAnswer;
+        if (matchCA?.pairs && Array.isArray(matchCA.pairs)) {
+          return matchCA.pairs.map(([a, b]: [string, string]) => `${a} = ${b}`).join(', ');
+        }
+        if (matchCA && typeof matchCA === 'object' && !Array.isArray(matchCA)) {
+          return Object.entries(matchCA).map(([a, b]) => `${a} = ${b}`).join(', ');
+        }
+        return '';
       case 'FILL_BLANK':
-        return (question.correctAnswer?.blanks || []).join(', ');
+        const fillCA = question.correctAnswer;
+        const blanksArr = fillCA?.blanks || (Array.isArray(fillCA) ? fillCA : (typeof fillCA === 'string' ? [fillCA] : []));
+        return blanksArr.join(', ');
       default:
         return '';
     }
