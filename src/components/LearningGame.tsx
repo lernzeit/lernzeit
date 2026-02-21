@@ -896,7 +896,7 @@ const MultipleChoiceRenderer: React.FC<{
         key={index}
         variant={selectedOption === option ? 'default' : 'outline'}
         className={cn(
-          "w-full justify-start text-left p-4 h-auto",
+          "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
           hasAnswered && option === correctAnswer && "border-green-500 bg-green-50 dark:bg-green-950",
           hasAnswered && selectedOption === option && option !== correctAnswer && "border-red-500 bg-red-50 dark:bg-red-950"
         )}
