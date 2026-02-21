@@ -82,12 +82,12 @@ export function MultipleChoiceQuestion({
         {question.question}
       </p>
       
-      <div className="grid gap-3 max-w-md mx-auto">
+      <div className="grid gap-3 w-full max-w-md mx-auto">
         {question.options.map((option, index) => (
           <Button
             key={index}
             variant={selectedAnswer === index ? "default" : "outline"}
-            className={`h-12 text-left justify-start ${
+            className={`min-h-12 h-auto py-3 text-left justify-start whitespace-normal break-words ${
               selectedAnswer === index ? 'bg-primary text-primary-foreground' : ''
             }`}
             onClick={() => onAnswerSelect(index)}
