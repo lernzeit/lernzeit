@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2, Crown, Check } from 'lucide-react';
 import { toast } from 'sonner';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import LegalFooter from '@/components/layout/LegalFooter';
 
 // Lazy load heavy components that aren't needed on initial page render
@@ -31,12 +31,13 @@ type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physi
 const Index = () => {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
+  const [showAuth, setShowAuth] = useState(searchParams.get('auth') === 'true');
 
   // Detect checkout success redirect
   useEffect(() => {
@@ -45,8 +46,13 @@ const Index = () => {
         description: 'Dein LernZeit Premium Abo ist jetzt aktiv. Viel Spaß mit allen Funktionen!',
         duration: 6000
       });
-      // Clean up URL
       searchParams.delete('checkout');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // Handle demo param
+    if (searchParams.get('demo') === 'true') {
+      setSelectedGrade(3);
+      searchParams.delete('demo');
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
@@ -168,7 +174,12 @@ const Index = () => {
           </CardContent>
         </Card>
       </div>);
+  }
 
+  // Redirect unauthenticated visitors to /start (unless they requested auth or demo)
+  if (!user && !showAuth && !selectedGrade) {
+    navigate('/start', { replace: true });
+    return null;
   }
 
   // Show auth form if no user and auth is requested
