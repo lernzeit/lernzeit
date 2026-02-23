@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { Clock, Shield, Brain, GraduationCap, Trophy } from 'lucide-react';
+import { Clock, Shield, Brain, GraduationCap, Trophy, BarChart3 } from 'lucide-react';
 
 const usps = [
   {
     icon: Clock,
     title: 'Bildschirmzeit als Belohnung',
-    description: 'Pro richtige Antwort verdienen Kinder Bildschirmzeit.',
-    back: 'Eltern legen pro Fach fest, wie viele Sekunden eine richtig beantwortete Aufgabe wert ist – so wird Lernen direkt belohnt.',
+    description: 'Kinder verdienen sich Bildschirmzeit durch richtige Antworten.',
+    back: 'Pro richtige Antwort gibt es Bildschirmzeit – Eltern legen pro Fach fest, wie viele Sekunden eine Aufgabe wert ist.',
     color: 'bg-primary/10 text-primary',
   },
   {
     icon: Shield,
     title: 'Eltern behalten die Kontrolle',
-    description: 'Zeitlimits und Belohnungen individuell einstellen.',
-    back: 'Eltern setzen ein tägliches Zeitlimit (Wochentag/Wochenende) und steuern die Belohnung je Fach – alles über das Eltern-Dashboard.',
+    description: 'Tägliche Limits, Fächersteuerung und Schwerpunkte setzen.',
+    back: 'Eltern setzen ein tägliches Zeitlimit (Wochentag/Wochenende), schalten Fächer sichtbar oder unsichtbar und setzen individuelle Schwerpunkte.',
     color: 'bg-secondary/10 text-secondary',
   },
   {
@@ -24,18 +24,25 @@ const usps = [
     color: 'bg-accent/10 text-accent',
   },
   {
+    icon: BarChart3,
+    title: 'Lernanalyse für Eltern',
+    description: 'Fortschritte und Ergebnisse auf einen Blick.',
+    back: 'Eltern sehen Lerntrends, Erfolgsquoten und Fehlerschwerpunkte – mit individuellen Empfehlungen für jedes Kind.',
+    color: 'bg-primary/10 text-primary',
+  },
+  {
     icon: GraduationCap,
     title: 'Lehrplanorientiert',
     description: 'Klasse 1–10, alle Hauptfächer.',
-    back: 'Inhalte orientieren sich an deutschen Lehrplänen und werden passend zur Klassenstufe ausgespielt – alles abgestimmt.',
+    back: 'Inhalte orientieren sich an deutschen Lehrplänen und werden passend zur Klassenstufe ausgespielt.',
     color: 'bg-destructive/10 text-destructive',
   },
   {
     icon: Trophy,
     title: 'Achievements & Streaks',
     description: 'Spielerische Motivation durch Erfolge.',
-    back: 'Kinder sammeln Achievements, halten Lern-Streaks aufrecht und werden so ganz natürlich zum regelmäßigen Lernen motiviert.',
-    color: 'bg-primary/10 text-primary',
+    back: 'Kinder sammeln Achievements und halten Lern-Streaks aufrecht – das motiviert zum regelmäßigen Lernen.',
+    color: 'bg-secondary/10 text-secondary',
   },
 ];
 
@@ -49,20 +56,20 @@ const FlipCard = ({ usp }: { usp: typeof usps[0] }) => {
       onMouseLeave={() => setFlipped(false)}
       onClick={() => setFlipped(f => !f)}
     >
-      <div className={`relative w-full h-52 transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
+      <div className={`relative w-full h-64 transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
         {/* Front */}
-        <div className="absolute inset-0 bg-card rounded-3xl p-6 border shadow-sm flex flex-col items-center justify-center text-center [backface-visibility:hidden]">
-          <div className={`w-14 h-14 ${usp.color} rounded-2xl flex items-center justify-center mb-4`}>
-            <usp.icon className="w-7 h-7" />
+        <div className="absolute inset-0 bg-card rounded-3xl p-7 border shadow-sm flex flex-col items-center justify-center text-center [backface-visibility:hidden]">
+          <div className={`w-16 h-16 ${usp.color} rounded-2xl flex items-center justify-center mb-5`}>
+            <usp.icon className="w-8 h-8" />
           </div>
-          <h3 className="font-bold text-lg">{usp.title}</h3>
-          <p className="text-muted-foreground text-sm mt-1">{usp.description}</p>
+          <h3 className="font-bold text-lg mb-1">{usp.title}</h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">{usp.description}</p>
         </div>
         {/* Back */}
-        <div className="absolute inset-0 bg-card rounded-3xl p-6 border shadow-sm flex items-center justify-center text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <div className="absolute inset-0 bg-card rounded-3xl p-7 border shadow-sm flex items-center justify-center text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
           <div>
-            <div className={`w-10 h-10 ${usp.color} rounded-xl flex items-center justify-center mx-auto mb-3`}>
-              <usp.icon className="w-5 h-5" />
+            <div className={`w-12 h-12 ${usp.color} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+              <usp.icon className="w-6 h-6" />
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{usp.back}</p>
           </div>
@@ -100,7 +107,7 @@ const USPSection = () => {
           <p className="text-muted-foreground mt-3 text-sm">Hover oder tippe auf eine Kachel für mehr Details</p>
         </div>
 
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {usps.map((usp) => (
             <FlipCard key={usp.title} usp={usp} />
           ))}
