@@ -1,5 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Check, X, Crown } from 'lucide-react';
+import { Check, X, Crown, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,61 +15,76 @@ const PricingComparison = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="py-16 px-4 bg-muted/30">
-      <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-          Kostenlos starten, jederzeit upgraden
-        </h2>
-        <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
-          Nach der Anmeldung stehen dir 4 Wochen lang alle Premium-Funktionen kostenlos zur Verfügung.
-        </p>
+    <section className="py-24 px-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background pointer-events-none" />
 
-        <Card className="shadow-card border-0 backdrop-blur-sm bg-card/80 overflow-hidden">
-          <CardContent className="p-0">
-            {/* Header */}
-            <div className="grid grid-cols-3 text-center font-bold border-b">
-              <div className="p-4 text-left text-muted-foreground text-sm">Feature</div>
-              <div className="p-4 text-sm">Kostenlos</div>
-              <div className="p-4 text-sm flex items-center justify-center gap-1.5">
-                <Crown className="w-4 h-4 text-warning" />
-                Premium
-              </div>
-            </div>
+      <div className="relative max-w-4xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="text-sm font-semibold text-accent uppercase tracking-wider">Preise</span>
+          <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
+            Kostenlos starten,{' '}
+            <span className="bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+              jederzeit upgraden
+            </span>
+          </h2>
+          <p className="text-muted-foreground mt-4 text-lg max-w-xl mx-auto">
+            Nach der Anmeldung stehen dir 4 Wochen lang alle Premium-Funktionen kostenlos zur Verfügung.
+          </p>
+        </div>
 
-            {/* Rows */}
-            {features.map((f, i) => (
-              <div
-                key={f.name}
-                className={`grid grid-cols-3 text-center items-center text-sm ${
-                  i < features.length - 1 ? 'border-b' : ''
-                }`}
-              >
-                <div className="p-4 text-left">{f.name}</div>
-                <div className="p-4 flex justify-center">
+        <div className="grid sm:grid-cols-2 gap-6">
+          {/* Free */}
+          <div className="bg-card rounded-3xl border p-8 shadow-sm">
+            <h3 className="text-xl font-bold mb-1">Kostenlos</h3>
+            <p className="text-muted-foreground text-sm mb-6">Für immer gratis</p>
+            <div className="text-4xl font-extrabold mb-8">0 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
+            <ul className="space-y-4">
+              {features.map((f) => (
+                <li key={f.name} className="flex items-center gap-3 text-sm">
                   {f.free ? (
-                    <Check className="w-5 h-5 text-secondary" />
+                    <Check className="w-5 h-5 text-secondary shrink-0" />
                   ) : (
-                    <X className="w-5 h-5 text-muted-foreground/40" />
+                    <X className="w-5 h-5 text-muted-foreground/30 shrink-0" />
                   )}
-                </div>
-                <div className="p-4 flex justify-center">
-                  <Check className="w-5 h-5 text-primary" />
-                </div>
-              </div>
-            ))}
+                  <span className={f.free ? '' : 'text-muted-foreground/50'}>{f.name}</span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              onClick={() => navigate('/?auth=true')}
+              variant="outline"
+              className="w-full mt-8 h-12 rounded-full font-semibold"
+            >
+              Kostenlos starten
+            </Button>
+          </div>
 
-            {/* CTA row */}
-            <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 text-center">
-              <p className="text-sm font-medium mb-3">4 Wochen kostenlos testen</p>
-              <Button
-                onClick={() => navigate('/?auth=true')}
-                className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg"
-              >
-                Jetzt starten
-              </Button>
+          {/* Premium */}
+          <div className="relative bg-card rounded-3xl border-2 border-primary/30 p-8 shadow-xl">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-secondary text-primary-foreground text-xs font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5" />
+              4 Wochen gratis
             </div>
-          </CardContent>
-        </Card>
+            <h3 className="text-xl font-bold mb-1">Premium</h3>
+            <p className="text-muted-foreground text-sm mb-6">Volle Kontrolle & KI-Tutor</p>
+            <div className="text-4xl font-extrabold mb-8">4,99 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
+            <ul className="space-y-4">
+              {features.map((f) => (
+                <li key={f.name} className="flex items-center gap-3 text-sm">
+                  <Check className="w-5 h-5 text-primary shrink-0" />
+                  <span>{f.name}</span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              onClick={() => navigate('/?auth=true')}
+              className="w-full mt-8 h-12 rounded-full font-semibold"
+            >
+              Jetzt testen
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   );

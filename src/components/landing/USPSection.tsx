@@ -1,4 +1,3 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { Clock, Shield, Brain, GraduationCap } from 'lucide-react';
 
 const usps = [
@@ -7,54 +6,66 @@ const usps = [
     title: 'Bildschirmzeit als Belohnung',
     description:
       'Pro richtige Antwort verdienen Kinder Bildschirmzeit – Eltern legen pro Fach fest, wie viele Sekunden eine Aufgabe wert ist.',
+    color: 'bg-primary/10 text-primary',
   },
   {
     icon: Shield,
     title: 'Eltern behalten die Kontrolle',
     description:
       'Eltern setzen ein tägliches Zeitlimit und steuern die Belohnung je Fach – alles über das Eltern-Dashboard.',
+    color: 'bg-secondary/10 text-secondary',
   },
   {
     icon: Brain,
     title: 'KI-Tutor',
     description:
       'Falsche Antworten werden kindgerecht erklärt – mit Vorlese-Funktion für jüngere Kinder.',
+    color: 'bg-accent/10 text-accent',
   },
   {
     icon: GraduationCap,
     title: 'Lehrplanorientiert',
     description:
       'Klasse 1–10, alle Hauptfächer, an deutschen Lehrplänen orientiert.',
+    color: 'bg-destructive/10 text-destructive',
   },
 ];
 
 const USPSection = () => {
   return (
-    <section className="py-16 px-4 bg-muted/30">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-          Was uns besonders macht
-        </h2>
-        <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
-          LernZeit verbindet Lernen mit einem durchdachten Belohnungssystem – unter voller Kontrolle der Eltern.
-        </p>
+    <section className="py-24 px-4 relative overflow-hidden">
+      {/* Background accent */}
+      <div className="absolute inset-0 bg-gradient-to-b from-muted/50 via-muted/30 to-background pointer-events-none" />
+      
+      <div className="relative max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="text-sm font-semibold text-secondary uppercase tracking-wider">Unsere Stärken</span>
+          <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
+            Was LernZeit{' '}
+            <span className="bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
+              besonders macht
+            </span>
+          </h2>
+        </div>
 
         <div className="grid sm:grid-cols-2 gap-6">
-          {usps.map((usp) => (
-            <Card
+          {usps.map((usp, i) => (
+            <div
               key={usp.title}
-              className="shadow-card border-0 backdrop-blur-sm bg-card/80 hover:shadow-xl transition-all duration-300"
+              className={`group relative bg-card rounded-3xl p-8 border shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${
+                i === 0 ? 'sm:col-span-2' : ''
+              }`}
             >
-              <CardContent className="p-6 flex gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                  <usp.icon className="w-6 h-6 text-primary" />
+              <div className="flex gap-5">
+                <div className={`w-14 h-14 ${usp.color} rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                  <usp.icon className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg mb-1">{usp.title}</h3>
-                  <p className="text-muted-foreground text-sm">{usp.description}</p>
+                  <h3 className="font-bold text-xl mb-2">{usp.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{usp.description}</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </div>
