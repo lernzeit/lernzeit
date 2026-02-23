@@ -99,10 +99,11 @@ const USPSection = () => {
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
           <span className="text-sm font-semibold text-secondary uppercase tracking-wider">Unsere Stärken</span>
           <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
-            Was LernZeit{' '}
+            Was{' '}
             <span className="bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
-              besonders macht
-            </span>
+              LernZeit besonders
+            </span>{' '}
+            macht
           </h2>
           <p className="text-muted-foreground mt-3 text-sm">Hover oder tippe auf eine Kachel für mehr Details</p>
         </div>
