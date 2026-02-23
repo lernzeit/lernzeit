@@ -1,4 +1,5 @@
 import { BookOpen, Brain, Clock } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 const steps = [
   {
@@ -25,10 +26,21 @@ const steps = [
 ];
 
 const HowItWorks = () => {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
+      { threshold: 0.1 }
+    );
+    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="py-24 px-4">
+    <section ref={sectionRef} className="py-24 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">So einfach geht's</span>
           <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
             In drei Schritten zur{' '}
@@ -39,10 +51,11 @@ const HowItWorks = () => {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {steps.map((step) => (
+          {steps.map((step, i) => (
             <div
               key={step.title}
-              className="group relative bg-card rounded-3xl p-8 border shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-2"
+              className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 group relative bg-card rounded-3xl p-8 border shadow-sm hover:shadow-xl hover:-translate-y-2`}
+              style={{ transitionDelay: `${i * 150}ms` }}
             >
               <span className="text-6xl font-black text-muted/60 absolute top-4 right-6">
                 {step.number}
@@ -56,6 +69,10 @@ const HowItWorks = () => {
           ))}
         </div>
       </div>
+
+      <style>{`
+        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
+      `}</style>
     </section>
   );
 };

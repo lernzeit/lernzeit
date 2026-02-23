@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Check, Trophy, Smile, Clock, Settings, Eye, BarChart3, Gamepad2, Award, Lightbulb } from 'lucide-react';
 
 const childFeatures = [
@@ -16,14 +16,23 @@ const parentFeatures = [
 
 const TargetAudience = () => {
   const [activeTab, setActiveTab] = useState<'parent' | 'child'>('parent');
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
+      { threshold: 0.1 }
+    );
+    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   const features = activeTab === 'parent' ? parentFeatures : childFeatures;
-  const accent = activeTab === 'parent' ? 'primary' : 'secondary';
 
   return (
-    <section className="py-24 px-4">
+    <section ref={sectionRef} className="py-24 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 grid md:grid-cols-2 gap-12 md:gap-16 items-center">
           {/* Text side */}
           <div className="order-2 md:order-1">
             <h2 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight mb-2">
@@ -34,7 +43,6 @@ const TargetAudience = () => {
               </span>
             </h2>
 
-            {/* Tab toggle */}
             <div className="inline-flex bg-muted rounded-full p-1 mb-8 mt-4">
               <button
                 onClick={() => setActiveTab('parent')}
@@ -78,12 +86,10 @@ const TargetAudience = () => {
             </ul>
           </div>
 
-          {/* Visual side - stylized phone mockup */}
+          {/* Visual side */}
           <div className="order-1 md:order-2 flex justify-center">
             <div className="relative">
-              {/* Phone frame */}
               <div className="w-[280px] sm:w-[300px] bg-card rounded-[2.5rem] border-[6px] border-foreground/10 shadow-2xl p-4 transition-all duration-500">
-                {/* Screen content */}
                 <div className="bg-muted rounded-[2rem] overflow-hidden">
                   {activeTab === 'parent' ? (
                     <div className="p-5 space-y-4">
@@ -99,18 +105,12 @@ const TargetAudience = () => {
                       <div className="bg-card rounded-xl p-3 border">
                         <div className="text-xs text-muted-foreground mb-2">Belohnung / Aufgabe</div>
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Mathe</span>
-                            <span className="font-semibold text-primary">30 Sek.</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Deutsch</span>
-                            <span className="font-semibold text-primary">25 Sek.</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>Englisch</span>
-                            <span className="font-semibold text-primary">20 Sek.</span>
-                          </div>
+                          {[['Mathe', '30'], ['Deutsch', '25'], ['Englisch', '20']].map(([f, s]) => (
+                            <div key={f} className="flex justify-between text-sm">
+                              <span>{f}</span>
+                              <span className="font-semibold text-primary">{s} Sek.</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                       <div className="bg-card rounded-xl p-3 border">
@@ -165,7 +165,6 @@ const TargetAudience = () => {
                   )}
                 </div>
               </div>
-              {/* Decorative circles */}
               <div className={`absolute -z-10 -top-8 -right-8 w-32 h-32 rounded-full blur-2xl transition-colors duration-500 ${
                 activeTab === 'parent' ? 'bg-primary/20' : 'bg-secondary/20'
               }`} />
@@ -176,6 +175,10 @@ const TargetAudience = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
+      `}</style>
     </section>
   );
 };
