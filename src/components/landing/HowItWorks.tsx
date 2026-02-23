@@ -54,17 +54,17 @@ const HowItWorks = () => {
           {steps.map((step, i) => (
             <div
               key={step.title}
-              className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 group relative bg-card rounded-3xl p-8 border shadow-sm hover:shadow-xl hover:-translate-y-2`}
+              className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 group relative bg-card rounded-3xl p-10 border shadow-sm hover:shadow-xl hover:-translate-y-2`}
               style={{ transitionDelay: `${i * 150}ms` }}
             >
-              <span className="text-6xl font-black text-muted/60 absolute top-4 right-6">
+              <span className="text-7xl font-black text-muted/50 absolute top-5 right-7">
                 {step.number}
               </span>
-              <div className={`w-14 h-14 bg-gradient-to-br ${step.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <step.icon className="w-7 h-7 text-primary-foreground" />
+              <div className={`w-16 h-16 bg-gradient-to-br ${step.gradient} rounded-2xl flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                <step.icon className="w-8 h-8 text-primary-foreground" />
               </div>
-              <h3 className="font-bold text-xl mb-3">{step.title}</h3>
-              <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+              <h3 className="font-bold text-2xl mb-3">{step.title}</h3>
+              <p className="text-muted-foreground text-base leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>
