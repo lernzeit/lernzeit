@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Check, X, Crown, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -13,13 +14,23 @@ const features = [
 
 const PricingComparison = () => {
   const navigate = useNavigate();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
+      { threshold: 0.1 }
+    );
+    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <section className="py-24 px-4 relative overflow-hidden">
+    <section ref={sectionRef} className="py-24 px-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background pointer-events-none" />
 
       <div className="relative max-w-4xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
           <span className="text-sm font-semibold text-accent uppercase tracking-wider">Preise</span>
           <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
             Kostenlos starten,{' '}
@@ -32,7 +43,7 @@ const PricingComparison = () => {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-6">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid sm:grid-cols-2 gap-6">
           {/* Free */}
           <div className="bg-card rounded-3xl border p-8 shadow-sm">
             <h3 className="text-xl font-bold mb-1">Kostenlos</h3>
@@ -67,7 +78,7 @@ const PricingComparison = () => {
             </div>
             <h3 className="text-xl font-bold mb-1">Premium</h3>
             <p className="text-muted-foreground text-sm mb-6">Volle Kontrolle & KI-Tutor</p>
-            <div className="text-4xl font-extrabold mb-8">4,99 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
+            <div className="text-4xl font-extrabold mb-8">1,49 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
             <ul className="space-y-4">
               {features.map((f) => (
                 <li key={f.name} className="flex items-center gap-3 text-sm">
@@ -86,6 +97,10 @@ const PricingComparison = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
+      `}</style>
     </section>
   );
 };

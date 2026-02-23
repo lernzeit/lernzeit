@@ -1,13 +1,23 @@
 import { Button } from '@/components/ui/button';
-import { BookOpen, ArrowRight, Sparkles, Star } from 'lucide-react';
+import { BookOpen, ArrowRight, Star, GraduationCap, Brain, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 
 const HeroSection = () => {
   const navigate = useNavigate();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
+      { threshold: 0.1 }
+    );
+    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      {/* Animated background */}
+    <section ref={sectionRef} className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
       <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse" />
       <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
@@ -15,7 +25,7 @@ const HeroSection = () => {
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
         {/* Trust badge */}
-        <div className="inline-flex items-center gap-2 bg-card/80 backdrop-blur-sm border rounded-full px-4 py-2 mb-8 shadow-sm">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 inline-flex items-center gap-2 bg-card/80 backdrop-blur-sm border rounded-full px-4 py-2 mb-8 shadow-sm">
           <div className="flex gap-0.5">
             {[...Array(5)].map((_, i) => (
               <Star key={i} className="w-3.5 h-3.5 fill-accent text-accent" />
@@ -25,11 +35,13 @@ const HeroSection = () => {
         </div>
 
         {/* Logo */}
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-3xl mb-8 shadow-xl animate-scale-in">
-          <BookOpen className="w-10 h-10 text-primary-foreground" />
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-100 flex justify-center mb-10">
+          <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-3xl flex items-center justify-center shadow-xl">
+            <BookOpen className="w-10 h-10 text-primary-foreground" />
+          </div>
         </div>
 
-        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 leading-[1.1] tracking-tight">
+        <h1 className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 leading-[1.1] tracking-tight">
           Lernen belohnen.{' '}
           <br />
           <span className="bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
@@ -37,12 +49,12 @@ const HeroSection = () => {
           </span>
         </h1>
 
-        <p className="text-lg sm:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+        <p className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-300 text-lg sm:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
           Kinder lösen Aufgaben und verdienen pro richtige Antwort Bildschirmzeit
           – wie viel, bestimmen die Eltern.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-[400ms] flex flex-col sm:flex-row gap-4 justify-center mb-16">
           <Button
             onClick={() => navigate('/?auth=true')}
             size="lg"
@@ -61,12 +73,12 @@ const HeroSection = () => {
           </Button>
         </div>
 
-        {/* Visual flow */}
-        <div className="flex items-center justify-center gap-3 sm:gap-6">
+        {/* Visual flow with matching icons */}
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-500 flex items-center justify-center gap-3 sm:gap-6">
           {[
-            { icon: Sparkles, label: 'Fach wählen', color: 'text-primary' },
-            { icon: Sparkles, label: 'Aufgabe lösen', color: 'text-secondary' },
-            { icon: Sparkles, label: 'Zeit verdient!', color: 'text-accent' },
+            { icon: GraduationCap, label: 'Fach wählen', color: 'text-primary' },
+            { icon: Brain, label: 'Aufgabe lösen', color: 'text-secondary' },
+            { icon: Clock, label: 'Zeit verdient!', color: 'text-accent' },
           ].map((step, i) => (
             <div key={step.label} className="flex items-center gap-3 sm:gap-6">
               <div className="flex flex-col items-center gap-2">
@@ -80,6 +92,10 @@ const HeroSection = () => {
           ))}
         </div>
       </div>
+
+      <style>{`
+        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
+      `}</style>
     </section>
   );
 };
