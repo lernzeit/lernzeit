@@ -79,6 +79,32 @@ const FlipCard = ({ usp }: { usp: typeof usps[0] }) => {
   );
 };
 
+const MobileUSPCard = ({ usp }: { usp: typeof usps[0] }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className="bg-card rounded-2xl border shadow-sm overflow-hidden cursor-pointer"
+      onClick={() => setExpanded(e => !e)}
+    >
+      <div className="flex items-center gap-3 p-4">
+        <div className={`w-10 h-10 shrink-0 ${usp.color} rounded-xl flex items-center justify-center`}>
+          <usp.icon className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-sm">{usp.title}</h3>
+          <p className="text-muted-foreground text-xs">{usp.description}</p>
+        </div>
+        <svg className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </div>
+      {expanded && (
+        <div className="px-4 pb-4 pt-0">
+          <p className="text-sm text-muted-foreground leading-relaxed border-t pt-3">{usp.back}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 const USPSection = () => {
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -108,10 +134,20 @@ const USPSection = () => {
           <p className="text-muted-foreground mt-3 text-sm">Hover oder tippe auf eine Kachel für mehr Details</p>
         </div>
 
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {usps.map((usp) => (
-            <FlipCard key={usp.title} usp={usp} />
-          ))}
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200">
+          {/* Desktop: 3-col flip grid */}
+          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {usps.map((usp) => (
+              <FlipCard key={usp.title} usp={usp} />
+            ))}
+          </div>
+
+          {/* Mobile: compact accordion-style list */}
+          <div className="sm:hidden space-y-3">
+            {usps.map((usp) => (
+              <MobileUSPCard key={usp.title} usp={usp} />
+            ))}
+          </div>
         </div>
       </div>
 
