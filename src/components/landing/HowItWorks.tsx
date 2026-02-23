@@ -50,7 +50,8 @@ const HowItWorks = () => {
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        {/* Desktop: 3-column grid */}
+        <div className="hidden md:grid md:grid-cols-3 gap-8">
           {steps.map((step, i) => (
             <div
               key={step.title}
@@ -65,6 +66,28 @@ const HowItWorks = () => {
               </div>
               <h3 className="font-bold text-2xl mb-3">{step.title}</h3>
               <p className="text-muted-foreground text-base leading-relaxed">{step.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile: compact horizontal list */}
+        <div className="md:hidden space-y-4">
+          {steps.map((step, i) => (
+            <div
+              key={step.title}
+              className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 flex items-start gap-4 bg-card rounded-2xl p-4 border shadow-sm`}
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
+              <div className={`w-12 h-12 shrink-0 bg-gradient-to-br ${step.gradient} rounded-xl flex items-center justify-center shadow-md`}>
+                <step.icon className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <h3 className="font-bold text-base">{step.title}</h3>
+                  <span className="text-xs font-bold text-muted-foreground/40">{step.number}</span>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed mt-0.5">{step.description}</p>
+              </div>
             </div>
           ))}
         </div>
