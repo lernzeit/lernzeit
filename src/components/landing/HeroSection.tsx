@@ -74,20 +74,20 @@ const HeroSection = () => {
         </div>
 
         {/* Visual flow with matching icons */}
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-500 flex items-center justify-center gap-3 sm:gap-6">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-500 flex items-center justify-center gap-4 sm:gap-8">
           {[
-            { icon: GraduationCap, label: 'Fach wählen', color: 'text-primary' },
-            { icon: Brain, label: 'Aufgabe lösen', color: 'text-secondary' },
-            { icon: Clock, label: 'Zeit verdient!', color: 'text-accent' },
+            { icon: GraduationCap, label: 'Fach wählen', bg: 'bg-primary', color: 'text-primary-foreground' },
+            { icon: Brain, label: 'Aufgabe lösen', bg: 'bg-secondary', color: 'text-secondary-foreground' },
+            { icon: Clock, label: 'Zeit verdient!', bg: 'bg-accent', color: 'text-accent-foreground' },
           ].map((step, i) => (
-            <div key={step.label} className="flex items-center gap-3 sm:gap-6">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-card border-2 rounded-2xl flex items-center justify-center shadow-sm">
-                  <step.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${step.color}`} />
+            <div key={step.label} className="flex items-center gap-4 sm:gap-8">
+              <div className="flex flex-col items-center gap-3">
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 ${step.bg} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-lg`}>
+                  <step.icon className={`w-7 h-7 sm:w-9 sm:h-9 ${step.color}`} />
                 </div>
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground">{step.label}</span>
+                <span className="text-sm sm:text-base font-semibold text-foreground">{step.label}</span>
               </div>
-              {i < 2 && <ArrowRight className="w-4 h-4 text-muted-foreground/40 mb-6" />}
+              {i < 2 && <ArrowRight className="w-5 h-5 text-muted-foreground/40 mb-8" />}
             </div>
           ))}
         </div>
