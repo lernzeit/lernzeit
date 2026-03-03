@@ -20,6 +20,8 @@ import { useQuestionReport } from '@/hooks/useQuestionReport';
 import { QuestionReportDialog } from '@/components/game/QuestionReportDialog';
 import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { useSubscription } from '@/hooks/useSubscription';
+import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
+import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
 
 interface LearningGameProps {
   grade: number;
@@ -91,6 +93,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [sortOrder, setSortOrder] = useState<string[]>([]);
   const [matches, setMatches] = useState<Record<string, string>>({});
   const [dragDropPlacements, setDragDropPlacements] = useState<Record<string, string[]>>({});
+  const [correctStreak, setCorrectStreak] = useState(0);
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
 
   // Browser TTS for explanations
@@ -140,6 +145,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   useEffect(() => {
     if (question) {
       resetAnswerState();
+      setQuestionStartTime(Date.now());
       if (question.questionType === 'SORT' && question.options) {
         setSortOrder([...question.options]);
       }
@@ -251,15 +257,36 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
     if (correct) {
       setScore(prev => prev + 1);
+      const newStreak = correctStreak + 1;
+      setCorrectStreak(newStreak);
+      
+      // Measure answer time
+      const answerTimeMs = Date.now() - questionStartTime;
+      const isFast = answerTimeMs < 3000;
+      
+      // Trigger gamification effects
+      if (isFast) {
+        triggerSpeedBonus();
+        setGameAnimation({ type: 'speed', message: 'Blitzschnell! ⚡' });
+      } else if (newStreak === 3) {
+        triggerCombo();
+        setGameAnimation({ type: 'combo', message: '3er-Combo! 🔥' });
+      } else if (newStreak === 5) {
+        triggerCombo();
+        setGameAnimation({ type: 'combo', message: 'Unaufhaltbar! 🦄' });
+      } else {
+        triggerSparkle();
+        setGameAnimation({ type: 'correct', message: 'Richtig! ✨' });
+      }
+
       // Increase difficulty on correct answers
       if (difficulty === 'easy') setDifficulty('medium');
       else if (difficulty === 'medium' && Math.random() > 0.5) setDifficulty('hard');
-      // No toast for correct - UI already shows green feedback inline
     } else {
+      setCorrectStreak(0);
       // Decrease difficulty on wrong answers
       if (difficulty === 'hard') setDifficulty('medium');
       else if (difficulty === 'medium') setDifficulty('easy');
-      // No toast for incorrect - UI already shows red feedback inline
     }
   };
 
@@ -450,6 +477,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Game completion screen
   if (showCompletionScreen) {
     const secondsPerTask = getSecondsPerTask();
+    // Trigger rainbow for perfect score
+    if (score === totalQuestions) {
+      triggerRainbow();
+    }
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
         <GameCompletionScreen
@@ -550,6 +581,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-bg py-4">
+      {/* In-game animation overlay */}
+      {gameAnimation && (
+        <InGameAnimation
+          type={gameAnimation.type}
+          message={gameAnimation.message}
+          onComplete={() => setGameAnimation(null)}
+        />
+      )}
       <div className="page-container">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

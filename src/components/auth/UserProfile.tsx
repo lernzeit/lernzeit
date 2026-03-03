@@ -25,6 +25,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 
 interface UserProfileProps {
   user: any;
@@ -42,6 +43,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [hasParentLink, setHasParentLink] = useState(false);
   const [checkingParentLink, setCheckingParentLink] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
@@ -112,6 +114,16 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
       loadStats();
     }
   }, [user]);
+
+  // Show onboarding after profile loads if never seen
+  useEffect(() => {
+    if (profile && user?.id) {
+      const key = `lernzeit_onboarding_${user.id}`;
+      if (!localStorage.getItem(key)) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [profile, user?.id]);
 
   // Check parent link when profile is loaded
   useEffect(() => {
@@ -259,9 +271,17 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             <p className="mt-4 text-muted-foreground">Profil wird geladen...</p>
           </CardContent>
         </Card>
+        {/* Onboarding won't show while loading */}
       </div>
     );
   }
+
+  const handleOnboardingComplete = () => {
+    if (user?.id) {
+      localStorage.setItem(`lernzeit_onboarding_${user.id}`, 'true');
+    }
+    setShowOnboarding(false);
+  };
 
   // Show settings menu for children
   if (profile?.role === 'child' && showSettingsMenu) {
@@ -301,6 +321,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   if (profile?.role === 'child') {
     return (
       <div className="min-h-screen bg-gradient-bg py-4">
+        {showOnboarding && (
+          <OnboardingTutorial role="child" onComplete={handleOnboardingComplete} />
+        )}
         <div className="page-container space-y-6">
           {/* Trial Expired Banner */}
           {trialJustExpired && (
@@ -502,6 +525,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   if (profile?.role === 'parent') {
     return (
       <div className="min-h-screen bg-gradient-bg py-4">
+        {showOnboarding && (
+          <OnboardingTutorial role="parent" onComplete={handleOnboardingComplete} />
+        )}
         <div className="page-container space-y-6">
           {/* Trial Expired Banner */}
           {trialJustExpired && (

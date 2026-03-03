@@ -5,7 +5,6 @@ import confetti from 'canvas-confetti';
  * Used for screen time approval and other positive events
  */
 export function triggerCelebrationConfetti() {
-  // First burst - center
   confetti({
     particleCount: 100,
     spread: 70,
@@ -14,7 +13,6 @@ export function triggerCelebrationConfetti() {
     zIndex: 9999,
   });
 
-  // Side bursts after a short delay
   setTimeout(() => {
     confetti({
       particleCount: 50,
@@ -57,15 +55,11 @@ export function triggerSparkle() {
 export function triggerFireworks() {
   const duration = 2000;
   const animationEnd = Date.now() + duration;
-
   const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
   const interval = setInterval(() => {
     const timeLeft = animationEnd - Date.now();
-
-    if (timeLeft <= 0) {
-      return clearInterval(interval);
-    }
+    if (timeLeft <= 0) return clearInterval(interval);
 
     confetti({
       particleCount: 50,
@@ -79,4 +73,56 @@ export function triggerFireworks() {
       zIndex: 9999,
     });
   }, 250);
+}
+
+/** Speed bonus effect – lightning burst */
+export function triggerSpeedBonus() {
+  confetti({
+    particleCount: 60,
+    spread: 100,
+    startVelocity: 45,
+    origin: { y: 0.5 },
+    colors: ['#facc15', '#fbbf24', '#f59e0b', '#eab308'],
+    scalar: 1.2,
+    zIndex: 9999,
+  });
+}
+
+/** Rainbow explosion for perfect rounds */
+export function triggerRainbow() {
+  const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+  
+  confetti({
+    particleCount: 120,
+    spread: 360,
+    startVelocity: 35,
+    origin: { x: 0.5, y: 0.4 },
+    colors,
+    scalar: 1.1,
+    zIndex: 9999,
+  });
+
+  setTimeout(() => {
+    confetti({
+      particleCount: 80,
+      spread: 180,
+      startVelocity: 25,
+      origin: { x: 0.5, y: 0.6 },
+      colors,
+      zIndex: 9999,
+    });
+  }, 300);
+}
+
+/** Combo burst for streaks */
+export function triggerCombo() {
+  confetti({
+    particleCount: 80,
+    spread: 120,
+    startVelocity: 40,
+    origin: { y: 0.5 },
+    colors: ['#f97316', '#ef4444', '#eab308'],
+    scalar: 1.0,
+    zIndex: 9999,
+  });
 }
