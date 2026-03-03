@@ -24,7 +24,8 @@ interface UseQuestionPreloaderOptions {
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
-const RECENT_QUESTIONS_MAX = 30; // Remember last 30 question texts to avoid repetition
+const RECENT_QUESTIONS_MAX = 30;
+const REQUEST_TIMEOUT_MS = 20000; // 20 second timeout per question
 
 export const useQuestionPreloader = ({
   grade,
@@ -40,29 +41,39 @@ export const useQuestionPreloader = ({
   const isLoadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentDifficultyRef = useRef(initialDifficulty);
+  const mountedRef = useRef(true);
   
-  // Session-level deduplication: tracks question texts seen in this session
+  // Session-level deduplication
   const seenTextsRef = useRef<Set<string>>(new Set());
 
-  // Load recently shown question texts from localStorage for cross-session dedup
+  // Stable refs for grade/subject to avoid useCallback dependency issues
+  const gradeRef = useRef(grade);
+  const subjectRef = useRef(subject);
+  const totalQuestionsRef = useRef(totalQuestions);
+  
+  useEffect(() => {
+    gradeRef.current = grade;
+    subjectRef.current = subject;
+    totalQuestionsRef.current = totalQuestions;
+  }, [grade, subject, totalQuestions]);
+
   const getRecentQuestionTexts = useCallback((): Set<string> => {
     try {
-      const stored = localStorage.getItem(RECENT_QUESTIONS_KEY(grade, subject));
+      const stored = localStorage.getItem(RECENT_QUESTIONS_KEY(gradeRef.current, subjectRef.current));
       return new Set<string>(stored ? JSON.parse(stored) : []);
     } catch {
       return new Set<string>();
     }
-  }, [grade, subject]);
+  }, []);
 
-  // Save seen question texts to localStorage (keep last N)
   const saveRecentQuestionTexts = useCallback((texts: Set<string>) => {
     try {
       const arr = Array.from(texts).slice(-RECENT_QUESTIONS_MAX);
-      localStorage.setItem(RECENT_QUESTIONS_KEY(grade, subject), JSON.stringify(arr));
+      localStorage.setItem(RECENT_QUESTIONS_KEY(gradeRef.current, subjectRef.current), JSON.stringify(arr));
     } catch {
-      // Ignore localStorage errors (private mode etc.)
+      // Ignore localStorage errors
     }
-  }, [grade, subject]);
+  }, []);
 
   const generateSingleQuestion = useCallback(async (
     difficulty: 'easy' | 'medium' | 'hard',
@@ -70,149 +81,173 @@ export const useQuestionPreloader = ({
     excludeTexts?: Set<string>
   ): Promise<PreloadedQuestion | null> => {
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke('ai-question-generator', {
+      // Add timeout via AbortController
+      const timeoutId = setTimeout(() => {
+        console.warn('⏱️ Question generation timed out after', REQUEST_TIMEOUT_MS, 'ms');
+      }, REQUEST_TIMEOUT_MS);
+
+      const fetchPromise = supabase.functions.invoke('ai-question-generator', {
         body: {
-          grade,
-          subject,
+          grade: gradeRef.current,
+          subject: subjectRef.current,
           difficulty,
           excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : []
         }
       });
 
+      // Race between the fetch and a timeout
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) => {
+        setTimeout(() => {
+          resolve({ data: null, error: new Error('Request timeout') });
+        }, REQUEST_TIMEOUT_MS);
+      });
+
+      const { data, error: invokeError } = await Promise.race([fetchPromise, timeoutPromise]);
+
+      clearTimeout(timeoutId);
+
       if (signal?.aborted) return null;
 
       if (invokeError) {
-        console.error('Question generation error:', invokeError);
+        console.error('❌ Question generation error:', invokeError);
         return null;
       }
 
       if (!data?.success) {
-        console.error('Question generation failed:', data?.error);
+        console.error('❌ Question generation failed:', data?.error || 'Unknown error');
         return null;
       }
 
+      console.log('✅ Question generated:', data.question?.questionType, '-', data.question?.questionText?.substring(0, 50));
       return data.question;
     } catch (err) {
       if (signal?.aborted) return null;
-      console.error('Question fetch error:', err);
+      console.error('❌ Question fetch error:', err);
       return null;
     }
-  }, [grade, subject]);
+  }, []); // No deps - uses refs
 
-  // Start preloading all questions - PARALLEL loading for speed
   const startPreloading = useCallback(async () => {
-    if (isLoadingRef.current) return;
+    if (isLoadingRef.current) {
+      console.log('⚠️ Already loading, skipping');
+      return;
+    }
     isLoadingRef.current = true;
     
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
     
-    setIsInitialLoading(true);
-    setError(null);
-    setQuestions([]);
-    setLoadingProgress(0);
+    if (mountedRef.current) {
+      setIsInitialLoading(true);
+      setError(null);
+      setQuestions([]);
+      setLoadingProgress(0);
+    }
     seenTextsRef.current = new Set();
 
-    // Load cross-session history for deduplication
     const recentTexts = getRecentQuestionTexts();
+    const total = totalQuestionsRef.current;
 
     const difficulties: ('easy' | 'medium' | 'hard')[] = ['medium', 'medium', 'easy', 'medium', 'hard'];
 
-    // Load FIRST question immediately, then REST in PARALLEL
+    console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
+
+    // Load FIRST question
     const firstQuestion = await generateSingleQuestion(
       currentDifficultyRef.current,
       signal,
       recentTexts
     );
     
-    if (signal.aborted) {
+    if (signal.aborted || !mountedRef.current) {
       isLoadingRef.current = false;
       return;
     }
     
     if (firstQuestion) {
-      // Session dedup check
       if (!seenTextsRef.current.has(firstQuestion.questionText)) {
         seenTextsRef.current.add(firstQuestion.questionText);
         recentTexts.add(firstQuestion.questionText);
-        setQuestions([firstQuestion]);
-        setLoadingProgress(1);
-        setIsInitialLoading(false);
-        
-        // Load remaining questions IN PARALLEL
-        if (totalQuestions > 1) {
-          const remainingPromises = [];
-          for (let i = 1; i < totalQuestions; i++) {
-            const difficulty = difficulties[i] || 'medium';
-            remainingPromises.push(generateSingleQuestion(difficulty, signal, recentTexts));
-          }
-          
-          const results = await Promise.allSettled(remainingPromises);
-          
-          if (!signal.aborted) {
-            const successfulQuestions = results
-              .filter((r): r is PromiseFulfilledResult<PreloadedQuestion | null> => 
-                r.status === 'fulfilled' && r.value !== null
-              )
-              .map(r => r.value as PreloadedQuestion)
-              .filter(q => {
-                // Session-level dedup
-                if (seenTextsRef.current.has(q.questionText)) return false;
-                seenTextsRef.current.add(q.questionText);
-                recentTexts.add(q.questionText);
-                return true;
-              });
-            
-            setQuestions(prev => [...prev, ...successfulQuestions]);
-            setLoadingProgress(1 + successfulQuestions.length);
-          }
+      }
+      
+      setQuestions([firstQuestion]);
+      setLoadingProgress(1);
+      setIsInitialLoading(false);
+      
+      // Load remaining questions IN PARALLEL
+      if (total > 1) {
+        const remainingPromises = [];
+        for (let i = 1; i < total; i++) {
+          const difficulty = difficulties[i] || 'medium';
+          remainingPromises.push(generateSingleQuestion(difficulty, signal, recentTexts));
         }
+        
+        const results = await Promise.allSettled(remainingPromises);
+        
+        if (!signal.aborted && mountedRef.current) {
+          const successfulQuestions = results
+            .filter((r): r is PromiseFulfilledResult<PreloadedQuestion | null> => 
+              r.status === 'fulfilled' && r.value !== null
+            )
+            .map(r => r.value as PreloadedQuestion)
+            .filter(q => {
+              if (seenTextsRef.current.has(q.questionText)) return false;
+              seenTextsRef.current.add(q.questionText);
+              recentTexts.add(q.questionText);
+              return true;
+            });
+          
+          setQuestions(prev => [...prev, ...successfulQuestions]);
+          setLoadingProgress(1 + successfulQuestions.length);
+        }
+      }
 
-        // Persist seen questions for future sessions
-        saveRecentQuestionTexts(recentTexts);
-      } else {
-        // First question was a dupe (rare) — still show it
-        setQuestions([firstQuestion]);
-        setLoadingProgress(1);
+      saveRecentQuestionTexts(recentTexts);
+    } else {
+      console.error('❌ First question failed to load');
+      if (mountedRef.current) {
+        setError('Frage konnte nicht geladen werden. Bitte prüfe deine Internetverbindung und versuche es erneut.');
         setIsInitialLoading(false);
       }
-    } else {
-      setError('Frage konnte nicht geladen werden. Bitte versuche es erneut.');
-      setIsInitialLoading(false);
     }
 
     isLoadingRef.current = false;
-  }, [generateSingleQuestion, totalQuestions, getRecentQuestionTexts, saveRecentQuestionTexts]);
+  }, [generateSingleQuestion, getRecentQuestionTexts, saveRecentQuestionTexts]);
 
-  // Get question at index
   const getQuestion = useCallback((index: number): PreloadedQuestion | null => {
     return questions[index] || null;
   }, [questions]);
 
-  // Check if question is available
   const isQuestionReady = useCallback((index: number): boolean => {
     return index < questions.length;
   }, [questions]);
 
-  // Update difficulty for future questions
   const updateDifficulty = useCallback((newDifficulty: 'easy' | 'medium' | 'hard') => {
     currentDifficultyRef.current = newDifficulty;
   }, []);
 
-  // Cancel all loading
   const cancelLoading = useCallback(() => {
     abortControllerRef.current?.abort();
     isLoadingRef.current = false;
   }, []);
 
-  // Start loading on mount
+  // Start loading on mount - use ref-based approach to avoid re-triggering
+  const hasStartedRef = useRef(false);
+  
   useEffect(() => {
-    startPreloading();
+    mountedRef.current = true;
+    
+    if (!hasStartedRef.current) {
+      hasStartedRef.current = true;
+      startPreloading();
+    }
     
     return () => {
+      mountedRef.current = false;
       cancelLoading();
     };
-  }, [startPreloading, cancelLoading]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Empty deps: we use refs for grade/subject/totalQuestions so this only runs on mount
 
   return {
     questions,
@@ -224,6 +259,10 @@ export const useQuestionPreloader = ({
     isQuestionReady,
     updateDifficulty,
     cancelLoading,
-    reload: startPreloading
+    reload: useCallback(() => {
+      hasStartedRef.current = false;
+      isLoadingRef.current = false;
+      startPreloading();
+    }, [startPreloading])
   };
 };
