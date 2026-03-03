@@ -212,7 +212,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         const userVal = userTextAnswer.toLowerCase().trim();
         const correctVal = freeTextCorrect.toLowerCase().trim();
         const alternatives = (typeof correctAnswerRaw === 'object' ? correctAnswerRaw?.alternatives || [] : []).map((a: string) => a.toLowerCase().trim());
-        correct = userVal === correctVal || alternatives.includes(userVal);
+        // Extract numeric values for comparison (handles "10 Murmeln" vs "10")
+        const extractNumber = (s: string) => s.replace(/[^\d.,\-]/g, '').replace(',', '.');
+        const userNum = extractNumber(userVal);
+        const correctNum = extractNumber(correctVal);
+        correct = userVal === correctVal 
+          || alternatives.includes(userVal)
+          || (userNum !== '' && correctNum !== '' && userNum === correctNum);
         break;
 
       case 'SORT':

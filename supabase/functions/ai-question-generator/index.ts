@@ -324,7 +324,14 @@ REGELN:
 - Alle Fragen und Antworten auf Deutsch
 - Altersgerecht und lehrplankonform für die angegebene Klassenstufe
 - Klar formuliert, eindeutig und pädagogisch wertvoll
-- Antworte NUR mit gültigem JSON, ohne Markdown oder Erklärungen`;
+- Antworte NUR mit gültigem JSON, ohne Markdown oder Erklärungen
+
+KRITISCHE REGEL FÜR MATHEMATIK:
+- Bei Mathematik-Fragen ist die Antwort IMMER NUR eine Zahl (z.B. "10", nicht "10 Murmeln", nicht "10 Brötchen").
+- Keine Einheiten, keine Wörter in der Antwort – NUR die reine Zahl.
+- Bei Multiple-Choice: Auch die Optionen enthalten NUR Zahlen, keine Einheiten.
+- PRÜFE JEDE BERECHNUNG DOPPELT: Rechne die Aufgabe selbst Schritt für Schritt durch und stelle sicher, dass die korrekte Antwort mathematisch stimmt.
+- Beispiel: "Ein Bäcker hat 25 Brötchen und verkauft 10. Wie viele hat er übrig?" → correct_answer: "15", NICHT "15 Brötchen"`;
 }
 
 function buildQuestionPrompt(
@@ -433,12 +440,16 @@ function getTypeSpecificInstructions(questionType: string): string {
     'MULTIPLE_CHOICE': `Erstelle eine Multiple-Choice-Frage mit genau 4 Antwortoptionen.
 - correct_answer: Index der korrekten Antwort (0-3)
 - options: Array mit genau 4 Strings ["Option A", "Option B", "Option C", "Option D"]
-- Eine klar korrekte Antwort, plausible Distraktoren`,
+- Bei Mathematik: Optionen sind NUR Zahlen (z.B. ["10", "15", "20", "25"]), KEINE Einheiten!
+- Eine klar korrekte Antwort, plausible Distraktoren
+- WICHTIG: Rechne die Aufgabe selbst durch und prüfe, dass correct_answer auf die tatsächlich richtige Option zeigt!`,
     
     'FREETEXT': `Erstelle eine offene Frage mit einer klar definierten korrekten Antwort.
 - correct_answer: String mit der erwarteten Antwort
+- Bei Mathematik: correct_answer ist NUR eine Zahl (z.B. "15"), KEINE Einheiten!
 - options: null
-- Die Frage sollte eine eindeutige kurze Antwort haben`,
+- Die Frage sollte eine eindeutige kurze Antwort haben
+- WICHTIG: Rechne die Aufgabe selbst durch und stelle sicher, dass correct_answer mathematisch korrekt ist!`,
     
     'SORT': `Erstelle eine Sortieraufgabe.
 - correct_answer: Array von Strings in der richtigen Reihenfolge
