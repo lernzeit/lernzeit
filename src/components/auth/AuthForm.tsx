@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
 
 // Google Icon SVG component
@@ -30,6 +31,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [role, setRole] = useState<'parent' | 'child'>('child');
   const [grade, setGrade] = useState<number>(1);
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
 
   const handleGoogleSignIn = async () => {
@@ -50,9 +54,27 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     } catch (error: any) {
       toast({
         title: "Fehler bei Google-Anmeldung",
-        description: error.message,
+        description: translateError(error.message),
         variant: "destructive",
       });
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast({ title: 'Link gesendet!', description: 'Prüfe dein E-Mail-Postfach für den Reset-Link.' });
+    } catch (error: any) {
+      toast({ title: 'Fehler', description: translateError(error.message), variant: 'destructive' });
+    } finally {
       setLoading(false);
     }
   };
@@ -86,7 +108,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     } catch (error: any) {
       toast({
         title: "Fehler",
-        description: error.message,
+        description: translateError(error.message),
         variant: "destructive",
       });
     } finally {
@@ -115,7 +137,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     } catch (error: any) {
       toast({
         title: "Fehler",
-        description: error.message,
+        description: translateError(error.message),
         variant: "destructive",
       });
     } finally {
@@ -211,6 +233,45 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     )}
                   </Button>
                 </form>
+
+                {/* Forgot password */}
+                {showForgotPassword ? (
+                  <div className="mt-4 p-4 rounded-xl border bg-muted/30 space-y-3 animate-fade-in">
+                    {resetSent ? (
+                      <p className="text-sm text-center text-muted-foreground">
+                        ✅ Link gesendet! Prüfe dein E-Mail-Postfach.
+                      </p>
+                    ) : (
+                      <form onSubmit={handleForgotPassword} className="space-y-3">
+                        <p className="text-sm text-muted-foreground">Gib deine E-Mail ein und wir senden dir einen Link zum Zurücksetzen.</p>
+                        <Input
+                          type="email"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          placeholder="deine-email@beispiel.de"
+                          required
+                          className="h-10"
+                        />
+                        <div className="flex gap-2">
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setShowForgotPassword(false)}>
+                            Abbrechen
+                          </Button>
+                          <Button type="submit" size="sm" disabled={loading} className="flex-1">
+                            {loading ? 'Wird gesendet...' : 'Link senden'}
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgotPassword(true); setResetEmail(email); }}
+                    className="mt-2 text-sm text-primary hover:underline w-full text-center"
+                  >
+                    Passwort vergessen?
+                  </button>
+                )}
 
                 {/* Divider */}
                 <div className="relative my-6">
