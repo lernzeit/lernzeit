@@ -17,6 +17,8 @@ const emojis: Record<AnimationType, string[]> = {
 
 export function InGameAnimation({ type, message, onComplete }: InGameAnimationProps) {
   const [particles, setParticles] = useState<{ id: number; emoji: string; x: number; y: number; delay: number }[]>([]);
+  const onCompleteRef = React.useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const icons = emojis[type];
@@ -30,9 +32,15 @@ export function InGameAnimation({ type, message, onComplete }: InGameAnimationPr
     }));
     setParticles(generated);
 
-    const timeout = setTimeout(onComplete, type === 'correct' ? 1200 : 2000);
-    return () => clearTimeout(timeout);
-  }, [type, onComplete]);
+    const duration = type === 'correct' ? 1200 : 2000;
+    const timeout = setTimeout(() => onCompleteRef.current(), duration);
+    // Safety fallback: force dismiss after max 3s no matter what
+    const safetyTimeout = setTimeout(() => onCompleteRef.current(), 3000);
+    return () => {
+      clearTimeout(timeout);
+      clearTimeout(safetyTimeout);
+    };
+  }, [type]);
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
