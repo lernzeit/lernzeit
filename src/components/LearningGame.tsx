@@ -514,14 +514,34 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     );
   }
 
-  // Waiting for next question (edge case if user is faster than preloading)
+  // Waiting for next question or no question available (fallback with retry)
   if (!question && !isInitialLoading) {
     return (
       <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
-          <CardContent className="p-12 text-center">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Nächste Frage wird geladen...</p>
+          <CardContent className="p-8 text-center">
+            {preloadError ? (
+              <>
+                <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+                <p className="text-lg mb-2">{preloadError}</p>
+                <p className="text-sm text-muted-foreground mb-6">Prüfe deine Internetverbindung und versuche es erneut.</p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary mb-4" />
+                <p className="text-lg text-muted-foreground mb-6">Nächste Frage wird geladen...</p>
+              </>
+            )}
+            <div className="flex gap-4 justify-center">
+              <Button variant="outline" onClick={onBack}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Zurück
+              </Button>
+              <Button onClick={reload}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Nochmal versuchen
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
