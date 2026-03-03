@@ -120,6 +120,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     if (profile && user?.id) {
       const key = `lernzeit_onboarding_${user.id}`;
       if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, 'true');
         setShowOnboarding(true);
       }
     }
