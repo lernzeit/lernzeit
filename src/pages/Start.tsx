@@ -14,9 +14,9 @@ const Start = () => {
   return (
     <div className="min-h-screen bg-background">
       <HeroSection />
+      <TargetAudience />
       <HowItWorks />
       <USPSection />
-      <TargetAudience />
       <PricingComparison />
 
       {/* Footer CTA */}
