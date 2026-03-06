@@ -209,15 +209,16 @@ const Index = () => {
   // Show learning game if grade and category are selected
   if (selectedGrade && selectedCategory) {
     return (
-      <Suspense fallback={<LoadingFallback />}>
-        <LearningGame
-          grade={selectedGrade}
-          subject={selectedCategory}
-          onComplete={handleGameComplete}
-          onBack={() => setSelectedCategory(null)}
-          totalQuestions={5} />
-
-      </Suspense>);
+      <ErrorBoundary onBack={() => setSelectedCategory(null)} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
+        <Suspense fallback={<LoadingFallback />}>
+          <LearningGame
+            grade={selectedGrade}
+            subject={selectedCategory}
+            onComplete={handleGameComplete}
+            onBack={() => setSelectedCategory(null)}
+            totalQuestions={5} />
+        </Suspense>
+      </ErrorBoundary>);
 
   }
 
