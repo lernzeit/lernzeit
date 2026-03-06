@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
+import { PromptRulesPanel } from './PromptRulesPanel';
 
 interface CacheStats {
   totalCached: number;
