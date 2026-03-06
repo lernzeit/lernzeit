@@ -98,6 +98,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
+  const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
 
   // Browser TTS for explanations (guarded for Android WebView compatibility)
   const speakText = (text: string) => {
