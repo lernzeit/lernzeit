@@ -98,21 +98,36 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
 
-  // Browser TTS for explanations
+  // Browser TTS for explanations (guarded for Android WebView compatibility)
   const speakText = (text: string) => {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'de-DE';
-    utterance.rate = grade <= 2 ? 0.85 : 0.95;
-    utterance.pitch = 1.1;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
+    try {
+      if (!window.speechSynthesis) {
+        console.warn('speechSynthesis not available');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'de-DE';
+      utterance.rate = grade <= 2 ? 0.85 : 0.95;
+      utterance.pitch = 1.1;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      setIsSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('TTS error:', e);
+      setIsSpeaking(false);
+    }
   };
 
   const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
+    try {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    } catch (e) {
+      console.warn('TTS stop error:', e);
+    }
     setIsSpeaking(false);
   };
 
