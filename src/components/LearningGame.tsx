@@ -886,9 +886,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                     <Button 
                       onClick={checkAnswer} 
                       className="flex-1"
-                      disabled={!canSubmitAnswer()}
+                      disabled={!canSubmitAnswer() || isValidatingAnswer}
                     >
-                      Antwort prüfen
+                      {isValidatingAnswer ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Antwort wird geprüft...</>
+                      ) : (
+                        'Antwort prüfen'
+                      )}
                     </Button>
                     <Button 
                       variant="ghost" 
