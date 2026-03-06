@@ -161,8 +161,12 @@ export function KITutorDialog({
     }
   };
 
-  // Browser TTS with best German voice selection
+  // Browser TTS with Android WebView-safe guards
   const getBestGermanVoice = useCallback((): SpeechSynthesisVoice | null => {
+    if (typeof window === 'undefined' || !window.speechSynthesis || typeof window.speechSynthesis.getVoices !== 'function') {
+      return null;
+    }
+
     const voices = window.speechSynthesis.getVoices();
     const germanVoices = voices.filter(v => v.lang.startsWith('de'));
     if (germanVoices.length === 0) return null;
@@ -173,6 +177,7 @@ export function KITutorDialog({
       const match = germanVoices.find(v => v.name.toLowerCase().includes(keyword));
       if (match) return match;
     }
+
     // Prefer female voices for child-friendliness
     const femaleVoice = germanVoices.find(v =>
       /anna|petra|marlene|vicki|female|frau/i.test(v.name)
@@ -184,7 +189,13 @@ export function KITutorDialog({
   }, []);
 
   const speakText = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      setIsSpeaking(false);
+      return;
+    }
+
     stopSpeaking();
+
     // Strip markdown/formatting before speaking
     const cleanText = text.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '').replace(/[*_~`]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -200,6 +211,11 @@ export function KITutorDialog({
   };
 
   const stopSpeaking = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis || typeof window.speechSynthesis.cancel !== 'function') {
+      setIsSpeaking(false);
+      return;
+    }
+
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
   };
