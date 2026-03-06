@@ -2,6 +2,14 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
+// Global error handlers to prevent silent white screens on mobile
+window.addEventListener('error', (event) => {
+  console.error('🔴 Global error:', event.message, event.filename, event.lineno);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('🔴 Unhandled rejection:', event.reason);
+});
+
 // Defer service worker registration to after page is interactive
 // This improves initial load performance by not blocking the main thread
 if ('serviceWorker' in navigator) {
