@@ -6,6 +6,7 @@ import { Trophy, Clock, BookOpen, Sparkles, User, Shield, Loader2, Crown, Check 
 import { toast } from 'sonner';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import LegalFooter from '@/components/layout/LegalFooter';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
