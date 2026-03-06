@@ -211,7 +211,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     return String(ca);
   };
 
-  const checkAnswer = () => {
+  const checkAnswer = async () => {
     if (!question) return;
 
     let correct = false;
@@ -236,6 +236,30 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         correct = userVal === correctVal 
           || alternatives.includes(userVal)
           || (userNum !== '' && correctNum !== '' && userNum === correctNum);
+        
+        // AI recheck: if local check says wrong, ask AI to verify
+        if (!correct && userVal.length > 0) {
+          try {
+            setIsValidatingAnswer(true);
+            const { data, error } = await supabase.functions.invoke('validate-answer', {
+              body: {
+                question: question.questionText,
+                correctAnswer: freeTextCorrect,
+                userAnswer: userTextAnswer.trim(),
+                grade,
+                subject,
+              },
+            });
+            if (!error && data?.accepted) {
+              console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.reason})`);
+              correct = true;
+            }
+          } catch (e) {
+            console.warn('AI recheck failed, using local result:', e);
+          } finally {
+            setIsValidatingAnswer(false);
+          }
+        }
         break;
 
       case 'SORT':
