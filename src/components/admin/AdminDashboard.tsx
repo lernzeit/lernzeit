@@ -227,6 +227,10 @@ export function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+          {/* Prompt Rules Tab */}
+          <TabsContent value="rules" className="space-y-4">
+            <PromptRulesPanel />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
