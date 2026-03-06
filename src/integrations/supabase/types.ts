@@ -433,8 +433,48 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_rules: {
+        Row: {
+          created_at: string
+          deactivated_at: string | null
+          grade_max: number | null
+          grade_min: number | null
+          id: string
+          is_active: boolean
+          rule_text: string
+          source_feedback_count: number
+          source_feedback_ids: string[]
+          subject: string | null
+        }
+        Insert: {
+          created_at?: string
+          deactivated_at?: string | null
+          grade_max?: number | null
+          grade_min?: number | null
+          id?: string
+          is_active?: boolean
+          rule_text: string
+          source_feedback_count?: number
+          source_feedback_ids?: string[]
+          subject?: string | null
+        }
+        Update: {
+          created_at?: string
+          deactivated_at?: string | null
+          grade_max?: number | null
+          grade_min?: number | null
+          id?: string
+          is_active?: boolean
+          rule_text?: string
+          source_feedback_count?: number
+          source_feedback_ids?: string[]
+          subject?: string | null
+        }
+        Relationships: []
+      }
       question_feedback: {
         Row: {
+          analyzed_at: string | null
           category: string
           created_at: string
           feedback_details: string | null
@@ -447,6 +487,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          analyzed_at?: string | null
           category: string
           created_at?: string
           feedback_details?: string | null
@@ -459,6 +500,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          analyzed_at?: string | null
           category?: string
           created_at?: string
           feedback_details?: string | null

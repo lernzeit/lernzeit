@@ -155,6 +155,32 @@ serve(async (req) => {
 
     const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts);
 
+    // Load active prompt rules from DB
+    let rulesBlock = '';
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const ruleClient = createClient(supabaseUrl, serviceRoleKey);
+      
+      const { data: rules } = await ruleClient
+        .from('prompt_rules')
+        .select('rule_text')
+        .eq('is_active', true)
+        .or(`subject.is.null,subject.eq.${subject}`)
+        .or(`grade_min.is.null,grade_min.lte.${grade}`)
+        .or(`grade_max.is.null,grade_max.gte.${grade}`);
+
+      if (rules && rules.length > 0) {
+        rulesBlock = '\n\nZUSÄTZLICHE QUALITÄTSREGELN (aus Nutzer-Feedback):\n' +
+          rules.map((r: { rule_text: string }) => `- ${r.rule_text}`).join('\n');
+        console.log(`📏 Injecting ${rules.length} prompt rules`);
+      }
+    } catch (rulesErr) {
+      console.warn('Could not load prompt rules:', rulesErr);
+    }
+
+    const systemPrompt = getSystemPrompt() + rulesBlock;
+
     const models = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'];
     let content: string | null = null;
 
@@ -170,7 +196,7 @@ serve(async (req) => {
           body: JSON.stringify({
             model,
             messages: [
-              { role: 'system', content: getSystemPrompt() },
+              { role: 'system', content: systemPrompt },
               { role: 'user', content: prompt }
             ],
             temperature: 0.9,

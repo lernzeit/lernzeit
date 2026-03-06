@@ -52,6 +52,9 @@ verify_jwt = false
 [functions.annual-grade-upgrade]
 verify_jwt = false
 
+[functions.analyze-feedback]
+verify_jwt = false
+
 # ============================================
 # STRIPE FUNCTIONS
 # ============================================
