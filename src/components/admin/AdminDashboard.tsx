@@ -123,7 +123,7 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-auto">
+          <TabsList className="grid w-full grid-cols-3 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Übersicht
@@ -131,6 +131,10 @@ export function AdminDashboard() {
             <TabsTrigger value="cache" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <Database className="w-3 h-3 sm:w-4 sm:h-4" />
               Fragen-Cache
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+              Prompt-Regeln
             </TabsTrigger>
           </TabsList>
 
