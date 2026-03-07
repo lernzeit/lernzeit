@@ -33,6 +33,7 @@ import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { ParentDailyOverview } from '@/components/ParentDailyOverview';
+import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 
 interface ParentDashboardProps {
   userId: string;
