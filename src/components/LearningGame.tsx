@@ -23,6 +23,7 @@ import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
+import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 
 interface LearningGameProps {
   grade: number;
@@ -54,6 +55,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { saveSession, isSaving } = useGameSessionSaver();
   const { settings: childSettings } = useChildSettings(user?.id || '');
   const { trackAllAchievements } = useAchievementTracker(user?.id);
+  const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
   
   // Use preloader instead of single question loader
   const { 
@@ -482,6 +484,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             }
           } catch (error) {
             console.error('❌ Error tracking achievements:', error);
+          }
+
+          // Check daily challenge completion
+          try {
+            const challengeCompleted = await checkDailyChallenge({
+              subject,
+              correctAnswers: score,
+              totalQuestions,
+              timeSpentSeconds,
+            });
+            if (challengeCompleted) {
+              toast.success('🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!', { duration: 4000 });
+            }
+          } catch (error) {
+            console.error('❌ Error checking daily challenge:', error);
           }
         } else {
           console.error('❌ Failed to save session:', result.error);

@@ -191,6 +191,42 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_challenges: {
+        Row: {
+          challenge_date: string
+          challenge_params: Json
+          challenge_type: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_completed: boolean
+          reward_minutes: number
+          user_id: string
+        }
+        Insert: {
+          challenge_date?: string
+          challenge_params?: Json
+          challenge_type: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          reward_minutes?: number
+          user_id: string
+        }
+        Update: {
+          challenge_date?: string
+          challenge_params?: Json
+          challenge_type?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          reward_minutes?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_request_summary: {
         Row: {
           created_at: string

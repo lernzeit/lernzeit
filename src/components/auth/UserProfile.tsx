@@ -26,6 +26,7 @@ import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
+import { DailyChallenge } from '@/components/DailyChallenge';
 
 interface UserProfileProps {
   user: any;
@@ -391,6 +392,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               </div>
             </CardHeader>
           </Card>
+
+          {/* Daily Challenge */}
+          <DailyChallenge userId={user.id} />
 
           {/* Screen Time Status */}
           {isAtLimit ? (
