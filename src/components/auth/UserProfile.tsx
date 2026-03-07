@@ -335,7 +335,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     return (
       <div className="min-h-screen bg-gradient-bg py-4">
         {showOnboarding && (
-          <OnboardingTutorial role="child" onComplete={handleOnboardingComplete} />
+          <OnboardingTutorial role="child" grade={profile?.grade || 1} onComplete={handleOnboardingComplete} />
         )}
         <div className="page-container space-y-6">
           {/* Trial Expired Banner */}
