@@ -74,6 +74,7 @@ const PremiumBadge = () => (
 const SUBJECTS = [
   { key: 'math', name: 'Mathematik', icon: BookOpen },
   { key: 'german', name: 'Deutsch', icon: Languages },
+  { key: 'science', name: 'Sachkunde', icon: TreePine },
   { key: 'english', name: 'Englisch', icon: GraduationCap },
   { key: 'geography', name: 'Geographie', icon: Globe },
   { key: 'history', name: 'Geschichte', icon: Clock },
