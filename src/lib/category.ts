@@ -10,6 +10,7 @@ export const CATEGORY_MAP = {
   'Mathematik': 'math',
   'Deutsch': 'german',
   'Englisch': 'english',
+  'Sachkunde': 'science',
   'Geographie': 'geography',
   'Geschichte': 'history',
   'Physik': 'physics',
@@ -21,6 +22,7 @@ export const CATEGORY_MAP = {
   'mathematik': 'math',
   'deutsch': 'german',
   'englisch': 'english',
+  'sachkunde': 'science',
   'geographie': 'geography',
   'geschichte': 'history',
   'physik': 'physics',
@@ -32,6 +34,7 @@ export const CATEGORY_MAP = {
   'math': 'math',
   'german': 'german',
   'english': 'english',
+  'science': 'science',
   'geography': 'geography',
   'history': 'history',
   'physics': 'physics',
@@ -58,6 +61,7 @@ export function toGermanCategory(englishCategory: string): string {
     case 'math': return 'Mathematik';
     case 'german': return 'Deutsch';
     case 'english': return 'Englisch';
+    case 'science': return 'Sachkunde';
     case 'geography': return 'Geographie';
     case 'history': return 'Geschichte';
     case 'physics': return 'Physik';
@@ -66,6 +70,32 @@ export function toGermanCategory(englishCategory: string): string {
     case 'latin': return 'Latein';
     default: return englishCategory;
   }
+}
+
+/**
+ * Grade constraints for subjects – defines which subjects are available at which grades.
+ * This is the SINGLE SOURCE OF TRUTH used by CategorySelector, AI generators, etc.
+ */
+export const SUBJECT_GRADE_CONSTRAINTS: Record<string, { minGrade: number; maxGrade: number }> = {
+  math:      { minGrade: 1, maxGrade: 10 },
+  german:    { minGrade: 1, maxGrade: 10 },
+  science:   { minGrade: 1, maxGrade: 4 },   // Sachkunde only Grundschule
+  english:   { minGrade: 3, maxGrade: 10 },
+  geography: { minGrade: 5, maxGrade: 10 },
+  history:   { minGrade: 5, maxGrade: 10 },
+  physics:   { minGrade: 5, maxGrade: 10 },
+  biology:   { minGrade: 5, maxGrade: 10 },
+  chemistry: { minGrade: 7, maxGrade: 10 },
+  latin:     { minGrade: 5, maxGrade: 10 },
+};
+
+/**
+ * Returns whether a subject is available for a given grade.
+ */
+export function isSubjectAvailableForGrade(subject: string, grade: number): boolean {
+  const constraint = SUBJECT_GRADE_CONSTRAINTS[subject];
+  if (!constraint) return true; // unknown subject → allow
+  return grade >= constraint.minGrade && grade <= constraint.maxGrade;
 }
 
 /**
