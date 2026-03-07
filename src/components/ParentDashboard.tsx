@@ -335,24 +335,28 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
       {/* Main Tabs */}
       <Tabs defaultValue="requests" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="requests" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
           </TabsTrigger>
-          <TabsTrigger value="children" className="flex items-center gap-2">
+          <TabsTrigger value="children" className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Kinder</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
+          <TabsTrigger value="lernplan" className="flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Lernplan</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-1.5">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Analyse</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-2">
+          <TabsTrigger value="subscription" className="flex items-center gap-1.5">
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
           </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-2">
+          <TabsTrigger value="account" className="flex items-center gap-1.5">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Konto</span>
           </TabsTrigger>
