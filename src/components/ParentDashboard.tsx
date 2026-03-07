@@ -326,6 +326,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </Card>
       )}
 
+      {/* Daily Overview */}
+      {linkedChildren.length > 0 && (
+        <ParentDailyOverview userId={userId} linkedChildren={linkedChildren} />
+      )}
+
       {/* Main Tabs */}
       <Tabs defaultValue="requests" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
