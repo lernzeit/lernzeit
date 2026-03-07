@@ -111,7 +111,9 @@ const Index = () => {
   };
 
   const handleBack = () => {
-    if (selectedCategory) {
+    if (selectedQuestionCount) {
+      setSelectedQuestionCount(null);
+    } else if (selectedCategory) {
       setSelectedCategory(null);
     } else if (selectedGrade) {
       setSelectedGrade(null);
