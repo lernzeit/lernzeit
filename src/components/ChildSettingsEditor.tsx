@@ -154,6 +154,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           weekend_max_minutes: settingsData.weekend_max_minutes,
           math_seconds_per_task: settingsData.math_seconds_per_task,
           german_seconds_per_task: settingsData.german_seconds_per_task,
+          science_seconds_per_task: (settingsData as any).science_seconds_per_task ?? 30,
           english_seconds_per_task: settingsData.english_seconds_per_task,
           geography_seconds_per_task: settingsData.geography_seconds_per_task,
           history_seconds_per_task: settingsData.history_seconds_per_task,
