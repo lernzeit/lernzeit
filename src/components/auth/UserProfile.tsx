@@ -393,6 +393,9 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
             </CardHeader>
           </Card>
 
+          {/* Daily Challenge */}
+          <DailyChallenge userId={user.id} />
+
           {/* Screen Time Status */}
           {isAtLimit ? (
             <>
