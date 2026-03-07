@@ -44,7 +44,8 @@ export function QuestionReportDialog({
   explanation,
   grade,
   subject,
-  templateId
+  templateId,
+  onReported
 }: QuestionReportDialogProps) {
   const [reportReason, setReportReason] = useState<ReportReason | ''>('');
   const [reportDetails, setReportDetails] = useState('');
