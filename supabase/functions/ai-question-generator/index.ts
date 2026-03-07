@@ -473,6 +473,13 @@ function selectQuestionType(subject: string, grade: number): string {
     if (grade <= 4) return rand < 0.5 ? 'FREETEXT' : 'MULTIPLE_CHOICE';
     return rand < 0.4 ? 'FREETEXT' : rand < 0.7 ? 'MULTIPLE_CHOICE' : 'FILL_BLANK';
   }
+
+  if (subject === 'science') {
+    // Sachkunde (Klasse 1-4): mostly MC and simple matching
+    if (rand < 0.5) return 'MULTIPLE_CHOICE';
+    if (rand < 0.75) return 'MATCH';
+    return 'FREETEXT';
+  }
   
   if (subject === 'german') {
     if (rand < 0.35) return 'MULTIPLE_CHOICE';
