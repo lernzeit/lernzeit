@@ -965,13 +965,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       {question && (
         <QuestionReportDialog
           open={showReportDialog}
-          onOpenChange={(open) => {
-            setShowReportDialog(open);
-            // When dialog closes after reporting, mark in review queue too
-            if (!open && question) {
-              markReviewReported(question.questionText);
-            }
-          }}
+          onOpenChange={setShowReportDialog}
           questionText={question.questionText}
           correctAnswer={getCorrectAnswerText()}
           userAnswer={getUserAnswerText()}
@@ -979,6 +973,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           grade={grade}
           subject={subject}
           templateId={question.id}
+          onReported={() => {
+            // Mark in review queue so reported questions won't reappear
+            markReviewReported(question.questionText);
+          }}
         />
       )}
 
