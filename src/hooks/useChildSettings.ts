@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 export interface ChildSettings {
   math_seconds_per_task: number;
   german_seconds_per_task: number;
+  science_seconds_per_task: number;
   english_seconds_per_task: number;
   geography_seconds_per_task: number;
   history_seconds_per_task: number;
@@ -28,6 +29,7 @@ export function useChildSettings(childId: string) {
       setSettings({
         math_seconds_per_task: 30,
         german_seconds_per_task: 30,
+        science_seconds_per_task: 30,
         english_seconds_per_task: 30,
         geography_seconds_per_task: 30,
         history_seconds_per_task: 30,
@@ -85,6 +87,7 @@ export function useChildSettings(childId: string) {
       const defaultSettings = {
         math_seconds_per_task: 30,
         german_seconds_per_task: 30,
+        science_seconds_per_task: 30,
         english_seconds_per_task: 30,
         geography_seconds_per_task: 30,
         history_seconds_per_task: 30,
@@ -105,6 +108,7 @@ export function useChildSettings(childId: string) {
       const defaultSettings = {
         math_seconds_per_task: 30,
         german_seconds_per_task: 30,
+        science_seconds_per_task: 30,
         english_seconds_per_task: 30,
         geography_seconds_per_task: 30,
         history_seconds_per_task: 30,

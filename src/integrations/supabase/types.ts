@@ -116,6 +116,7 @@ export type Database = {
           math_seconds_per_task: number
           parent_id: string
           physics_seconds_per_task: number
+          science_seconds_per_task: number
           updated_at: string
           weekday_max_minutes: number
           weekend_max_minutes: number
@@ -134,6 +135,7 @@ export type Database = {
           math_seconds_per_task?: number
           parent_id: string
           physics_seconds_per_task?: number
+          science_seconds_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
@@ -152,6 +154,7 @@ export type Database = {
           math_seconds_per_task?: number
           parent_id?: string
           physics_seconds_per_task?: number
+          science_seconds_per_task?: number
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number

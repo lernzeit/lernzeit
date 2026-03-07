@@ -21,15 +21,18 @@ import {
   Leaf, 
   FlaskConical, 
   Columns3,
+  TreePine,
   Save,
   Loader2,
   Settings2,
   Calendar,
   Crown,
-  Target
+  Target,
+  Info
 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumFeature } from '@/components/PremiumGate';
+import { isSubjectAvailableForGrade } from '@/lib/category';
 
 interface ChildSettingsEditorProps {
   childId: string;
@@ -44,6 +47,7 @@ interface ChildSettings {
   weekend_max_minutes: number;
   math_seconds_per_task: number;
   german_seconds_per_task: number;
+  science_seconds_per_task: number;
   english_seconds_per_task: number;
   geography_seconds_per_task: number;
   history_seconds_per_task: number;
@@ -71,6 +75,7 @@ const PremiumBadge = () => (
 const SUBJECTS = [
   { key: 'math', name: 'Mathematik', icon: BookOpen },
   { key: 'german', name: 'Deutsch', icon: Languages },
+  { key: 'science', name: 'Sachkunde', icon: TreePine },
   { key: 'english', name: 'Englisch', icon: GraduationCap },
   { key: 'geography', name: 'Geographie', icon: Globe },
   { key: 'history', name: 'Geschichte', icon: Clock },
@@ -85,6 +90,7 @@ const DEFAULT_SETTINGS: ChildSettings = {
   weekend_max_minutes: 60,
   math_seconds_per_task: 30,
   german_seconds_per_task: 30,
+  science_seconds_per_task: 30,
   english_seconds_per_task: 30,
   geography_seconds_per_task: 30,
   history_seconds_per_task: 30,
@@ -106,11 +112,29 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   const { isPremium, isTrialing } = useSubscription();
   const hasPremiumAccess = isPremium || isTrialing;
 
+  // Track whether parent has explicit visibility overrides
+  const [hasExplicitVisibility, setHasExplicitVisibility] = useState(false);
+
   useEffect(() => {
     if (isOpen && childId) {
       loadSettings();
     }
   }, [isOpen, childId]);
+
+  // When grade changes, apply grade-based defaults (unless parent has explicit overrides)
+  useEffect(() => {
+    if (!hasExplicitVisibility || !hasPremiumAccess) {
+      applyGradeDefaults(grade);
+    }
+  }, [grade]);
+
+  const applyGradeDefaults = (g: number) => {
+    const newVisibility: SubjectVisibility = {};
+    SUBJECTS.forEach(s => {
+      newVisibility[s.key] = isSubjectAvailableForGrade(s.key, g);
+    });
+    setVisibility(newVisibility);
+  };
 
   const loadSettings = async () => {
     setLoading(true);
@@ -130,6 +154,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           weekend_max_minutes: settingsData.weekend_max_minutes,
           math_seconds_per_task: settingsData.math_seconds_per_task,
           german_seconds_per_task: settingsData.german_seconds_per_task,
+          science_seconds_per_task: (settingsData as any).science_seconds_per_task ?? 30,
           english_seconds_per_task: settingsData.english_seconds_per_task,
           geography_seconds_per_task: settingsData.geography_seconds_per_task,
           history_seconds_per_task: settingsData.history_seconds_per_task,
@@ -148,16 +173,23 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
       if (visibilityError) throw visibilityError;
 
-      const visibilityMap: SubjectVisibility = {};
-      SUBJECTS.forEach(s => {
-        visibilityMap[s.key] = true; // Default all visible
-      });
-      
-      visibilityData?.forEach(v => {
-        visibilityMap[v.subject] = v.is_visible;
-      });
-
-      setVisibility(visibilityMap);
+      if (visibilityData && visibilityData.length > 0) {
+        // Parent has explicit overrides
+        setHasExplicitVisibility(true);
+        const visibilityMap: SubjectVisibility = {};
+        SUBJECTS.forEach(s => {
+          // Default to grade-appropriate
+          visibilityMap[s.key] = isSubjectAvailableForGrade(s.key, grade);
+        });
+        visibilityData.forEach(v => {
+          visibilityMap[v.subject] = v.is_visible;
+        });
+        setVisibility(visibilityMap);
+      } else {
+        // No explicit settings – use grade-based defaults
+        setHasExplicitVisibility(false);
+        applyGradeDefaults(grade);
+      }
 
       // Load subject priorities (from separate query to handle missing column gracefully)
       const priorityMap: SubjectPriority = {};
@@ -295,7 +327,12 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  const isGradeDefault = (subject: string) => {
+    return isSubjectAvailableForGrade(subject, grade) === (visibility[subject] ?? true);
+  };
+
   const toggleSubjectVisibility = (subject: string) => {
+    setHasExplicitVisibility(true);
     setVisibility(prev => ({ ...prev, [subject]: !prev[subject] }));
   };
 
@@ -406,49 +443,59 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               </Card>
             </PremiumFeature>
 
-            {/* Subject Visibility */}
-            <PremiumFeature 
-              featureName="Individuelle Fächerkonfiguration"
-              onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
-            >
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Sichtbare Fächer
-                    </CardTitle>
-                    <PremiumBadge />
-                  </div>
-                  <CardDescription className="text-xs">
-                    Welche Fächer soll {childName} sehen?
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    {SUBJECTS.map((subject) => {
-                      const Icon = subject.icon;
-                      return (
-                        <div 
-                          key={subject.key}
-                          className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{subject.name}</span>
+            {/* Subject Visibility – defaults are grade-based, customization requires Premium */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Sichtbare Fächer
+                  </CardTitle>
+                  {!hasPremiumAccess && <PremiumBadge />}
+                </div>
+                <CardDescription className="text-xs">
+                  Empfohlene Fächer für Klasse {grade} sind vorausgewählt.
+                  {!hasPremiumAccess && ' Anpassung erfordert Premium.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                  <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Bei Klassenwechsel werden die empfohlenen Fächer automatisch angepasst.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {SUBJECTS.map((subject) => {
+                    const Icon = subject.icon;
+                    const isRecommended = isSubjectAvailableForGrade(subject.key, grade);
+                    const isCurrentlyOn = visibility[subject.key] ?? isRecommended;
+                    const isDeviating = isCurrentlyOn !== isRecommended;
+                    return (
+                      <div 
+                        key={subject.key}
+                        className={`flex items-center justify-between p-2 rounded-lg ${isDeviating ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-sm block truncate">{subject.name}</span>
+                            {!isRecommended && isCurrentlyOn && (
+                              <span className="text-[10px] text-warning">Nicht empfohlen</span>
+                            )}
                           </div>
-                          <Switch
-                            checked={visibility[subject.key] ?? true}
-                            onCheckedChange={() => toggleSubjectVisibility(subject.key)}
-                            disabled={!hasPremiumAccess}
-                          />
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </PremiumFeature>
+                        <Switch
+                          checked={isCurrentlyOn}
+                          onCheckedChange={() => toggleSubjectVisibility(subject.key)}
+                          disabled={!hasPremiumAccess}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Subject Priorities */}
             <PremiumFeature 
