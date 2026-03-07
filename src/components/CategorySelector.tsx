@@ -1,29 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, Star } from 'lucide-react';
+import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, Star, TreePine } from 'lucide-react';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAgeGroup } from '@/hooks/useAgeGroup';
+import { isSubjectAvailableForGrade } from '@/lib/category';
 import { supabase } from '@/lib/supabase';
+
+type SubjectId = 'math' | 'german' | 'english' | 'science' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
 interface CategorySelectorProps {
   grade: number;
-  onCategorySelect: (category: 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin') => void;
+  onCategorySelect: (category: SubjectId) => void;
   onBack: () => void;
 }
 
-const categories = [
-  { id: 'math' as const, name: 'Mathematik', shortName: 'Mathe', icon: BookOpen, color: 'bg-blue-500', emoji: '🔢' },
-  { id: 'german' as const, name: 'Deutsch', shortName: 'Deutsch', icon: Languages, color: 'bg-green-500', emoji: '📚' },
-  { id: 'english' as const, name: 'Englisch', shortName: 'Englisch', icon: GraduationCap, color: 'bg-purple-500', emoji: '🇬🇧' },
-  { id: 'geography' as const, name: 'Geographie', shortName: 'Geo', icon: Globe, color: 'bg-teal-500', emoji: '🌍' },
-  { id: 'history' as const, name: 'Geschichte', shortName: 'Geschichte', icon: Clock, color: 'bg-amber-500', emoji: '🏛️' },
-  { id: 'physics' as const, name: 'Physik', shortName: 'Physik', icon: Atom, color: 'bg-cyan-500', emoji: '⚡' },
-  { id: 'biology' as const, name: 'Biologie', shortName: 'Bio', icon: Leaf, color: 'bg-emerald-500', emoji: '🌱' },
-  { id: 'chemistry' as const, name: 'Chemie', shortName: 'Chemie', icon: FlaskConical, color: 'bg-orange-500', emoji: '🧪' },
-  { id: 'latin' as const, name: 'Latein', shortName: 'Latein', icon: Columns3, color: 'bg-rose-500', emoji: '🏺' },
+const categories: { id: SubjectId; name: string; shortName: string; icon: any; color: string; emoji: string }[] = [
+  { id: 'math',      name: 'Mathematik',  shortName: 'Mathe',      icon: BookOpen,      color: 'bg-blue-500',    emoji: '🔢' },
+  { id: 'german',    name: 'Deutsch',     shortName: 'Deutsch',    icon: Languages,     color: 'bg-green-500',   emoji: '📚' },
+  { id: 'science',   name: 'Sachkunde',   shortName: 'Sachkunde',  icon: TreePine,      color: 'bg-lime-500',    emoji: '🌿' },
+  { id: 'english',   name: 'Englisch',    shortName: 'Englisch',   icon: GraduationCap, color: 'bg-purple-500',  emoji: '🇬🇧' },
+  { id: 'geography', name: 'Geographie',  shortName: 'Geo',        icon: Globe,         color: 'bg-teal-500',    emoji: '🌍' },
+  { id: 'history',   name: 'Geschichte',  shortName: 'Geschichte', icon: Clock,         color: 'bg-amber-500',   emoji: '🏛️' },
+  { id: 'physics',   name: 'Physik',      shortName: 'Physik',     icon: Atom,          color: 'bg-cyan-500',    emoji: '⚡' },
+  { id: 'biology',   name: 'Biologie',    shortName: 'Bio',        icon: Leaf,          color: 'bg-emerald-500', emoji: '🌱' },
+  { id: 'chemistry', name: 'Chemie',      shortName: 'Chemie',     icon: FlaskConical,  color: 'bg-orange-500',  emoji: '🧪' },
+  { id: 'latin',     name: 'Latein',      shortName: 'Latein',     icon: Columns3,      color: 'bg-rose-500',    emoji: '🏺' },
 ];
 
 export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySelectorProps) {
@@ -33,14 +37,16 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
   const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
 
+  // Filter categories by grade constraints first
+  const gradeFilteredCategories = categories.filter(c => isSubjectAvailableForGrade(c.id, grade));
+
   useEffect(() => {
     if (user?.id) {
       loadSubjectVisibility();
     } else {
-      const allIds = categories.map(c => c.id) as string[];
-      setVisibleSubjects(new Set(allIds));
+      setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
     }
-  }, [user?.id]);
+  }, [user?.id, grade]);
 
   const loadSubjectVisibility = async () => {
     if (!user?.id) return;
@@ -59,7 +65,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
-          const allSubjects = new Set<string>(categories.map(c => c.id));
+          const allSubjects = new Set<string>(gradeFilteredCategories.map(c => c.id));
           const priorities = new Set<string>();
           visibilitySettings.forEach(s => {
             if (!s.is_visible) allSubjects.delete(s.subject);
@@ -68,13 +74,13 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           setVisibleSubjects(allSubjects);
           setPrioritySubjects(priorities);
         } else {
-          setVisibleSubjects(new Set(categories.map(c => c.id)));
+          setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
         }
       } else {
-        setVisibleSubjects(new Set(categories.map(c => c.id)));
+        setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
       }
     } catch {
-      setVisibleSubjects(new Set(categories.map(c => c.id)));
+      setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
     }
   };
 
@@ -94,7 +100,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     }
   };
 
-  const sortedCategories = categories
+  // Apply both grade filter AND parent visibility
+  const sortedCategories = gradeFilteredCategories
     .filter(c => visibleSubjects.has(c.id))
     .sort((a, b) => {
       const aPri = prioritySubjects.has(a.id) ? 0 : 1;
