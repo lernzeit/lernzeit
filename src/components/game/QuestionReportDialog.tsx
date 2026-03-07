@@ -23,6 +23,7 @@ interface QuestionReportDialogProps {
   grade: number;
   subject: string;
   templateId?: string;
+  onReported?: () => void;
 }
 
 const REPORT_REASONS: { value: ReportReason; label: string; description: string }[] = [
