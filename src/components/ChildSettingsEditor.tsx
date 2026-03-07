@@ -324,7 +324,12 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  const isGradeDefault = (subject: string) => {
+    return isSubjectAvailableForGrade(subject, grade) === (visibility[subject] ?? true);
+  };
+
   const toggleSubjectVisibility = (subject: string) => {
+    setHasExplicitVisibility(true);
     setVisibility(prev => ({ ...prev, [subject]: !prev[subject] }));
   };
 
