@@ -26,7 +26,8 @@ import {
   Crown,
   Check,
   AlertTriangle,
-  Clock
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
