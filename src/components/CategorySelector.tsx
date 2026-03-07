@@ -37,14 +37,14 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
   const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
 
-  // All categories available – visibility is controlled manually by parents (Premium feature)
-  const gradeFilteredCategories = categories;
+  // Grade-based default: only show subjects appropriate for this grade
+  const getGradeDefaults = () => new Set(categories.filter(c => isSubjectAvailableForGrade(c.id, grade)).map(c => c.id));
 
   useEffect(() => {
     if (user?.id) {
       loadSubjectVisibility();
     } else {
-      setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
+      setVisibleSubjects(getGradeDefaults());
     }
   }, [user?.id, grade]);
 
@@ -65,7 +65,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
-          const allSubjects = new Set<string>(gradeFilteredCategories.map(c => c.id));
+          // Parent has explicit settings – use those
+          const allSubjects = new Set<string>(categories.map(c => c.id));
           const priorities = new Set<string>();
           visibilitySettings.forEach(s => {
             if (!s.is_visible) allSubjects.delete(s.subject);
@@ -74,13 +75,15 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           setVisibleSubjects(allSubjects);
           setPrioritySubjects(priorities);
         } else {
-          setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
+          // No parent overrides – use grade-based defaults
+          setVisibleSubjects(getGradeDefaults());
         }
       } else {
-        setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
+        // No parent linked – use grade-based defaults
+        setVisibleSubjects(getGradeDefaults());
       }
     } catch {
-      setVisibleSubjects(new Set(gradeFilteredCategories.map(c => c.id)));
+      setVisibleSubjects(getGradeDefaults());
     }
   };
 
