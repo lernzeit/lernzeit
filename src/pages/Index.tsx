@@ -235,6 +235,7 @@ const Index = () => {
         <SessionLengthSelector
           subject={selectedCategory}
           secondsPerTask={30}
+          grade={selectedGrade}
           onSelect={(count) => setSelectedQuestionCount(count)}
           onBack={() => setSelectedCategory(null)} />
       </Suspense>);
