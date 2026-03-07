@@ -131,6 +131,25 @@ serve(async (req) => {
 
     const grade = body.grade as ValidGrade;
     const subject = (body.subject as string).toLowerCase() as ValidSubject;
+
+    // ── Grade constraints for subjects ──
+    const SUBJECT_GRADE_CONSTRAINTS: Record<string, { min: number; max: number }> = {
+      math: { min: 1, max: 10 }, german: { min: 1, max: 10 },
+      science: { min: 1, max: 4 }, english: { min: 3, max: 10 },
+      geography: { min: 5, max: 10 }, history: { min: 5, max: 10 },
+      physics: { min: 5, max: 10 }, biology: { min: 5, max: 10 },
+      chemistry: { min: 7, max: 10 }, latin: { min: 5, max: 10 },
+    };
+    const constraint = SUBJECT_GRADE_CONSTRAINTS[subject];
+    if (constraint && (grade < constraint.min || grade > constraint.max)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `${subject} ist für Klasse ${grade} nicht verfügbar`
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     // Extract exclude list for deduplication (max 20 texts, validated)
     const excludeTexts: string[] = Array.isArray(body.excludeTexts)
