@@ -110,11 +110,29 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   const { isPremium, isTrialing } = useSubscription();
   const hasPremiumAccess = isPremium || isTrialing;
 
+  // Track whether parent has explicit visibility overrides
+  const [hasExplicitVisibility, setHasExplicitVisibility] = useState(false);
+
   useEffect(() => {
     if (isOpen && childId) {
       loadSettings();
     }
   }, [isOpen, childId]);
+
+  // When grade changes, apply grade-based defaults (unless parent has explicit overrides)
+  useEffect(() => {
+    if (!hasExplicitVisibility || !hasPremiumAccess) {
+      applyGradeDefaults(grade);
+    }
+  }, [grade]);
+
+  const applyGradeDefaults = (g: number) => {
+    const newVisibility: SubjectVisibility = {};
+    SUBJECTS.forEach(s => {
+      newVisibility[s.key] = isSubjectAvailableForGrade(s.key, g);
+    });
+    setVisibility(newVisibility);
+  };
 
   const loadSettings = async () => {
     setLoading(true);
