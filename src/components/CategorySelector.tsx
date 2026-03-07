@@ -37,8 +37,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
   const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
 
-  // Filter categories by grade constraints first
-  const gradeFilteredCategories = categories.filter(c => isSubjectAvailableForGrade(c.id, grade));
+  // All categories available – visibility is controlled manually by parents (Premium feature)
+  const gradeFilteredCategories = categories;
 
   useEffect(() => {
     if (user?.id) {
