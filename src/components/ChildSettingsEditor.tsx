@@ -465,7 +465,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                     Bei Klassenwechsel werden die empfohlenen Fächer automatisch angepasst.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SUBJECTS.map((subject) => {
                     const Icon = subject.icon;
                     const isRecommended = isSubjectAvailableForGrade(subject.key, grade);
@@ -474,14 +474,14 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                     return (
                       <div 
                         key={subject.key}
-                        className={`flex items-center justify-between p-2 rounded-lg ${isDeviating ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}
+                        className={`flex items-center justify-between p-2.5 rounded-lg ${isDeviating ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-2.5">
                           <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <div className="min-w-0">
-                            <span className="text-sm block truncate">{subject.name}</span>
+                          <div>
+                            <span className="text-sm">{subject.name}</span>
                             {!isRecommended && isCurrentlyOn && (
-                              <span className="text-[10px] text-warning">Nicht empfohlen</span>
+                              <span className="text-[10px] text-warning block">Nicht empfohlen</span>
                             )}
                           </div>
                         </div>
