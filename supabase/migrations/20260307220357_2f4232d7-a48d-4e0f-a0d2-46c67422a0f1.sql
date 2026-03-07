@@ -1,0 +1,1 @@
+ALTER TABLE public.child_settings ADD COLUMN IF NOT EXISTS science_seconds_per_task integer NOT NULL DEFAULT 30;
