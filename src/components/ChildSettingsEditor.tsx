@@ -21,15 +21,18 @@ import {
   Leaf, 
   FlaskConical, 
   Columns3,
+  TreePine,
   Save,
   Loader2,
   Settings2,
   Calendar,
   Crown,
-  Target
+  Target,
+  Info
 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumFeature } from '@/components/PremiumGate';
+import { isSubjectAvailableForGrade } from '@/lib/category';
 
 interface ChildSettingsEditorProps {
   childId: string;
