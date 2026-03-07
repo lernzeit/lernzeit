@@ -24,6 +24,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
+import { useReviewQueue } from '@/hooks/useReviewQueue';
 
 interface LearningGameProps {
   grade: number;
