@@ -37,7 +37,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     if (user?.id) {
       loadSubjectVisibility();
     } else {
-      setVisibleSubjects(new Set(categories.map(c => c.id)));
+      const allIds = categories.map(c => c.id) as string[];
+      setVisibleSubjects(new Set(allIds));
     }
   }, [user?.id]);
 
