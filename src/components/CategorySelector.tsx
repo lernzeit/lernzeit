@@ -92,6 +92,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     switch (categoryId) {
       case 'math': return settings.math_seconds_per_task;
       case 'german': return settings.german_seconds_per_task;
+      case 'science': return settings.science_seconds_per_task;
       case 'english': return settings.english_seconds_per_task;
       case 'geography': return settings.geography_seconds_per_task;
       case 'history': return settings.history_seconds_per_task;
