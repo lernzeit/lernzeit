@@ -23,6 +23,7 @@ import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
+import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 
 interface LearningGameProps {
   grade: number;
