@@ -55,6 +55,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { saveSession, isSaving } = useGameSessionSaver();
   const { settings: childSettings } = useChildSettings(user?.id || '');
   const { trackAllAchievements } = useAchievementTracker(user?.id);
+  const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
   
   // Use preloader instead of single question loader
   const { 
