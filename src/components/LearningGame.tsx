@@ -485,6 +485,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           } catch (error) {
             console.error('❌ Error tracking achievements:', error);
           }
+
+          // Check daily challenge completion
+          try {
+            const challengeCompleted = await checkDailyChallenge({
+              subject,
+              correctAnswers: score,
+              totalQuestions,
+              timeSpentSeconds,
+            });
+            if (challengeCompleted) {
+              toast.success('🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!', { duration: 4000 });
+            }
+          } catch (error) {
+            console.error('❌ Error checking daily challenge:', error);
+          }
         } else {
           console.error('❌ Failed to save session:', result.error);
           toast.error('Fehler beim Speichern der Session');
