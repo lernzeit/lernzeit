@@ -59,7 +59,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
-          const allSubjects = new Set(categories.map(c => c.id));
+          const allSubjects = new Set<string>(categories.map(c => c.id));
           const priorities = new Set<string>();
           visibilitySettings.forEach(s => {
             if (!s.is_visible) allSubjects.delete(s.subject);
