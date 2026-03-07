@@ -213,20 +213,31 @@ const Index = () => {
   }
 
 
-  // Show learning game if grade and category are selected
-  if (selectedGrade && selectedCategory) {
+  // Show learning game if grade, category, and question count are selected
+  if (selectedGrade && selectedCategory && selectedQuestionCount) {
     return (
-      <ErrorBoundary onBack={() => setSelectedCategory(null)} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
+      <ErrorBoundary onBack={() => setSelectedQuestionCount(null)} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
         <Suspense fallback={<LoadingFallback />}>
           <LearningGame
             grade={selectedGrade}
             subject={selectedCategory}
             onComplete={handleGameComplete}
-            onBack={() => setSelectedCategory(null)}
-            totalQuestions={5} />
+            onBack={() => setSelectedQuestionCount(null)}
+            totalQuestions={selectedQuestionCount} />
         </Suspense>
       </ErrorBoundary>);
+  }
 
+  // Show session length selector if grade and category are selected
+  if (selectedGrade && selectedCategory) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <SessionLengthSelector
+          subject={selectedCategory}
+          secondsPerTask={30}
+          onSelect={(count) => setSelectedQuestionCount(count)}
+          onBack={() => setSelectedCategory(null)} />
+      </Suspense>);
   }
 
   // Show category selector if grade is selected but not category
