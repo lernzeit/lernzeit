@@ -14,6 +14,7 @@ const CategorySelector = lazy(() => import('@/components/CategorySelector').then
 const LearningGame = lazy(() => import('@/components/LearningGame').then((m) => ({ default: m.LearningGame })));
 const AuthForm = lazy(() => import('@/components/auth/AuthForm').then((m) => ({ default: m.AuthForm })));
 const UserProfile = lazy(() => import('@/components/auth/UserProfile').then((m) => ({ default: m.UserProfile })));
+const SessionLengthSelector = lazy(() => import('@/components/SessionLengthSelector').then((m) => ({ default: m.SessionLengthSelector })));
 
 // Loading fallback component
 const LoadingFallback = () =>
@@ -35,6 +36,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | null>(null);
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -79,6 +81,7 @@ const Index = () => {
   const handleSignOut = () => {
     setSelectedGrade(null);
     setSelectedCategory(null);
+    setSelectedQuestionCount(null);
     setShowSuccess(false);
     setEarnedTime(0);
     setEarnedCategory('');
@@ -100,13 +103,17 @@ const Index = () => {
     if (user) {
       setSelectedGrade(null);
       setSelectedCategory(null);
+      setSelectedQuestionCount(null);
     } else {
       setSelectedCategory(null);
+      setSelectedQuestionCount(null);
     }
   };
 
   const handleBack = () => {
-    if (selectedCategory) {
+    if (selectedQuestionCount) {
+      setSelectedQuestionCount(null);
+    } else if (selectedCategory) {
       setSelectedCategory(null);
     } else if (selectedGrade) {
       setSelectedGrade(null);
@@ -206,20 +213,31 @@ const Index = () => {
   }
 
 
-  // Show learning game if grade and category are selected
-  if (selectedGrade && selectedCategory) {
+  // Show learning game if grade, category, and question count are selected
+  if (selectedGrade && selectedCategory && selectedQuestionCount) {
     return (
-      <ErrorBoundary onBack={() => setSelectedCategory(null)} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
+      <ErrorBoundary onBack={() => setSelectedQuestionCount(null)} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
         <Suspense fallback={<LoadingFallback />}>
           <LearningGame
             grade={selectedGrade}
             subject={selectedCategory}
             onComplete={handleGameComplete}
-            onBack={() => setSelectedCategory(null)}
-            totalQuestions={5} />
+            onBack={() => setSelectedQuestionCount(null)}
+            totalQuestions={selectedQuestionCount} />
         </Suspense>
       </ErrorBoundary>);
+  }
 
+  // Show session length selector if grade and category are selected
+  if (selectedGrade && selectedCategory) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <SessionLengthSelector
+          subject={selectedCategory}
+          secondsPerTask={30}
+          onSelect={(count) => setSelectedQuestionCount(count)}
+          onBack={() => setSelectedCategory(null)} />
+      </Suspense>);
   }
 
   // Show category selector if grade is selected but not category

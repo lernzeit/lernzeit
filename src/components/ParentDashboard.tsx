@@ -31,6 +31,7 @@ import {
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
+import { ParentDailyOverview } from '@/components/ParentDailyOverview';
 
 interface ParentDashboardProps {
   userId: string;
@@ -323,6 +324,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Daily Overview */}
+      {linkedChildren.length > 0 && (
+        <ParentDailyOverview userId={userId} linkedChildren={linkedChildren} />
       )}
 
       {/* Main Tabs */}
