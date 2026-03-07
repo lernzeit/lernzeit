@@ -67,6 +67,7 @@ export function QuestionReportDialog({
     });
 
     onOpenChange(false);
+    onReported?.();
     setReportReason('');
     setReportDetails('');
   };
