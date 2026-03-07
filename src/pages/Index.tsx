@@ -28,7 +28,7 @@ const LoadingFallback = () =>
   </div>;
 
 
-type Category = 'math' | 'german' | 'english' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
+type Category = 'math' | 'german' | 'english' | 'science' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
 const Index = () => {
   const { user, loading } = useAuth();
