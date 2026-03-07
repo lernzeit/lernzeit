@@ -90,6 +90,7 @@ const DEFAULT_SETTINGS: ChildSettings = {
   weekend_max_minutes: 60,
   math_seconds_per_task: 30,
   german_seconds_per_task: 30,
+  science_seconds_per_task: 30,
   english_seconds_per_task: 30,
   geography_seconds_per_task: 30,
   history_seconds_per_task: 30,

@@ -108,6 +108,7 @@ export function useChildSettings(childId: string) {
       const defaultSettings = {
         math_seconds_per_task: 30,
         german_seconds_per_task: 30,
+        science_seconds_per_task: 30,
         english_seconds_per_task: 30,
         geography_seconds_per_task: 30,
         history_seconds_per_task: 30,
