@@ -103,8 +103,10 @@ const Index = () => {
     if (user) {
       setSelectedGrade(null);
       setSelectedCategory(null);
+      setSelectedQuestionCount(null);
     } else {
       setSelectedCategory(null);
+      setSelectedQuestionCount(null);
     }
   };
 
