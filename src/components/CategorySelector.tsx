@@ -103,8 +103,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     }
   };
 
-  // Apply both grade filter AND parent visibility
-  const sortedCategories = gradeFilteredCategories
+  // Apply parent visibility (or grade defaults)
+  const sortedCategories = categories
     .filter(c => visibleSubjects.has(c.id))
     .sort((a, b) => {
       const aPri = prioritySubjects.has(a.id) ? 0 : 1;

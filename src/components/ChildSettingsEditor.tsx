@@ -440,49 +440,59 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               </Card>
             </PremiumFeature>
 
-            {/* Subject Visibility */}
-            <PremiumFeature 
-              featureName="Individuelle Fächerkonfiguration"
-              onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
-            >
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Sichtbare Fächer
-                    </CardTitle>
-                    <PremiumBadge />
-                  </div>
-                  <CardDescription className="text-xs">
-                    Welche Fächer soll {childName} sehen?
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    {SUBJECTS.map((subject) => {
-                      const Icon = subject.icon;
-                      return (
-                        <div 
-                          key={subject.key}
-                          className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{subject.name}</span>
+            {/* Subject Visibility – defaults are grade-based, customization requires Premium */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Sichtbare Fächer
+                  </CardTitle>
+                  {!hasPremiumAccess && <PremiumBadge />}
+                </div>
+                <CardDescription className="text-xs">
+                  Empfohlene Fächer für Klasse {grade} sind vorausgewählt.
+                  {!hasPremiumAccess && ' Anpassung erfordert Premium.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                  <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Bei Klassenwechsel werden die empfohlenen Fächer automatisch angepasst.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {SUBJECTS.map((subject) => {
+                    const Icon = subject.icon;
+                    const isRecommended = isSubjectAvailableForGrade(subject.key, grade);
+                    const isCurrentlyOn = visibility[subject.key] ?? isRecommended;
+                    const isDeviating = isCurrentlyOn !== isRecommended;
+                    return (
+                      <div 
+                        key={subject.key}
+                        className={`flex items-center justify-between p-2 rounded-lg ${isDeviating ? 'bg-warning/10 border border-warning/20' : 'bg-muted/50'}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-sm block truncate">{subject.name}</span>
+                            {!isRecommended && isCurrentlyOn && (
+                              <span className="text-[10px] text-warning">Nicht empfohlen</span>
+                            )}
                           </div>
-                          <Switch
-                            checked={visibility[subject.key] ?? true}
-                            onCheckedChange={() => toggleSubjectVisibility(subject.key)}
-                            disabled={!hasPremiumAccess}
-                          />
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </PremiumFeature>
+                        <Switch
+                          checked={isCurrentlyOn}
+                          onCheckedChange={() => toggleSubjectVisibility(subject.key)}
+                          disabled={!hasPremiumAccess && isDeviating ? false : !hasPremiumAccess && !isGradeDefault(subject.key) ? true : !hasPremiumAccess}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Subject Priorities */}
             <PremiumFeature 
