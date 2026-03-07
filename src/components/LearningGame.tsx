@@ -965,7 +965,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       {question && (
         <QuestionReportDialog
           open={showReportDialog}
-          onOpenChange={setShowReportDialog}
+          onOpenChange={(open) => {
+            setShowReportDialog(open);
+            // When dialog closes after reporting, mark in review queue too
+            if (!open && question) {
+              markReviewReported(question.questionText);
+            }
+          }}
           questionText={question.questionText}
           correctAnswer={getCorrectAnswerText()}
           userAnswer={getUserAnswerText()}
