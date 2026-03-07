@@ -6,7 +6,7 @@ import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAgeGroup } from '@/hooks/useAgeGroup';
-import { isSubjectAvailableForGrade } from '@/lib/category';
+
 import { supabase } from '@/lib/supabase';
 
 type SubjectId = 'math' | 'german' | 'english' | 'science' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
@@ -37,8 +37,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
   const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
 
-  // Filter categories by grade constraints first
-  const gradeFilteredCategories = categories.filter(c => isSubjectAvailableForGrade(c.id, grade));
+  // All categories available – visibility is controlled manually by parents (Premium feature)
+  const gradeFilteredCategories = categories;
 
   useEffect(() => {
     if (user?.id) {
