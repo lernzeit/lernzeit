@@ -170,16 +170,23 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
       if (visibilityError) throw visibilityError;
 
-      const visibilityMap: SubjectVisibility = {};
-      SUBJECTS.forEach(s => {
-        visibilityMap[s.key] = true; // Default all visible
-      });
-      
-      visibilityData?.forEach(v => {
-        visibilityMap[v.subject] = v.is_visible;
-      });
-
-      setVisibility(visibilityMap);
+      if (visibilityData && visibilityData.length > 0) {
+        // Parent has explicit overrides
+        setHasExplicitVisibility(true);
+        const visibilityMap: SubjectVisibility = {};
+        SUBJECTS.forEach(s => {
+          // Default to grade-appropriate
+          visibilityMap[s.key] = isSubjectAvailableForGrade(s.key, grade);
+        });
+        visibilityData.forEach(v => {
+          visibilityMap[v.subject] = v.is_visible;
+        });
+        setVisibility(visibilityMap);
+      } else {
+        // No explicit settings – use grade-based defaults
+        setHasExplicitVisibility(false);
+        applyGradeDefaults(grade);
+      }
 
       // Load subject priorities (from separate query to handle missing column gracefully)
       const priorityMap: SubjectPriority = {};
