@@ -364,6 +364,51 @@ export type Database = {
           },
         ]
       }
+      learning_plans: {
+        Row: {
+          child_id: string
+          child_name: string
+          created_at: string
+          grade: number
+          id: string
+          parent_id: string
+          plan_data: Json
+          status: string
+          subject: string
+          test_date: string | null
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          child_id: string
+          child_name?: string
+          created_at?: string
+          grade: number
+          id?: string
+          parent_id: string
+          plan_data?: Json
+          status?: string
+          subject: string
+          test_date?: string | null
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          child_id?: string
+          child_name?: string
+          created_at?: string
+          grade?: number
+          id?: string
+          parent_id?: string
+          plan_data?: Json
+          status?: string
+          subject?: string
+          test_date?: string | null
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       learning_sessions: {
         Row: {
           category: string

@@ -26,12 +26,14 @@ import {
   Crown,
   Check,
   AlertTriangle,
-  Clock
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { ParentDailyOverview } from '@/components/ParentDailyOverview';
+import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 
 interface ParentDashboardProps {
   userId: string;
@@ -333,24 +335,28 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
       {/* Main Tabs */}
       <Tabs defaultValue="requests" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="requests" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
           </TabsTrigger>
-          <TabsTrigger value="children" className="flex items-center gap-2">
+          <TabsTrigger value="children" className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Kinder</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
+          <TabsTrigger value="lernplan" className="flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Lernplan</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-1.5">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Analyse</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-2">
+          <TabsTrigger value="subscription" className="flex items-center gap-1.5">
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
           </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-2">
+          <TabsTrigger value="account" className="flex items-center gap-1.5">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Konto</span>
           </TabsTrigger>
@@ -359,6 +365,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         {/* Tab: Bildschirmzeit-Anfragen */}
         <TabsContent value="requests" className="space-y-4">
           <ParentScreenTimeRequestsDashboard userId={userId} />
+        </TabsContent>
+
+        {/* Tab: KI-Lernplan */}
+        <TabsContent value="lernplan" className="space-y-4">
+          <LearningPlanGenerator userId={userId} linkedChildren={linkedChildren} />
         </TabsContent>
 
         {/* Tab: Kinder verwalten */}
