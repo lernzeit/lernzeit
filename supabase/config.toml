@@ -55,6 +55,9 @@ verify_jwt = false
 [functions.analyze-feedback]
 verify_jwt = false
 
+[functions.generate-learning-plan]
+verify_jwt = false
+
 # ============================================
 # STRIPE FUNCTIONS
 # ============================================

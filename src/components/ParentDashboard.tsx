@@ -367,6 +367,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           <ParentScreenTimeRequestsDashboard userId={userId} />
         </TabsContent>
 
+        {/* Tab: KI-Lernplan */}
+        <TabsContent value="lernplan" className="space-y-4">
+          <LearningPlanGenerator userId={userId} linkedChildren={linkedChildren} />
+        </TabsContent>
+
         {/* Tab: Kinder verwalten */}
         <TabsContent value="children" className="space-y-6">
           {/* Quick Stats */}
