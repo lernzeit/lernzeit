@@ -338,6 +338,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       // Decrease difficulty on wrong answers
       if (difficulty === 'hard') setDifficulty('medium');
       else if (difficulty === 'medium') setDifficulty('easy');
+
+      // Add to spaced repetition review queue
+      if (question) {
+        addToReviewQueue(question);
+      }
     }
   };
 
