@@ -550,6 +550,63 @@ export type Database = {
         }
         Relationships: []
       }
+      review_queue: {
+        Row: {
+          correct_answer: Json
+          created_at: string
+          grade: number
+          hint: string | null
+          id: string
+          is_retired: boolean
+          max_reviews: number
+          next_review_at: string
+          options: Json | null
+          question_text: string
+          question_type: string
+          review_count: number
+          subject: string
+          updated_at: string
+          user_id: string
+          was_reported: boolean
+        }
+        Insert: {
+          correct_answer: Json
+          created_at?: string
+          grade: number
+          hint?: string | null
+          id?: string
+          is_retired?: boolean
+          max_reviews?: number
+          next_review_at?: string
+          options?: Json | null
+          question_text: string
+          question_type: string
+          review_count?: number
+          subject: string
+          updated_at?: string
+          user_id: string
+          was_reported?: boolean
+        }
+        Update: {
+          correct_answer?: Json
+          created_at?: string
+          grade?: number
+          hint?: string | null
+          id?: string
+          is_retired?: boolean
+          max_reviews?: number
+          next_review_at?: string
+          options?: Json | null
+          question_text?: string
+          question_type?: string
+          review_count?: number
+          subject?: string
+          updated_at?: string
+          user_id?: string
+          was_reported?: boolean
+        }
+        Relationships: []
+      }
       screen_time_requests: {
         Row: {
           child_id: string
