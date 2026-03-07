@@ -488,7 +488,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                         <Switch
                           checked={isCurrentlyOn}
                           onCheckedChange={() => toggleSubjectVisibility(subject.key)}
-                          disabled={!hasPremiumAccess && isDeviating ? false : !hasPremiumAccess && !isGradeDefault(subject.key) ? true : !hasPremiumAccess}
+                          disabled={!hasPremiumAccess}
                         />
                       </div>
                     );
