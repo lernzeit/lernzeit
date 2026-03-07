@@ -116,13 +116,24 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     }
   }, [user]);
 
-  // Show onboarding after profile loads if never seen
+  // Show onboarding only once for truly new users
   useEffect(() => {
     if (profile && user?.id) {
       const key = `lernzeit_onboarding_${user.id}`;
-      if (!localStorage.getItem(key)) {
+      // Already seen? Skip.
+      if (localStorage.getItem(key)) return;
+
+      // Extra guard: only show if the profile was created less than 5 minutes ago
+      // This prevents re-showing after localStorage is cleared (e.g. browser/app restart)
+      const profileAge = Date.now() - new Date(profile.created_at).getTime();
+      const isNewUser = profileAge < 5 * 60 * 1000; // 5 minutes
+
+      if (isNewUser) {
         localStorage.setItem(key, 'true');
         setShowOnboarding(true);
+      } else {
+        // Profile is old → mark as seen so we never check again
+        localStorage.setItem(key, 'true');
       }
     }
   }, [profile, user?.id]);
