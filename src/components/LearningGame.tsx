@@ -24,6 +24,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
+import { useReviewQueue } from '@/hooks/useReviewQueue';
 
 interface LearningGameProps {
   grade: number;
@@ -56,6 +57,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { settings: childSettings } = useChildSettings(user?.id || '');
   const { trackAllAchievements } = useAchievementTracker(user?.id);
   const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
+  const { addToQueue: addToReviewQueue, markAsReported: markReviewReported } = useReviewQueue(user?.id);
   
   // Use preloader instead of single question loader
   const { 
@@ -336,6 +338,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       // Decrease difficulty on wrong answers
       if (difficulty === 'hard') setDifficulty('medium');
       else if (difficulty === 'medium') setDifficulty('easy');
+
+      // Add to spaced repetition review queue
+      if (question) {
+        addToReviewQueue(question);
+      }
     }
   };
 
@@ -966,6 +973,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           grade={grade}
           subject={subject}
           templateId={question.id}
+          onReported={() => {
+            // Mark in review queue so reported questions won't reappear
+            markReviewReported(question.questionText);
+          }}
         />
       )}
 

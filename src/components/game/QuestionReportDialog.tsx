@@ -23,6 +23,7 @@ interface QuestionReportDialogProps {
   grade: number;
   subject: string;
   templateId?: string;
+  onReported?: () => void;
 }
 
 const REPORT_REASONS: { value: ReportReason; label: string; description: string }[] = [
@@ -43,7 +44,8 @@ export function QuestionReportDialog({
   explanation,
   grade,
   subject,
-  templateId
+  templateId,
+  onReported
 }: QuestionReportDialogProps) {
   const [reportReason, setReportReason] = useState<ReportReason | ''>('');
   const [reportDetails, setReportDetails] = useState('');
@@ -65,6 +67,7 @@ export function QuestionReportDialog({
     });
 
     onOpenChange(false);
+    onReported?.();
     setReportReason('');
     setReportDetails('');
   };
