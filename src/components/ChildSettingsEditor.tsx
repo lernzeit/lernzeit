@@ -47,6 +47,7 @@ interface ChildSettings {
   weekend_max_minutes: number;
   math_seconds_per_task: number;
   german_seconds_per_task: number;
+  science_seconds_per_task: number;
   english_seconds_per_task: number;
   geography_seconds_per_task: number;
   history_seconds_per_task: number;
