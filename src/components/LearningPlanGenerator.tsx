@@ -376,12 +376,107 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
   );
 }
 
+interface DayProgress {
+  totalQuestions: number;
+  correctAnswers: number;
+  sessions: number;
+}
+
+function normalizeCategoryKey(cat: string): string {
+  const mapping: Record<string, string> = {
+    'mathematik': 'math', 'mathe': 'math',
+    'deutsch': 'german', 'englisch': 'english',
+    'sachkunde': 'science', 'sachunterricht': 'science',
+    'erdkunde': 'geography', 'geographie': 'geography',
+    'geschichte': 'history', 'physik': 'physics',
+    'biologie': 'biology', 'chemie': 'chemistry',
+    'latein': 'latin',
+  };
+  return mapping[cat.toLowerCase()] || cat.toLowerCase();
+}
+
+function usePlanProgress(plan: LearningPlan) {
+  const [dayProgress, setDayProgress] = useState<Map<number, DayProgress>>(new Map());
+  const [loaded, setLoaded] = useState(false);
+  const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
+
+  useEffect(() => {
+    if (days.length === 0) return;
+
+    const planStart = new Date(plan.created_at);
+    planStart.setHours(0, 0, 0, 0);
+
+    // End = test_date or created + days count
+    const planEnd = plan.test_date
+      ? new Date(plan.test_date)
+      : new Date(planStart.getTime() + days.length * 24 * 60 * 60 * 1000);
+    planEnd.setHours(23, 59, 59, 999);
+
+    const fetchProgress = async () => {
+      try {
+        const { data } = await supabase
+          .from('game_sessions')
+          .select('session_date, correct_answers, total_questions, category')
+          .eq('user_id', plan.child_id)
+          .gte('session_date', planStart.toISOString())
+          .lte('session_date', planEnd.toISOString())
+          .order('session_date', { ascending: true });
+
+        if (!data) { setLoaded(true); return; }
+
+        // Filter to matching subject
+        const matching = data.filter(s =>
+          normalizeCategoryKey(s.category || '') === normalizeCategoryKey(plan.subject)
+        );
+
+        // Map sessions to plan days (day 0 = planStart, day 1 = planStart+1, etc.)
+        const progress = new Map<number, DayProgress>();
+        for (const session of matching) {
+          const sessionDate = new Date(session.session_date!);
+          const dayIndex = Math.floor(
+            (sessionDate.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)
+          );
+          if (dayIndex < 0 || dayIndex >= days.length) continue;
+
+          const existing = progress.get(dayIndex) || { totalQuestions: 0, correctAnswers: 0, sessions: 0 };
+          existing.totalQuestions += session.total_questions;
+          existing.correctAnswers += session.correct_answers;
+          existing.sessions += 1;
+          progress.set(dayIndex, existing);
+        }
+
+        setDayProgress(progress);
+      } catch (err) {
+        console.error('Error loading plan progress:', err);
+      } finally {
+        setLoaded(true);
+      }
+    };
+
+    fetchProgress();
+  }, [plan.child_id, plan.subject, plan.created_at, plan.test_date, days.length]);
+
+  const totalStats = React.useMemo(() => {
+    let practiced = 0, questions = 0, correct = 0;
+    dayProgress.forEach(dp => {
+      practiced++;
+      questions += dp.totalQuestions;
+      correct += dp.correctAnswers;
+    });
+    const accuracy = questions > 0 ? Math.round((correct / questions) * 100) : 0;
+    return { practiced, total: days.length, questions, correct, accuracy };
+  }, [dayProgress, days.length]);
+
+  return { dayProgress, totalStats, loaded };
+}
+
 function LearningPlanCard({ plan, onDelete }: { plan: LearningPlan; onDelete: (id: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
   const createdDate = new Date(plan.created_at).toLocaleDateString('de-DE', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
+  const { dayProgress, totalStats, loaded } = usePlanProgress(plan);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -408,6 +503,26 @@ function LearningPlanCard({ plan, onDelete }: { plan: LearningPlan; onDelete: (i
                     </>
                   )}
                 </CardDescription>
+                {/* Subtle progress summary */}
+                {loaded && totalStats.questions > 0 && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="flex gap-0.5">
+                      {days.map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            dayProgress.has(i)
+                              ? 'bg-primary'
+                              : 'bg-muted-foreground/20'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      {totalStats.practiced}/{totalStats.total} Tage geübt • {totalStats.accuracy}% richtig
+                    </span>
+                  </div>
+                )}
               </button>
             </CollapsibleTrigger>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -421,62 +536,89 @@ function LearningPlanCard({ plan, onDelete }: { plan: LearningPlan; onDelete: (i
         <CollapsibleContent>
           <CardContent className="pt-3">
             <Accordion type="single" collapsible className="w-full">
-              {days.map((day, idx) => (
-                <AccordionItem key={idx} value={`day-${idx}`} className="border-b-0">
-                  <AccordionTrigger className="py-2 hover:no-underline">
-                    <div className="flex items-center gap-3 text-left">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        idx === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {day.day || idx + 1}
+              {days.map((day, idx) => {
+                const dp = dayProgress.get(idx);
+                const dayAccuracy = dp && dp.totalQuestions > 0
+                  ? Math.round((dp.correctAnswers / dp.totalQuestions) * 100)
+                  : null;
+
+                return (
+                  <AccordionItem key={idx} value={`day-${idx}`} className="border-b-0">
+                    <AccordionTrigger className="py-2 hover:no-underline">
+                      <div className="flex items-center gap-3 text-left flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                          dp
+                            ? 'bg-primary text-primary-foreground'
+                            : idx === days.length - 1
+                              ? 'bg-primary/20 text-primary'
+                              : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {dp ? <CheckCircle2 className="h-4 w-4" /> : (day.day || idx + 1)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{day.title}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {day.estimatedMinutes} Min
+                            <span className="mx-1">•</span>
+                            {day.focus}
+                          </p>
+                        </div>
+                        {dp && dayAccuracy !== null && (
+                          <Badge
+                            variant={dayAccuracy >= 70 ? 'default' : 'secondary'}
+                            className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+                          >
+                            {dp.correctAnswers}/{dp.totalQuestions} • {dayAccuracy}%
+                          </Badge>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-11 space-y-3">
+                      {dp && (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border/50">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <p className="text-xs text-muted-foreground">
+                            {dp.sessions} {dp.sessions === 1 ? 'Übungseinheit' : 'Übungseinheiten'} absolviert – {dp.correctAnswers} von {dp.totalQuestions} Aufgaben richtig ({dayAccuracy}%)
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Lernziele
+                        </p>
+                        <ul className="space-y-0.5">
+                          {day.goals?.map((goal, gi) => (
+                            <li key={gi} className="text-sm flex items-start gap-1.5">
+                              <ChevronRight className="h-3 w-3 mt-1 text-primary shrink-0" />
+                              {goal}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{day.title}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {day.estimatedMinutes} Min
-                          <span className="mx-1">•</span>
-                          {day.focus}
+                        <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" /> Übungen
                         </p>
+                        <ul className="space-y-0.5">
+                          {day.exercises?.map((ex, ei) => (
+                            <li key={ei} className="text-sm flex items-start gap-1.5">
+                              <span className="text-primary font-medium shrink-0">{ei + 1}.</span>
+                              {ex}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pl-11 space-y-3">
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Lernziele
-                      </p>
-                      <ul className="space-y-0.5">
-                        {day.goals?.map((goal, gi) => (
-                          <li key={gi} className="text-sm flex items-start gap-1.5">
-                            <ChevronRight className="h-3 w-3 mt-1 text-primary shrink-0" />
-                            {goal}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                        <BookOpen className="h-3 w-3" /> Übungen
-                      </p>
-                      <ul className="space-y-0.5">
-                        {day.exercises?.map((ex, ei) => (
-                          <li key={ei} className="text-sm flex items-start gap-1.5">
-                            <span className="text-primary font-medium shrink-0">{ei + 1}.</span>
-                            {ex}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    {day.tip && (
-                      <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
-                        <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <p className="text-xs text-muted-foreground">{day.tip}</p>
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                      {day.tip && (
+                        <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                          <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <p className="text-xs text-muted-foreground">{day.tip}</p>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           </CardContent>
         </CollapsibleContent>
