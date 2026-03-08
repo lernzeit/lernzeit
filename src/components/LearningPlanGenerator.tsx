@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -23,6 +24,7 @@ import {
   Crown,
   Trash2,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 
 interface LinkedChild {
@@ -362,107 +364,110 @@ export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
 }
 
 function LearningPlanCard({ plan, onDelete }: { plan: LearningPlan; onDelete: (id: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
   const days = Array.isArray(plan.plan_data) ? plan.plan_data : [];
   const createdDate = new Date(plan.created_at).toLocaleDateString('de-DE', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3 bg-muted/30">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              {plan.topic}
-            </CardTitle>
-            <CardDescription className="text-xs space-x-2">
-              <span>{plan.child_name}</span>
-              <span>•</span>
-              <span>Klasse {plan.grade}</span>
-              <span>•</span>
-              <span>{toGermanCategory(plan.subject)}</span>
-              {plan.test_date && (
-                <>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3 bg-muted/30">
+          <div className="flex items-start justify-between">
+            <CollapsibleTrigger asChild>
+              <button className="flex-1 text-left space-y-1 hover:opacity-80 transition-opacity">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  {plan.topic}
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </CardTitle>
+                <CardDescription className="text-xs space-x-2">
+                  <span>{plan.child_name}</span>
                   <span>•</span>
-                  <span>Test: {new Date(plan.test_date).toLocaleDateString('de-DE')}</span>
-                </>
-              )}
-            </CardDescription>
+                  <span>Klasse {plan.grade}</span>
+                  <span>•</span>
+                  <span>{toGermanCategory(plan.subject)}</span>
+                  {plan.test_date && (
+                    <>
+                      <span>•</span>
+                      <span>Test: {new Date(plan.test_date).toLocaleDateString('de-DE')}</span>
+                    </>
+                  )}
+                </CardDescription>
+              </button>
+            </CollapsibleTrigger>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs text-muted-foreground">{createdDate}</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(plan.id)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{createdDate}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(plan.id)}>
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-3">
-        <Accordion type="single" collapsible className="w-full">
-          {days.map((day, idx) => (
-            <AccordionItem key={idx} value={`day-${idx}`} className="border-b-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
-                <div className="flex items-center gap-3 text-left">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    idx === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {day.day || idx + 1}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{day.title}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {day.estimatedMinutes} Min
-                      <span className="mx-1">•</span>
-                      {day.focus}
-                    </p>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pl-11 space-y-3">
-                {/* Goals */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Lernziele
-                  </p>
-                  <ul className="space-y-0.5">
-                    {day.goals?.map((goal, gi) => (
-                      <li key={gi} className="text-sm flex items-start gap-1.5">
-                        <ChevronRight className="h-3 w-3 mt-1 text-primary shrink-0" />
-                        {goal}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Exercises */}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                    <BookOpen className="h-3 w-3" /> Übungen
-                  </p>
-                  <ul className="space-y-0.5">
-                    {day.exercises?.map((ex, ei) => (
-                      <li key={ei} className="text-sm flex items-start gap-1.5">
-                        <span className="text-primary font-medium shrink-0">{ei + 1}.</span>
-                        {ex}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Tip */}
-                {day.tip && (
-                  <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
-                    <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <p className="text-xs text-muted-foreground">{day.tip}</p>
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="pt-3">
+            <Accordion type="single" collapsible className="w-full">
+              {days.map((day, idx) => (
+                <AccordionItem key={idx} value={`day-${idx}`} className="border-b-0">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        idx === 4 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {day.day || idx + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{day.title}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {day.estimatedMinutes} Min
+                          <span className="mx-1">•</span>
+                          {day.focus}
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pl-11 space-y-3">
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Lernziele
+                      </p>
+                      <ul className="space-y-0.5">
+                        {day.goals?.map((goal, gi) => (
+                          <li key={gi} className="text-sm flex items-start gap-1.5">
+                            <ChevronRight className="h-3 w-3 mt-1 text-primary shrink-0" />
+                            {goal}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" /> Übungen
+                      </p>
+                      <ul className="space-y-0.5">
+                        {day.exercises?.map((ex, ei) => (
+                          <li key={ei} className="text-sm flex items-start gap-1.5">
+                            <span className="text-primary font-medium shrink-0">{ei + 1}.</span>
+                            {ex}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {day.tip && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground">{day.tip}</p>
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
