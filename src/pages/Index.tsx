@@ -106,9 +106,11 @@ const Index = () => {
       setSelectedGrade(null);
       setSelectedCategory(null);
       setSelectedQuestionCount(null);
+      setLearningPlanTopic(null);
     } else {
       setSelectedCategory(null);
       setSelectedQuestionCount(null);
+      setLearningPlanTopic(null);
     }
   };
 
