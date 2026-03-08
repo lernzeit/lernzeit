@@ -157,8 +157,13 @@ serve(async (req) => {
           .filter((t): t is string => typeof t === 'string')
           .slice(0, 20)
       : [];
+
+    // Extract optional topicHint for learning plan focus
+    const topicHint: string | undefined = typeof body.topicHint === 'string' && body.topicHint.length > 0
+      ? (body.topicHint as string).slice(0, 200)
+      : undefined;
     
-    console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts`);
+    console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
