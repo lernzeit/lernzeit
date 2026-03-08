@@ -59,6 +59,8 @@ interface LearningPlan {
 interface Props {
   userId: string;
   linkedChildren: LinkedChild[];
+  /** When set, locks to this child – hides the child dropdown and filters plans */
+  fixedChildId?: string;
 }
 
 const ALL_SUBJECTS = [

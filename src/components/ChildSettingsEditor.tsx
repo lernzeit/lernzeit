@@ -552,8 +552,14 @@ function SubjectRow({
                 type="number"
                 min={5}
                 max={300}
-                value={bonus}
-                onChange={(e) => onBonusChange(parseInt(e.target.value) || 30)}
+                value={bonus === 0 ? '' : bonus}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === '') { onBonusChange(0); return; }
+                  const num = parseInt(raw);
+                  if (!isNaN(num)) onBonusChange(num);
+                }}
+                onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 5) onBonusChange(5); }}
                 className="w-16 h-7 text-center text-xs"
                 disabled={!hasPremiumAccess}
               />
