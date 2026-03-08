@@ -20,6 +20,7 @@ interface UseQuestionPreloaderOptions {
   subject: string;
   totalQuestions: number;
   initialDifficulty?: 'easy' | 'medium' | 'hard';
+  topicHint?: string;
 }
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
