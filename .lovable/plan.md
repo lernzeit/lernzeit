@@ -1,90 +1,36 @@
 
 
-# Eltern-Dashboard Redesign: Kind-zentrierte Struktur
+## Plan: ScreenTimeWidget durch sinnvolle Eltern-Karte ersetzen
 
-## Problem
-Das Dashboard verteilt kind-bezogene Funktionen (Einstellungen, Lernplan, Analyse) auf separate Tabs. Eltern müssen zwischen Tabs hin- und herspringen und bei mehreren Kindern immer wieder das Kind wechseln. Die Fächereinstellungen (Sichtbarkeit, Schwerpunkt, Bonus) sind in drei separate Sektionen aufgeteilt, was viel Scrollen erfordert.
+### Problem
+Die `ScreenTimeWidget`-Komponente auf dem Eltern-Dashboard ist ein Dummy. Sie prüft `Capacitor.isNativePlatform()`, das in der PWA/Web-Ansicht immer `false` zurückgibt, und zeigt dann "Familienkontrollen sind auf diesem Gerät nicht verfügbar". Selbst auf nativen Geräten liefert der `FamilyLinkService` nur Mock-Daten.
 
-## Neue Struktur
+Die eigentliche Bildschirmzeit-Verwaltung (Anfragen genehmigen, Zeitlimits setzen) läuft bereits vollständig über das `ParentDashboard` und die `ParentScreenTimeRequestsDashboard`-Komponente. Die ScreenTimeWidget ist also redundant und verwirrend.
 
-### Dashboard-Layout (vereinfacht)
+### Lösung
 
-```text
-┌─────────────────────────────────┐
-│ Eltern-Dashboard    [Refresh]   │
-│ Trial-Banner (wenn nötig)       │
-├─────────────────────────────────┤
-│ Tabs: Anfragen | Kinder | ...   │
-│       Abo | Konto | Codes       │
-├─────────────────────────────────┤
-│ Tab "Kinder":                   │
-│                                 │
-│ ┌─ Max (Klasse 4) ───────────┐ │
-│ │ 📚 3 Fragen | ✓ 67% | 2min│ │  ← DailyOverview inline
-│ │ 🔥 5 Streak               │ │
-│ │ [v] aufklappen             │ │
-│ └────────────────────────────┘ │
-│   ├─ Klassenstufe             │ │
-│   ├─ Zeitlimits              │ │
-│   ├─ Fächer (collapsible)    │ │
-│   │   ├─ Mathematik [v]      │ │
-│   │   │  Sichtbar [x] Fokus[x] 30s │
-│   │   ├─ Deutsch [v]         │ │
-│   │   │  Sichtbar [x] Fokus[ ] 30s │
-│   │   └─ ...                 │ │
-│   ├─ KI-Lernplan Generator   │ │
-│   ├─ Lernentwicklung         │ │
-│   └─ [Kind entfernen]        │ │
-│                                 │
-│ ┌─ Lisa (Klasse 2) ──────────┐ │
-│ │ Heute noch nicht gelernt   │ │
-│ │ [v] aufklappen             │ │
-│ └────────────────────────────┘ │
-└─────────────────────────────────┘
-```
+**Die `ScreenTimeWidget` im Eltern-Dashboard durch eine kompakte "Kindersicherung"-Karte ersetzen**, die:
 
-### Tabs reduziert auf 4-5
-- **Anfragen** (Bildschirmzeit)
-- **Kinder** (alles Kind-bezogene: Overview + Settings + Lernplan + Analyse)
-- **Abo**
-- **Konto** (Profil, Passwort, Codes)
+1. **Erkennt, ob ein natives Gerät vorliegt** (via `parentalControlsService.isNativePlatform()`)
+2. **Auf nativen Geräten**: Einen Button zeigt, der direkt Family Link (Android) oder Bildschirmzeit-Einstellungen (iOS) öffnet – über die bereits implementierten Deep-Links in `parentalControlsService`
+3. **Im Web/PWA**: Statt "nicht verfügbar" eine kurze Anleitung zeigt, wie man Family Link oder Bildschirmzeit auf dem Gerät einrichtet, mit Links zu den App-Stores
+4. **Immer**: Einen Hinweis zeigt, dass Bildschirmzeit-Anfragen der Kinder im Tab "Anfragen" im Dashboard unten verwaltet werden
 
-### Fächer-Einstellungen zusammengeführt
-Statt drei separate Listen (Sichtbarkeit, Schwerpunkt, Bonus) wird jedes Fach ein einzelnes collapsible Element. Aufgeklappt zeigt es:
-- Toggle "Sichtbar"
-- Toggle "Schwerpunkt" (Premium)
-- Input "Bonus je Aufgabe" in Sekunden (Premium)
+### Technische Änderungen
 
-```text
-┌─ Mathematik 📘 ──── [30s] ──┐
-│  Sichtbar      [====]       │
-│  Schwerpunkt   [====] 👑    │
-│  Bonus/Aufgabe [__30__] s   │
-└─────────────────────────────┘
-┌─ Deutsch 📗 ─────── [30s] ──┐  (zugeklappt)
-```
+**`src/components/ScreenTimeWidget.tsx`** – Komplett umschreiben:
+- Entferne Abhängigkeit von `useScreenTime` und `familyLinkService` (die Mock-Daten liefern)
+- Nutze stattdessen `parentalControlsService` (bereits implementiert mit echten Deep-Links)
+- Zeige plattformspezifische UI: nativer Button vs. Web-Anleitung
+- Entferne den ganzen "Permission"-Flow (war ohnehin Mock)
 
-## Technische Umsetzung
+**`src/hooks/useScreenTime.ts`** und **`src/services/familyLink.ts`** – Können entfernt werden, da sie nur Mock-Daten liefern und von keiner anderen Komponente genutzt werden.
 
-### 1. `ParentDashboard.tsx` komplett umbauen
-- Tabs reduzieren: `Anfragen | Kinder | Abo | Konto`
-- Codes-Sektion in den "Konto"-Tab verschieben
-- "Lernplan" und "Analyse" Tabs entfernen (werden pro Kind eingebettet)
-- Im "Kinder"-Tab: Pro `linkedChild` ein `Collapsible` rendern, das die `ParentDailyOverview`-Daten als Header zeigt
-- Aufgeklappt: `ChildSettingsEditor` (umgebaut), `LearningPlanGenerator` (gefiltert auf dieses Kind), `ChildLearningAnalysis`
+### Dateiänderungen
 
-### 2. `ChildSettingsEditor.tsx` Fächer-Sektion umbauen
-- Die drei separaten Karten (Sichtbarkeit, Schwerpunkte, Bonus) durch eine einzige "Fächer"-Karte ersetzen
-- Jedes Fach als `Collapsible`: Header zeigt Icon + Name + aktuellen Bonus, aufgeklappt zeigt drei Controls
-- Nur für die Klassenstufe verfügbare Fächer anzeigen
-
-### 3. `ParentDailyOverview.tsx` anpassen
-- Neue Export-Variante oder Props, damit die Daten pro Kind inline im Collapsible-Header genutzt werden können (statt als separate Grid-Karte)
-
-### Dateien
-| Datei | Änderung |
+| Datei | Aktion |
 |---|---|
-| `src/components/ParentDashboard.tsx` | Tabs reduzieren, Kinder-Tab mit Collapsibles pro Kind, Codes in Konto-Tab |
-| `src/components/ChildSettingsEditor.tsx` | Fächer in collapsible Einzelelemente zusammenführen |
-| `src/components/ParentDailyOverview.tsx` | Optional: Datenlade-Hook extrahieren für Inline-Nutzung |
+| `src/components/ScreenTimeWidget.tsx` | Umschreiben (nutzt `parentalControlsService`) |
+| `src/hooks/useScreenTime.ts` | Entfernen (nur Mock-Daten) |
+| `src/services/familyLink.ts` | Entfernen (nur Mock-Daten) |
 
