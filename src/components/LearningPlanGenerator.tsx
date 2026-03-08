@@ -59,6 +59,8 @@ interface LearningPlan {
 interface Props {
   userId: string;
   linkedChildren: LinkedChild[];
+  /** When set, locks to this child – hides the child dropdown and filters plans */
+  fixedChildId?: string;
 }
 
 const ALL_SUBJECTS = [
@@ -74,12 +76,12 @@ const ALL_SUBJECTS = [
   { key: 'latin', name: 'Latein' },
 ];
 
-export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
+export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: Props) {
   const { toast } = useToast();
   const { isPremium, isTrialing } = useSubscription();
   const hasPremiumAccess = isPremium || isTrialing;
 
-  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [selectedChildId, setSelectedChildId] = useState<string>(fixedChildId || '');
   const [subject, setSubject] = useState('');
   const [topic, setTopic] = useState('');
   const [testDate, setTestDate] = useState('');
@@ -94,10 +96,12 @@ export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
     : ALL_SUBJECTS;
 
   useEffect(() => {
-    if (linkedChildren.length > 0 && !selectedChildId) {
+    if (fixedChildId) {
+      setSelectedChildId(fixedChildId);
+    } else if (linkedChildren.length > 0 && !selectedChildId) {
       setSelectedChildId(linkedChildren[0].id);
     }
-  }, [linkedChildren]);
+  }, [linkedChildren, fixedChildId]);
 
   useEffect(() => {
     loadSavedPlans();
@@ -106,12 +110,19 @@ export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
   const loadSavedPlans = async () => {
     try {
       setLoadingPlans(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('learning_plans')
         .select('*')
         .eq('parent_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
+
+      // Filter to specific child when embedded under a child card
+      if (fixedChildId) {
+        query = query.eq('child_id', fixedChildId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setSavedPlans((data as any[]) || []);
@@ -240,22 +251,24 @@ export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Child Selection */}
-          <div className="space-y-2">
-            <Label>Kind auswählen</Label>
-            <Select value={selectedChildId} onValueChange={setSelectedChildId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kind wählen..." />
-              </SelectTrigger>
-              <SelectContent>
-                {linkedChildren.map(child => (
-                  <SelectItem key={child.id} value={child.id}>
-                    {child.name || 'Unbenannt'} (Klasse {child.grade})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Child Selection – only when not fixed to a single child */}
+          {!fixedChildId && (
+            <div className="space-y-2">
+              <Label>Kind auswählen</Label>
+              <Select value={selectedChildId} onValueChange={setSelectedChildId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kind wählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {linkedChildren.map(child => (
+                    <SelectItem key={child.id} value={child.id}>
+                      {child.name || 'Unbenannt'} (Klasse {child.grade})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Subject */}
           <div className="space-y-2">

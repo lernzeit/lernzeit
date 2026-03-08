@@ -357,6 +357,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                             <LearningPlanGenerator 
                               userId={userId} 
                               linkedChildren={[child]}
+                              fixedChildId={child.id}
                             />
                           </div>
 
