@@ -177,7 +177,7 @@ serve(async (req) => {
       });
     }
 
-    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts);
+    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint);
 
     // Load active prompt rules from DB
     let rulesBlock = '';
