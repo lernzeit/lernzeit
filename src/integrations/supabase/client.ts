@@ -5,13 +5,17 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://fsmgynpdfxkaiiuguqyr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q";
 
-const memoryStorage = {
-  getItem: (key: string) => memoryStorageMap.get(key) ?? null,
-  setItem: (key: string, value: string) => memoryStorageMap.set(key, value),
-  removeItem: (key: string) => memoryStorageMap.delete(key),
-};
-
 const memoryStorageMap = new Map<string, string>();
+
+const memoryStorage = {
+  getItem: (key: string): string | null => memoryStorageMap.get(key) ?? null,
+  setItem: (key: string, value: string): void => {
+    memoryStorageMap.set(key, value);
+  },
+  removeItem: (key: string): void => {
+    memoryStorageMap.delete(key);
+  },
+};
 
 const resolveAuthStorage = () => {
   if (typeof window === 'undefined') return memoryStorage;
