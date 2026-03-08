@@ -85,7 +85,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         .order('test_date', { ascending: true, nullsFirst: false })
         .limit(1)
         .maybeSingle();
-      setActivePlan(data);
+      setActivePlan(data as unknown as LearningPlan | null);
     } catch {
       setActivePlan(null);
     }
