@@ -174,6 +174,45 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           </CardContent>
         </Card>
 
+        {/* Learning Plan Card */}
+        {activePlan && (() => {
+          const daysSinceCreated = differenceInDays(new Date(), new Date(activePlan.created_at));
+          const currentDay = Math.min(daysSinceCreated + 1, 5);
+          const subjectName = categories.find(c => c.id === activePlan.subject)?.shortName || activePlan.subject;
+          return (
+            <Card
+              className="rounded-2xl border-2 border-primary/50 shadow-lg hover:scale-[1.02] cursor-pointer transition-all duration-300 bg-gradient-to-r from-primary/5 to-accent/5"
+              onClick={() => onCategorySelect(activePlan.subject as SubjectId, activePlan.topic)}
+            >
+              <CardContent className={`${isYoung ? 'p-5' : 'p-4'}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white shrink-0">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className={`${isYoung ? 'text-lg' : 'text-base'} font-bold`}>📋 Dein Lernplan</h3>
+                      <Badge variant="secondary" className="text-xs">{subjectName}</Badge>
+                    </div>
+                    <p className={`${isYoung ? 'text-sm' : 'text-xs'} text-muted-foreground font-medium mt-0.5 truncate`}>
+                      {activePlan.topic}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span className="font-medium text-primary">Tag {currentDay} von 5</span>
+                      {activePlan.test_date && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Test am {format(new Date(activePlan.test_date), 'd. MMM', { locale: de })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Categories */}
         <div className={`grid ${age.gridCols} gap-${isYoung ? '4' : '3'}`}>
           {sortedCategories.map((category) => {

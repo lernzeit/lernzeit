@@ -227,7 +227,8 @@ const Index = () => {
             subject={selectedCategory}
             onComplete={handleGameComplete}
             onBack={() => setSelectedQuestionCount(null)}
-            totalQuestions={selectedQuestionCount} />
+            totalQuestions={selectedQuestionCount}
+            topicHint={learningPlanTopic || undefined} />
         </Suspense>
       </ErrorBoundary>);
   }
