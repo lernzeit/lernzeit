@@ -13,6 +13,17 @@ import { de } from 'date-fns/locale';
 
 type SubjectId = 'math' | 'german' | 'english' | 'science' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
+interface LearningPlanDay {
+  day: number;
+  title: string;
+  focus: string;
+  goals: string[];
+  exercises: string[];
+  appCategory: string;
+  estimatedMinutes: number;
+  tip: string;
+}
+
 interface LearningPlan {
   id: string;
   subject: string;
@@ -20,6 +31,7 @@ interface LearningPlan {
   test_date: string | null;
   created_at: string;
   grade: number;
+  plan_data: LearningPlanDay[] | null;
 }
 
 interface CategorySelectorProps {
