@@ -2,18 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, Star, TreePine } from 'lucide-react';
+import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, Star, TreePine, Sparkles, Calendar } from 'lucide-react';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAgeGroup } from '@/hooks/useAgeGroup';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import { supabase } from '@/lib/supabase';
+import { format, differenceInDays } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 type SubjectId = 'math' | 'german' | 'english' | 'science' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
 
+interface LearningPlan {
+  id: string;
+  subject: string;
+  topic: string;
+  test_date: string | null;
+  created_at: string;
+  grade: number;
+}
+
 interface CategorySelectorProps {
   grade: number;
-  onCategorySelect: (category: SubjectId) => void;
+  onCategorySelect: (category: SubjectId, topicHint?: string) => void;
   onBack: () => void;
 }
 
