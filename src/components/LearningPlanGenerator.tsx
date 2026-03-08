@@ -251,22 +251,24 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Child Selection */}
-          <div className="space-y-2">
-            <Label>Kind auswählen</Label>
-            <Select value={selectedChildId} onValueChange={setSelectedChildId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kind wählen..." />
-              </SelectTrigger>
-              <SelectContent>
-                {linkedChildren.map(child => (
-                  <SelectItem key={child.id} value={child.id}>
-                    {child.name || 'Unbenannt'} (Klasse {child.grade})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Child Selection – only when not fixed to a single child */}
+          {!fixedChildId && (
+            <div className="space-y-2">
+              <Label>Kind auswählen</Label>
+              <Select value={selectedChildId} onValueChange={setSelectedChildId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Kind wählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {linkedChildren.map(child => (
+                    <SelectItem key={child.id} value={child.id}>
+                      {child.name || 'Unbenannt'} (Klasse {child.grade})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Subject */}
           <div className="space-y-2">
