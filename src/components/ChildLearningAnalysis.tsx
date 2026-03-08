@@ -564,12 +564,10 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Lightbulb className="h-5 w-5" />
                   Empfehlungen
-                  {!hasPremiumAccess && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
-                      <Crown className="h-2.5 w-2.5" />
-                      Premium
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
+                    <Crown className="h-2.5 w-2.5" />
+                    Premium
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
                   Basierend auf dem Lernfortschritt
