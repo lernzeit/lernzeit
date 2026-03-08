@@ -396,7 +396,8 @@ function buildQuestionPrompt(
   subject: string, 
   difficulty: string, 
   requestedType?: string,
-  excludeTexts?: string[]
+  excludeTexts?: string[],
+  topicHint?: string
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const gradeGuidelines = getGradeGuidelines(grade);
@@ -409,11 +410,16 @@ function buildQuestionPrompt(
     exclusionNote = `\n\nWICHTIG - Vermeide Fragen die diesen ähnlich sind:\n${excludeTexts.slice(0, 10).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nGeneriere eine völlig andere Frage!`;
   }
 
+  let topicNote = '';
+  if (topicHint) {
+    topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
+  }
+
   return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
-FRAGETYP: ${questionType}${exclusionNote}
+FRAGETYP: ${questionType}${exclusionNote}${topicNote}
 
 ${typeInstructions}
 
