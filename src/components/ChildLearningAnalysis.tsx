@@ -525,7 +525,6 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                   </Badge>
                 )}
               </CardTitle>
-              </CardTitle>
               <CardDescription>
                 Leistung pro Fach
               </CardDescription>
