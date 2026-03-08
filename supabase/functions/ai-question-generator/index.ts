@@ -537,9 +537,11 @@ function getTypeSpecificInstructions(questionType: string): string {
 - options: Array der verfügbaren Wörter (inklusive 1-2 Distraktoren)`,
     
     'FILL_BLANK': `Erstelle eine Lückentextaufgabe.
-- task: Der Satz mit ___ für die Lücke(n)
+- question_text: Der Satz mit ___ für die Lücke(n). WICHTIG: question_text MUSS mindestens ein ___ (drei Unterstriche) enthalten!
+- task: Kurze Anweisung (z.B. "Setze das richtige Wort in die Lücke ein.")
 - correct_answer: String oder Array mit den fehlenden Wörtern
-- options: null`
+- options: null
+- GROSS-/KLEINSCHREIBUNG: Die korrekte Antwort muss die deutsche Rechtschreibung korrekt wiedergeben. Wenn das Wort mitten im Satz steht, gilt: Nomen groß, Verben/Adjektive klein. Beispiel: "Die Katze ___ auf dem Dach." → correct_answer: "saß" (klein, weil Verb mitten im Satz).`
   };
   
   return instructions[questionType] || instructions['MULTIPLE_CHOICE'];

@@ -1268,12 +1268,17 @@ const FillBlankRenderer: React.FC<{
   onChange: (index: number, value: string) => void;
 }> = ({ task, text, answers, options, correctAnswers, hasAnswered, subject, onChange }) => {
   const [activeGapIndex, setActiveGapIndex] = useState<number | null>(null);
-  const parts = text.split('___');
+  // Use task as fill-blank text if text doesn't contain blanks
+  const fillText = text.includes('___') ? text : (task.includes('___') ? task : text);
+  const parts = fillText.split('___');
   
   // Determine if this is a language subject (should use keyboard input)
   const isLanguageSubject = ['german', 'english', 'latin', 'french', 'spanish'].includes(subject || '');
   const hasOptions = options.length > 0;
   const useChipSelection = hasOptions && !isLanguageSubject;
+  
+  // If no blanks found anywhere, show a simple text input fallback
+  const hasBlanks = parts.length > 1;
 
   // Get available options (not yet used)
   const getAvailableOptions = () => {
@@ -1368,12 +1373,33 @@ const FillBlankRenderer: React.FC<{
       
       {/* Text with inline gaps */}
       <div className="text-lg leading-loose bg-muted/30 rounded-lg p-4">
-        {parts.map((part, index) => (
-          <React.Fragment key={index}>
-            <span>{part}</span>
-            {index < parts.length - 1 && renderGap(index)}
-          </React.Fragment>
-        ))}
+        {hasBlanks ? (
+          parts.map((part, index) => (
+            <React.Fragment key={index}>
+              <span>{part}</span>
+              {index < parts.length - 1 && renderGap(index)}
+            </React.Fragment>
+          ))
+        ) : (
+          <>
+            <p className="mb-3">{text}</p>
+            {isLanguageSubject || !hasOptions ? (
+              <Input
+                type="text"
+                value={answers[0] || ''}
+                onChange={(e) => onChange(0, e.target.value)}
+                disabled={hasAnswered}
+                className={cn(
+                  "text-lg h-14",
+                  hasAnswered && answers[0]?.toLowerCase().trim() === correctAnswers[0]?.toLowerCase().trim() && "border-green-500",
+                  hasAnswered && answers[0]?.toLowerCase().trim() !== correctAnswers[0]?.toLowerCase().trim() && "border-red-500"
+                )}
+                placeholder="Deine Antwort..."
+                autoComplete="off"
+              />
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* Word chips for selection (only for non-language subjects with options) */}
