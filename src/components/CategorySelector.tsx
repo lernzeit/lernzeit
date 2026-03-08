@@ -191,10 +191,18 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           const daysSinceCreated = differenceInDays(new Date(), new Date(activePlan.created_at));
           const currentDay = Math.min(daysSinceCreated + 1, 5);
           const subjectName = categories.find(c => c.id === activePlan.subject)?.shortName || activePlan.subject;
+          
+          // Get today's focus from plan_data for a more targeted topicHint
+          const planDays = Array.isArray(activePlan.plan_data) ? activePlan.plan_data : [];
+          const todaysPlan = planDays[currentDay - 1];
+          const topicHint = todaysPlan 
+            ? `${activePlan.topic} – Schwerpunkt: ${todaysPlan.focus}` 
+            : activePlan.topic;
+          
           return (
             <Card
               className="rounded-2xl border-2 border-primary/50 shadow-lg hover:scale-[1.02] cursor-pointer transition-all duration-300 bg-gradient-to-r from-primary/5 to-accent/5"
-              onClick={() => onCategorySelect(activePlan.subject as SubjectId, activePlan.topic)}
+              onClick={() => onCategorySelect(activePlan.subject as SubjectId, topicHint)}
             >
               <CardContent className={`${isYoung ? 'p-5' : 'p-4'}`}>
                 <div className="flex items-center gap-4">
