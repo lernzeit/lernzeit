@@ -66,8 +66,9 @@ const Index = () => {
     setShowSuccess(false);
   };
 
-  const handleCategorySelect = (category: Category) => {
+  const handleCategorySelect = (category: Category, topicHint?: string) => {
     setSelectedCategory(category);
+    setLearningPlanTopic(topicHint || null);
   };
 
   const handleStartGame = (grade: number) => {
