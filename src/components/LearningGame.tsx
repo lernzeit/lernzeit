@@ -1373,12 +1373,33 @@ const FillBlankRenderer: React.FC<{
       
       {/* Text with inline gaps */}
       <div className="text-lg leading-loose bg-muted/30 rounded-lg p-4">
-        {parts.map((part, index) => (
-          <React.Fragment key={index}>
-            <span>{part}</span>
-            {index < parts.length - 1 && renderGap(index)}
-          </React.Fragment>
-        ))}
+        {hasBlanks ? (
+          parts.map((part, index) => (
+            <React.Fragment key={index}>
+              <span>{part}</span>
+              {index < parts.length - 1 && renderGap(index)}
+            </React.Fragment>
+          ))
+        ) : (
+          <>
+            <p className="mb-3">{text}</p>
+            {isLanguageSubject || !hasOptions ? (
+              <Input
+                type="text"
+                value={answers[0] || ''}
+                onChange={(e) => onChange(0, e.target.value)}
+                disabled={hasAnswered}
+                className={cn(
+                  "text-lg h-14",
+                  hasAnswered && answers[0]?.toLowerCase().trim() === correctAnswers[0]?.toLowerCase().trim() && "border-green-500",
+                  hasAnswered && answers[0]?.toLowerCase().trim() !== correctAnswers[0]?.toLowerCase().trim() && "border-red-500"
+                )}
+                placeholder="Deine Antwort..."
+                autoComplete="off"
+              />
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* Word chips for selection (only for non-language subjects with options) */}

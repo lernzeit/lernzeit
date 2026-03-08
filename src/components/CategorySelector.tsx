@@ -215,7 +215,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                       <Badge variant="secondary" className="text-xs">{subjectName}</Badge>
                     </div>
                     <p className={`${isYoung ? 'text-sm' : 'text-xs'} text-muted-foreground font-medium mt-0.5 truncate`}>
-                      {activePlan.topic}
+                      {todaysPlan ? `Heute: ${todaysPlan.focus}` : activePlan.topic}
                     </p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                       <span className="font-medium text-primary">Tag {currentDay} von 5</span>
