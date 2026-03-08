@@ -1,36 +1,51 @@
 
 
-## Plan: ScreenTimeWidget durch sinnvolle Eltern-Karte ersetzen
+# Lernplan als "Fach" in der Fächerauswahl anzeigen
 
-### Problem
-Die `ScreenTimeWidget`-Komponente auf dem Eltern-Dashboard ist ein Dummy. Sie prüft `Capacitor.isNativePlatform()`, das in der PWA/Web-Ansicht immer `false` zurückgibt, und zeigt dann "Familienkontrollen sind auf diesem Gerät nicht verfügbar". Selbst auf nativen Geräten liefert der `FamilyLinkService` nur Mock-Daten.
+## Überblick
+Wenn ein Kind einen aktiven Lernplan hat (Testdatum in der Zukunft oder heute), wird dieser als erste Karte in der Fächerauswahl (CategorySelector) angezeigt. Bei Klick darauf startet das Lernspiel mit thematisch passenden Fragen zum Lernplan-Thema.
 
-Die eigentliche Bildschirmzeit-Verwaltung (Anfragen genehmigen, Zeitlimits setzen) läuft bereits vollständig über das `ParentDashboard` und die `ParentScreenTimeRequestsDashboard`-Komponente. Die ScreenTimeWidget ist also redundant und verwirrend.
+## Technische Umsetzung
 
-### Lösung
+### 1. RLS-Policy: Kinder dürfen eigene Lernpläne lesen
+Migration:
+```sql
+CREATE POLICY "Children can view their own learning plans"
+  ON learning_plans FOR SELECT
+  USING (auth.uid() = child_id);
+```
 
-**Die `ScreenTimeWidget` im Eltern-Dashboard durch eine kompakte "Kindersicherung"-Karte ersetzen**, die:
+### 2. CategorySelector erweitern
+- Aktive Lernpläne laden: Query auf `learning_plans` wo `child_id = user.id` und `test_date >= today` (oder `test_date IS NULL`), sortiert nach `test_date ASC`, limit 1.
+- Vor der normalen Fächerliste eine spezielle "Lernplan"-Karte rendern mit:
+  - Sparkles-Icon, lila/gold Gradient
+  - Thema + Testdatum ("Bruchrechnung — Test am 15.03.")
+  - Fach-Badge + "KI-Lernplan" Label
+- `onCategorySelect` wird erweitert: Neuer Callback `onLearningPlanSelect(plan)` als optionaler Prop, oder wir übergeben das Thema als Metadaten.
 
-1. **Erkennt, ob ein natives Gerät vorliegt** (via `parentalControlsService.isNativePlatform()`)
-2. **Auf nativen Geräten**: Einen Button zeigt, der direkt Family Link (Android) oder Bildschirmzeit-Einstellungen (iOS) öffnet – über die bereits implementierten Deep-Links in `parentalControlsService`
-3. **Im Web/PWA**: Statt "nicht verfügbar" eine kurze Anleitung zeigt, wie man Family Link oder Bildschirmzeit auf dem Gerät einrichtet, mit Links zu den App-Stores
-4. **Immer**: Einen Hinweis zeigt, dass Bildschirmzeit-Anfragen der Kinder im Tab "Anfragen" im Dashboard unten verwaltet werden
+### 3. Thema an den Frage-Generator weitergeben
+**Neuer Flow**: CategorySelector → Index.tsx → LearningGame → useQuestionPreloader → Edge Function
 
-### Technische Änderungen
+- **CategorySelector**: Bei Klick auf Lernplan-Karte wird ein neuer Callback aufgerufen, z.B. `onCategorySelect(plan.subject)` plus ein neuer State `topicHint` im Index.
+- **Index.tsx**: Neuer State `learningPlanTopic: string | null`. Wird beim Lernplan-Klick gesetzt und an `LearningGame` als neuer optionaler Prop `topicHint` weitergereicht.
+- **LearningGame**: Nimmt `topicHint?: string` als Prop entgegen, gibt es an `useQuestionPreloader` weiter.
+- **useQuestionPreloader**: Neuer optionaler Parameter `topicHint`. Wird im Body an die Edge Function übergeben.
+- **Edge Function `ai-question-generator`**: Liest `topicHint` aus dem Body. Wenn vorhanden, wird es in den Prompt eingebaut: `"Fokussiere die Frage auf das Thema: ${topicHint}"`. So generiert die KI Fragen passend zum Lernplan-Schwerpunkt.
 
-**`src/components/ScreenTimeWidget.tsx`** – Komplett umschreiben:
-- Entferne Abhängigkeit von `useScreenTime` und `familyLinkService` (die Mock-Daten liefern)
-- Nutze stattdessen `parentalControlsService` (bereits implementiert mit echten Deep-Links)
-- Zeige plattformspezifische UI: nativer Button vs. Web-Anleitung
-- Entferne den ganzen "Permission"-Flow (war ohnehin Mock)
+### 4. Dateien
 
-**`src/hooks/useScreenTime.ts`** und **`src/services/familyLink.ts`** – Können entfernt werden, da sie nur Mock-Daten liefern und von keiner anderen Komponente genutzt werden.
-
-### Dateiänderungen
-
-| Datei | Aktion |
+| Datei | Änderung |
 |---|---|
-| `src/components/ScreenTimeWidget.tsx` | Umschreiben (nutzt `parentalControlsService`) |
-| `src/hooks/useScreenTime.ts` | Entfernen (nur Mock-Daten) |
-| `src/services/familyLink.ts` | Entfernen (nur Mock-Daten) |
+| Migration (neu) | RLS-Policy für Kind-Zugriff |
+| `src/components/CategorySelector.tsx` | Lernplan laden + als erste Karte anzeigen |
+| `src/pages/Index.tsx` | `learningPlanTopic` State, an LearningGame weiterreichen |
+| `src/components/LearningGame.tsx` | `topicHint` Prop annehmen, an Preloader geben |
+| `src/hooks/useQuestionPreloader.ts` | `topicHint` Parameter, im Request-Body senden |
+| `supabase/functions/ai-question-generator/index.ts` | `topicHint` aus Body lesen, in Prompt einbauen |
+
+### 5. UI-Verhalten
+- Lernplan-Karte erscheint nur wenn ein aktiver Plan existiert (Testdatum heute oder in Zukunft)
+- Visuell abgehoben: Gradient-Border, Sparkles-Icon, "📋 Dein Lernplan" Titel
+- Zeigt: Thema, Fach, Testdatum, welcher Tag heute dran ist (berechnet aus `created_at`)
+- Klick → normaler Flow: SessionLengthSelector → LearningGame (mit topicHint)
 
