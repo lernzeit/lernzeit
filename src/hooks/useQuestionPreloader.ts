@@ -95,7 +95,8 @@ export const useQuestionPreloader = ({
           grade: gradeRef.current,
           subject: subjectRef.current,
           difficulty,
-          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : []
+          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : [],
+          topicHint: topicHintRef.current || undefined
         }
       });
 
