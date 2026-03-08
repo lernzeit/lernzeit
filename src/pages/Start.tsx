@@ -12,7 +12,7 @@ const Start = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       <HeroSection />
       <TargetAudience />
       <HowItWorks />
