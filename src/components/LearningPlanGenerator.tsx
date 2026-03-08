@@ -76,12 +76,12 @@ const ALL_SUBJECTS = [
   { key: 'latin', name: 'Latein' },
 ];
 
-export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
+export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: Props) {
   const { toast } = useToast();
   const { isPremium, isTrialing } = useSubscription();
   const hasPremiumAccess = isPremium || isTrialing;
 
-  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [selectedChildId, setSelectedChildId] = useState<string>(fixedChildId || '');
   const [subject, setSubject] = useState('');
   const [topic, setTopic] = useState('');
   const [testDate, setTestDate] = useState('');
@@ -96,10 +96,12 @@ export function LearningPlanGenerator({ userId, linkedChildren }: Props) {
     : ALL_SUBJECTS;
 
   useEffect(() => {
-    if (linkedChildren.length > 0 && !selectedChildId) {
+    if (fixedChildId) {
+      setSelectedChildId(fixedChildId);
+    } else if (linkedChildren.length > 0 && !selectedChildId) {
       setSelectedChildId(linkedChildren[0].id);
     }
-  }, [linkedChildren]);
+  }, [linkedChildren, fixedChildId]);
 
   useEffect(() => {
     loadSavedPlans();
