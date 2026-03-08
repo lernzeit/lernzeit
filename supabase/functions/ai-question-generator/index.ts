@@ -157,8 +157,13 @@ serve(async (req) => {
           .filter((t): t is string => typeof t === 'string')
           .slice(0, 20)
       : [];
+
+    // Extract optional topicHint for learning plan focus
+    const topicHint: string | undefined = typeof body.topicHint === 'string' && body.topicHint.length > 0
+      ? (body.topicHint as string).slice(0, 200)
+      : undefined;
     
-    console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts`);
+    console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -172,7 +177,7 @@ serve(async (req) => {
       });
     }
 
-    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts);
+    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint);
 
     // Load active prompt rules from DB
     let rulesBlock = '';
@@ -391,7 +396,8 @@ function buildQuestionPrompt(
   subject: string, 
   difficulty: string, 
   requestedType?: string,
-  excludeTexts?: string[]
+  excludeTexts?: string[],
+  topicHint?: string
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const gradeGuidelines = getGradeGuidelines(grade);
@@ -404,11 +410,16 @@ function buildQuestionPrompt(
     exclusionNote = `\n\nWICHTIG - Vermeide Fragen die diesen ähnlich sind:\n${excludeTexts.slice(0, 10).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nGeneriere eine völlig andere Frage!`;
   }
 
+  let topicNote = '';
+  if (topicHint) {
+    topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
+  }
+
   return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
-FRAGETYP: ${questionType}${exclusionNote}
+FRAGETYP: ${questionType}${exclusionNote}${topicNote}
 
 ${typeInstructions}
 

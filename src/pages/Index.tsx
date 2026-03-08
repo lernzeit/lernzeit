@@ -36,6 +36,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
   const [selectedQuestionCount, setSelectedQuestionCount] = useState<number | null>(null);
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
@@ -65,8 +66,9 @@ const Index = () => {
     setShowSuccess(false);
   };
 
-  const handleCategorySelect = (category: Category) => {
+  const handleCategorySelect = (category: Category, topicHint?: string) => {
     setSelectedCategory(category);
+    setLearningPlanTopic(topicHint || null);
   };
 
   const handleStartGame = (grade: number) => {
@@ -104,9 +106,11 @@ const Index = () => {
       setSelectedGrade(null);
       setSelectedCategory(null);
       setSelectedQuestionCount(null);
+      setLearningPlanTopic(null);
     } else {
       setSelectedCategory(null);
       setSelectedQuestionCount(null);
+      setLearningPlanTopic(null);
     }
   };
 
@@ -223,7 +227,8 @@ const Index = () => {
             subject={selectedCategory}
             onComplete={handleGameComplete}
             onBack={() => setSelectedQuestionCount(null)}
-            totalQuestions={selectedQuestionCount} />
+            totalQuestions={selectedQuestionCount}
+            topicHint={learningPlanTopic || undefined} />
         </Suspense>
       </ErrorBoundary>);
   }

@@ -32,6 +32,7 @@ interface LearningGameProps {
   onComplete: (stats: GameStats) => void;
   onBack: () => void;
   totalQuestions?: number;
+  topicHint?: string;
 }
 
 interface GameStats {
@@ -50,7 +51,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   subject,
   onComplete,
   onBack,
-  totalQuestions = 5
+  totalQuestions = 5,
+  topicHint
 }) => {
   const { user } = useAuth();
   const { saveSession, isSaving } = useGameSessionSaver();
@@ -70,7 +72,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     updateDifficulty,
     reload,
     cancelLoading
-  } = useQuestionPreloader({ grade, subject, totalQuestions });
+  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   

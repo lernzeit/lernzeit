@@ -20,6 +20,7 @@ interface UseQuestionPreloaderOptions {
   subject: string;
   totalQuestions: number;
   initialDifficulty?: 'easy' | 'medium' | 'hard';
+  topicHint?: string;
 }
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
@@ -31,7 +32,8 @@ export const useQuestionPreloader = ({
   grade,
   subject,
   totalQuestions,
-  initialDifficulty = 'medium'
+  initialDifficulty = 'medium',
+  topicHint
 }: UseQuestionPreloaderOptions) => {
   const [questions, setQuestions] = useState<PreloadedQuestion[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -50,12 +52,14 @@ export const useQuestionPreloader = ({
   const gradeRef = useRef(grade);
   const subjectRef = useRef(subject);
   const totalQuestionsRef = useRef(totalQuestions);
+  const topicHintRef = useRef(topicHint);
   
   useEffect(() => {
     gradeRef.current = grade;
     subjectRef.current = subject;
     totalQuestionsRef.current = totalQuestions;
-  }, [grade, subject, totalQuestions]);
+    topicHintRef.current = topicHint;
+  }, [grade, subject, totalQuestions, topicHint]);
 
   const getRecentQuestionTexts = useCallback((): Set<string> => {
     try {
@@ -91,7 +95,8 @@ export const useQuestionPreloader = ({
           grade: gradeRef.current,
           subject: subjectRef.current,
           difficulty,
-          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : []
+          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : [],
+          topicHint: topicHintRef.current || undefined
         }
       });
 
