@@ -32,6 +32,7 @@ interface LearningGameProps {
   onComplete: (stats: GameStats) => void;
   onBack: () => void;
   totalQuestions?: number;
+  topicHint?: string;
 }
 
 interface GameStats {
