@@ -51,7 +51,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   subject,
   onComplete,
   onBack,
-  totalQuestions = 5
+  totalQuestions = 5,
+  topicHint
 }) => {
   const { user } = useAuth();
   const { saveSession, isSaving } = useGameSessionSaver();
