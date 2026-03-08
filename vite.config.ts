@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: null,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'app-icon-1024.png'],
       manifest: {
         name: 'LernZeit - Verdiene Dir Bildschirm-Zeit',
