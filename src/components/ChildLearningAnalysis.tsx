@@ -97,9 +97,18 @@ const LEARNING_RECOMMENDATIONS: Record<string, Record<number, string[]>> = {
 
 function normalizeCategory(category: string): string {
   const lower = category.toLowerCase();
-  if (lower === 'mathematik') return 'math';
-  if (lower === 'englisch') return 'english';
-  return lower;
+  const mapping: Record<string, string> = {
+    'mathematik': 'math',
+    'deutsch': 'german',
+    'englisch': 'english',
+    'erdkunde': 'geography',
+    'geschichte': 'history',
+    'physik': 'physics',
+    'biologie': 'biology',
+    'chemie': 'chemistry',
+    'latein': 'latin',
+  };
+  return mapping[lower] || lower;
 }
 
 function getWeekKey(date: Date): string {
