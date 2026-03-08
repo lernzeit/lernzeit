@@ -124,7 +124,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isPremium } = useSubscription();
+  const { isPremium, isTrialing } = useSubscription();
 
   useEffect(() => {
     loadAnalysis();
