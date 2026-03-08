@@ -52,12 +52,14 @@ export const useQuestionPreloader = ({
   const gradeRef = useRef(grade);
   const subjectRef = useRef(subject);
   const totalQuestionsRef = useRef(totalQuestions);
+  const topicHintRef = useRef(topicHint);
   
   useEffect(() => {
     gradeRef.current = grade;
     subjectRef.current = subject;
     totalQuestionsRef.current = totalQuestions;
-  }, [grade, subject, totalQuestions]);
+    topicHintRef.current = topicHint;
+  }, [grade, subject, totalQuestions, topicHint]);
 
   const getRecentQuestionTexts = useCallback((): Set<string> => {
     try {
