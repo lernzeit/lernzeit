@@ -47,6 +47,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const age = useAgeGroup(grade);
   const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
   const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
+  const [activePlan, setActivePlan] = useState<LearningPlan | null>(null);
 
   // Grade-based default: only show subjects appropriate for this grade
   const getGradeDefaults = () => new Set(categories.filter(c => isSubjectAvailableForGrade(c.id, grade)).map(c => c.id));
