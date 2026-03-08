@@ -124,7 +124,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isPremium } = useSubscription();
+  const { isPremium, isTrialing } = useSubscription();
 
   useEffect(() => {
     loadAnalysis();
@@ -383,192 +383,197 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
     );
   }
 
+  const hasPremiumAccess = isPremium || isTrialing;
+
   return (
-    <PremiumFeature 
-      featureName="Detaillierte Lernanalyse"
-      onUpgradeClick={() => {}}
-    >
-      <div className="space-y-4">
-        {/* Übersichtskarte */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Gesamtübersicht
-            </CardTitle>
-            <CardDescription>
-              Lernfortschritt für {childName}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{overview.totalQuestions}</div>
-                <div className="text-xs text-muted-foreground">Aufgaben gelöst</div>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className={`text-2xl font-bold ${getSuccessRateColor(overview.overallSuccessRate)}`}>
-                  {Math.round(overview.overallSuccessRate)}%
-                </div>
-                <div className="text-xs text-muted-foreground">Richtig beantwortet</div>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold">{formatTime(overview.avgTimePerQuestion)}</div>
-                <div className="text-xs text-muted-foreground">Ø pro Aufgabe</div>
-              </div>
-              <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <div className="text-2xl font-bold">{formatLearningTime(overview.totalLearningTime)}</div>
-                <div className="text-xs text-muted-foreground">Gesamte Lernzeit</div>
-              </div>
+    <div className="space-y-4">
+      {/* Übersichtskarte – immer sichtbar (Free) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Gesamtübersicht
+          </CardTitle>
+          <CardDescription>
+            Lernfortschritt für {childName}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold text-primary">{overview.totalQuestions}</div>
+              <div className="text-xs text-muted-foreground">Aufgaben gelöst</div>
             </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className={`text-2xl font-bold ${getSuccessRateColor(overview.overallSuccessRate)}`}>
+                {Math.round(overview.overallSuccessRate)}%
+              </div>
+              <div className="text-xs text-muted-foreground">Richtig beantwortet</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">{formatTime(overview.avgTimePerQuestion)}</div>
+              <div className="text-xs text-muted-foreground">Ø pro Aufgabe</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">{formatLearningTime(overview.totalLearningTime)}</div>
+              <div className="text-xs text-muted-foreground">Gesamte Lernzeit</div>
+            </div>
+          </div>
 
-            {/* Stärken & Schwächen */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {overview.strongestSubject && (
-                <div className="flex items-center gap-3 p-3 border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <div>
-                    <div className="text-sm font-medium">Stärkstes Fach</div>
-                    <div className="text-lg font-semibold text-green-700 dark:text-green-400">
-                      {overview.strongestSubject}
-                    </div>
+          {/* Stärken & Schwächen */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {overview.strongestSubject && (
+              <div className="flex items-center gap-3 p-3 border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="text-sm font-medium">Stärkstes Fach</div>
+                  <div className="text-lg font-semibold text-green-700 dark:text-green-400">
+                    {overview.strongestSubject}
                   </div>
                 </div>
-              )}
-              {overview.weakestSubject && overview.weakestSubject !== overview.strongestSubject && (
-                <div className="flex items-center gap-3 p-3 border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg">
-                  <Target className="h-5 w-5 text-amber-600" />
-                  <div>
-                    <div className="text-sm font-medium">Mehr Übung empfohlen</div>
-                    <div className="text-lg font-semibold text-amber-700 dark:text-amber-400">
-                      {overview.weakestSubject}
-                    </div>
+              </div>
+            )}
+            {overview.weakestSubject && overview.weakestSubject !== overview.strongestSubject && (
+              <div className="flex items-center gap-3 p-3 border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 rounded-lg">
+                <Target className="h-5 w-5 text-amber-600" />
+                <div>
+                  <div className="text-sm font-medium">Mehr Übung empfohlen</div>
+                  <div className="text-lg font-semibold text-amber-700 dark:text-amber-400">
+                    {overview.weakestSubject}
                   </div>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Zeitlicher Verlauf */}
-        {weeklyData.length >= 2 && (
+      {/* Premium-Bereich: Zeitverlauf, Fachstatistiken, Empfehlungen */}
+      <PremiumFeature
+        featureName="Detaillierte Lernanalyse"
+        onUpgradeClick={() => {}}
+      >
+        <div className="space-y-4">
+          {/* Zeitlicher Verlauf */}
+          {weeklyData.length >= 2 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Entwicklung der letzten Wochen
+                </CardTitle>
+                <CardDescription>
+                  Erfolgsquote im zeitlichen Verlauf
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={weeklyData}>
+                      <XAxis 
+                        dataKey="week" 
+                        tick={{ fontSize: 12 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        tick={{ fontSize: 12 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => [`${value}%`, 'Erfolgsquote']}
+                        labelFormatter={(label) => label}
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          color: 'hsl(var(--foreground))'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="successRate" 
+                        stroke="hsl(var(--primary))" 
+                        dot={{ fill: 'hsl(var(--primary))' }}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Fach-Statistiken */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Entwicklung der letzten Wochen
+                <BarChart3 className="h-5 w-5" />
+                Fachspezifische Statistiken
               </CardTitle>
               <CardDescription>
-                Erfolgsquote im zeitlichen Verlauf
+                Leistung pro Fach
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={weeklyData}>
-                    <XAxis 
-                      dataKey="week" 
-                      tick={{ fontSize: 12 }}
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <YAxis 
-                      domain={[0, 100]} 
-                      tick={{ fontSize: 12 }}
-                      stroke="hsl(var(--muted-foreground))"
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value}%`, 'Erfolgsquote']}
-                      labelFormatter={(label) => label}
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        color: 'hsl(var(--foreground))'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="successRate" 
-                      stroke="hsl(var(--primary))" 
-                      dot={{ fill: 'hsl(var(--primary))' }}
-                      isAnimationActive={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Fach-Statistiken */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Fachspezifische Statistiken
-            </CardTitle>
-            <CardDescription>
-              Leistung pro Fach
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {subjectStats.map((stat) => (
-                <div key={stat.subject} className="p-3 border rounded-lg bg-muted/30 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center justify-between flex-1">
-                      <span className="font-medium text-sm">{stat.displayName}</span>
-                      <div className="flex items-center gap-2">
-                        {getTrendIcon(stat.trend)}
-                        <Badge variant={getSuccessRateBadge(stat.successRate).variant}>
-                          {getSuccessRateBadge(stat.successRate).label}
-                        </Badge>
+              <div className="space-y-4">
+                {subjectStats.map((stat) => (
+                  <div key={stat.subject} className="p-3 border rounded-lg bg-muted/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-1">
+                        <span className="font-medium text-sm">{stat.displayName}</span>
+                        <div className="flex items-center gap-2">
+                          {getTrendIcon(stat.trend)}
+                          <Badge variant={getSuccessRateBadge(stat.successRate).variant}>
+                            {getSuccessRateBadge(stat.successRate).label}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{stat.correctAnswers} von {stat.totalQuestions} richtig ({Math.round(stat.successRate)}%)</span>
+                      <span>{formatTime(stat.avgTimePerQuestion)} pro Aufgabe</span>
+                    </div>
+                    
+                    <Progress value={stat.successRate} className="h-2" />
+                    
+                    <div className="text-xs text-muted-foreground">
+                      <span>{stat.sessionCount} Übungseinheiten</span>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{stat.correctAnswers} von {stat.totalQuestions} richtig ({Math.round(stat.successRate)}%)</span>
-                    <span>{formatTime(stat.avgTimePerQuestion)} pro Aufgabe</span>
-                  </div>
-                  
-                  <Progress value={stat.successRate} className="h-2" />
-                  
-                  <div className="text-xs text-muted-foreground">
-                    <span>{stat.sessionCount} Übungseinheiten</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Lernempfehlungen */}
-        {recommendations.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Lightbulb className="h-5 w-5" />
-                Empfehlungen
-              </CardTitle>
-              <CardDescription>
-                Basierend auf dem Lernfortschritt
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {recommendations.map((rec, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
-                    <Zap className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                    <span>{rec}</span>
-                  </li>
                 ))}
-              </ul>
+              </div>
             </CardContent>
           </Card>
-        )}
-      </div>
-    </PremiumFeature>
+
+          {/* Lernempfehlungen */}
+          {recommendations.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5" />
+                  Empfehlungen
+                </CardTitle>
+                <CardDescription>
+                  Basierend auf dem Lernfortschritt
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {recommendations.map((rec, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <Zap className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </PremiumFeature>
+    </div>
   );
 }
