@@ -353,12 +353,10 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                             <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
                               <Sparkles className="h-4 w-4 text-primary" />
                               KI-Lernplan
-                              {!(isPremium || isTrialing) && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
-                                  <Crown className="h-2.5 w-2.5" />
-                                  Premium
-                                </Badge>
-                              )}
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
+                                <Crown className="h-2.5 w-2.5" />
+                                Premium
+                              </Badge>
                             </h3>
                             <LearningPlanGenerator 
                               userId={userId} 

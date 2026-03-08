@@ -410,7 +410,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               <BookOpen className="h-4 w-4" />
               Fächer
             </CardTitle>
-            {!hasPremiumAccess && <PremiumBadge />}
+            <PremiumBadge />
           </div>
           <CardDescription className="text-xs">
             Fächer für Klasse {grade} verwalten
