@@ -32,7 +32,8 @@ export const useQuestionPreloader = ({
   grade,
   subject,
   totalQuestions,
-  initialDifficulty = 'medium'
+  initialDifficulty = 'medium',
+  topicHint
 }: UseQuestionPreloaderOptions) => {
   const [questions, setQuestions] = useState<PreloadedQuestion[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
