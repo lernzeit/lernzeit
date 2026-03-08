@@ -5,12 +5,38 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://fsmgynpdfxkaiiuguqyr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzbWd5bnBkZnhrYWlpdWd1cXlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2OTg4ODYsImV4cCI6MjA2ODI3NDg4Nn0.unk2ST0Wcsw7RJz-BGrCqQpXSgLJQpAQPgJ-ImGCv-Q";
 
+const memoryStorageMap = new Map<string, string>();
+
+const memoryStorage = {
+  getItem: (key: string): string | null => memoryStorageMap.get(key) ?? null,
+  setItem: (key: string, value: string): void => {
+    memoryStorageMap.set(key, value);
+  },
+  removeItem: (key: string): void => {
+    memoryStorageMap.delete(key);
+  },
+};
+
+const resolveAuthStorage = () => {
+  if (typeof window === 'undefined') return memoryStorage;
+
+  try {
+    const testKey = '__supabase_storage_test__';
+    window.localStorage.setItem(testKey, 'ok');
+    window.localStorage.removeItem(testKey);
+    return window.localStorage;
+  } catch (error) {
+    console.warn('localStorage unavailable, using in-memory auth storage fallback:', error);
+    return memoryStorage;
+  }
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: resolveAuthStorage(),
     persistSession: true,
     autoRefreshToken: true,
   }
