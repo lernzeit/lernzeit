@@ -516,20 +516,21 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {SUBJECTS.map((subject) => {
                       const Icon = subject.icon;
+                      const isPriority = priorities[subject.key] ?? false;
                       return (
                         <div 
                           key={subject.key}
-                          className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                          className={`flex items-center justify-between p-2.5 rounded-lg ${isPriority ? 'bg-primary/10 border border-primary/20' : 'bg-muted/50'}`}
                         >
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-2.5">
+                            <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-sm">{subject.name}</span>
                           </div>
                           <Switch
-                            checked={priorities[subject.key] ?? false}
+                            checked={isPriority}
                             onCheckedChange={() => toggleSubjectPriority(subject.key)}
                             disabled={!hasPremiumAccess}
                           />
