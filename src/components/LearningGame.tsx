@@ -1268,12 +1268,17 @@ const FillBlankRenderer: React.FC<{
   onChange: (index: number, value: string) => void;
 }> = ({ task, text, answers, options, correctAnswers, hasAnswered, subject, onChange }) => {
   const [activeGapIndex, setActiveGapIndex] = useState<number | null>(null);
-  const parts = text.split('___');
+  // Use task as fill-blank text if text doesn't contain blanks
+  const fillText = text.includes('___') ? text : (task.includes('___') ? task : text);
+  const parts = fillText.split('___');
   
   // Determine if this is a language subject (should use keyboard input)
   const isLanguageSubject = ['german', 'english', 'latin', 'french', 'spanish'].includes(subject || '');
   const hasOptions = options.length > 0;
   const useChipSelection = hasOptions && !isLanguageSubject;
+  
+  // If no blanks found anywhere, show a simple text input fallback
+  const hasBlanks = parts.length > 1;
 
   // Get available options (not yet used)
   const getAvailableOptions = () => {
