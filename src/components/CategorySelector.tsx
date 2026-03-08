@@ -55,10 +55,29 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   useEffect(() => {
     if (user?.id) {
       loadSubjectVisibility();
+      loadActiveLearningPlan();
     } else {
       setVisibleSubjects(getGradeDefaults());
     }
   }, [user?.id, grade]);
+
+  const loadActiveLearningPlan = async () => {
+    if (!user?.id) return;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('learning_plans')
+        .select('id, subject, topic, test_date, created_at, grade')
+        .eq('child_id', user.id)
+        .or(`test_date.gte.${today},test_date.is.null`)
+        .order('test_date', { ascending: true, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      setActivePlan(data);
+    } catch {
+      setActivePlan(null);
+    }
+  };
 
   const loadSubjectVisibility = async () => {
     if (!user?.id) return;
