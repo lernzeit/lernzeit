@@ -79,7 +79,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
       const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
         .from('learning_plans')
-        .select('id, subject, topic, test_date, created_at, grade')
+        .select('id, subject, topic, test_date, created_at, grade, plan_data')
         .eq('child_id', user.id)
         .or(`test_date.gte.${today},test_date.is.null`)
         .order('test_date', { ascending: true, nullsFirst: false })
