@@ -110,12 +110,19 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
   const loadSavedPlans = async () => {
     try {
       setLoadingPlans(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('learning_plans')
         .select('*')
         .eq('parent_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
+
+      // Filter to specific child when embedded under a child card
+      if (fixedChildId) {
+        query = query.eq('child_id', fixedChildId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setSavedPlans((data as any[]) || []);
