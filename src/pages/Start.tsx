@@ -41,7 +41,7 @@ const Start = () => {
       </section>
 
       <LegalFooter className="pb-8" />
-    </div>
+    </main>
   );
 };
 
