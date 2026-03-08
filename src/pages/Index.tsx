@@ -390,7 +390,7 @@ const Index = () => {
 
         <LegalFooter className="mt-8" />
       </div>
-    </div>);
+    </main>);
 
 };
 
