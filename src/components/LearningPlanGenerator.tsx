@@ -24,6 +24,7 @@ import {
   Crown,
   Trash2,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 
 interface LinkedChild {
