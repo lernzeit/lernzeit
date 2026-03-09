@@ -318,8 +318,6 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                       </Button>
                     </CardContent>
                   </Card>
-                    </CardContent>
-                  </Card>
 
                   {/* Multiple Parent Support */}
                   <Card className="shadow-card">
