@@ -404,8 +404,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Prüfe...
                         </span>
-                      ) : hasParentLink && parentInfo ? (
-                        `👨‍👩‍👧‍👦 Mit ${parentInfo.name} verknüpft` 
+                      ) : hasParentLink ? (
+                        `👨‍👩‍👧‍👦 Mit ${parentInfoList.map(p => p.name).join(', ')} verknüpft` 
                       ) : (
                         '🔓 Unabhängig'
                       )}
