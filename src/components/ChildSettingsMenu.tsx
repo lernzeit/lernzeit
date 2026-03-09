@@ -141,20 +141,20 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
     }
   };
 
-  // Determine if there's a parent link based on parentInfo (not settings)
-  const hasParentLink = parentInfo !== null;
+  // Determine if there's a parent link based on parentInfoList
+  const hasParentLink = parentInfoList.length > 0;
 
-  const handleUnlinkParent = async () => {
-    if (!parentInfo || !user?.id) return;
+  const handleUnlinkParent = async (parentId: string) => {
+    if (!user?.id) return;
     
     try {
-      console.log('🔥 Unlinking parent:', parentInfo.id, 'from child:', user.id);
+      console.log('🔥 Unlinking parent:', parentId, 'from child:', user.id);
       
       const { error } = await supabase
         .from('parent_child_relationships')
         .delete()
         .eq('child_id', user.id)
-        .eq('parent_id', parentInfo.id);
+        .eq('parent_id', parentId);
 
       if (error) {
         console.error('❌ Error unlinking parent:', error);
@@ -162,11 +162,11 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
       }
 
       console.log('✅ Successfully unlinked parent');
-      setParentInfo(null);
+      setParentInfoList(prev => prev.filter(p => p.id !== parentId));
       
       toast({
         title: "Verknüpfung entfernt",
-        description: "Die Verbindung zu deinen Eltern wurde getrennt.",
+        description: "Die Verbindung wurde getrennt.",
       });
     } catch (error: any) {
       console.error('❌ Error in handleUnlinkParent:', error);
