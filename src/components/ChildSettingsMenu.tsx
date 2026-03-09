@@ -259,27 +259,37 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                     </div>
                   </CardContent>
                 </Card>
-              ) : hasParentLink && parentInfo ? (
+              ) : hasParentLink ? (
                 <div className="space-y-6">
-                  {/* Current Parent Link Display */}
+                  {/* Current Parent Links Display */}
                   <Card className="shadow-card">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
                           <Users className="w-5 h-5 text-white" />
                         </div>
-                        Aktuelle Verknüpfung
+                        Aktuelle Verknüpfungen ({parentInfoList.length})
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <Check className="w-6 h-6 text-green-600" />
-                        <div className="flex-1">
-                          <div className="font-medium text-green-800">
-                            Verknüpft mit: <span className="font-semibold">{parentInfo.displayName || parentInfo.name}</span>
+                      {parentInfoList.map((parent) => (
+                        <div key={parent.id} className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <Check className="w-6 h-6 text-green-600 shrink-0" />
+                          <div className="flex-1">
+                            <div className="font-medium text-green-800">
+                              Verknüpft mit: <span className="font-semibold">{parent.displayName || parent.name}</span>
+                            </div>
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                            onClick={() => handleUnlinkParent(parent.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
-                      </div>
+                      ))}
                       
                       <div className="space-y-3">
                         <h4 className="font-medium">Was bedeutet das?</h4>
@@ -291,33 +301,23 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                         </ul>
                       </div>
                       
-                      <div className="space-y-3">
-                        <Button 
-                          onClick={refreshParentLink}
-                          variant="outline"
-                          className="w-full"
-                          disabled={checkingRelationship}
-                        >
-                          {checkingRelationship ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Überprüfe...
-                            </>
-                          ) : (
-                            'Status aktualisieren'
-                          )}
-                        </Button>
-                        
-                        <Button 
-                          variant="destructive" 
-                          onClick={handleUnlinkParent}
-                          className="w-full"
-                          disabled={checkingRelationship}
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Verknüpfung trennen
-                        </Button>
-                      </div>
+                      <Button 
+                        onClick={refreshParentLink}
+                        variant="outline"
+                        className="w-full"
+                        disabled={checkingRelationship}
+                      >
+                        {checkingRelationship ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Überprüfe...
+                          </>
+                        ) : (
+                          'Status aktualisieren'
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
                     </CardContent>
                   </Card>
 
