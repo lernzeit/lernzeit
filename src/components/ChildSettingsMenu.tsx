@@ -70,7 +70,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
     if (!user?.id) {
       console.log('❌ No user ID provided');
       setLoadingParentInfo(false);
-      setParentInfo(null);
+      setParentInfoList([]);
       return;
     }
     
@@ -78,64 +78,58 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
     console.log('🔍 Loading parent info for child:', user.id);
     
     try {
-      // Get parent-child relationship to find parent ID
-      const { data: relationship, error: relationshipError } = await supabase
+      // Get ALL parent-child relationships
+      const { data: relationships, error: relationshipError } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
-        .eq('child_id', user.id)
-        .maybeSingle();
+        .eq('child_id', user.id);
 
-      console.log('👥 Relationship query result:', { relationship, relationshipError });
+      console.log('👥 Relationships query result:', { relationships, relationshipError });
 
       if (relationshipError) {
-        console.error('❌ Error fetching relationship:', relationshipError);
-        setParentInfo(null);
+        console.error('❌ Error fetching relationships:', relationshipError);
+        setParentInfoList([]);
         return;
       }
 
-      if (relationship?.parent_id) {
-        console.log('✅ Found parent relationship with parent ID:', relationship.parent_id);
+      if (relationships && relationships.length > 0) {
+        const parentIds = relationships.map(r => r.parent_id).filter(Boolean) as string[];
+        console.log('✅ Found parent relationships:', parentIds);
         
-        // Load parent profile
-        console.log('🔍 Querying parent profile for ID:', relationship.parent_id);
-        const { data: parentProfile, error: parentError } = await supabase
+        // Load all parent profiles
+        const { data: parentProfiles, error: parentError } = await supabase
           .from('profiles')
           .select('id, name, role')
-          .eq('id', relationship.parent_id)
-          .maybeSingle();
+          .in('id', parentIds);
 
-        console.log('👨‍👩‍👧‍👦 Parent profile query result:', { 
-          parentProfile, 
-          parentError,
-          nameFromProfile: parentProfile?.name,
-          rawParentProfile: parentProfile
-        });
+        console.log('👨‍👩‍👧‍👦 Parent profiles query result:', { parentProfiles, parentError });
 
-        if (parentProfile && !parentError) {
-          const parentData = {
-            id: parentProfile.id,
-            name: parentProfile.name || 'Elternteil',
+        if (parentProfiles && !parentError) {
+          const parents: ParentInfo[] = parentProfiles.map(p => ({
+            id: p.id,
+            name: p.name || 'Elternteil',
             email: '',
-            role: parentProfile.role || 'parent',
-            displayName: parentProfile.name || 'Elternteil'
-          };
-          console.log('✅ Setting parent info with name:', parentProfile.name, 'Final parentData:', parentData);
-          setParentInfo(parentData);
+            role: p.role || 'parent',
+            displayName: p.name || 'Elternteil'
+          }));
+          console.log('✅ Setting parent info list:', parents);
+          setParentInfoList(parents);
         } else {
-          console.error('❌ Error fetching parent profile:', parentError);
-          setParentInfo({
-            id: relationship.parent_id,
+          console.error('❌ Error fetching parent profiles:', parentError);
+          // Fallback with IDs only
+          setParentInfoList(parentIds.map(id => ({
+            id,
             name: 'Elternteil',
             email: ''
-          });
+          })));
         }
       } else {
-        console.log('❌ No parent relationship found');
-        setParentInfo(null);
+        console.log('❌ No parent relationships found');
+        setParentInfoList([]);
       }
     } catch (error) {
       console.error('❌ Unexpected error in loadParentInfo:', error);
-      setParentInfo(null);
+      setParentInfoList([]);
       
       toast({
         title: "Fehler",
