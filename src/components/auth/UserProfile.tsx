@@ -89,15 +89,15 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', user.id)
-        .maybeSingle();
+        .limit(1);
 
       console.log('🔍 Parent link query result:', { data, error });
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('❌ Error checking parent link:', error);
         setHasParentLink(false);
       } else {
-        const linked = !!data?.parent_id;
+        const linked = !!(data && data.length > 0 && data[0].parent_id);
         console.log('✅ Parent link status:', linked ? 'LINKED' : 'NOT LINKED');
         setHasParentLink(linked);
       }

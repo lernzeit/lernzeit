@@ -45,7 +45,7 @@ interface ParentInfo {
 
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSection }: ChildSettingsMenuProps) {
   const [activeSection, setActiveSection] = useState<string | null>(initialSection || null);
-  const [parentInfo, setParentInfo] = useState<ParentInfo | null>(null);
+  const [parentInfoList, setParentInfoList] = useState<ParentInfo[]>([]);
   const [loadingParentInfo, setLoadingParentInfo] = useState(true);
   const [checkingRelationship, setCheckingRelationship] = useState(false);
   const { toast } = useToast();
@@ -70,7 +70,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
     if (!user?.id) {
       console.log('❌ No user ID provided');
       setLoadingParentInfo(false);
-      setParentInfo(null);
+      setParentInfoList([]);
       return;
     }
     
@@ -78,64 +78,58 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
     console.log('🔍 Loading parent info for child:', user.id);
     
     try {
-      // Get parent-child relationship to find parent ID
-      const { data: relationship, error: relationshipError } = await supabase
+      // Get ALL parent-child relationships
+      const { data: relationships, error: relationshipError } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
-        .eq('child_id', user.id)
-        .maybeSingle();
+        .eq('child_id', user.id);
 
-      console.log('👥 Relationship query result:', { relationship, relationshipError });
+      console.log('👥 Relationships query result:', { relationships, relationshipError });
 
       if (relationshipError) {
-        console.error('❌ Error fetching relationship:', relationshipError);
-        setParentInfo(null);
+        console.error('❌ Error fetching relationships:', relationshipError);
+        setParentInfoList([]);
         return;
       }
 
-      if (relationship?.parent_id) {
-        console.log('✅ Found parent relationship with parent ID:', relationship.parent_id);
+      if (relationships && relationships.length > 0) {
+        const parentIds = relationships.map(r => r.parent_id).filter(Boolean) as string[];
+        console.log('✅ Found parent relationships:', parentIds);
         
-        // Load parent profile
-        console.log('🔍 Querying parent profile for ID:', relationship.parent_id);
-        const { data: parentProfile, error: parentError } = await supabase
+        // Load all parent profiles
+        const { data: parentProfiles, error: parentError } = await supabase
           .from('profiles')
           .select('id, name, role')
-          .eq('id', relationship.parent_id)
-          .maybeSingle();
+          .in('id', parentIds);
 
-        console.log('👨‍👩‍👧‍👦 Parent profile query result:', { 
-          parentProfile, 
-          parentError,
-          nameFromProfile: parentProfile?.name,
-          rawParentProfile: parentProfile
-        });
+        console.log('👨‍👩‍👧‍👦 Parent profiles query result:', { parentProfiles, parentError });
 
-        if (parentProfile && !parentError) {
-          const parentData = {
-            id: parentProfile.id,
-            name: parentProfile.name || 'Elternteil',
+        if (parentProfiles && !parentError) {
+          const parents: ParentInfo[] = parentProfiles.map(p => ({
+            id: p.id,
+            name: p.name || 'Elternteil',
             email: '',
-            role: parentProfile.role || 'parent',
-            displayName: parentProfile.name || 'Elternteil'
-          };
-          console.log('✅ Setting parent info with name:', parentProfile.name, 'Final parentData:', parentData);
-          setParentInfo(parentData);
+            role: p.role || 'parent',
+            displayName: p.name || 'Elternteil'
+          }));
+          console.log('✅ Setting parent info list:', parents);
+          setParentInfoList(parents);
         } else {
-          console.error('❌ Error fetching parent profile:', parentError);
-          setParentInfo({
-            id: relationship.parent_id,
+          console.error('❌ Error fetching parent profiles:', parentError);
+          // Fallback with IDs only
+          setParentInfoList(parentIds.map(id => ({
+            id,
             name: 'Elternteil',
             email: ''
-          });
+          })));
         }
       } else {
-        console.log('❌ No parent relationship found');
-        setParentInfo(null);
+        console.log('❌ No parent relationships found');
+        setParentInfoList([]);
       }
     } catch (error) {
       console.error('❌ Unexpected error in loadParentInfo:', error);
-      setParentInfo(null);
+      setParentInfoList([]);
       
       toast({
         title: "Fehler",
@@ -147,20 +141,20 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
     }
   };
 
-  // Determine if there's a parent link based on parentInfo (not settings)
-  const hasParentLink = parentInfo !== null;
+  // Determine if there's a parent link based on parentInfoList
+  const hasParentLink = parentInfoList.length > 0;
 
-  const handleUnlinkParent = async () => {
-    if (!parentInfo || !user?.id) return;
+  const handleUnlinkParent = async (parentId: string) => {
+    if (!user?.id) return;
     
     try {
-      console.log('🔥 Unlinking parent:', parentInfo.id, 'from child:', user.id);
+      console.log('🔥 Unlinking parent:', parentId, 'from child:', user.id);
       
       const { error } = await supabase
         .from('parent_child_relationships')
         .delete()
         .eq('child_id', user.id)
-        .eq('parent_id', parentInfo.id);
+        .eq('parent_id', parentId);
 
       if (error) {
         console.error('❌ Error unlinking parent:', error);
@@ -168,11 +162,11 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
       }
 
       console.log('✅ Successfully unlinked parent');
-      setParentInfo(null);
+      setParentInfoList(prev => prev.filter(p => p.id !== parentId));
       
       toast({
         title: "Verknüpfung entfernt",
-        description: "Die Verbindung zu deinen Eltern wurde getrennt.",
+        description: "Die Verbindung wurde getrennt.",
       });
     } catch (error: any) {
       console.error('❌ Error in handleUnlinkParent:', error);
@@ -265,27 +259,37 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                     </div>
                   </CardContent>
                 </Card>
-              ) : hasParentLink && parentInfo ? (
+              ) : hasParentLink ? (
                 <div className="space-y-6">
-                  {/* Current Parent Link Display */}
+                  {/* Current Parent Links Display */}
                   <Card className="shadow-card">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
                           <Users className="w-5 h-5 text-white" />
                         </div>
-                        Aktuelle Verknüpfung
+                        Aktuelle Verknüpfungen ({parentInfoList.length})
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <Check className="w-6 h-6 text-green-600" />
-                        <div className="flex-1">
-                          <div className="font-medium text-green-800">
-                            Verknüpft mit: <span className="font-semibold">{parentInfo.displayName || parentInfo.name}</span>
+                      {parentInfoList.map((parent) => (
+                        <div key={parent.id} className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <Check className="w-6 h-6 text-green-600 shrink-0" />
+                          <div className="flex-1">
+                            <div className="font-medium text-green-800">
+                              Verknüpft mit: <span className="font-semibold">{parent.displayName || parent.name}</span>
+                            </div>
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                            onClick={() => handleUnlinkParent(parent.id)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
                         </div>
-                      </div>
+                      ))}
                       
                       <div className="space-y-3">
                         <h4 className="font-medium">Was bedeutet das?</h4>
@@ -297,33 +301,21 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                         </ul>
                       </div>
                       
-                      <div className="space-y-3">
-                        <Button 
-                          onClick={refreshParentLink}
-                          variant="outline"
-                          className="w-full"
-                          disabled={checkingRelationship}
-                        >
-                          {checkingRelationship ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Überprüfe...
-                            </>
-                          ) : (
-                            'Status aktualisieren'
-                          )}
-                        </Button>
-                        
-                        <Button 
-                          variant="destructive" 
-                          onClick={handleUnlinkParent}
-                          className="w-full"
-                          disabled={checkingRelationship}
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Verknüpfung trennen
-                        </Button>
-                      </div>
+                      <Button 
+                        onClick={refreshParentLink}
+                        variant="outline"
+                        className="w-full"
+                        disabled={checkingRelationship}
+                      >
+                        {checkingRelationship ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Überprüfe...
+                          </>
+                        ) : (
+                          'Status aktualisieren'
+                        )}
+                      </Button>
                     </CardContent>
                   </Card>
 
@@ -412,8 +404,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Prüfe...
                         </span>
-                      ) : hasParentLink && parentInfo ? (
-                        `👨‍👩‍👧‍👦 Mit ${parentInfo.name} verknüpft` 
+                      ) : hasParentLink ? (
+                        `👨‍👩‍👧‍👦 Mit ${parentInfoList.map(p => p.name).join(', ')} verknüpft` 
                       ) : (
                         '🔓 Unabhängig'
                       )}
