@@ -45,7 +45,7 @@ interface ParentInfo {
 
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSection }: ChildSettingsMenuProps) {
   const [activeSection, setActiveSection] = useState<string | null>(initialSection || null);
-  const [parentInfo, setParentInfo] = useState<ParentInfo | null>(null);
+  const [parentInfoList, setParentInfoList] = useState<ParentInfo[]>([]);
   const [loadingParentInfo, setLoadingParentInfo] = useState(true);
   const [checkingRelationship, setCheckingRelationship] = useState(false);
   const { toast } = useToast();
