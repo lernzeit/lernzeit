@@ -235,15 +235,19 @@ const Index = () => {
 
   // Show session length selector if grade and category are selected
   if (selectedGrade && selectedCategory) {
+    // Skip session length selector - always use 5 questions for faster loading
     return (
-      <Suspense fallback={<LoadingFallback />}>
-        <SessionLengthSelector
-          subject={selectedCategory}
-          secondsPerTask={30}
-          grade={selectedGrade}
-          onSelect={(count) => setSelectedQuestionCount(count)}
-          onBack={() => setSelectedCategory(null)} />
-      </Suspense>);
+      <ErrorBoundary onReset={() => { setSelectedCategory(null); }}>
+        <Suspense fallback={<LoadingFallback />}>
+          <LearningGame
+            grade={selectedGrade}
+            subject={selectedCategory}
+            onComplete={handleGameComplete}
+            onBack={() => setSelectedCategory(null)}
+            totalQuestions={5}
+            topicHint={learningPlanTopic || undefined} />
+        </Suspense>
+      </ErrorBoundary>);
   }
 
   // Show category selector if grade is selected but not category
