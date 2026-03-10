@@ -538,10 +538,12 @@ function getTypeSpecificInstructions(questionType: string): string {
     
     'FILL_BLANK': `Erstelle eine Lückentextaufgabe.
 - question_text: Der Satz mit ___ für die Lücke(n). WICHTIG: question_text MUSS mindestens ein ___ (drei Unterstriche) enthalten!
-- task: Kurze Anweisung (z.B. "Setze das richtige Wort in die Lücke ein.")
+- task: Kurze Anweisung (z.B. "Setze das passende Tunwort (Verb) in die Lücke ein.")
 - correct_answer: String oder Array mit den fehlenden Wörtern
 - options: null
-- GROSS-/KLEINSCHREIBUNG: Die korrekte Antwort muss die deutsche Rechtschreibung korrekt wiedergeben. Wenn das Wort mitten im Satz steht, gilt: Nomen groß, Verben/Adjektive klein. Beispiel: "Die Katze ___ auf dem Dach." → correct_answer: "saß" (klein, weil Verb mitten im Satz).`
+- GROSS-/KLEINSCHREIBUNG: Die korrekte Antwort muss die deutsche Rechtschreibung korrekt wiedergeben. Wenn das Wort mitten im Satz steht, gilt: Nomen groß, Verben/Adjektive klein. Beispiel: "Die Katze ___ auf dem Dach." → correct_answer: "saß" (klein, weil Verb mitten im Satz).
+- GRUNDFORM-HINWEIS (WICHTIG für Deutsch-Fragen): Wenn ein Verb oder Adjektiv in konjugierter/flektierter Form eingesetzt werden muss, schreibe die Grundform (Infinitiv) in Klammern direkt hinter die Lücke im question_text. Beispiel: "Der Vogel ___ (singen) im Garten." → correct_answer: "singt". So weiß das Kind, welches Wort gemeint ist, und muss nur die richtige Form finden.
+- Für Nomen (Substantive) ist kein Grundform-Hinweis nötig, da sie eindeutig sind.`
   };
   
   return instructions[questionType] || instructions['MULTIPLE_CHOICE'];
