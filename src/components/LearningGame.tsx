@@ -170,7 +170,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       resetAnswerState();
       setQuestionStartTime(Date.now());
       if (question.questionType === 'SORT' && question.options) {
-        setSortOrder([...question.options]);
+        const opts = Array.isArray(question.options) ? question.options : [];
+        setSortOrder([...opts]);
       }
       if (question.questionType === 'FILL_BLANK') {
         const ca = question.correctAnswer;
@@ -728,7 +729,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               {/* Question Type Renderers */}
               {question.questionType === 'MULTIPLE_CHOICE' && (
                 <MultipleChoiceRenderer
-                  options={question.options || []}
+                  options={Array.isArray(question.options) ? question.options : []}
                   selectedOption={selectedOption}
                   correctAnswer={resolveCorrectAnswerText(question)}
                   hasAnswered={hasAnswered}
@@ -771,7 +772,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   task={question.task || ''}
                   text={question.questionText}
                   answers={fillBlanks}
-                  options={question.options || []}
+                  options={Array.isArray(question.options) ? question.options : []}
                   correctAnswers={question.correctAnswer?.blanks || []}
                   hasAnswered={hasAnswered}
                   subject={subject}
