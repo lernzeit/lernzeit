@@ -35,7 +35,22 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [biometricInfo, setBiometricInfo] = useState<BiometricAvailability>({ available: false });
+  const [hasBiometricCredentials, setHasBiometricCredentials] = useState(false);
   const { toast } = useToast();
+
+  // Check biometric availability on mount
+  useEffect(() => {
+    const checkBiometric = async () => {
+      const availability = await biometricAuthService.isAvailable();
+      setBiometricInfo(availability);
+      if (availability.available) {
+        const hasCredentials = await biometricAuthService.hasStoredCredentials();
+        setHasBiometricCredentials(hasCredentials);
+      }
+    };
+    checkBiometric();
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
