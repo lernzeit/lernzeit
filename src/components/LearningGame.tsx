@@ -170,7 +170,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       resetAnswerState();
       setQuestionStartTime(Date.now());
       if (question.questionType === 'SORT' && question.options) {
-        setSortOrder([...question.options]);
+        const opts = Array.isArray(question.options) ? question.options : [];
+        setSortOrder([...opts]);
       }
       if (question.questionType === 'FILL_BLANK') {
         const ca = question.correctAnswer;
