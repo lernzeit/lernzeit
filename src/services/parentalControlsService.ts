@@ -63,9 +63,8 @@ class ParentalControlsService {
 
   private async openFamilyLink(minutes?: number): Promise<OpenParentalControlsResult> {
     const packageName = 'com.google.android.apps.kids.familylink';
-    const intentUri = `intent://#Intent;package=${packageName};scheme=familylink;end`;
-    const playStoreLink = `https://play.google.com/store/apps/details?id=${packageName}`;
     const marketUri = `market://details?id=${packageName}`;
+    const playStoreLink = `https://play.google.com/store/apps/details?id=${packageName}`;
     const minutesMsg = minutes
       ? `Bitte vergeben Sie ${minutes} Minuten zusätzliche Bildschirmzeit für Ihr Kind.`
       : '';
@@ -74,44 +73,61 @@ class ParentalControlsService {
       const launcher = await getAppLauncher();
 
       if (launcher) {
-        // Try multiple approaches to open Family Link
-        const urlsToTry = [
-          `familylink://`,                    // URI scheme
-          intentUri,                           // Intent URI
-          packageName,                         // Package name (legacy)
+        // Strategy: Skip canOpenUrl (unreliable on Android 11+) and try openUrl directly.
+        // Capacitor's canOpenUrl uses getLaunchIntentForPackage for bare names,
+        // but openUrl uses Uri.parse + ACTION_VIEW which fails for non-URI strings.
+        
+        // 1) Try Android App Link – families.google.com is verified by Family Link
+        //    ACTION_VIEW with this HTTPS URL opens Family Link if installed
+        const appLinkUrls = [
+          'https://families.google.com/familylink/',
+          'https://families.google.com/',
         ];
 
-        for (const url of urlsToTry) {
+        for (const url of appLinkUrls) {
           try {
-            const { value: canOpen } = await launcher.canOpenUrl({ url });
-            if (canOpen) {
-              await launcher.openUrl({ url });
-              return {
-                success: true, opened: true, platform: 'android',
-                appName: 'Family Link',
-                message: `Family Link wurde geöffnet. ${minutesMsg}`.trim(),
-              };
-            }
+            await launcher.openUrl({ url });
+            console.log('✅ Family Link opened via App Link:', url);
+            return {
+              success: true, opened: true, platform: 'android',
+              appName: 'Family Link',
+              message: `Family Link wurde geöffnet. ${minutesMsg}`.trim(),
+            };
           } catch (e) {
-            console.warn(`Failed to open Family Link with ${url}:`, e);
+            console.warn(`App Link failed for ${url}:`, e);
           }
         }
 
-        // Not installed or not queryable – open Play Store via market URI first, then HTTPS
-        for (const storeUrl of [marketUri, playStoreLink]) {
-          try {
-            await launcher.openUrl({ url: storeUrl });
-            return {
-              success: true, opened: false, platform: 'android',
-              appName: 'Family Link',
-              message: 'Family Link konnte nicht direkt geöffnet werden. Der Play Store wurde geöffnet.',
-            };
-          } catch { /* try next */ }
+        // 2) Try market:// URI – opens Play Store with "Open" button if installed
+        try {
+          await launcher.openUrl({ url: marketUri });
+          console.log('✅ Play Store opened via market:// URI');
+          return {
+            success: true, opened: false, platform: 'android',
+            appName: 'Family Link',
+            message: `Family Link: Bitte auf "Öffnen" tippen. ${minutesMsg}`.trim(),
+          };
+        } catch (e) {
+          console.warn('market:// URI failed:', e);
+        }
+
+        // 3) HTTPS Play Store fallback
+        try {
+          await launcher.openUrl({ url: playStoreLink });
+          console.log('✅ Play Store opened via HTTPS');
+          return {
+            success: true, opened: false, platform: 'android',
+            appName: 'Family Link',
+            message: `Family Link: Bitte auf "Öffnen" tippen. ${minutesMsg}`.trim(),
+          };
+        } catch (e) {
+          console.warn('HTTPS Play Store link failed:', e);
         }
       }
 
-      // Fallback without AppLauncher plugin
-      window.open(playStoreLink, '_system');
+      // Final fallback: use window.location (more reliable than window.open in WebView)
+      console.warn('All AppLauncher methods failed, using window.location fallback');
+      window.location.href = playStoreLink;
       return {
         success: true, opened: false, platform: 'android',
         appName: 'Family Link',
