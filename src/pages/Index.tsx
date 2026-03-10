@@ -112,9 +112,7 @@ const Index = () => {
   };
 
   const handleBack = () => {
-    if (selectedQuestionCount) {
-      setSelectedQuestionCount(null);
-    } else if (selectedCategory) {
+    if (selectedCategory) {
       setSelectedCategory(null);
     } else if (selectedGrade) {
       setSelectedGrade(null);
