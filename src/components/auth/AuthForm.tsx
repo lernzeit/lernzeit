@@ -109,9 +109,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             role,
             grade: role === 'child' ? grade : null,
           },
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
+      emailRedirectTo: `${window.location.origin}/`
+          }
+        });
 
       if (error) throw error;
 
@@ -144,9 +144,62 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       if (error) throw error;
 
+      // Save credentials for biometric login if available
+      if (biometricInfo.available) {
+        await biometricAuthService.saveCredentials(email, password);
+        setHasBiometricCredentials(true);
+      }
+
       toast({
         title: "Willkommen zurück!",
         description: `Du bist erfolgreich angemeldet.`,
+      });
+
+      onAuthSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Fehler",
+        description: translateError(error.message),
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    try {
+      const credentials = await biometricAuthService.authenticate();
+      if (!credentials) {
+        setLoading(false);
+        return; // User cancelled
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: credentials.username,
+        password: credentials.password,
+      });
+
+      if (error) {
+        // Credentials might be outdated - remove them
+        if (error.message.includes('Invalid login credentials')) {
+          await biometricAuthService.deleteCredentials();
+          setHasBiometricCredentials(false);
+          toast({
+            title: 'Gespeicherte Anmeldedaten ungültig',
+            description: 'Bitte melde dich erneut mit E-Mail und Passwort an.',
+            variant: 'destructive',
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({
+        title: "Willkommen zurück!",
+        description: `Biometrische Anmeldung erfolgreich.`,
       });
 
       onAuthSuccess();
