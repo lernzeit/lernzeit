@@ -729,7 +729,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               {/* Question Type Renderers */}
               {question.questionType === 'MULTIPLE_CHOICE' && (
                 <MultipleChoiceRenderer
-                  options={question.options || []}
+                  options={Array.isArray(question.options) ? question.options : []}
                   selectedOption={selectedOption}
                   correctAnswer={resolveCorrectAnswerText(question)}
                   hasAnswered={hasAnswered}
