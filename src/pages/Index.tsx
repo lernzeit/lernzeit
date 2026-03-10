@@ -83,7 +83,6 @@ const Index = () => {
   const handleSignOut = () => {
     setSelectedGrade(null);
     setSelectedCategory(null);
-    setSelectedQuestionCount(null);
     setShowSuccess(false);
     setEarnedTime(0);
     setEarnedCategory('');
