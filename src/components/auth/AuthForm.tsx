@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
+import { biometricAuthService, BiometricAvailability } from '@/services/biometricAuthService';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, Fingerprint, ScanFace, ShieldCheck } from 'lucide-react';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
