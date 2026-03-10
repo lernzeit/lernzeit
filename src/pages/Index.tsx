@@ -37,7 +37,7 @@ const Index = () => {
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
-  // selectedQuestionCount removed - always 5
+  // Sessions always use 5 questions
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
