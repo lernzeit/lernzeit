@@ -14,7 +14,7 @@ const CategorySelector = lazy(() => import('@/components/CategorySelector').then
 const LearningGame = lazy(() => import('@/components/LearningGame').then((m) => ({ default: m.LearningGame })));
 const AuthForm = lazy(() => import('@/components/auth/AuthForm').then((m) => ({ default: m.AuthForm })));
 const UserProfile = lazy(() => import('@/components/auth/UserProfile').then((m) => ({ default: m.UserProfile })));
-const SessionLengthSelector = lazy(() => import('@/components/SessionLengthSelector').then((m) => ({ default: m.SessionLengthSelector })));
+// SessionLengthSelector removed - always 5 questions
 
 // Loading fallback component
 const LoadingFallback = () =>
