@@ -415,7 +415,14 @@ function buildQuestionPrompt(
     topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
   }
 
+  const subjectScope = getSubjectContentScope(subject, grade);
+
   return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
+
+WICHTIG – FACHBINDUNG: Die Frage MUSS ausschließlich zum Fach ${subjectGerman} gehören. Erstelle KEINE fachfremden Inhalte (z.B. keine Rechenaufgaben im Fach Deutsch, keine Grammatik im Fach Mathematik).
+
+FACHSPEZIFISCHER INHALT FÜR ${subjectGerman.toUpperCase()}:
+${subjectScope}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
