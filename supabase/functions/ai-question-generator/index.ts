@@ -415,7 +415,14 @@ function buildQuestionPrompt(
     topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
   }
 
+  const subjectScope = getSubjectContentScope(subject, grade);
+
   return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
+
+WICHTIG – FACHBINDUNG: Die Frage MUSS ausschließlich zum Fach ${subjectGerman} gehören. Erstelle KEINE fachfremden Inhalte (z.B. keine Rechenaufgaben im Fach Deutsch, keine Grammatik im Fach Mathematik).
+
+FACHSPEZIFISCHER INHALT FÜR ${subjectGerman.toUpperCase()}:
+${subjectScope}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
@@ -547,4 +554,27 @@ function getTypeSpecificInstructions(questionType: string): string {
   };
   
   return instructions[questionType] || instructions['MULTIPLE_CHOICE'];
+}
+
+function getSubjectContentScope(subject: string, grade: number): string {
+  const scopes: Record<string, (g: number) => string> = {
+    'math': (g) => g <= 4
+      ? 'Zahlen, Grundrechenarten, Geometrie, Größen & Messen, Sachaufgaben. Keine Textanalyse, keine Grammatik.'
+      : 'Algebra, Brüche, Dezimalzahlen, Gleichungen, Funktionen, Geometrie, Stochastik. Keine sprachlichen Analysen.',
+    'german': (g) => g <= 4
+      ? 'Rechtschreibung, Grammatik (Wortarten, Satzglieder), Lesen & Textverständnis, Wortschatz, Alphabet, Silben. KEINE Rechenaufgaben, KEINE Zahlenrätsel, KEINE Mathematik.'
+      : 'Grammatik (Satzglieder, Zeitformen, Konjugation, Deklination), Rechtschreibung, Textanalyse, Literatur, Aufsatz, Wortschatz. KEINE Rechenaufgaben, KEINE Mathematik.',
+    'english': (g) => g <= 6
+      ? 'Vokabeln, einfache Grammatik (Simple Present/Past), Leseverständnis auf Englisch. Keine deutschen Grammatikfragen.'
+      : 'Grammatik (Tenses, Conditionals, Passive), Vokabeln, Textverständnis, Redewendungen. Alles auf Englisch.',
+    'geography': () => 'Erdkunde: Länder, Hauptstädte, Kontinente, Klima, Landschaften, Karten. Keine Mathe, keine Grammatik.',
+    'history': () => 'Geschichte: Epochen, Ereignisse, Persönlichkeiten, Ursachen & Folgen. Keine Mathe, keine Grammatik.',
+    'physics': () => 'Physik: Mechanik, Elektrizität, Optik, Wärmelehre, Formeln & Berechnungen. Nur physikalische Inhalte.',
+    'biology': () => 'Biologie: Zellen, Pflanzen, Tiere, Ökologie, Körper, Evolution. Keine Mathe, keine Grammatik.',
+    'chemistry': () => 'Chemie: Stoffe, Reaktionen, Periodensystem, Bindungen. Nur chemische Inhalte.',
+    'latin': () => 'Latein: Deklination, Konjugation, Übersetzung, Vokabeln, römische Kultur. Keine modernen Sprachen.',
+    'science': () => 'Sachkunde: Natur, Tiere, Pflanzen, Jahreszeiten, Wetter, Technik im Alltag. Altersgerecht für Grundschule.',
+  };
+  const fn = scopes[subject];
+  return fn ? fn(grade) : 'Erstelle eine fachlich korrekte Frage zum angegebenen Fach.';
 }
