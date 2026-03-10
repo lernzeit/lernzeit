@@ -94,6 +94,13 @@ window.setTimeout(() => {
 
 const bootstrap = async () => {
   try {
+    // On native platforms, init storage BEFORE importing App (which creates supabase client)
+    if (isNativePlatform()) {
+      const { initNativeStorage } = await import('./services/nativeStorageAdapter');
+      await initNativeStorage();
+      console.log('✅ Native storage initialized');
+    }
+
     const { default: App } = await import('./App.tsx');
     const rootEl = document.getElementById('root');
 
