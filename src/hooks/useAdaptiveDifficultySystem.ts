@@ -445,6 +445,27 @@ export function useAdaptiveDifficultySystem(
     return difficultyProfile.current_level;
   }, [difficultyProfile]);
 
+  // Probabilistic difficulty selection based on current level
+  // Max 80% hard questions even at highest level, to keep motivation
+  const selectDifficultyForQuestion = useCallback((): 'easy' | 'medium' | 'hard' => {
+    const level = difficultyProfile?.current_level ?? 0.5;
+    
+    // Calculate probabilities with max 80% hard cap
+    const hardProb = Math.min(level * 0.8, 0.8);  // max 80%
+    const easyProb = Math.max(0.05, (1 - level) * 0.8); // min 5%
+    const mediumProb = Math.max(0, 1 - hardProb - easyProb);
+    
+    const roll = Math.random();
+    if (roll < easyProb) return 'easy';
+    if (roll < easyProb + mediumProb) return 'medium';
+    return 'hard';
+  }, [difficultyProfile]);
+
+  // Generate a difficulty sequence for N questions
+  const generateDifficultySequence = useCallback((count: number): ('easy' | 'medium' | 'hard')[] => {
+    return Array.from({ length: count }, () => selectDifficultyForQuestion());
+  }, [selectDifficultyForQuestion]);
+
   // Reset session data
   const resetSession = useCallback(() => {
     sessionDataRef.current = {
