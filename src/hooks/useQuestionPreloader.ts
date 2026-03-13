@@ -157,7 +157,8 @@ export const useQuestionPreloader = ({
     const recentTexts = getRecentQuestionTexts();
     const total = totalQuestionsRef.current;
 
-    const difficulties: ('easy' | 'medium' | 'hard')[] = ['medium', 'medium', 'easy', 'medium', 'hard'];
+    // Use adaptive sequence if provided, otherwise fallback to hardcoded default
+    const difficulties: ('easy' | 'medium' | 'hard')[] = difficultySequenceRef.current || ['medium', 'medium', 'easy', 'medium', 'hard'];
 
     console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
 

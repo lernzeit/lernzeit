@@ -505,12 +505,15 @@ export function useAdaptiveDifficultySystem(
     resetSession,
     getRecommendedDifficulty,
     applyUserFeedback,
+    selectDifficultyForQuestion,
+    generateDifficultySequence,
 
     // Computed Properties
     shouldAdjust: performanceHistory.length >= 3 && !isAdapting,
     difficultyLevel: difficultyProfile?.current_level || 0.5,
     masteryLevel: difficultyProfile?.mastery_score || 0,
     learningTrend: difficultyProfile?.learning_velocity || 0,
+    isProfileLoaded: difficultyProfile !== null,
     
     // Session Statistics
     sessionStats: {
