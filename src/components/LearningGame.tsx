@@ -353,14 +353,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         setGameAnimation({ type: 'correct', message: 'Richtig! ✨' });
       }
 
-      // Increase difficulty on correct answers
-      if (difficulty === 'easy') setDifficulty('medium');
-      else if (difficulty === 'medium' && Math.random() > 0.5) setDifficulty('hard');
+      // Adaptive difficulty handles the adjustment automatically
     } else {
       setCorrectStreak(0);
-      // Decrease difficulty on wrong answers
-      if (difficulty === 'hard') setDifficulty('medium');
-      else if (difficulty === 'medium') setDifficulty('easy');
 
       // Add to spaced repetition review queue
       if (question) {
