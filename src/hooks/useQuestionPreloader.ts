@@ -21,6 +21,7 @@ interface UseQuestionPreloaderOptions {
   totalQuestions: number;
   initialDifficulty?: 'easy' | 'medium' | 'hard';
   topicHint?: string;
+  difficultySequence?: ('easy' | 'medium' | 'hard')[];
 }
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
@@ -33,7 +34,8 @@ export const useQuestionPreloader = ({
   subject,
   totalQuestions,
   initialDifficulty = 'medium',
-  topicHint
+  topicHint,
+  difficultySequence
 }: UseQuestionPreloaderOptions) => {
   const [questions, setQuestions] = useState<PreloadedQuestion[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -53,13 +55,15 @@ export const useQuestionPreloader = ({
   const subjectRef = useRef(subject);
   const totalQuestionsRef = useRef(totalQuestions);
   const topicHintRef = useRef(topicHint);
+  const difficultySequenceRef = useRef(difficultySequence);
   
   useEffect(() => {
     gradeRef.current = grade;
     subjectRef.current = subject;
     totalQuestionsRef.current = totalQuestions;
     topicHintRef.current = topicHint;
-  }, [grade, subject, totalQuestions, topicHint]);
+    difficultySequenceRef.current = difficultySequence;
+  }, [grade, subject, totalQuestions, topicHint, difficultySequence]);
 
   const getRecentQuestionTexts = useCallback((): Set<string> => {
     try {
@@ -153,7 +157,8 @@ export const useQuestionPreloader = ({
     const recentTexts = getRecentQuestionTexts();
     const total = totalQuestionsRef.current;
 
-    const difficulties: ('easy' | 'medium' | 'hard')[] = ['medium', 'medium', 'easy', 'medium', 'hard'];
+    // Use adaptive sequence if provided, otherwise fallback to hardcoded default
+    const difficulties: ('easy' | 'medium' | 'hard')[] = difficultySequenceRef.current || ['medium', 'medium', 'easy', 'medium', 'hard'];
 
     console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
 

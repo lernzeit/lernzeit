@@ -86,6 +86,12 @@ serve(async (req) => {
     const variantIssues: typeof feedbacks = [];
 
     for (const fb of feedbacks) {
+      // Skip too_hard/too_easy from clustering — these are user-specific
+      // and should only affect individual difficulty profiles, not global prompt rules
+      if (fb.feedback_type === 'too_hard' || fb.feedback_type === 'too_easy') {
+        continue;
+      }
+
       const key = `${fb.feedback_type}__${fb.category}`;
       if (!clusters.has(key)) clusters.set(key, []);
       clusters.get(key)!.push(fb);

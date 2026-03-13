@@ -12,6 +12,7 @@ import { useGameSessionSaver } from '@/hooks/useGameSessionSaver';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAchievementTracker } from '@/hooks/useAchievementTracker';
+import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AchievementPopup } from '@/components/AchievementPopup';
 import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, Sparkles, Crown, Volume2, VolumeX } from 'lucide-react';
@@ -61,7 +62,24 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
   const { addToQueue: addToReviewQueue, markAsReported: markReviewReported } = useReviewQueue(user?.id);
   
-  // Use preloader instead of single question loader
+  // Adaptive difficulty system — per subject, persisted across sessions
+  const {
+    updatePerformance: updateAdaptivePerformance,
+    performAdaptiveAdjustment,
+    applyUserFeedback: applyAdaptiveFeedback,
+    selectDifficultyForQuestion,
+    generateDifficultySequence,
+    isProfileLoaded,
+    difficultyLevel,
+  } = useAdaptiveDifficultySystem(subject, grade, user?.id || '');
+
+  // Generate difficulty sequence once profile is loaded
+  const adaptiveDifficultySequence = useMemo(() => {
+    if (!isProfileLoaded) return undefined;
+    return generateDifficultySequence(totalQuestions);
+  }, [isProfileLoaded, generateDifficultySequence, totalQuestions]);
+
+  // Use preloader with adaptive difficulty sequence
   const { 
     questions, 
     isInitialLoading, 
@@ -72,7 +90,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     updateDifficulty,
     reload,
     cancelLoading
-  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint });
+  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint, difficultySequence: adaptiveDifficultySequence });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   
@@ -89,7 +107,6 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [sessionSaved, setSessionSaved] = useState(false);
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showAchievementPopup, setShowAchievementPopup] = useState(false);
   const [achievementBonusMinutes, setAchievementBonusMinutes] = useState(0);
@@ -309,13 +326,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     // PAUSE timer when question is answered
     pauseTimer();
 
+    // Track performance for adaptive difficulty system
+    const answerTimeMs = Date.now() - questionStartTime;
+    updateAdaptivePerformance(correct, answerTimeMs);
+
     if (correct) {
       setScore(prev => prev + 1);
       const newStreak = correctStreak + 1;
       setCorrectStreak(newStreak);
       
-      // Measure answer time
-      const answerTimeMs = Date.now() - questionStartTime;
       const isFast = answerTimeMs < 3000;
       
       // Trigger gamification effects
@@ -333,14 +352,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         setGameAnimation({ type: 'correct', message: 'Richtig! ✨' });
       }
 
-      // Increase difficulty on correct answers
-      if (difficulty === 'easy') setDifficulty('medium');
-      else if (difficulty === 'medium' && Math.random() > 0.5) setDifficulty('hard');
+      // Adaptive difficulty handles the adjustment automatically
     } else {
       setCorrectStreak(0);
-      // Decrease difficulty on wrong answers
-      if (difficulty === 'hard') setDifficulty('medium');
-      else if (difficulty === 'medium') setDifficulty('easy');
 
       // Add to spaced repetition review queue
       if (question) {
@@ -376,9 +390,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     // Pause timer
     pauseTimer();
     
-    // Decrease difficulty since the child couldn't answer
-    if (difficulty === 'hard') setDifficulty('medium');
-    else if (difficulty === 'medium') setDifficulty('easy');
+    // Track as incorrect in adaptive system (long response = gave up)
+    updateAdaptivePerformance(false, 60000);
     
     // Automatically show explanation
     setShowExplanation(true);
@@ -455,6 +468,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       const secondsPerTask = getSecondsPerTask();
       const earnedSeconds = score * secondsPerTask;
       const accuracyScore = Math.round((score / totalQuestions) * 100);
+
+      // Perform adaptive difficulty adjustment at end of session → persists per subject
+      performAdaptiveAdjustment().catch(err => 
+        console.error('❌ Adaptive adjustment failed:', err)
+      );
       
       // Save session to database
       if (user && !sessionSaved) {
@@ -464,7 +482,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           correctAnswers: score,
           totalQuestions,
           timeSpentSeconds,
-          earnedSeconds, // Store in seconds for consistency
+          earnedSeconds,
           questionSource: 'template-bank'
         });
         
@@ -488,7 +506,6 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               console.log('🏆 New achievements earned:', earned);
               setNewAchievements(earned);
               setShowAchievementPopup(true);
-              // Calculate bonus minutes from achievements
               const bonusMinutes = earned.reduce((sum, a) => sum + (a.reward_minutes || 0), 0);
               setAchievementBonusMinutes(bonusMinutes);
             }
@@ -518,9 +535,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     } else {
       setCurrentIndex(prev => prev + 1);
       resetAnswerState();
-      // Timer will auto-start via useEffect when new question loads
-      // Update difficulty for future questions
-      updateDifficulty(difficulty);
+      // Adaptive difficulty selects difficulty per question via the preloader sequence
+      // Use selectDifficultyForQuestion for the next question's difficulty
+      updateDifficulty(selectDifficultyForQuestion());
     }
   };
 
@@ -869,6 +886,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       )}
                     </div>
                   )}
+                  {/* Emoji Feedback Buttons — feed adaptive difficulty system */}
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
+                    <div className="flex gap-1.5 justify-center">
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('thumbs_up')} className="text-xl px-3 hover:bg-green-100 hover:border-green-300" title="Gut">👍</Button>
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('thumbs_down')} className="text-xl px-3 hover:bg-red-100 hover:border-red-300" title="Schlecht">👎</Button>
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('too_hard')} className="text-xl px-3 hover:bg-orange-100 hover:border-orange-300" title="Zu schwer">😰</Button>
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('too_easy')} className="text-xl px-3 hover:bg-blue-100 hover:border-blue-300" title="Zu leicht">😴</Button>
+                    </div>
+                  </div>
                 </div>
               )}
 

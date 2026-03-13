@@ -176,14 +176,15 @@ export function useAdaptiveDifficultySystem(
     };
   }, []);
 
-  // Calculate adaptive difficulty adjustment
+  // Calculate adaptive difficulty adjustment with ASYMMETRIC scaling:
+  // - Increases are slower (factor 0.6) to prevent jumping to max difficulty
+  // - Decreases remain at full speed to quickly support struggling students
   const calculateDifficultyAdjustment = useCallback((
     currentProfile: DifficultyProfile,
     performance: PerformanceMetrics,
     pattern: AdaptiveBehaviorPattern
   ): DifficultyAdjustment => {
     let adjustment = 0;
-    let reason = '';
     const reasons: string[] = [];
 
     // Performance-based adjustments
@@ -215,7 +216,7 @@ export function useAdaptiveDifficultySystem(
         reasons.push('Exzellente Fortschritte');
         break;
       case 'plateauing':
-        adjustment += Math.random() > 0.5 ? 0.05 : -0.05; // Small random change
+        adjustment += Math.random() > 0.5 ? 0.05 : -0.05;
         reasons.push('Abwechslung für Motivation');
         break;
       case 'improving':
@@ -230,16 +231,21 @@ export function useAdaptiveDifficultySystem(
       reasons.push('Häufige Hilfeanfragen');
     }
 
+    // ASYMMETRIC SCALING: positive adjustments are slower (0.6x)
+    if (adjustment > 0) {
+      adjustment *= 0.6;
+    }
+
     // Clamp adjustment and calculate new level
     adjustment = Math.max(-0.3, Math.min(0.3, adjustment));
-    const newLevel = Math.max(0.1, Math.min(1.0, currentProfile.current_level + adjustment));
+    const newLevel = Math.max(0.1, Math.min(0.95, currentProfile.current_level + adjustment));
 
     return {
       previous_level: currentProfile.current_level,
       new_level: newLevel,
       adjustment_reason: reasons.join(', '),
       confidence: pattern.confidence,
-      recommended_topics: [] // Could be expanded based on analysis
+      recommended_topics: []
     };
   }, []);
 
@@ -439,6 +445,27 @@ export function useAdaptiveDifficultySystem(
     return difficultyProfile.current_level;
   }, [difficultyProfile]);
 
+  // Probabilistic difficulty selection based on current level
+  // Max 80% hard questions even at highest level, to keep motivation
+  const selectDifficultyForQuestion = useCallback((): 'easy' | 'medium' | 'hard' => {
+    const level = difficultyProfile?.current_level ?? 0.5;
+    
+    // Calculate probabilities with max 80% hard cap
+    const hardProb = Math.min(level * 0.8, 0.8);  // max 80%
+    const easyProb = Math.max(0.05, (1 - level) * 0.8); // min 5%
+    const mediumProb = Math.max(0, 1 - hardProb - easyProb);
+    
+    const roll = Math.random();
+    if (roll < easyProb) return 'easy';
+    if (roll < easyProb + mediumProb) return 'medium';
+    return 'hard';
+  }, [difficultyProfile]);
+
+  // Generate a difficulty sequence for N questions
+  const generateDifficultySequence = useCallback((count: number): ('easy' | 'medium' | 'hard')[] => {
+    return Array.from({ length: count }, () => selectDifficultyForQuestion());
+  }, [selectDifficultyForQuestion]);
+
   // Reset session data
   const resetSession = useCallback(() => {
     sessionDataRef.current = {
@@ -478,12 +505,15 @@ export function useAdaptiveDifficultySystem(
     resetSession,
     getRecommendedDifficulty,
     applyUserFeedback,
+    selectDifficultyForQuestion,
+    generateDifficultySequence,
 
     // Computed Properties
     shouldAdjust: performanceHistory.length >= 3 && !isAdapting,
     difficultyLevel: difficultyProfile?.current_level || 0.5,
     masteryLevel: difficultyProfile?.mastery_score || 0,
     learningTrend: difficultyProfile?.learning_velocity || 0,
+    isProfileLoaded: difficultyProfile !== null,
     
     // Session Statistics
     sessionStats: {
