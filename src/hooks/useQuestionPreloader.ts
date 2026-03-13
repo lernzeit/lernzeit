@@ -55,6 +55,7 @@ export const useQuestionPreloader = ({
   const subjectRef = useRef(subject);
   const totalQuestionsRef = useRef(totalQuestions);
   const topicHintRef = useRef(topicHint);
+  const difficultySequenceRef = useRef(difficultySequence);
   
   useEffect(() => {
     gradeRef.current = grade;
