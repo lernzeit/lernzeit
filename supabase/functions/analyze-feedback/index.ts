@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 const MAX_NEW_RULES_PER_RUN = 5;
-const MAX_ACTIVE_RULES = 20;
-const MIN_CLUSTER_SIZE = 3;
+const MAX_ACTIVE_RULES = 30;
+const MIN_CLUSTER_SIZE = 2;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,14 +16,24 @@ serve(async (req) => {
   }
 
   try {
-    // Auth: require admin role via JWT or x-analyze-secret header
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify caller is admin (via Authorization header)
+    // Auth: admin JWT OR service_role key in Authorization header
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Nicht authentifiziert' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Check if it's the service role key (for automated/cron invocations)
+    if (token !== serviceRoleKey) {
+      // Verify as user JWT
       const anonClient = createClient(
         supabaseUrl,
         Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -46,11 +56,6 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-    } else {
-      return new Response(JSON.stringify({ error: 'Nicht authentifiziert' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
     }
 
     // 1. Load unanalyzed feedback
@@ -75,36 +80,36 @@ serve(async (req) => {
 
     console.log(`📊 Found ${feedbacks.length} unanalyzed feedbacks`);
 
-    // 2. Cluster by feedback_type + category
+    // 2. Cluster by feedback_type + category (content quality rules)
     const clusters = new Map<string, typeof feedbacks>();
+    // 2b. Also cluster for variant/question-type issues
+    const variantIssues: typeof feedbacks = [];
+
     for (const fb of feedbacks) {
       const key = `${fb.feedback_type}__${fb.category}`;
       if (!clusters.has(key)) clusters.set(key, []);
       clusters.get(key)!.push(fb);
+
+      // Detect variant mismatch feedback (from details mentioning Zuordnung, Reihenfolge, etc.)
+      if (fb.feedback_details) {
+        const detailsLower = typeof fb.feedback_details === 'string' 
+          ? fb.feedback_details.toLowerCase() 
+          : JSON.stringify(fb.feedback_details).toLowerCase();
+        if (detailsLower.includes('zuordnung') || 
+            detailsLower.includes('reihenfolge') || 
+            detailsLower.includes('fragetyp') ||
+            detailsLower.includes('sortier') ||
+            detailsLower.includes('multiple choice') ||
+            detailsLower.includes('falscher typ')) {
+          variantIssues.push(fb);
+        }
+      }
     }
 
     // 3. Filter clusters with >= MIN_CLUSTER_SIZE
     const significantClusters = Array.from(clusters.entries())
       .filter(([, items]) => items.length >= MIN_CLUSTER_SIZE)
       .slice(0, MAX_NEW_RULES_PER_RUN);
-
-    if (significantClusters.length === 0) {
-      // Mark all as analyzed even if no cluster is significant
-      const allIds = feedbacks.map(f => f.id);
-      await supabase
-        .from('question_feedback')
-        .update({ analyzed_at: new Date().toISOString() })
-        .in('id', allIds);
-
-      return new Response(JSON.stringify({
-        success: true,
-        message: `${feedbacks.length} Feedbacks analysiert, aber kein Cluster groß genug (min. ${MIN_CLUSTER_SIZE})`,
-        newRules: 0,
-        analyzedFeedbacks: feedbacks.length,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -124,121 +129,159 @@ serve(async (req) => {
     const activeRuleCount = existingTexts.length;
 
     let newRulesCreated = 0;
-    const allAnalyzedIds: string[] = [];
 
-    // 4. For each significant cluster, generate a rule
+    // 4. For each significant cluster, generate a content quality rule
     for (const [clusterKey, items] of significantClusters) {
       if (activeRuleCount + newRulesCreated >= MAX_ACTIVE_RULES) {
-        // Deactivate oldest rule to make room
-        const { data: oldestRule } = await supabase
-          .from('prompt_rules')
-          .select('id')
-          .eq('is_active', true)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .single();
-
-        if (oldestRule) {
-          await supabase
-            .from('prompt_rules')
-            .update({ is_active: false, deactivated_at: new Date().toISOString() })
-            .eq('id', oldestRule.id);
-        }
+        await deactivateOldestRule(supabase);
       }
 
       const [feedbackType, category] = clusterKey.split('__');
-      const feedbackIds = items.map(i => i.id);
-      allAnalyzedIds.push(...feedbackIds);
-
-      // Build summary for AI
       const sampleTexts = items.slice(0, 5).map(i =>
-        `- Frage: "${i.question_content.substring(0, 200)}" | Grund: ${i.feedback_type} | Details: ${i.feedback_details || 'keine'}`
+        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Grund: ${i.feedback_type} | Details: ${i.feedback_details || 'keine'}`
       ).join('\n');
 
       const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
 
-      const aiPrompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
+      const ruleText = await generateRule(LOVABLE_API_KEY, {
+        type: 'content_quality',
+        category,
+        feedbackType,
+        sampleTexts,
+        itemCount: items.length,
+      });
 
-Hier sind ${items.length} Beschwerden zum Fach "${category}", Typ "${feedbackType}":
+      if (!ruleText) continue;
 
-${sampleTexts}
-
-Formuliere EINE kurze, präzise Imperativ-Regel (max. 1 Satz), die der Fragengenerator befolgen soll, um diesen Fehlertyp in Zukunft zu vermeiden.
-
-Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
-
-      try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [{ role: 'user', content: aiPrompt }],
-            temperature: 0.3,
-          }),
-        });
-
-        if (!response.ok) {
-          console.error(`AI error for cluster ${clusterKey}: ${response.status}`);
-          continue;
-        }
-
-        const result = await response.json();
-        const ruleText = result.choices?.[0]?.message?.content?.trim();
-
-        if (!ruleText || ruleText.length < 10 || ruleText.length > 500) {
-          console.warn(`Invalid rule text for ${clusterKey}: "${ruleText}"`);
-          continue;
-        }
-
-        // Deduplicate: skip if very similar rule exists
-        const isDuplicate = existingTexts.some(existing => {
-          const similarity = calculateSimilarity(existing, ruleText.toLowerCase());
-          return similarity > 0.7;
-        });
-
-        if (isDuplicate) {
-          console.log(`⏭️ Skipping duplicate rule for ${clusterKey}`);
-          continue;
-        }
-
-        // Determine subject scope
-        const ruleSubject = category === 'general' ? null : category;
-        const gradeMin = grades.length > 0 ? Math.min(...grades) : null;
-        const gradeMax = grades.length > 0 ? Math.max(...grades) : null;
-
-        const { error: insertError } = await supabase
-          .from('prompt_rules')
-          .insert({
-            rule_text: ruleText,
-            subject: ruleSubject,
-            grade_min: gradeMin,
-            grade_max: gradeMax,
-            source_feedback_ids: feedbackIds,
-            source_feedback_count: items.length,
-          });
-
-        if (insertError) {
-          console.error(`Error inserting rule: ${insertError.message}`);
-          continue;
-        }
-
-        newRulesCreated++;
-        existingTexts.push(ruleText.toLowerCase());
-        console.log(`✅ New rule created for ${clusterKey}: "${ruleText}"`);
-
-      } catch (aiErr) {
-        console.error(`AI call failed for ${clusterKey}:`, aiErr);
+      const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, ruleText.toLowerCase()) > 0.7);
+      if (isDuplicate) {
+        console.log(`⏭️ Skipping duplicate rule for ${clusterKey}`);
         continue;
+      }
+
+      const ruleSubject = normalizeCategory(category);
+      const { error: insertError } = await supabase
+        .from('prompt_rules')
+        .insert({
+          rule_text: ruleText,
+          subject: ruleSubject,
+          grade_min: grades.length > 0 ? Math.min(...grades) : null,
+          grade_max: grades.length > 0 ? Math.max(...grades) : null,
+          source_feedback_ids: items.map(i => i.id),
+          source_feedback_count: items.length,
+        });
+
+      if (insertError) {
+        console.error(`Error inserting rule: ${insertError.message}`);
+        continue;
+      }
+
+      newRulesCreated++;
+      existingTexts.push(ruleText.toLowerCase());
+      console.log(`✅ Content rule for ${clusterKey}: "${ruleText}"`);
+    }
+
+    // 5. Generate VARIANT OPTIMIZATION rules from question type feedback
+    if (variantIssues.length > 0) {
+      console.log(`🔄 Found ${variantIssues.length} variant-related feedbacks`);
+
+      const variantRule = await generateRule(LOVABLE_API_KEY, {
+        type: 'variant_optimization',
+        category: 'all',
+        feedbackType: 'variant_mismatch',
+        sampleTexts: variantIssues.slice(0, 8).map(i => {
+          const details = typeof i.feedback_details === 'string' 
+            ? i.feedback_details 
+            : JSON.stringify(i.feedback_details);
+          return `- Fach: ${i.category} | Klasse: ${i.grade} | Frage: "${(i.question_content || '').substring(0, 150)}" | Nutzer-Feedback: ${details?.substring(0, 300) || 'keine'}`;
+        }).join('\n'),
+        itemCount: variantIssues.length,
+      });
+
+      if (variantRule) {
+        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, variantRule.toLowerCase()) > 0.7);
+        if (!isDuplicate) {
+          if (activeRuleCount + newRulesCreated >= MAX_ACTIVE_RULES) {
+            await deactivateOldestRule(supabase);
+          }
+
+          const { error: insertError } = await supabase
+            .from('prompt_rules')
+            .insert({
+              rule_text: variantRule,
+              subject: null, // applies to all subjects
+              grade_min: null,
+              grade_max: null,
+              source_feedback_ids: variantIssues.map(i => i.id),
+              source_feedback_count: variantIssues.length,
+            });
+
+          if (!insertError) {
+            newRulesCreated++;
+            console.log(`✅ Variant optimization rule: "${variantRule}"`);
+          }
+        }
       }
     }
 
-    // 5. Mark ALL feedbacks as analyzed (not just clustered ones)
+    // 6. Also generate subject-specific variant preference rules
+    // Cluster variant issues by category
+    const variantByCategory = new Map<string, typeof feedbacks>();
+    for (const fb of feedbacks) {
+      // Analyze question content for type mismatches
+      const content = (fb.question_content || '').toLowerCase();
+      const isAssignment = content.includes('ordne') || content.includes('zuordnung') || content.includes('sortiere') || content.includes('passend');
+      const questionType = fb.question_type || '';
+      
+      if (isAssignment && (questionType.includes('sort') || questionType.includes('SORT'))) {
+        const key = `variant__${fb.category}`;
+        if (!variantByCategory.has(key)) variantByCategory.set(key, []);
+        variantByCategory.get(key)!.push(fb);
+      }
+    }
+
+    for (const [key, items] of variantByCategory) {
+      if (items.length < MIN_CLUSTER_SIZE) continue;
+      
+      const category = key.split('__')[1];
+      const sampleTexts = items.slice(0, 5).map(i =>
+        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Typ: ${i.question_type}`
+      ).join('\n');
+
+      const variantRule = await generateRule(LOVABLE_API_KEY, {
+        type: 'variant_selection',
+        category,
+        feedbackType: 'wrong_variant',
+        sampleTexts,
+        itemCount: items.length,
+      });
+
+      if (variantRule) {
+        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, variantRule.toLowerCase()) > 0.7);
+        if (!isDuplicate && activeRuleCount + newRulesCreated < MAX_ACTIVE_RULES) {
+          const ruleSubject = normalizeCategory(category);
+          const { error: insertError } = await supabase
+            .from('prompt_rules')
+            .insert({
+              rule_text: variantRule,
+              subject: ruleSubject,
+              grade_min: null,
+              grade_max: null,
+              source_feedback_ids: items.map(i => i.id),
+              source_feedback_count: items.length,
+            });
+
+          if (!insertError) {
+            newRulesCreated++;
+            existingTexts.push(variantRule.toLowerCase());
+            console.log(`✅ Variant selection rule for ${category}: "${variantRule}"`);
+          }
+        }
+      }
+    }
+
+    // 7. Mark ALL feedbacks as analyzed
     const allFeedbackIds = feedbacks.map(f => f.id);
-    // Update in batches of 50
     for (let i = 0; i < allFeedbackIds.length; i += 50) {
       const batch = allFeedbackIds.slice(i, i + 50);
       await supabase
@@ -249,10 +292,11 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
 
     const response = {
       success: true,
-      message: `${newRulesCreated} neue Regel(n) erstellt aus ${significantClusters.length} Cluster(n)`,
+      message: `${newRulesCreated} neue Regel(n) erstellt`,
       newRules: newRulesCreated,
       analyzedFeedbacks: feedbacks.length,
       clusters: significantClusters.length,
+      variantIssuesFound: variantIssues.length,
     };
 
     console.log(`📋 Analysis complete:`, response);
@@ -273,7 +317,122 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
   }
 });
 
-// Simple similarity check using Jaccard index on word sets
+// --- Helper functions ---
+
+async function deactivateOldestRule(supabase: any) {
+  const { data: oldestRule } = await supabase
+    .from('prompt_rules')
+    .select('id')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .single();
+
+  if (oldestRule) {
+    await supabase
+      .from('prompt_rules')
+      .update({ is_active: false, deactivated_at: new Date().toISOString() })
+      .eq('id', oldestRule.id);
+  }
+}
+
+function normalizeCategory(category: string): string | null {
+  const map: Record<string, string> = {
+    'mathematik': 'math', 'mathe': 'math', 'math': 'math',
+    'deutsch': 'german', 'german': 'german',
+    'englisch': 'english', 'english': 'english',
+    'erdkunde': 'geography', 'geography': 'geography',
+    'geschichte': 'history', 'history': 'history',
+    'physik': 'physics', 'physics': 'physics',
+    'biologie': 'biology', 'biology': 'biology',
+    'chemie': 'chemistry', 'chemistry': 'chemistry',
+    'latein': 'latin', 'latin': 'latin',
+  };
+  const normalized = map[category.toLowerCase()];
+  return normalized || (category === 'general' ? null : category.toLowerCase());
+}
+
+interface RuleGenerationContext {
+  type: 'content_quality' | 'variant_optimization' | 'variant_selection';
+  category: string;
+  feedbackType: string;
+  sampleTexts: string;
+  itemCount: number;
+}
+
+async function generateRule(apiKey: string, ctx: RuleGenerationContext): Promise<string | null> {
+  let prompt: string;
+
+  if (ctx.type === 'content_quality') {
+    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
+
+Hier sind ${ctx.itemCount} Beschwerden zum Fach "${ctx.category}", Typ "${ctx.feedbackType}":
+
+${ctx.sampleTexts}
+
+Formuliere EINE kurze, präzise Imperativ-Regel (max. 1 Satz), die der Fragengenerator befolgen soll, um diesen Fehlertyp in Zukunft zu vermeiden.
+
+Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
+  } else if (ctx.type === 'variant_optimization') {
+    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
+Der Generator kann 4 Fragetypen erstellen: MULTIPLE_CHOICE, FREETEXT, SORT (Reihenfolge), MATCH (Zuordnung).
+
+Nutzer haben sich beschwert, dass Fragen den FALSCHEN Fragetyp verwenden:
+
+${ctx.sampleTexts}
+
+Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze), die definiert, WANN welcher Fragetyp verwendet werden soll. Fokussiere auf die häufigsten Fehler aus dem Feedback.
+Beispiel: "Verwende MATCH statt SORT, wenn Elemente Kategorien zugeordnet werden sollen; SORT nur für echte Reihenfolgen (zeitlich, numerisch, alphabetisch)."
+
+Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
+  } else {
+    // variant_selection
+    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
+Der Generator kann 4 Fragetypen erstellen: MULTIPLE_CHOICE, FREETEXT, SORT (Reihenfolge), MATCH (Zuordnung).
+
+Bei folgenden Fragen im Fach "${ctx.category}" wurde der falsche Fragetyp (SORT statt MATCH) verwendet:
+
+${ctx.sampleTexts}
+
+Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze) für das Fach "${ctx.category}", die beschreibt, wann MATCH statt SORT verwendet werden soll.
+
+Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
+  }
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`AI error: ${response.status}`);
+      return null;
+    }
+
+    const result = await response.json();
+    const ruleText = result.choices?.[0]?.message?.content?.trim();
+
+    if (!ruleText || ruleText.length < 10 || ruleText.length > 500) {
+      console.warn(`Invalid rule text: "${ruleText}"`);
+      return null;
+    }
+
+    return ruleText;
+  } catch (err) {
+    console.error('AI call failed:', err);
+    return null;
+  }
+}
+
 function calculateSimilarity(a: string, b: string): number {
   const wordsA = new Set(a.split(/\s+/).filter(w => w.length > 2));
   const wordsB = new Set(b.split(/\s+/).filter(w => w.length > 2));
