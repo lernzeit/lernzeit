@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const MAX_NEW_RULES_PER_RUN = 5;
 const MAX_ACTIVE_RULES = 30;
-const MIN_CLUSTER_SIZE = 2;
+const MIN_CLUSTER_SIZE = 3;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
