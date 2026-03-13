@@ -391,9 +391,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     // Pause timer
     pauseTimer();
     
-    // Decrease difficulty since the child couldn't answer
-    if (difficulty === 'hard') setDifficulty('medium');
-    else if (difficulty === 'medium') setDifficulty('easy');
+    // Track as incorrect in adaptive system (long response = gave up)
+    updateAdaptivePerformance(false, 60000);
     
     // Automatically show explanation
     setShowExplanation(true);
