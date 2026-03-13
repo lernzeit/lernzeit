@@ -62,7 +62,24 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
   const { addToQueue: addToReviewQueue, markAsReported: markReviewReported } = useReviewQueue(user?.id);
   
-  // Use preloader instead of single question loader
+  // Adaptive difficulty system — per subject, persisted across sessions
+  const {
+    updatePerformance: updateAdaptivePerformance,
+    performAdaptiveAdjustment,
+    applyUserFeedback: applyAdaptiveFeedback,
+    selectDifficultyForQuestion,
+    generateDifficultySequence,
+    isProfileLoaded,
+    difficultyLevel,
+  } = useAdaptiveDifficultySystem(subject, grade, user?.id || '');
+
+  // Generate difficulty sequence once profile is loaded
+  const adaptiveDifficultySequence = useMemo(() => {
+    if (!isProfileLoaded) return undefined;
+    return generateDifficultySequence(totalQuestions);
+  }, [isProfileLoaded, generateDifficultySequence, totalQuestions]);
+
+  // Use preloader with adaptive difficulty sequence
   const { 
     questions, 
     isInitialLoading, 
@@ -73,7 +90,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     updateDifficulty,
     reload,
     cancelLoading
-  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint });
+  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint, difficultySequence: adaptiveDifficultySequence });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   
