@@ -12,6 +12,7 @@ import { useGameSessionSaver } from '@/hooks/useGameSessionSaver';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAchievementTracker } from '@/hooks/useAchievementTracker';
+import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AchievementPopup } from '@/components/AchievementPopup';
 import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, Sparkles, Crown, Volume2, VolumeX } from 'lucide-react';
