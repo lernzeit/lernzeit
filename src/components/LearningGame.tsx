@@ -327,13 +327,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     // PAUSE timer when question is answered
     pauseTimer();
 
+    // Track performance for adaptive difficulty system
+    const answerTimeMs = Date.now() - questionStartTime;
+    updateAdaptivePerformance(correct, answerTimeMs);
+
     if (correct) {
       setScore(prev => prev + 1);
       const newStreak = correctStreak + 1;
       setCorrectStreak(newStreak);
       
-      // Measure answer time
-      const answerTimeMs = Date.now() - questionStartTime;
       const isFast = answerTimeMs < 3000;
       
       // Trigger gamification effects
