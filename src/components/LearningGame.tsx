@@ -469,6 +469,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       const secondsPerTask = getSecondsPerTask();
       const earnedSeconds = score * secondsPerTask;
       const accuracyScore = Math.round((score / totalQuestions) * 100);
+
+      // Perform adaptive difficulty adjustment at end of session → persists per subject
+      performAdaptiveAdjustment().catch(err => 
+        console.error('❌ Adaptive adjustment failed:', err)
+      );
       
       // Save session to database
       if (user && !sessionSaved) {
@@ -478,7 +483,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           correctAnswers: score,
           totalQuestions,
           timeSpentSeconds,
-          earnedSeconds, // Store in seconds for consistency
+          earnedSeconds,
           questionSource: 'template-bank'
         });
         
@@ -502,7 +507,6 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               console.log('🏆 New achievements earned:', earned);
               setNewAchievements(earned);
               setShowAchievementPopup(true);
-              // Calculate bonus minutes from achievements
               const bonusMinutes = earned.reduce((sum, a) => sum + (a.reward_minutes || 0), 0);
               setAchievementBonusMinutes(bonusMinutes);
             }
@@ -532,9 +536,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     } else {
       setCurrentIndex(prev => prev + 1);
       resetAnswerState();
-      // Timer will auto-start via useEffect when new question loads
-      // Update difficulty for future questions
-      updateDifficulty(difficulty);
+      // Adaptive difficulty selects difficulty per question via the preloader sequence
+      // Use selectDifficultyForQuestion for the next question's difficulty
+      updateDifficulty(selectDifficultyForQuestion());
     }
   };
 
