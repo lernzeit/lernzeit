@@ -21,6 +21,7 @@ interface UseQuestionPreloaderOptions {
   totalQuestions: number;
   initialDifficulty?: 'easy' | 'medium' | 'hard';
   topicHint?: string;
+  difficultySequence?: ('easy' | 'medium' | 'hard')[];
 }
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
