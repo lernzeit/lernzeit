@@ -887,6 +887,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       )}
                     </div>
                   )}
+                  {/* Emoji Feedback Buttons — feed adaptive difficulty system */}
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
+                    <div className="flex gap-1.5 justify-center">
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('thumbs_up')} className="text-xl px-3 hover:bg-green-100 hover:border-green-300" title="Gut">👍</Button>
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('thumbs_down')} className="text-xl px-3 hover:bg-red-100 hover:border-red-300" title="Schlecht">👎</Button>
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('too_hard')} className="text-xl px-3 hover:bg-orange-100 hover:border-orange-300" title="Zu schwer">😰</Button>
+                      <Button variant="outline" size="sm" onClick={() => applyAdaptiveFeedback('too_easy')} className="text-xl px-3 hover:bg-blue-100 hover:border-blue-300" title="Zu leicht">😴</Button>
+                    </div>
+                  </div>
                 </div>
               )}
 
