@@ -62,7 +62,8 @@ export const useQuestionPreloader = ({
     subjectRef.current = subject;
     totalQuestionsRef.current = totalQuestions;
     topicHintRef.current = topicHint;
-  }, [grade, subject, totalQuestions, topicHint]);
+    difficultySequenceRef.current = difficultySequence;
+  }, [grade, subject, totalQuestions, topicHint, difficultySequence]);
 
   const getRecentQuestionTexts = useCallback((): Set<string> => {
     try {
