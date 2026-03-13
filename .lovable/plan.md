@@ -1,36 +1,49 @@
 
 
-## Plan: ScreenTimeWidget durch sinnvolle Eltern-Karte ersetzen
+## Plan: Fachspezifische adaptive Schwierigkeit mit Difficulty-Mix statt Maximum
 
-### Problem
-Die `ScreenTimeWidget`-Komponente auf dem Eltern-Dashboard ist ein Dummy. Sie prüft `Capacitor.isNativePlatform()`, das in der PWA/Web-Ansicht immer `false` zurückgibt, und zeigt dann "Familienkontrollen sind auf diesem Gerät nicht verfügbar". Selbst auf nativen Geräten liefert der `FamilyLinkService` nur Mock-Daten.
+### Zusammenfassung
+Statt bei guten Schülern permanent auf "hard" zu gehen, wird ein **Difficulty-Mix** verwendet: Der `difficultyLevel` (0.0–1.0) bestimmt die **Wahrscheinlichkeit** für schwere Fragen (max 80%). Der Anstieg ist langsamer als die Herabsenkung. Das System ist pro Fach separat, da `user_difficulty_profiles` bereits per `category` gespeichert wird.
 
-Die eigentliche Bildschirmzeit-Verwaltung (Anfragen genehmigen, Zeitlimits setzen) läuft bereits vollständig über das `ParentDashboard` und die `ParentScreenTimeRequestsDashboard`-Komponente. Die ScreenTimeWidget ist also redundant und verwirrend.
+### Änderungen
 
-### Lösung
+#### 1. `analyze-feedback/index.ts` — `too_hard`/`too_easy` aus Clustering ausschließen
+- Beim Clustering (Zeile 88–107) Feedbacks mit `feedback_type === 'too_hard'` oder `'too_easy'` überspringen
+- Diese werden weiterhin in der DB gespeichert und als `analyzed_at` markiert, aber erzeugen keine globalen Prompt-Regeln
 
-**Die `ScreenTimeWidget` im Eltern-Dashboard durch eine kompakte "Kindersicherung"-Karte ersetzen**, die:
+#### 2. `useAdaptiveDifficultySystem.ts` — Asymmetrische Anpassung + Difficulty-Mix
+- **Langsamerer Anstieg**: Positive Adjustments um Faktor 0.6 reduzieren (z.B. +0.1 → +0.06)
+- **Schnellere Herabsenkung**: Negative Adjustments bleiben wie bisher
+- **Neue Funktion `selectDifficultyForQuestion()`**: Statt direkt den Level als Difficulty zu mappen, einen **probabilistischen Mix** verwenden:
 
-1. **Erkennt, ob ein natives Gerät vorliegt** (via `parentalControlsService.isNativePlatform()`)
-2. **Auf nativen Geräten**: Einen Button zeigt, der direkt Family Link (Android) oder Bildschirmzeit-Einstellungen (iOS) öffnet – über die bereits implementierten Deep-Links in `parentalControlsService`
-3. **Im Web/PWA**: Statt "nicht verfügbar" eine kurze Anleitung zeigt, wie man Family Link oder Bildschirmzeit auf dem Gerät einrichtet, mit Links zu den App-Stores
-4. **Immer**: Einen Hinweis zeigt, dass Bildschirmzeit-Anfragen der Kinder im Tab "Anfragen" im Dashboard unten verwaltet werden
+```text
+difficultyLevel 0.8 → 80% hard, 15% medium, 5% easy
+difficultyLevel 0.5 → 20% hard, 60% medium, 20% easy  
+difficultyLevel 0.2 → 5% hard, 15% medium, 80% easy
+```
 
-### Technische Änderungen
+- Max Hard-Quote: 80% (nie 100% schwere Fragen)
+- Exportiere `selectDifficultyForQuestion()` als neue Methode
 
-**`src/components/ScreenTimeWidget.tsx`** – Komplett umschreiben:
-- Entferne Abhängigkeit von `useScreenTime` und `familyLinkService` (die Mock-Daten liefern)
-- Nutze stattdessen `parentalControlsService` (bereits implementiert mit echten Deep-Links)
-- Zeige plattformspezifische UI: nativer Button vs. Web-Anleitung
-- Entferne den ganzen "Permission"-Flow (war ohnehin Mock)
+#### 3. `LearningGame.tsx` — Adaptive System integrieren
+- `useAdaptiveDifficultySystem(subject, grade, user.id)` importieren und aufrufen
+- Initiale Difficulty aus `getRecommendedDifficulty()` laden statt hardcoded `'medium'`
+- Bei jeder Antwort `updatePerformance(isCorrect, responseTimeMs)` aufrufen
+- `selectDifficultyForQuestion()` nutzen statt der bisherigen manuellen Difficulty-Logik (Zeilen 336–348, 380–381)
+- `applyUserFeedback` als `onQuestionFeedback`-Handler an `GameFeedback` durchreichen
+- Am Ende der Session `performAdaptiveAdjustment()` aufrufen → Profil wird per Fach in `user_difficulty_profiles` persistiert
+- Bisherige hardcoded Difficulty-Progression im Preloader (Zeile 156: `['medium', 'medium', 'easy', 'medium', 'hard']`) durch adaptive Werte ersetzen
 
-**`src/hooks/useScreenTime.ts`** und **`src/services/familyLink.ts`** – Können entfernt werden, da sie nur Mock-Daten liefern und von keiner anderen Komponente genutzt werden.
+#### 4. `useQuestionPreloader.ts` — Difficulty-Array von außen akzeptieren
+- Neuer optionaler Parameter `difficultySequence?: ('easy' | 'medium' | 'hard')[]`
+- Wenn gesetzt, diese statt der hardcoded Sequenz verwenden
 
-### Dateiänderungen
+### Fachspezifisches Verhalten
+Die Tabelle `user_difficulty_profiles` hat bereits die Spalten `user_id`, `category`, `grade` mit Unique-Constraint-Verhalten über Upsert. Jedes Fach hat sein eigenes Profil — kein Schema-Change nötig.
 
-| Datei | Aktion |
-|---|---|
-| `src/components/ScreenTimeWidget.tsx` | Umschreiben (nutzt `parentalControlsService`) |
-| `src/hooks/useScreenTime.ts` | Entfernen (nur Mock-Daten) |
-| `src/services/familyLink.ts` | Entfernen (nur Mock-Daten) |
+### Betroffene Dateien
+- `supabase/functions/analyze-feedback/index.ts`
+- `src/hooks/useAdaptiveDifficultySystem.ts`
+- `src/components/LearningGame.tsx`
+- `src/hooks/useQuestionPreloader.ts`
 
