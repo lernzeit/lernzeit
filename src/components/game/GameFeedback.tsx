@@ -183,8 +183,8 @@ export function GameFeedback({
               <Button
                 variant="outline"
                 size={isMobile ? "sm" : "lg"}
-                onClick={() => onQuestionFeedback('thumbs_up')}
-                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-green-100 hover:border-green-300`}
+                onClick={() => { setSelectedFeedback('thumbs_up'); onQuestionFeedback('thumbs_up'); }}
+                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`}
                 title="Gut"
               >
                 👍
@@ -193,10 +193,11 @@ export function GameFeedback({
                 variant="outline"
                 size={isMobile ? "sm" : "lg"}
                 onClick={() => {
+                  setSelectedFeedback('thumbs_down');
                   onQuestionFeedback('thumbs_down');
                   setShowReportDialog(true);
                 }}
-                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-red-100 hover:border-red-300`}
+                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`}
                 title="Schlecht"
               >
                 👎
@@ -204,8 +205,8 @@ export function GameFeedback({
               <Button
                 variant="outline"
                 size={isMobile ? "sm" : "lg"}
-                onClick={() => onQuestionFeedback('too_hard')}
-                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-orange-100 hover:border-orange-300`}
+                onClick={() => { setSelectedFeedback('too_hard'); onQuestionFeedback('too_hard'); }}
+                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`}
                 title="Zu schwer"
               >
                 😰
@@ -213,8 +214,8 @@ export function GameFeedback({
               <Button
                 variant="outline"
                 size={isMobile ? "sm" : "lg"}
-                onClick={() => onQuestionFeedback('too_easy')}
-                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-blue-100 hover:border-blue-300`}
+                onClick={() => { setSelectedFeedback('too_easy'); onQuestionFeedback('too_easy'); }}
+                className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`}
                 title="Zu leicht"
               >
                 😴
