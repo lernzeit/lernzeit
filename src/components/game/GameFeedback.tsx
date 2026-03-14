@@ -52,6 +52,7 @@ export function GameFeedback({
 }: GameFeedbackProps) {
   const isMobile = useIsMobile();
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState<ReportReason | ''>('');
   const [reportDetails, setReportDetails] = useState('');
   const [showTutorDialog, setShowTutorDialog] = useState(false);
