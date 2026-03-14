@@ -31,7 +31,6 @@ interface GameFeedbackProps {
 
 const REPORT_REASONS: { value: ReportReason; label: string; description: string }[] = [
   { value: 'wrong_answer', label: 'Falsche Antwort', description: 'Die angegebene richtige Antwort ist falsch' },
-  { value: 'calculation_error', label: 'Rechenfehler', description: 'Die Berechnung stimmt nicht' },
   { value: 'confusing_question', label: 'Verwirrende Frage', description: 'Die Frage ist unklar formuliert' },
   { value: 'too_hard', label: 'Zu schwer', description: 'Die Frage ist für diese Klassenstufe zu schwer' },
   { value: 'too_easy', label: 'Zu einfach', description: 'Die Frage ist für diese Klassenstufe zu einfach' },
@@ -209,17 +208,6 @@ export function GameFeedback({
                 onClick={() => {
                   setSelectedFeedback('thumbs_down');
                   onQuestionFeedback('thumbs_down');
-                  if (questionText) {
-                    reportQuestion({
-                      reason: 'thumbs_down',
-                      question: questionText,
-                      statedAnswer: correctAnswer || '',
-                      userAnswer,
-                      grade: grade || 1,
-                      subject: subject || 'math',
-                      templateId,
-                    });
-                  }
                   setShowReportDialog(true);
                 }}
                 className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`}
