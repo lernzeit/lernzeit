@@ -283,9 +283,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
               <CardContent className="text-center py-12">
                 <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground mb-4">Noch keine Kinder verknüpft</p>
-                <Button onClick={handleGenerateCode} disabled={newCodeLoading}>
+                <Button onClick={() => { setConsentChecked(false); }} disabled={newCodeLoading}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Einladungscode erstellen
+                  Einladungscode erstellen (im Tab "Konto")
                 </Button>
               </CardContent>
             </Card>
