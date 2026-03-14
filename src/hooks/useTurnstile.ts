@@ -20,12 +20,8 @@ function loadTurnstileScript(): Promise<void> {
       return;
     }
     if (document.getElementById(TURNSTILE_SCRIPT_ID)) {
-      // Script is loading, wait for it
       const check = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(check);
-          resolve();
-        }
+        if (window.turnstile) { clearInterval(check); resolve(); }
       }, 100);
       setTimeout(() => { clearInterval(check); reject(new Error('Turnstile load timeout')); }, 10000);
       return;
@@ -40,8 +36,21 @@ function loadTurnstileScript(): Promise<void> {
       }, 50);
       setTimeout(() => { clearInterval(check); reject(new Error('Turnstile init timeout')); }, 5000);
     };
-    script.onerror = () => reject(new Error('Failed to load Turnstile'));
+    script.onerror = () => reject(new Error('Failed to load Turnstile script'));
     document.head.appendChild(script);
+  });
+}
+
+function waitForElement(id: string, timeout = 5000): Promise<HTMLElement> {
+  return new Promise((resolve, reject) => {
+    const el = document.getElementById(id);
+    if (el) { resolve(el); return; }
+    const observer = new MutationObserver(() => {
+      const el = document.getElementById(id);
+      if (el) { observer.disconnect(); resolve(el); }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => { observer.disconnect(); reject(new Error(`Element #${id} not found`)); }, timeout);
   });
 }
 
@@ -56,11 +65,13 @@ export function useTurnstile(containerId: string) {
 
     const init = async () => {
       try {
-        await loadTurnstileScript();
-        if (cancelled) return;
+        // Wait for both script AND container to be ready
+        const [, container] = await Promise.all([
+          loadTurnstileScript(),
+          waitForElement(containerId),
+        ]);
 
-        const container = document.getElementById(containerId);
-        if (!container || !window.turnstile) return;
+        if (cancelled || !window.turnstile) return;
 
         // Clear any previous widget
         if (widgetIdRef.current) {
@@ -68,16 +79,29 @@ export function useTurnstile(containerId: string) {
         }
         container.innerHTML = '';
 
+        console.log('[Turnstile] Rendering widget into', containerId);
+
         widgetIdRef.current = window.turnstile.render(container, {
           sitekey: TURNSTILE_SITE_KEY,
-          callback: (t: string) => { if (mountedRef.current) setToken(t); },
-          'expired-callback': () => { if (mountedRef.current) setToken(null); },
-          'error-callback': () => { if (mountedRef.current) setToken(null); },
+          callback: (t: string) => {
+            console.log('[Turnstile] Token received');
+            if (mountedRef.current) setToken(t);
+          },
+          'expired-callback': () => {
+            console.log('[Turnstile] Token expired');
+            if (mountedRef.current) setToken(null);
+          },
+          'error-callback': (err: unknown) => {
+            console.warn('[Turnstile] Error callback:', err);
+            if (mountedRef.current) setToken(null);
+          },
           theme: 'auto',
           size: 'flexible',
         });
+
+        console.log('[Turnstile] Widget rendered, id:', widgetIdRef.current);
       } catch (err) {
-        console.warn('Turnstile init error:', err);
+        console.warn('[Turnstile] Init error:', err);
       }
     };
 
