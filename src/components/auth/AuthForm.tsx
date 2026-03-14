@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
-import { biometricAuthService, BiometricAvailability } from '@/services/biometricAuthService';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, Fingerprint, ScanFace, ShieldCheck } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
@@ -35,23 +34,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
-  const [biometricInfo, setBiometricInfo] = useState<BiometricAvailability>({ available: false });
-  const [hasBiometricCredentials, setHasBiometricCredentials] = useState(false);
   const { toast } = useToast();
-
-  // Check biometric availability on mount
-  useEffect(() => {
-    const checkBiometric = async () => {
-      const availability = await biometricAuthService.isAvailable();
-      setBiometricInfo(availability);
-      if (availability.available) {
-        const hasCredentials = await biometricAuthService.hasStoredCredentials();
-        setHasBiometricCredentials(hasCredentials);
-      }
-    };
-    checkBiometric();
-  }, []);
-
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
@@ -137,69 +120,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      // Save credentials for biometric login if available
-      if (biometricInfo.available) {
-        await biometricAuthService.saveCredentials(email, password);
-        setHasBiometricCredentials(true);
-      }
-
       toast({
         title: "Willkommen zurück!",
         description: `Du bist erfolgreich angemeldet.`,
-      });
-
-      onAuthSuccess();
-    } catch (error: any) {
-      toast({
-        title: "Fehler",
-        description: translateError(error.message),
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBiometricLogin = async () => {
-    setLoading(true);
-    try {
-      const credentials = await biometricAuthService.authenticate();
-      if (!credentials) {
-        setLoading(false);
-        return; // User cancelled
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: credentials.username,
-        password: credentials.password,
-      });
-
-      if (error) {
-        // Credentials might be outdated - remove them
-        if (error.message.includes('Invalid login credentials')) {
-          await biometricAuthService.deleteCredentials();
-          setHasBiometricCredentials(false);
-          toast({
-            title: 'Gespeicherte Anmeldedaten ungültig',
-            description: 'Bitte melde dich erneut mit E-Mail und Passwort an.',
-            variant: 'destructive',
-          });
-        } else {
-          throw error;
-        }
-        return;
-      }
-
-      toast({
-        title: "Willkommen zurück!",
-        description: `Biometrische Anmeldung erfolgreich.`,
       });
 
       onAuthSuccess();
@@ -251,55 +181,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsList>
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
-                {/* Biometric quick login - shown prominently if credentials are stored */}
-                {biometricInfo.available && hasBiometricCredentials && (
-                  <>
-                    <div className="text-center mb-2">
-                      <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
-                      <p className="text-sm text-muted-foreground">Schnell anmelden mit {biometricAuthService.getBiometryLabel(biometricInfo.biometryType)}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={handleBiometricLogin}
-                      disabled={loading}
-                      className="w-full h-14 text-base font-medium bg-gradient-to-r from-primary to-secondary hover:opacity-90 shadow-lg transition-all duration-200 hover:scale-105"
-                    >
-                      {loading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Wird angemeldet...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          {biometricInfo.biometryType === 'face' ? (
-                            <ScanFace className="w-6 h-6" />
-                          ) : biometricInfo.biometryType === 'fingerprint' ? (
-                            <Fingerprint className="w-6 h-6" />
-                          ) : (
-                            <ShieldCheck className="w-6 h-6" />
-                          )}
-                          Mit {biometricAuthService.getBiometryLabel(biometricInfo.biometryType)} anmelden
-                        </div>
-                      )}
-                    </Button>
-                    <div className="relative my-4">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-border"></div>
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Standard login header (only if no biometric quick login) */}
-                {(!biometricInfo.available || !hasBiometricCredentials) && (
-                  <div className="text-center mb-4">
-                    <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
-                    <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
-                  </div>
-                )}
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
+                  <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
+                </div>
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">E-Mail</Label>
