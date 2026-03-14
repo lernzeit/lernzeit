@@ -333,7 +333,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   // Child Dashboard
   if (profile?.role === 'child') {
     return (
-      <div className="min-h-screen bg-gradient-bg py-4">
+      <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top">
         {showOnboarding && (
           <OnboardingTutorial role="child" grade={profile?.grade || 1} onComplete={handleOnboardingComplete} />
         )}
