@@ -41,6 +41,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     errorCode: captchaErrorCode,
     ensureToken,
     resetWidget: resetCaptcha,
+    isEnabled: isCaptchaEnabled,
   } = useTurnstile('turnstile-container');
 
   const getCaptchaErrorDescription = () => {
@@ -65,6 +66,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       description: getCaptchaErrorDescription(),
       variant: 'destructive',
     });
+  };
+
+  const resolveCaptchaToken = async (): Promise<string | null | undefined> => {
+    if (!isCaptchaEnabled) {
+      return undefined;
+    }
+
+    const tokenToUse = await ensureToken();
+    if (!tokenToUse) {
+      handleCaptchaFailure();
+      return null;
+    }
+
+    return tokenToUse;
   };
 
   const handleGoogleSignIn = async () => {
