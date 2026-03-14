@@ -548,12 +548,30 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           {/* Trial Expired Banner */}
           {trialJustExpired && (
             <Card className="shadow-card border-warning bg-warning/10">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Crown className="w-6 h-6 text-warning shrink-0" />
-                <div>
-                  <p className="font-semibold text-sm">Die Testphase ist abgelaufen</p>
-                  <p className="text-xs text-muted-foreground">Premium-Funktionen wie KI-Tutor und individuelle Einstellungen wurden deaktiviert. Einstellungen wurden auf Standard zurückgesetzt.</p>
+              <CardContent className="p-4 flex items-center gap-3 justify-between">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-6 h-6 text-warning shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Die Testphase ist abgelaufen</p>
+                    <p className="text-xs text-muted-foreground">Premium-Funktionen wurden deaktiviert.</p>
+                  </div>
                 </div>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="shrink-0"
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('create-checkout');
+                      if (error) throw error;
+                      if (data?.url) window.open(data.url, '_blank');
+                    } catch (err) {
+                      toast({ title: 'Fehler', description: 'Checkout konnte nicht geöffnet werden.', variant: 'destructive' });
+                    }
+                  }}
+                >
+                  Jetzt upgraden
+                </Button>
               </CardContent>
             </Card>
           )}
