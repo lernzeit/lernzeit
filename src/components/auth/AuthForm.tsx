@@ -150,6 +150,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
+      resetCaptcha();
       toast({
         title: "Fehler",
         description: translateError(error.message),
