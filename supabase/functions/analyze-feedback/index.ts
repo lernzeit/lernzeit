@@ -360,7 +360,7 @@ function normalizeCategory(category: string): string | null {
 }
 
 interface RuleGenerationContext {
-  type: 'content_quality' | 'variant_optimization' | 'variant_selection';
+  type: 'content_quality' | 'variant_optimization' | 'variant_selection' | 'positive_reinforcement';
   category: string;
   feedbackType: string;
   sampleTexts: string;
@@ -370,7 +370,18 @@ interface RuleGenerationContext {
 async function generateRule(apiKey: string, ctx: RuleGenerationContext): Promise<string | null> {
   let prompt: string;
 
-  if (ctx.type === 'content_quality') {
+  if (ctx.type === 'positive_reinforcement') {
+    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
+
+Hier sind ${ctx.itemCount} positiv bewertete Fragen (👍 Daumen hoch) im Fach "${ctx.category}":
+
+${ctx.sampleTexts}
+
+Analysiere, was diese Fragen gut macht (z.B. klare Formulierung, passender Schwierigkeitsgrad, gute Antwortalternativen).
+Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze), die der Fragengenerator befolgen soll, um mehr solcher guten Fragen zu erzeugen.
+
+Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
+  } else if (ctx.type === 'content_quality') {
     prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
 
 Hier sind ${ctx.itemCount} Beschwerden zum Fach "${ctx.category}", Typ "${ctx.feedbackType}":
