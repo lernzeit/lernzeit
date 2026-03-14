@@ -145,7 +145,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-16 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
@@ -174,10 +174,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         <Card className="shadow-card backdrop-blur-sm bg-card/95 border-0 animate-slide-up">
           <CardContent className="p-6">
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue="signup" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-background">Anmelden</TabsTrigger>
                 <TabsTrigger value="signup" className="data-[state=active]:bg-background">Registrieren</TabsTrigger>
+                <TabsTrigger value="signin" className="data-[state=active]:bg-background">Anmelden</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
