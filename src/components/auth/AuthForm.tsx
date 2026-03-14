@@ -138,15 +138,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      if (!captchaToken) {
-        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+      const tokenToUse = await ensureToken();
+      if (!tokenToUse) {
+        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
         setLoading(false);
         return;
       }
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: { captchaToken },
+        options: { captchaToken: tokenToUse },
       });
 
       if (error) throw error;
