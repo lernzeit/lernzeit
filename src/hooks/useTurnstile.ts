@@ -88,6 +88,7 @@ function waitForElement(id: string, timeout = 5000): Promise<HTMLElement> {
 export function useTurnstile(containerId: string) {
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<TurnstileStatus>('loading');
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
   const tokenResolverRef = useRef<((value: string | null) => void) | null>(null);
@@ -99,6 +100,7 @@ export function useTurnstile(containerId: string) {
     const init = async () => {
       try {
         setStatus('loading');
+        setErrorCode(null);
 
         const [, container] = await Promise.all([
           loadTurnstileScript(),
@@ -123,6 +125,7 @@ export function useTurnstile(containerId: string) {
             if (!mountedRef.current) return;
             setToken(t);
             setStatus('ready');
+            setErrorCode(null);
             if (tokenResolverRef.current) {
               tokenResolverRef.current(t);
               tokenResolverRef.current = null;
@@ -132,17 +135,19 @@ export function useTurnstile(containerId: string) {
             if (!mountedRef.current) return;
             setToken(null);
           },
-          'error-callback': () => {
+          'error-callback': (code?: string) => {
             if (!mountedRef.current) return;
             setToken(null);
             setStatus('error');
+            setErrorCode(code ?? 'unknown_error');
             if (tokenResolverRef.current) {
               tokenResolverRef.current(null);
               tokenResolverRef.current = null;
             }
           },
           theme: 'auto',
-          size: 'flexible',
+          appearance: 'interaction-only',
+          execution: 'execute',
         });
 
         setStatus('ready');
@@ -150,6 +155,7 @@ export function useTurnstile(containerId: string) {
         console.warn('[Turnstile] Init error:', err);
         if (!mountedRef.current) return;
         setStatus('error');
+        setErrorCode('init_failed');
       }
     };
 
@@ -177,9 +183,11 @@ export function useTurnstile(containerId: string) {
 
   const resetWidget = useCallback(() => {
     setToken(null);
+    setErrorCode(null);
     if (widgetIdRef.current && window.turnstile) {
       try {
         window.turnstile.reset(widgetIdRef.current);
+        setStatus('ready');
       } catch {
         // no-op
       }
@@ -196,7 +204,7 @@ export function useTurnstile(containerId: string) {
     return new Promise((resolve) => {
       tokenResolverRef.current = resolve;
       try {
-        window.turnstile?.execute(widgetIdRef.current as string);
+        window.turnstile.execute(widgetIdRef.current as string);
       } catch {
         tokenResolverRef.current = null;
         resolve(null);
@@ -211,5 +219,5 @@ export function useTurnstile(containerId: string) {
     });
   }, [token]);
 
-  return { token, status, ensureToken, resetWidget };
+  return { token, status, errorCode, ensureToken, resetWidget };
 }
