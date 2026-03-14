@@ -510,7 +510,8 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                       <Bar
                         yAxisId="right"
                         dataKey="questions"
-                        fill="hsl(var(--primary) / 0.2)"
+                        fill="#22d3ee"
+                        fillOpacity={0.35}
                         radius={[4, 4, 0, 0]}
                         isAnimationActive={false}
                       />
