@@ -159,7 +159,7 @@ const Index = () => {
     switch (category) {
       case 'math':return '🔢';
       case 'german':return '📚';
-      case 'english':return '🇬🇧';
+      case 'english':return '🔤';
       case 'geography':return '🌍';
       case 'history':return '🏛️';
       case 'physics':return '⚡';
