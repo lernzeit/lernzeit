@@ -68,14 +68,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     if (!resetEmail) return;
     setLoading(true);
     try {
-      if (!captchaToken) {
-        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+      const tokenToUse = await ensureToken();
+      if (!tokenToUse) {
+        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
         setLoading(false);
         return;
       }
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken,
+        captchaToken: tokenToUse,
       });
       if (error) throw error;
       setResetSent(true);
