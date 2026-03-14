@@ -187,7 +187,7 @@ export function GameFeedback({
                   onQuestionFeedback('thumbs_up');
                   if (questionText) {
                     reportQuestion({
-                      reason: 'thumbs_up',
+                      reason: 'good_question',
                       question: questionText,
                       statedAnswer: correctAnswer || '',
                       userAnswer,

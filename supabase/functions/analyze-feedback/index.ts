@@ -87,9 +87,8 @@ serve(async (req) => {
 
     for (const fb of feedbacks) {
       // Skip too_hard/too_easy from clustering — these are user-specific
-      // and should only affect individual difficulty profiles, not global prompt rules
-      // thumbs_down is handled via the report dialog and clustered normally
-      if (fb.feedback_type === 'too_hard' || fb.feedback_type === 'too_easy') {
+      // Skip good_question — handled separately for positive reinforcement rules
+      if (fb.feedback_type === 'too_hard' || fb.feedback_type === 'too_easy' || fb.feedback_type === 'good_question') {
         continue;
       }
 
@@ -287,11 +286,11 @@ serve(async (req) => {
       }
     }
 
-    // 7. Generate POSITIVE REINFORCEMENT rules from thumbs_up feedback
+    // 7. Generate POSITIVE REINFORCEMENT rules from good_question feedback
     const positiveClusters = new Map<string, typeof feedbacks>();
     for (const fb of feedbacks) {
-      if (fb.feedback_type !== 'thumbs_up') continue;
-      const key = `thumbs_up__${fb.category}`;
+      if (fb.feedback_type !== 'good_question') continue;
+      const key = `good_question__${fb.category}`;
       if (!positiveClusters.has(key)) positiveClusters.set(key, []);
       positiveClusters.get(key)!.push(fb);
     }
@@ -309,7 +308,7 @@ serve(async (req) => {
       const positiveRule = await generateRule(LOVABLE_API_KEY, {
         type: 'positive_reinforcement',
         category,
-        feedbackType: 'thumbs_up',
+        feedbackType: 'good_question',
         sampleTexts,
         itemCount: items.length,
       });

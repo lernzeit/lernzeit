@@ -125,14 +125,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
-  // Save emoji feedback (positive & negative) to question_feedback table
+  // Save emoji feedback to question_feedback table
   const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
     if (!question) return;
     const correctAnswerText = typeof question.correctAnswer === 'string' 
       ? question.correctAnswer 
       : JSON.stringify(question.correctAnswer);
+    // Map thumbs_up to 'good_question' for meaningful prompt analysis
+    const reason = feedbackType === 'thumbs_up' ? 'good_question' : feedbackType;
     reportQuestion({
-      reason: feedbackType as any,
+      reason: reason as any,
       question: question.questionText,
       statedAnswer: correctAnswerText,
       grade,
