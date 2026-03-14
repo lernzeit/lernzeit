@@ -543,23 +543,32 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {emailVerified === false && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+                  Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse, bevor Sie einen Einladungscode erstellen können.
+                </div>
+              )}
+
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="consent-settings"
+                  checked={consentChecked}
+                  onCheckedChange={(checked) => setConsentChecked(checked === true)}
+                  disabled={emailVerified === false}
+                />
+                <label htmlFor="consent-settings" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  Ich stimme den{' '}
+                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
+                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
+                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
+                </label>
+              </div>
+
               <Button 
                 onClick={handleGenerateCode}
-                disabled={newCodeLoading}
+                disabled={newCodeLoading || !consentChecked || emailVerified === false}
                 className="w-full"
               >
-                {newCodeLoading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Erstelle Code...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Neuen Einladungscode erstellen
-                  </>
-                )}
-              </Button>
 
               {activeCodes.length > 0 && (
                 <>
