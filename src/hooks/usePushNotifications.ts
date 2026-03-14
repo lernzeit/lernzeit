@@ -217,6 +217,7 @@ export function usePushNotifications({
             // fallback to generic name
           }
 
+          // Native push notification (works in background)
           await showNotification(
             '📱 Neue Bildschirmzeit-Anfrage',
             `${childName} möchte ${newRecord.requested_minutes} Minuten Bildschirmzeit.`,
@@ -227,6 +228,12 @@ export function usePushNotifications({
               minutes: newRecord.requested_minutes,
             }
           );
+
+          // In-app toast when app is in foreground
+          toast.info(`📱 ${childName} möchte Bildschirmzeit`, {
+            description: `${newRecord.requested_minutes} Minuten angefragt. Öffne den Tab "Anfragen" zum Antworten.`,
+            duration: 8000,
+          });
         }
       )
       .subscribe();
