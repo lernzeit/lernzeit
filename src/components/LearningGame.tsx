@@ -211,6 +211,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setHasAnswered(false);
     setIsCorrect(false);
     setShowExplanation(false);
+    setSelectedFeedback(null);
     clearExplanation();
   };
 
