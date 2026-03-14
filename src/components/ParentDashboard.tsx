@@ -513,6 +513,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                           {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                           Premium aktivieren
                         </Button>
+                      ) : isTrialing ? (
+                        <Button className="w-full" size="sm" onClick={handleUpgrade} disabled={checkoutLoading}>
+                          {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                          Jetzt Abo abschließen
+                        </Button>
                       ) : (
                         <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
                           {portalLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
