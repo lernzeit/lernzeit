@@ -145,7 +145,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-16 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
