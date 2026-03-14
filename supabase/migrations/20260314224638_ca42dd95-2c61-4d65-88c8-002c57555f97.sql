@@ -1,0 +1,2 @@
+ALTER TABLE public.question_feedback DROP CONSTRAINT question_feedback_feedback_type_check;
+ALTER TABLE public.question_feedback ADD CONSTRAINT question_feedback_feedback_type_check CHECK (feedback_type = ANY (ARRAY['incorrect', 'too_easy', 'too_hard', 'confusing', 'duplicate', 'wrong_answer', 'calculation_error', 'confusing_question', 'thumbs_up', 'thumbs_down', 'other']));

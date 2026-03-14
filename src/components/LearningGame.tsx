@@ -61,6 +61,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { trackAllAchievements } = useAchievementTracker(user?.id);
   const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
   const { addToQueue: addToReviewQueue, markAsReported: markReviewReported } = useReviewQueue(user?.id);
+  const { reportQuestion } = useQuestionReport();
   
   // Adaptive difficulty system — per subject, persisted across sessions
   const {
@@ -123,6 +124,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { isPremium } = useSubscription();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+
+  // Save emoji feedback (positive & negative) to question_feedback table
+  const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
+    if (!question) return;
+    const correctAnswerText = typeof question.correctAnswer === 'string' 
+      ? question.correctAnswer 
+      : JSON.stringify(question.correctAnswer);
+    reportQuestion({
+      reason: feedbackType as any,
+      question: question.questionText,
+      statedAnswer: correctAnswerText,
+      grade,
+      subject,
+    });
+  };
 
   // Browser TTS for explanations (guarded for Android WebView compatibility)
   const speakText = (text: string) => {
@@ -892,10 +908,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   <div className="mt-3 pt-3 border-t border-border">
                     <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
                     <div className="flex gap-1.5 justify-center">
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); saveEmojiFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
                     </div>
                   </div>
                 </div>

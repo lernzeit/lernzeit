@@ -88,6 +88,7 @@ serve(async (req) => {
     for (const fb of feedbacks) {
       // Skip too_hard/too_easy from clustering — these are user-specific
       // and should only affect individual difficulty profiles, not global prompt rules
+      // thumbs_down is handled via the report dialog and clustered normally
       if (fb.feedback_type === 'too_hard' || fb.feedback_type === 'too_easy') {
         continue;
       }
@@ -286,7 +287,58 @@ serve(async (req) => {
       }
     }
 
-    // 7. Mark ALL feedbacks as analyzed
+    // 7. Generate POSITIVE REINFORCEMENT rules from thumbs_up feedback
+    const positiveClusters = new Map<string, typeof feedbacks>();
+    for (const fb of feedbacks) {
+      if (fb.feedback_type !== 'thumbs_up') continue;
+      const key = `thumbs_up__${fb.category}`;
+      if (!positiveClusters.has(key)) positiveClusters.set(key, []);
+      positiveClusters.get(key)!.push(fb);
+    }
+
+    for (const [key, items] of positiveClusters) {
+      if (items.length < MIN_CLUSTER_SIZE) continue;
+
+      const category = key.split('__')[1];
+      const sampleTexts = items.slice(0, 8).map(i =>
+        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Klasse: ${i.grade} | Typ: ${i.question_type}`
+      ).join('\n');
+
+      const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
+
+      const positiveRule = await generateRule(LOVABLE_API_KEY, {
+        type: 'positive_reinforcement',
+        category,
+        feedbackType: 'thumbs_up',
+        sampleTexts,
+        itemCount: items.length,
+      });
+
+      if (positiveRule) {
+        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, positiveRule.toLowerCase()) > 0.7);
+        if (!isDuplicate && activeRuleCount + newRulesCreated < MAX_ACTIVE_RULES) {
+          const ruleSubject = normalizeCategory(category);
+          const { error: insertError } = await supabase
+            .from('prompt_rules')
+            .insert({
+              rule_text: positiveRule,
+              subject: ruleSubject,
+              grade_min: grades.length > 0 ? Math.min(...grades) : null,
+              grade_max: grades.length > 0 ? Math.max(...grades) : null,
+              source_feedback_ids: items.map(i => i.id),
+              source_feedback_count: items.length,
+            });
+
+          if (!insertError) {
+            newRulesCreated++;
+            existingTexts.push(positiveRule.toLowerCase());
+            console.log(`✅ Positive reinforcement rule for ${category}: "${positiveRule}"`);
+          }
+        }
+      }
+    }
+
+    // 8. Mark ALL feedbacks as analyzed
     const allFeedbackIds = feedbacks.map(f => f.id);
     for (let i = 0; i < allFeedbackIds.length; i += 50) {
       const batch = allFeedbackIds.slice(i, i + 50);
@@ -359,7 +411,7 @@ function normalizeCategory(category: string): string | null {
 }
 
 interface RuleGenerationContext {
-  type: 'content_quality' | 'variant_optimization' | 'variant_selection';
+  type: 'content_quality' | 'variant_optimization' | 'variant_selection' | 'positive_reinforcement';
   category: string;
   feedbackType: string;
   sampleTexts: string;
@@ -369,7 +421,18 @@ interface RuleGenerationContext {
 async function generateRule(apiKey: string, ctx: RuleGenerationContext): Promise<string | null> {
   let prompt: string;
 
-  if (ctx.type === 'content_quality') {
+  if (ctx.type === 'positive_reinforcement') {
+    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
+
+Hier sind ${ctx.itemCount} positiv bewertete Fragen (👍 Daumen hoch) im Fach "${ctx.category}":
+
+${ctx.sampleTexts}
+
+Analysiere, was diese Fragen gut macht (z.B. klare Formulierung, passender Schwierigkeitsgrad, gute Antwortalternativen).
+Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze), die der Fragengenerator befolgen soll, um mehr solcher guten Fragen zu erzeugen.
+
+Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
+  } else if (ctx.type === 'content_quality') {
     prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
 
 Hier sind ${ctx.itemCount} Beschwerden zum Fach "${ctx.category}", Typ "${ctx.feedbackType}":
