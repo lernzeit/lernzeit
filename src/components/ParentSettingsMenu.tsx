@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -7,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
@@ -283,10 +285,31 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     }
   };
 
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setEmailVerified(!!user?.email_confirmed_at);
+    };
+    checkEmail();
+  }, []);
+
   const handleGenerateCode = async () => {
+    if (!emailVerified) {
+      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.", variant: "destructive" });
+      return;
+    }
+    if (!consentChecked) {
+      toast({ title: "Einwilligung erforderlich", description: "Bitte bestätigen Sie die Einwilligung zur Datenverarbeitung.", variant: "destructive" });
+      return;
+    }
     setNewCodeLoading(true);
-    await generateInvitationCode(userId);
+    const consentTimestamp = new Date().toISOString();
+    await generateInvitationCode(userId, consentTimestamp);
     setNewCodeLoading(false);
+    setConsentChecked(false);
   };
 
   const copyToClipboard = (code: string) => {
@@ -520,9 +543,30 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {emailVerified === false && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+                  Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse, bevor Sie einen Einladungscode erstellen können.
+                </div>
+              )}
+
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="consent-settings"
+                  checked={consentChecked}
+                  onCheckedChange={(checked) => setConsentChecked(checked === true)}
+                  disabled={emailVerified === false}
+                />
+                <label htmlFor="consent-settings" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  Ich stimme den{' '}
+                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
+                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
+                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
+                </label>
+              </div>
+
               <Button 
                 onClick={handleGenerateCode}
-                disabled={newCodeLoading}
+                disabled={newCodeLoading || !consentChecked || emailVerified === false}
                 className="w-full"
               >
                 {newCodeLoading ? (
