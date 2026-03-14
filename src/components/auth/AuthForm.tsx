@@ -68,8 +68,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     if (!resetEmail) return;
     setLoading(true);
     try {
+      if (!captchaToken) {
+        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
+        captchaToken,
       });
       if (error) throw error;
       setResetSent(true);
