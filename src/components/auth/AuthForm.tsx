@@ -443,7 +443,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-medium bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
-                    disabled={loading || !captchaToken}
+                    disabled={loading}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
