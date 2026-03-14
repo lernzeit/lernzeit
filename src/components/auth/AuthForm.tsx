@@ -196,6 +196,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 <TabsTrigger value="signup" className="data-[state=active]:bg-background">Registrieren</TabsTrigger>
                 <TabsTrigger value="signin" className="data-[state=active]:bg-background">Anmelden</TabsTrigger>
               </TabsList>
+
+              {/* Shared Turnstile CAPTCHA widget */}
+              <div id="turnstile-container" className="flex justify-center mb-4"></div>
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
