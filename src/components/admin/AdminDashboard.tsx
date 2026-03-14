@@ -108,6 +108,33 @@ export function AdminDashboard() {
     }
   };
 
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPw, setIsChangingPw] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 8) {
+      toast({ title: 'Fehler', description: 'Mindestens 8 Zeichen erforderlich.', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Fehler', description: 'Passwörter stimmen nicht überein.', variant: 'destructive' });
+      return;
+    }
+    setIsChangingPw(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsChangingPw(false);
+    if (error) {
+      toast({ title: 'Fehler', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Passwort geändert', description: 'Dein Passwort wurde erfolgreich aktualisiert.' });
+      setNewPassword('');
+      setConfirmPassword('');
+      setPwDialogOpen(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
@@ -119,10 +146,47 @@ export function AdminDashboard() {
               KI-System & Cache-Übersicht
             </p>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2 w-full sm:w-auto">
-            <LogOut className="w-4 h-4" />
-            Logout
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2 flex-1 sm:flex-initial">
+                  <KeyRound className="w-4 h-4" />
+                  Passwort
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Passwort ändern</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <Input
+                    type="password"
+                    placeholder="Neues Passwort (min. 8 Zeichen)"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Passwort bestätigen"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                  />
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={isChangingPw || !newPassword || !confirmPassword}
+                    className="w-full"
+                  >
+                    {isChangingPw ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Passwort ändern
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2 flex-1 sm:flex-initial">
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Main Navigation */}
