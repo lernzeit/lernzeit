@@ -25,7 +25,7 @@ const teenGrades = grades.filter((g) => g.grade >= 5);
 
 export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
   return (
-    <div className="min-h-screen bg-gradient-bg py-4">
+    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top">
       <div className="page-container">
         {/* Header */}
         <div className="text-center mb-8">

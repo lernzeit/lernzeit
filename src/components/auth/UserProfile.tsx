@@ -540,7 +540,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   // Parent Dashboard
   if (profile?.role === 'parent') {
     return (
-      <div className="min-h-screen bg-gradient-bg py-4">
+      <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top">
         {showOnboarding && (
           <OnboardingTutorial role="parent" onComplete={handleOnboardingComplete} />
         )}
