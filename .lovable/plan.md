@@ -1,36 +1,36 @@
 
 
-## Plan: ScreenTimeWidget durch sinnvolle Eltern-Karte ersetzen
+## Sicherheitsverbesserungen: CSP + DSGVO-Consent-Flow
 
-### Problem
-Die `ScreenTimeWidget`-Komponente auf dem Eltern-Dashboard ist ein Dummy. Sie prüft `Capacitor.isNativePlatform()`, das in der PWA/Web-Ansicht immer `false` zurückgibt, und zeigt dann "Familienkontrollen sind auf diesem Gerät nicht verfügbar". Selbst auf nativen Geräten liefert der `FamilyLinkService` nur Mock-Daten.
+### Übersicht
 
-Die eigentliche Bildschirmzeit-Verwaltung (Anfragen genehmigen, Zeitlimits setzen) läuft bereits vollständig über das `ParentDashboard` und die `ParentScreenTimeRequestsDashboard`-Komponente. Die ScreenTimeWidget ist also redundant und verwirrend.
+Drei Änderungen: Meta-CSP-Tag, E-Mail-Bestätigungsprüfung vor Code-Generierung, und Consent-Checkbox mit Datenbankprotokollierung.
 
-### Lösung
+### 1. `index.html` — Meta-CSP-Tag
 
-**Die `ScreenTimeWidget` im Eltern-Dashboard durch eine kompakte "Kindersicherung"-Karte ersetzen**, die:
+Ein `<meta http-equiv="Content-Security-Policy">` Tag im `<head>` hinzufügen mit allen benötigten Quellen (Supabase, Google OAuth, Lovable AI Gateway).
 
-1. **Erkennt, ob ein natives Gerät vorliegt** (via `parentalControlsService.isNativePlatform()`)
-2. **Auf nativen Geräten**: Einen Button zeigt, der direkt Family Link (Android) oder Bildschirmzeit-Einstellungen (iOS) öffnet – über die bereits implementierten Deep-Links in `parentalControlsService`
-3. **Im Web/PWA**: Statt "nicht verfügbar" eine kurze Anleitung zeigt, wie man Family Link oder Bildschirmzeit auf dem Gerät einrichtet, mit Links zu den App-Stores
-4. **Immer**: Einen Hinweis zeigt, dass Bildschirmzeit-Anfragen der Kinder im Tab "Anfragen" im Dashboard unten verwaltet werden
+### 2. Datenbank — Consent-Spalte
 
-### Technische Änderungen
+Migration: Neue Spalte `consent_given_at` (timestamp, nullable) zur Tabelle `invitation_codes` hinzufügen. Speichert den genauen Zeitpunkt der DSGVO-Einwilligung bei Code-Generierung.
 
-**`src/components/ScreenTimeWidget.tsx`** – Komplett umschreiben:
-- Entferne Abhängigkeit von `useScreenTime` und `familyLinkService` (die Mock-Daten liefern)
-- Nutze stattdessen `parentalControlsService` (bereits implementiert mit echten Deep-Links)
-- Zeige plattformspezifische UI: nativer Button vs. Web-Anleitung
-- Entferne den ganzen "Permission"-Flow (war ohnehin Mock)
+### 3. `ParentDashboard.tsx` und `ParentSettingsMenu.tsx` — Consent-Flow
 
-**`src/hooks/useScreenTime.ts`** und **`src/services/familyLink.ts`** – Können entfernt werden, da sie nur Mock-Daten liefern und von keiner anderen Komponente genutzt werden.
+Beide Dateien haben identische Code-Generierungs-UIs. Änderungen:
 
-### Dateiänderungen
+- **E-Mail-Bestätigungsprüfung**: Vor der Code-Generierung wird über `supabase.auth.getUser()` geprüft, ob `email_confirmed_at` gesetzt ist. Falls nicht, wird eine Fehlermeldung angezeigt: "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse."
+- **Consent-Checkbox**: Eine Pflicht-Checkbox mit dem Text: *"Ich stimme den [Nutzungsbedingungen](/nutzungsbedingungen) zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO ([Datenschutzerklärung](/datenschutz))."*
+- **Button-Sperre**: Der "Code erstellen"-Button ist deaktiviert, solange die Checkbox nicht angehakt ist.
+- **Zeitstempel speichern**: `handleGenerateCode` übergibt den Consent-Zeitstempel an `generateInvitationCode`.
 
-| Datei | Aktion |
-|---|---|
-| `src/components/ScreenTimeWidget.tsx` | Umschreiben (nutzt `parentalControlsService`) |
-| `src/hooks/useScreenTime.ts` | Entfernen (nur Mock-Daten) |
-| `src/services/familyLink.ts` | Entfernen (nur Mock-Daten) |
+### 4. `useFamilyLinking.ts` — Consent-Zeitstempel speichern
+
+`generateInvitationCode` erhält einen optionalen Parameter `consentGivenAt`. Beim Insert in `invitation_codes` wird `consent_given_at` mitgespeichert.
+
+### Betroffene Dateien
+- `index.html` — Meta-CSP
+- `src/components/ParentDashboard.tsx` — Checkbox + E-Mail-Check
+- `src/components/ParentSettingsMenu.tsx` — Checkbox + E-Mail-Check
+- `src/hooks/useFamilyLinking.ts` — consent_given_at Parameter
+- Neue Migration — `consent_given_at` Spalte
 
