@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAACq7in7UFvgQNiS8';
 const TURNSTILE_SCRIPT_ID = 'cf-turnstile-script';
+const TURNSTILE_ENABLED = import.meta.env.VITE_TURNSTILE_ENABLED === 'true';
 
 type TurnstileStatus = 'loading' | 'ready' | 'error';
 
@@ -57,7 +58,6 @@ async function loadTurnstileScript(): Promise<void> {
   try {
     await waitForTurnstile(6000);
   } catch {
-    // stale/broken script element (e.g. blocked once by extension/network): retry with a clean script tag
     document.getElementById(TURNSTILE_SCRIPT_ID)?.remove();
     appendTurnstileScript();
     await waitForTurnstile(8000);
@@ -91,7 +91,7 @@ function waitForElement(id: string, timeout = 5000): Promise<HTMLElement> {
 
 export function useTurnstile(containerId: string) {
   const [token, setToken] = useState<string | null>(null);
-  const [status, setStatus] = useState<TurnstileStatus>('loading');
+  const [status, setStatus] = useState<TurnstileStatus>(TURNSTILE_ENABLED ? 'loading' : 'ready');
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -100,6 +100,14 @@ export function useTurnstile(containerId: string) {
   useEffect(() => {
     mountedRef.current = true;
     let cancelled = false;
+
+    if (!TURNSTILE_ENABLED) {
+      setStatus('ready');
+      setErrorCode(null);
+      return () => {
+        mountedRef.current = false;
+      };
+    }
 
     const init = async () => {
       try {
@@ -188,6 +196,12 @@ export function useTurnstile(containerId: string) {
   const resetWidget = useCallback(() => {
     setToken(null);
     setErrorCode(null);
+
+    if (!TURNSTILE_ENABLED) {
+      setStatus('ready');
+      return;
+    }
+
     if (widgetIdRef.current && window.turnstile) {
       try {
         window.turnstile.reset(widgetIdRef.current);
@@ -199,6 +213,10 @@ export function useTurnstile(containerId: string) {
   }, []);
 
   const ensureToken = useCallback(async (): Promise<string | null> => {
+    if (!TURNSTILE_ENABLED) {
+      return null;
+    }
+
     if (token) return token;
 
     if (!widgetIdRef.current || !window.turnstile?.execute) {
@@ -223,5 +241,5 @@ export function useTurnstile(containerId: string) {
     });
   }, [token]);
 
-  return { token, status, errorCode, ensureToken, resetWidget };
+  return { token, status, errorCode, ensureToken, resetWidget, isEnabled: TURNSTILE_ENABLED };
 }
