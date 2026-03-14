@@ -496,8 +496,8 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                       />
                       <Tooltip 
                         formatter={(value: number, name: string) => {
-                          if (name === 'successRate') return [`${value}%`, 'Erfolgsquote'];
-                          return [value, 'Fragen'];
+                          if (name === 'successRate') return [<span style={{ color: 'hsl(var(--primary))' }}>{`${value}%`}</span>, 'Erfolgsquote'];
+                          return [<span style={{ color: '#22d3ee' }}>{value}</span>, 'Fragen'];
                         }}
                         labelFormatter={(label) => label}
                         contentStyle={{
