@@ -68,7 +68,7 @@ export function useQuestionReport(): UseQuestionReportReturn {
       }
 
       console.log('✅ Question reported successfully');
-      toast.success('Danke für deine Meldung! Wir prüfen die Frage.');
+      // Silent success - no toast to avoid UI clutter during gameplay
       return true;
     } catch (err) {
       console.error('❌ Failed to report question:', err);
