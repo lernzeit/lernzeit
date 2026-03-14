@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
+import { useTurnstile } from '@/hooks/useTurnstile';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
