@@ -166,3 +166,8 @@ All colors MUST be HSL.
 .animate-scale-in-bounce {
   animation: scale-in-bounce 0.4s ease-out forwards;
 }
+
+/* Safe area utilities for mobile notches/status bars */
+.pt-safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top, 1rem));
+}
