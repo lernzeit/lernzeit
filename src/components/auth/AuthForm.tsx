@@ -232,12 +232,18 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsList>
 
               {/* Shared Turnstile CAPTCHA widget */}
-              <div id="turnstile-container" className="flex justify-center mb-2 min-h-[65px]"></div>
+              <div id="turnstile-container" className="flex justify-center mb-2 min-h-[1px]"></div>
               {captchaStatus === 'loading' && (
                 <p className="text-xs text-muted-foreground text-center mb-3">Sicherheitsprüfung wird geladen…</p>
               )}
               {captchaStatus === 'error' && (
-                <p className="text-xs text-destructive text-center mb-3">CAPTCHA konnte nicht geladen werden.</p>
+                <p className="text-xs text-destructive text-center mb-3">
+                  {captchaErrorCode === '110200'
+                    ? `Domain "${window.location.hostname}" ist für Turnstile nicht freigegeben.`
+                    : captchaErrorCode
+                      ? `CAPTCHA-Fehler (${captchaErrorCode}).`
+                      : 'CAPTCHA konnte nicht geladen werden.'}
+                </p>
               )}
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
