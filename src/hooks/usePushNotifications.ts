@@ -131,16 +131,14 @@ export function usePushNotifications({
     };
   }, [isNative]);
 
-  // Subscribe to screen time request updates for background notifications
+  // Subscribe to screen time request updates for CHILD notifications
   useEffect(() => {
     if (!enabled || !userId || role !== 'child') return;
 
-    // Request permissions on mount for child users
     requestPermissions();
 
-    // Subscribe to changes on screen_time_requests table
     const channel = supabase
-      .channel(`push-notifications-${userId}`)
+      .channel(`push-notifications-child-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -153,11 +151,8 @@ export function usePushNotifications({
           const newRecord = payload.new as any;
           const oldRecord = payload.old as any;
 
-          // Check if status changed to approved
           if (newRecord.status === 'approved' && oldRecord?.status === 'pending') {
             console.log('🔔 Screen time approved - triggering notification');
-            
-            // Show native notification (works in background)
             await showNotification(
               '🎉 Bildschirmzeit genehmigt!',
               `Deine Eltern haben ${newRecord.requested_minutes} Minuten Bildschirmzeit freigegeben!`,
@@ -169,7 +164,6 @@ export function usePushNotifications({
             );
           } else if (newRecord.status === 'denied' && oldRecord?.status === 'pending') {
             console.log('🔔 Screen time denied - triggering notification');
-            
             await showNotification(
               'Bildschirmzeit abgelehnt',
               newRecord.parent_response || 'Deine Anfrage wurde leider abgelehnt.',
@@ -179,6 +173,60 @@ export function usePushNotifications({
               }
             );
           }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [enabled, userId, role, showNotification, requestPermissions]);
+
+  // Subscribe to NEW screen time requests for PARENT notifications
+  useEffect(() => {
+    if (!enabled || !userId || role !== 'parent') return;
+
+    requestPermissions();
+
+    const channel = supabase
+      .channel(`push-notifications-parent-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'screen_time_requests',
+          filter: `parent_id=eq.${userId}`
+        },
+        async (payload) => {
+          const newRecord = payload.new as any;
+          console.log('🔔 New screen time request from child - triggering parent notification');
+
+          // Try to fetch child name for a friendlier notification
+          let childName = 'Dein Kind';
+          try {
+            const { data: childProfile } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', newRecord.child_id)
+              .single();
+            if (childProfile?.name) {
+              childName = childProfile.name;
+            }
+          } catch {
+            // fallback to generic name
+          }
+
+          await showNotification(
+            '📱 Neue Bildschirmzeit-Anfrage',
+            `${childName} möchte ${newRecord.requested_minutes} Minuten Bildschirmzeit.`,
+            {
+              type: 'screen_time_request_new',
+              requestId: newRecord.id,
+              childId: newRecord.child_id,
+              minutes: newRecord.requested_minutes,
+            }
+          );
         }
       )
       .subscribe();

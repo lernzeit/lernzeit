@@ -65,12 +65,13 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     profile?.role === 'child' ? user?.id : undefined
   );
 
-  // Initialize push notifications for children
-  // This handles local notifications when the app is in background
+  // Initialize push notifications for children AND parents
+  // Children: notified when screen time is approved/denied
+  // Parents: notified when a child creates a new request
   usePushNotifications({
     userId: user?.id,
     role: profile?.role as 'child' | 'parent',
-    enabled: profile?.role === 'child',
+    enabled: profile?.role === 'child' || profile?.role === 'parent',
   });
 
   // Check for parent-child relationship
