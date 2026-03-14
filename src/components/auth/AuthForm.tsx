@@ -144,53 +144,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     }
   };
 
-  const handleBiometricLogin = async () => {
-    setLoading(true);
-    try {
-      const credentials = await biometricAuthService.authenticate();
-      if (!credentials) {
-        setLoading(false);
-        return; // User cancelled
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: credentials.username,
-        password: credentials.password,
-      });
-
-      if (error) {
-        // Credentials might be outdated - remove them
-        if (error.message.includes('Invalid login credentials')) {
-          await biometricAuthService.deleteCredentials();
-          setHasBiometricCredentials(false);
-          toast({
-            title: 'Gespeicherte Anmeldedaten ungültig',
-            description: 'Bitte melde dich erneut mit E-Mail und Passwort an.',
-            variant: 'destructive',
-          });
-        } else {
-          throw error;
-        }
-        return;
-      }
-
-      toast({
-        title: "Willkommen zurück!",
-        description: `Biometrische Anmeldung erfolgreich.`,
-      });
-
-      onAuthSuccess();
-    } catch (error: any) {
-      toast({
-        title: "Fehler",
-        description: translateError(error.message),
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background elements */}
