@@ -36,7 +36,32 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
-  const { status: captchaStatus, ensureToken, resetWidget: resetCaptcha } = useTurnstile('turnstile-container');
+  const {
+    status: captchaStatus,
+    errorCode: captchaErrorCode,
+    ensureToken,
+    resetWidget: resetCaptcha,
+  } = useTurnstile('turnstile-container');
+
+  const getCaptchaErrorDescription = () => {
+    if (captchaErrorCode === '110200') {
+      return `Domain "${window.location.hostname}" ist in Cloudflare Turnstile nicht freigegeben.`;
+    }
+
+    if (captchaErrorCode) {
+      return `Turnstile-Fehlercode: ${captchaErrorCode}. Bitte Seite neu laden und erneut versuchen.`;
+    }
+
+    return 'Bitte Seite neu laden und erneut versuchen.';
+  };
+
+  const handleCaptchaFailure = () => {
+    toast({
+      title: 'Sicherheitsprüfung fehlgeschlagen',
+      description: getCaptchaErrorDescription(),
+      variant: 'destructive',
+    });
+  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -70,7 +95,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const tokenToUse = await ensureToken();
       if (!tokenToUse) {
-        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
+        handleCaptchaFailure();
         setLoading(false);
         return;
       }
@@ -95,7 +120,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const tokenToUse = await ensureToken();
       if (!tokenToUse) {
-        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
+        handleCaptchaFailure();
         setLoading(false);
         return;
       }
@@ -140,7 +165,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const tokenToUse = await ensureToken();
       if (!tokenToUse) {
-        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
+        handleCaptchaFailure();
         setLoading(false);
         return;
       }
