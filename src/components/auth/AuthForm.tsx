@@ -36,6 +36,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
+  const { token: captchaToken, resetWidget: resetCaptcha } = useTurnstile('turnstile-container');
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
