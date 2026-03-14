@@ -41,6 +41,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     errorCode: captchaErrorCode,
     ensureToken,
     resetWidget: resetCaptcha,
+    isEnabled: isCaptchaEnabled,
   } = useTurnstile('turnstile-container');
 
   const getCaptchaErrorDescription = () => {
@@ -65,6 +66,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       description: getCaptchaErrorDescription(),
       variant: 'destructive',
     });
+  };
+
+  const resolveCaptchaToken = async (): Promise<string | null | undefined> => {
+    if (!isCaptchaEnabled) {
+      return undefined;
+    }
+
+    const tokenToUse = await ensureToken();
+    if (!tokenToUse) {
+      handleCaptchaFailure();
+      return null;
+    }
+
+    return tokenToUse;
   };
 
   const handleGoogleSignIn = async () => {
@@ -97,16 +112,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     if (!resetEmail) return;
     setLoading(true);
     try {
-      const tokenToUse = await ensureToken();
-      if (!tokenToUse) {
-        handleCaptchaFailure();
+      const tokenToUse = await resolveCaptchaToken();
+      if (tokenToUse === null) {
         setLoading(false);
         return;
       }
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken: tokenToUse,
+        ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
       });
+
       if (error) throw error;
       setResetSent(true);
       toast({ title: 'Link gesendet!', description: 'Prüfe dein E-Mail-Postfach für den Reset-Link.' });
@@ -122,17 +138,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const tokenToUse = await ensureToken();
-      if (!tokenToUse) {
-        handleCaptchaFailure();
+      const tokenToUse = await resolveCaptchaToken();
+      if (tokenToUse === null) {
         setLoading(false);
         return;
       }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          captchaToken: tokenToUse,
+          ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
           data: {
             name,
             role,
@@ -151,7 +167,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
-      resetCaptcha();
+      if (isCaptchaEnabled) {
+        resetCaptcha();
+      }
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -167,16 +185,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const tokenToUse = await ensureToken();
-      if (!tokenToUse) {
-        handleCaptchaFailure();
+      const tokenToUse = await resolveCaptchaToken();
+      if (tokenToUse === null) {
         setLoading(false);
         return;
       }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: { captchaToken: tokenToUse },
+        ...(typeof tokenToUse === 'string' ? { options: { captchaToken: tokenToUse } } : {}),
       });
 
       if (error) throw error;
@@ -188,7 +206,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
-      resetCaptcha();
+      if (isCaptchaEnabled) {
+        resetCaptcha();
+      }
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -236,20 +256,24 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsList>
 
               {/* Shared Turnstile CAPTCHA widget */}
-              <div id="turnstile-container" className="flex justify-center mb-2 min-h-[1px]"></div>
-              {captchaStatus === 'loading' && (
-                <p className="text-xs text-muted-foreground text-center mb-3">Sicherheitsprüfung wird geladen…</p>
-              )}
-              {captchaStatus === 'error' && (
-                <p className="text-xs text-destructive text-center mb-3">
-                  {captchaErrorCode === '110200'
-                    ? `Domain "${window.location.hostname}" ist für Turnstile nicht freigegeben.`
-                    : captchaErrorCode === 'init_failed'
-                      ? 'Turnstile konnte nicht initialisiert werden (Skript blockiert oder Netzwerkproblem).'
-                      : captchaErrorCode
-                        ? `CAPTCHA-Fehler (${captchaErrorCode}).`
-                        : 'CAPTCHA konnte nicht geladen werden.'}
-                </p>
+              {isCaptchaEnabled && (
+                <>
+                  <div id="turnstile-container" className="flex justify-center mb-2 min-h-[1px]"></div>
+                  {captchaStatus === 'loading' && (
+                    <p className="text-xs text-muted-foreground text-center mb-3">Sicherheitsprüfung wird geladen…</p>
+                  )}
+                  {captchaStatus === 'error' && (
+                    <p className="text-xs text-destructive text-center mb-3">
+                      {captchaErrorCode === '110200'
+                        ? `Domain "${window.location.hostname}" ist für Turnstile nicht freigegeben.`
+                        : captchaErrorCode === 'init_failed'
+                          ? 'Turnstile konnte nicht initialisiert werden (Skript blockiert oder Netzwerkproblem).'
+                          : captchaErrorCode
+                            ? `CAPTCHA-Fehler (${captchaErrorCode}).`
+                            : 'CAPTCHA konnte nicht geladen werden.'}
+                    </p>
+                  )}
+                </>
               )}
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
