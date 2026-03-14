@@ -122,6 +122,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
   // Browser TTS for explanations (guarded for Android WebView compatibility)
   const speakText = (text: string) => {
