@@ -181,51 +181,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsList>
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
-                {/* Biometric quick login - shown prominently if credentials are stored */}
-                {biometricInfo.available && hasBiometricCredentials && (
-                  <>
-                    <div className="text-center mb-2">
-                      <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
-                      <p className="text-sm text-muted-foreground">Schnell anmelden mit {biometricAuthService.getBiometryLabel(biometricInfo.biometryType)}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={handleBiometricLogin}
-                      disabled={loading}
-                      className="w-full h-14 text-base font-medium bg-gradient-to-r from-primary to-secondary hover:opacity-90 shadow-lg transition-all duration-200 hover:scale-105"
-                    >
-                      {loading ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Wird angemeldet...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          {biometricInfo.biometryType === 'face' ? (
-                            <ScanFace className="w-6 h-6" />
-                          ) : biometricInfo.biometryType === 'fingerprint' ? (
-                            <Fingerprint className="w-6 h-6" />
-                          ) : (
-                            <ShieldCheck className="w-6 h-6" />
-                          )}
-                          Mit {biometricAuthService.getBiometryLabel(biometricInfo.biometryType)} anmelden
-                        </div>
-                      )}
-                    </Button>
-                    <div className="relative my-4">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-border"></div>
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Standard login header (only if no biometric quick login) */}
-                {(!biometricInfo.available || !hasBiometricCredentials) && (
-                  <div className="text-center mb-4">
+                <div className="text-center mb-4">
                     <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
                     <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
                   </div>
