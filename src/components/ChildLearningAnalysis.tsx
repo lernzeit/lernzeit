@@ -474,20 +474,31 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
               <CardContent>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weeklyData}>
+                    <ComposedChart data={weeklyData}>
                       <XAxis 
                         dataKey="week" 
                         tick={{ fontSize: 12 }}
                         stroke="hsl(var(--muted-foreground))"
                       />
                       <YAxis 
+                        yAxisId="left"
                         domain={[0, 100]} 
                         tick={{ fontSize: 12 }}
                         stroke="hsl(var(--muted-foreground))"
                         tickFormatter={(value) => `${value}%`}
                       />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        tick={{ fontSize: 12 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        allowDecimals={false}
+                      />
                       <Tooltip 
-                        formatter={(value: number) => [`${value}%`, 'Erfolgsquote']}
+                        formatter={(value: number, name: string) => {
+                          if (name === 'successRate') return [`${value}%`, 'Erfolgsquote'];
+                          return [value, 'Fragen'];
+                        }}
                         labelFormatter={(label) => label}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--background))',
@@ -496,14 +507,22 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                           color: 'hsl(var(--foreground))'
                         }}
                       />
+                      <Bar
+                        yAxisId="right"
+                        dataKey="questions"
+                        fill="hsl(var(--primary) / 0.2)"
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={false}
+                      />
                       <Line 
+                        yAxisId="left"
                         type="monotone" 
                         dataKey="successRate" 
                         stroke="hsl(var(--primary))" 
                         dot={{ fill: 'hsl(var(--primary))' }}
                         isAnimationActive={false}
                       />
-                    </LineChart>
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
