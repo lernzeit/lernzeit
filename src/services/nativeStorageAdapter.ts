@@ -5,26 +5,46 @@
  */
 import { Capacitor } from '@capacitor/core';
 
-let Preferences: any = null;
-let preferencesAvailable = false;
+type PreferencesPluginLike = {
+  get: (options: { key: string }) => Promise<{ value: string | null }>;
+  set: (options: { key: string; value: string }) => Promise<void>;
+  remove: (options: { key: string }) => Promise<void>;
+};
 
-async function getPreferences() {
-  if (Preferences) return Preferences;
-  if (!Capacitor.isNativePlatform()) return null;
+let Preferences: PreferencesPluginLike | null = null;
+let preferencesStatus: 'unknown' | 'available' | 'unavailable' = 'unknown';
+let initPromise: Promise<void> | null = null;
 
-  try {
-    const mod = await import('@capacitor/preferences');
-    Preferences = mod.Preferences;
-    // Test that it actually works on this platform
-    await Preferences.get({ key: '__test__' });
-    preferencesAvailable = true;
-    return Preferences;
-  } catch (e) {
-    console.warn('Capacitor Preferences not available, falling back to localStorage:', e);
-    Preferences = null;
-    preferencesAvailable = false;
-    return null;
+async function ensurePreferencesInitialized(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    preferencesStatus = 'unavailable';
+    return;
   }
+
+  if (preferencesStatus !== 'unknown') return;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      const mod = await import('@capacitor/preferences');
+      const candidate = mod.Preferences as PreferencesPluginLike;
+
+      // Validate plugin bridge. Do not return plugin objects from async fns
+      // because Capacitor proxy can be treated as thenable on Android.
+      await candidate.get({ key: '__test__' });
+
+      Preferences = candidate;
+      preferencesStatus = 'available';
+    } catch (e) {
+      console.warn('Capacitor Preferences not available, falling back to localStorage:', e);
+      Preferences = null;
+      preferencesStatus = 'unavailable';
+    } finally {
+      initPromise = null;
+    }
+  })();
+
+  return initPromise;
 }
 
 // In-memory cache to serve getItem synchronously (Supabase requires sync storage API)
@@ -43,26 +63,25 @@ export async function initNativeStorage(): Promise<void> {
 
   if (!Capacitor.isNativePlatform()) return;
 
+  await ensurePreferencesInitialized();
+
   try {
-    const prefs = await getPreferences();
-    if (!prefs) {
-      // Preferences plugin not working — seed memory cache from localStorage
-      try {
-        const stored = localStorage.getItem(SUPABASE_STORAGE_KEY);
-        if (stored) {
-          memoryCache.set(SUPABASE_STORAGE_KEY, stored);
-          console.log('✅ Session restored from localStorage fallback');
-        }
-      } catch { /* ignore */ }
+    if (preferencesStatus === 'available' && Preferences) {
+      const { value } = await Preferences.get({ key: SUPABASE_STORAGE_KEY });
+      if (value) {
+        memoryCache.set(SUPABASE_STORAGE_KEY, value);
+        console.log('✅ Session restored from native storage');
+      } else {
+        console.log('ℹ️ No saved session found in native storage');
+      }
       return;
     }
 
-    const { value } = await prefs.get({ key: SUPABASE_STORAGE_KEY });
-    if (value) {
-      memoryCache.set(SUPABASE_STORAGE_KEY, value);
-      console.log('✅ Session restored from native storage');
-    } else {
-      console.log('ℹ️ No saved session found in native storage');
+    // Preferences plugin not working — seed memory cache from localStorage
+    const stored = localStorage.getItem(SUPABASE_STORAGE_KEY);
+    if (stored) {
+      memoryCache.set(SUPABASE_STORAGE_KEY, stored);
+      console.log('✅ Session restored from localStorage fallback');
     }
   } catch (e) {
     console.warn('Failed to init native storage, using localStorage fallback:', e);
@@ -73,33 +92,43 @@ export async function initNativeStorage(): Promise<void> {
 function persistValue(key: string, value: string): void {
   if (!Capacitor.isNativePlatform()) return;
 
-  if (preferencesAvailable && Preferences) {
-    try {
-      Preferences.set({ key, value }).catch((e: any) =>
-        console.warn('Failed to persist to native storage:', e)
-      );
-    } catch {
-      // sync error — fall through to localStorage
-    }
+  if (preferencesStatus === 'unknown') {
+    void ensurePreferencesInitialized();
+  }
+
+  if (preferencesStatus === 'available' && Preferences) {
+    void Preferences.set({ key, value }).catch((e: unknown) => {
+      console.warn('Failed to persist to native storage:', e);
+    });
   }
 
   // Always also write to localStorage as backup
-  try { localStorage.setItem(key, value); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Safely remove from native storage and localStorage */
 function removeValue(key: string): void {
   if (!Capacitor.isNativePlatform()) return;
 
-  if (preferencesAvailable && Preferences) {
-    try {
-      Preferences.remove({ key }).catch((e: any) =>
-        console.warn('Failed to remove from native storage:', e)
-      );
-    } catch { /* ignore */ }
+  if (preferencesStatus === 'unknown') {
+    void ensurePreferencesInitialized();
   }
 
-  try { localStorage.removeItem(key); } catch { /* ignore */ }
+  if (preferencesStatus === 'available' && Preferences) {
+    void Preferences.remove({ key }).catch((e: unknown) => {
+      console.warn('Failed to remove from native storage:', e);
+    });
+  }
+
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
