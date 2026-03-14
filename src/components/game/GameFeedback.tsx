@@ -208,17 +208,6 @@ export function GameFeedback({
                 onClick={() => {
                   setSelectedFeedback('thumbs_down');
                   onQuestionFeedback('thumbs_down');
-                  if (questionText) {
-                    reportQuestion({
-                      reason: 'thumbs_down',
-                      question: questionText,
-                      statedAnswer: correctAnswer || '',
-                      userAnswer,
-                      grade: grade || 1,
-                      subject: subject || 'math',
-                      templateId,
-                    });
-                  }
                   setShowReportDialog(true);
                 }}
                 className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`}
