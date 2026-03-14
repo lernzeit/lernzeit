@@ -285,10 +285,31 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
     }
   };
 
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setEmailVerified(!!user?.email_confirmed_at);
+    };
+    checkEmail();
+  }, []);
+
   const handleGenerateCode = async () => {
+    if (!emailVerified) {
+      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.", variant: "destructive" });
+      return;
+    }
+    if (!consentChecked) {
+      toast({ title: "Einwilligung erforderlich", description: "Bitte bestätigen Sie die Einwilligung zur Datenverarbeitung.", variant: "destructive" });
+      return;
+    }
     setNewCodeLoading(true);
-    await generateInvitationCode(userId);
+    const consentTimestamp = new Date().toISOString();
+    await generateInvitationCode(userId, consentTimestamp);
     setNewCodeLoading(false);
+    setConsentChecked(false);
   };
 
   const copyToClipboard = (code: string) => {
