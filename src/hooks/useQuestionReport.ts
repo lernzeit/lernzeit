@@ -6,12 +6,10 @@ import { toast } from 'sonner';
 export type ReportReason = 
   | 'wrong_answer' 
   | 'confusing_question' 
-  | 'calculation_error' 
   | 'too_hard' 
   | 'too_easy' 
   | 'duplicate'
-  | 'thumbs_up'
-  | 'thumbs_down'
+  | 'good_question'
   | 'other';
 
 export interface QuestionReport {
