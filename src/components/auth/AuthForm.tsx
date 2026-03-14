@@ -394,7 +394,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               <TabsContent value="signup" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold">Konto erstellen</h3>
-                  <p className="text-sm text-muted-foreground">Starte dein Lernabenteuer und verdiene Handyzeit</p>
+                  <p className="text-sm text-muted-foreground">
+                    {role === 'parent'
+                      ? 'Behalte den Lernfortschritt deiner Kinder im Blick'
+                      : 'Starte dein Lernabenteuer und verdiene Handyzeit'}
+                  </p>
                 </div>
                 
                 <form onSubmit={handleSignUp} className="space-y-4">
