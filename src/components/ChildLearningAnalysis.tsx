@@ -17,7 +17,7 @@ import {
   Lightbulb,
   Crown
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ChildLearningAnalysisProps {
   childId: string;
