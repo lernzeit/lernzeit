@@ -10,6 +10,8 @@ export type ReportReason =
   | 'too_hard' 
   | 'too_easy' 
   | 'duplicate'
+  | 'thumbs_up'
+  | 'thumbs_down'
   | 'other';
 
 export interface QuestionReport {
