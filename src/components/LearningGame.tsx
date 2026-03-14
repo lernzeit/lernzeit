@@ -1590,7 +1590,7 @@ function getSubjectEmoji(subject: string): string {
   const map: Record<string, string> = {
     'math': '🔢',
     'german': '📚',
-    'english': '🇬🇧',
+    'english': '🔤',
     'geography': '🌍',
     'history': '🏛️',
     'physics': '⚡',
