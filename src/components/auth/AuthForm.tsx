@@ -236,8 +236,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       />
                     </div>
                   </div>
-                  {/* Turnstile CAPTCHA widget */}
-                  <div id="turnstile-container" className="flex justify-center"></div>
 
                   <Button 
                     type="submit" 
