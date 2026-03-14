@@ -182,10 +182,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
-                    <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
-                    <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
-                  </div>
-                )}
+                  <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
+                  <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
+                </div>
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">E-Mail</Label>
