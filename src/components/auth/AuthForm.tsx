@@ -48,6 +48,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       return `Domain "${window.location.hostname}" ist in Cloudflare Turnstile nicht freigegeben.`;
     }
 
+    if (captchaErrorCode === 'init_failed') {
+      return 'Turnstile konnte nicht initialisiert werden. Bitte Adblocker/Tracking-Schutz deaktivieren und challenges.cloudflare.com erlauben.';
+    }
+
     if (captchaErrorCode) {
       return `Turnstile-Fehlercode: ${captchaErrorCode}. Bitte Seite neu laden und erneut versuchen.`;
     }
@@ -240,9 +244,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 <p className="text-xs text-destructive text-center mb-3">
                   {captchaErrorCode === '110200'
                     ? `Domain "${window.location.hostname}" ist für Turnstile nicht freigegeben.`
-                    : captchaErrorCode
-                      ? `CAPTCHA-Fehler (${captchaErrorCode}).`
-                      : 'CAPTCHA konnte nicht geladen werden.'}
+                    : captchaErrorCode === 'init_failed'
+                      ? 'Turnstile konnte nicht initialisiert werden (Skript blockiert oder Netzwerkproblem).'
+                      : captchaErrorCode
+                        ? `CAPTCHA-Fehler (${captchaErrorCode}).`
+                        : 'CAPTCHA konnte nicht geladen werden.'}
                 </p>
               )}
               

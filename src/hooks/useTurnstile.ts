@@ -16,48 +16,52 @@ declare global {
   }
 }
 
-function loadTurnstileScript(): Promise<void> {
+function waitForTurnstile(timeout = 6000): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.turnstile) {
       resolve();
       return;
     }
 
-    if (document.getElementById(TURNSTILE_SCRIPT_ID)) {
-      const check = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 100);
-
-      setTimeout(() => {
+    const check = setInterval(() => {
+      if (window.turnstile) {
         clearInterval(check);
-        reject(new Error('Turnstile load timeout'));
-      }, 10000);
-      return;
-    }
+        clearTimeout(timer);
+        resolve();
+      }
+    }, 50);
 
-    const script = document.createElement('script');
-    script.id = TURNSTILE_SCRIPT_ID;
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async = true;
-    script.onload = () => {
-      const check = setInterval(() => {
-        if (window.turnstile) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 50);
-
-      setTimeout(() => {
-        clearInterval(check);
-        reject(new Error('Turnstile init timeout'));
-      }, 5000);
-    };
-    script.onerror = () => reject(new Error('Failed to load Turnstile script'));
-    document.head.appendChild(script);
+    const timer = setTimeout(() => {
+      clearInterval(check);
+      reject(new Error('Turnstile load timeout'));
+    }, timeout);
   });
+}
+
+function appendTurnstileScript() {
+  const script = document.createElement('script');
+  script.id = TURNSTILE_SCRIPT_ID;
+  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+}
+
+async function loadTurnstileScript(): Promise<void> {
+  if (window.turnstile) return;
+
+  if (!document.getElementById(TURNSTILE_SCRIPT_ID)) {
+    appendTurnstileScript();
+  }
+
+  try {
+    await waitForTurnstile(6000);
+  } catch {
+    // stale/broken script element (e.g. blocked once by extension/network): retry with a clean script tag
+    document.getElementById(TURNSTILE_SCRIPT_ID)?.remove();
+    appendTurnstileScript();
+    await waitForTurnstile(8000);
+  }
 }
 
 function waitForElement(id: string, timeout = 5000): Promise<HTMLElement> {
