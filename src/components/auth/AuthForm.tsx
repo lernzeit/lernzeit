@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
-import { biometricAuthService, BiometricAvailability } from '@/services/biometricAuthService';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, Fingerprint, ScanFace, ShieldCheck } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
@@ -35,23 +34,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
-  const [biometricInfo, setBiometricInfo] = useState<BiometricAvailability>({ available: false });
-  const [hasBiometricCredentials, setHasBiometricCredentials] = useState(false);
   const { toast } = useToast();
-
-  // Check biometric availability on mount
-  useEffect(() => {
-    const checkBiometric = async () => {
-      const availability = await biometricAuthService.isAvailable();
-      setBiometricInfo(availability);
-      if (availability.available) {
-        const hasCredentials = await biometricAuthService.hasStoredCredentials();
-        setHasBiometricCredentials(hasCredentials);
-      }
-    };
-    checkBiometric();
-  }, []);
-
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
