@@ -30,7 +30,7 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="de" dir="ltr">
     <Head />
-    <Preview>Willkommen bei Lernzeit – bitte bestätige deine E-Mail-Adresse 🎓</Preview>
+    <Preview>Willkommen bei Lernzeit – bitte bestätige deine E-Mail 🎉</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
@@ -38,18 +38,17 @@ export const SignupEmail = ({
         </Section>
         <Heading style={h1}>Willkommen bei Lernzeit! 🎉</Heading>
         <Text style={text}>
-          Schön, dass du dabei bist! Wir freuen uns, dich und deine Familie auf der Lernreise zu begleiten.
-        </Text>
-        <Text style={text}>
-          Bitte bestätige deine E-Mail-Adresse ({recipient}), damit es losgehen kann:
+          Schön, dass du dabei bist! Bitte bestätige deine E-Mail-Adresse (
+          <Link href={`mailto:${recipient}`} style={link}>{recipient}</Link>
+          ), damit du loslegen kannst:
         </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>
-            E-Mail bestätigen ✓
+            E-Mail bestätigen
           </Button>
         </Section>
         <Text style={hint}>
-          Der Link ist 24 Stunden gültig. Danach kannst du einen neuen anfordern.
+          Der Link ist 60 Minuten gültig.
         </Text>
         <Text style={footer}>
           Falls du kein Konto erstellt hast, kannst du diese E-Mail einfach ignorieren.
@@ -73,6 +72,7 @@ const header = { textAlign: 'center' as const, marginBottom: '24px' }
 const logo = { fontSize: '28px', fontWeight: 'bold' as const, color: 'hsl(217, 91%, 60%)', margin: '0' }
 const h1 = { fontSize: '24px', fontWeight: 'bold' as const, color: 'hsl(240, 10%, 15%)', margin: '0 0 16px', textAlign: 'center' as const }
 const text = { fontSize: '15px', color: 'hsl(240, 5%, 35%)', lineHeight: '1.6', margin: '0 0 16px' }
+const link = { color: 'hsl(217, 91%, 60%)', textDecoration: 'underline' }
 const buttonSection = { textAlign: 'center' as const, margin: '24px 0' }
 const button = { backgroundColor: 'hsl(217, 91%, 60%)', color: '#ffffff', fontSize: '16px', fontWeight: 'bold' as const, borderRadius: '8px', padding: '14px 28px', textDecoration: 'none' }
 const hint = { fontSize: '13px', color: 'hsl(240, 5%, 55%)', lineHeight: '1.5', margin: '0 0 24px', textAlign: 'center' as const }

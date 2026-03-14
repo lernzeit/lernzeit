@@ -34,13 +34,10 @@ export const InviteEmail = ({
         <Section style={header}>
           <Text style={logo}>🎓 Lernzeit</Text>
         </Section>
-        <Heading style={h1}>Du bist eingeladen! 🎉</Heading>
+        <Heading style={h1}>Du wurdest eingeladen! 🎓</Heading>
         <Text style={text}>
-          Jemand hat dich zu{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>Lernzeit</strong>
-          </Link>{' '}
-          eingeladen. Klicke auf den Button, um dein Konto zu erstellen und loszulegen.
+          Du wurdest eingeladen, <Link href={siteUrl} style={link}><strong>Lernzeit</strong></Link> beizutreten.
+          Klicke auf den Button, um die Einladung anzunehmen und dein Konto zu erstellen:
         </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>
