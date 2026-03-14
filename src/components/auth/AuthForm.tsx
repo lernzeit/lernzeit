@@ -233,10 +233,13 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       />
                     </div>
                   </div>
+                  {/* Turnstile CAPTCHA widget */}
+                  <div id="turnstile-container" className="flex justify-center"></div>
+
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
-                    disabled={loading}
+                    disabled={loading || !captchaToken}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
