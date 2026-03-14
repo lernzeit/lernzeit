@@ -125,6 +125,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
+  // Save emoji feedback (positive & negative) to question_feedback table
+  const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
+    if (!question) return;
+    const correctAnswerText = typeof question.correctAnswer === 'string' 
+      ? question.correctAnswer 
+      : JSON.stringify(question.correctAnswer);
+    reportQuestion({
+      reason: feedbackType as any,
+      question: question.questionText,
+      statedAnswer: correctAnswerText,
+      grade,
+      subject,
+    });
+  };
+
   // Browser TTS for explanations (guarded for Android WebView compatibility)
   const speakText = (text: string) => {
     try {
