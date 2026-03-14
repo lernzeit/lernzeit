@@ -72,7 +72,7 @@ export function useQuestionReport(): UseQuestionReportReturn {
       return true;
     } catch (err) {
       console.error('❌ Failed to report question:', err);
-      toast.error('Meldung fehlgeschlagen. Bitte versuche es erneut.');
+      console.error('Meldung fehlgeschlagen');
       return false;
     } finally {
       setIsReporting(false);
