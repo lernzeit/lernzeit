@@ -198,7 +198,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsList>
 
               {/* Shared Turnstile CAPTCHA widget */}
-              <div id="turnstile-container" className="flex justify-center mb-4"></div>
+              <div id="turnstile-container" className="flex justify-center mb-4 min-h-[65px]"></div>
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
