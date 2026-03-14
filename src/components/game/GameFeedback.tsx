@@ -31,7 +31,6 @@ interface GameFeedbackProps {
 
 const REPORT_REASONS: { value: ReportReason; label: string; description: string }[] = [
   { value: 'wrong_answer', label: 'Falsche Antwort', description: 'Die angegebene richtige Antwort ist falsch' },
-  { value: 'calculation_error', label: 'Rechenfehler', description: 'Die Berechnung stimmt nicht' },
   { value: 'confusing_question', label: 'Verwirrende Frage', description: 'Die Frage ist unklar formuliert' },
   { value: 'too_hard', label: 'Zu schwer', description: 'Die Frage ist für diese Klassenstufe zu schwer' },
   { value: 'too_easy', label: 'Zu einfach', description: 'Die Frage ist für diese Klassenstufe zu einfach' },
