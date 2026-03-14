@@ -244,9 +244,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 <p className="text-xs text-destructive text-center mb-3">
                   {captchaErrorCode === '110200'
                     ? `Domain "${window.location.hostname}" ist für Turnstile nicht freigegeben.`
-                    : captchaErrorCode
-                      ? `CAPTCHA-Fehler (${captchaErrorCode}).`
-                      : 'CAPTCHA konnte nicht geladen werden.'}
+                    : captchaErrorCode === 'init_failed'
+                      ? 'Turnstile konnte nicht initialisiert werden (Skript blockiert oder Netzwerkproblem).'
+                      : captchaErrorCode
+                        ? `CAPTCHA-Fehler (${captchaErrorCode}).`
+                        : 'CAPTCHA konnte nicht geladen werden.'}
                 </p>
               )}
               
