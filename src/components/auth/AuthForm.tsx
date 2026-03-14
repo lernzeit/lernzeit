@@ -86,18 +86,24 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
+      if (!captchaToken) {
+        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          captchaToken,
           data: {
             name,
             role,
             grade: role === 'child' ? grade : null,
           },
-      emailRedirectTo: `${window.location.origin}/`
-          }
-        });
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
 
       if (error) throw error;
 
