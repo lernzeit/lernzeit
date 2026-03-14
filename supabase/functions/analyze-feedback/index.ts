@@ -88,6 +88,7 @@ serve(async (req) => {
     for (const fb of feedbacks) {
       // Skip too_hard/too_easy from clustering — these are user-specific
       // and should only affect individual difficulty profiles, not global prompt rules
+      // thumbs_down is handled via the report dialog and clustered normally
       if (fb.feedback_type === 'too_hard' || fb.feedback_type === 'too_easy') {
         continue;
       }
