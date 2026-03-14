@@ -320,6 +320,7 @@ export type Database = {
         Row: {
           child_id: string | null
           code: string
+          consent_given_at: string | null
           created_at: string | null
           expires_at: string
           id: string
@@ -330,6 +331,7 @@ export type Database = {
         Insert: {
           child_id?: string | null
           code: string
+          consent_given_at?: string | null
           created_at?: string | null
           expires_at: string
           id?: string
@@ -340,6 +342,7 @@ export type Database = {
         Update: {
           child_id?: string | null
           code?: string
+          consent_given_at?: string | null
           created_at?: string | null
           expires_at?: string
           id?: string

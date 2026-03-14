@@ -1,0 +1,1 @@
+ALTER TABLE public.invitation_codes ADD COLUMN consent_given_at timestamp with time zone;

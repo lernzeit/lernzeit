@@ -80,7 +80,7 @@ export function useFamilyLinking() {
   }, [toast]);
 
   // Generate new invitation code
-  const generateInvitationCode = async (parentId: string): Promise<string | null> => {
+  const generateInvitationCode = async (parentId: string, consentGivenAt?: string): Promise<string | null> => {
     setLoading(true);
     try {
       // Call database function to generate unique code
@@ -92,14 +92,19 @@ export function useFamilyLinking() {
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes expiry
 
-      // Insert the code into the database
+      // Insert the code into the database with consent timestamp
+      const insertData: any = {
+        code: newCode,
+        parent_id: parentId,
+        expires_at: expiresAt.toISOString(),
+      };
+      if (consentGivenAt) {
+        insertData.consent_given_at = consentGivenAt;
+      }
+
       const { error: insertError } = await supabase
         .from('invitation_codes')
-        .insert({
-          code: newCode,
-          parent_id: parentId,
-          expires_at: expiresAt.toISOString()
-        });
+        .insert(insertData);
 
       if (insertError) throw insertError;
 
