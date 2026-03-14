@@ -6,17 +6,25 @@
 import { Capacitor } from '@capacitor/core';
 
 let Preferences: any = null;
+let preferencesAvailable = false;
 
 async function getPreferences() {
-  if (!Preferences && Capacitor.isNativePlatform()) {
-    try {
-      const mod = await import('@capacitor/preferences');
-      Preferences = mod.Preferences;
-    } catch (e) {
-      console.warn('Capacitor Preferences not available:', e);
-    }
+  if (Preferences) return Preferences;
+  if (!Capacitor.isNativePlatform()) return null;
+
+  try {
+    const mod = await import('@capacitor/preferences');
+    Preferences = mod.Preferences;
+    // Test that it actually works on this platform
+    await Preferences.get({ key: '__test__' });
+    preferencesAvailable = true;
+    return Preferences;
+  } catch (e) {
+    console.warn('Capacitor Preferences not available, falling back to localStorage:', e);
+    Preferences = null;
+    preferencesAvailable = false;
+    return null;
   }
-  return Preferences;
 }
 
 // In-memory cache to serve getItem synchronously (Supabase requires sync storage API)
@@ -37,9 +45,18 @@ export async function initNativeStorage(): Promise<void> {
 
   try {
     const prefs = await getPreferences();
-    if (!prefs) return;
+    if (!prefs) {
+      // Preferences plugin not working — seed memory cache from localStorage
+      try {
+        const stored = localStorage.getItem(SUPABASE_STORAGE_KEY);
+        if (stored) {
+          memoryCache.set(SUPABASE_STORAGE_KEY, stored);
+          console.log('✅ Session restored from localStorage fallback');
+        }
+      } catch { /* ignore */ }
+      return;
+    }
 
-    // Load the main Supabase auth key
     const { value } = await prefs.get({ key: SUPABASE_STORAGE_KEY });
     if (value) {
       memoryCache.set(SUPABASE_STORAGE_KEY, value);
@@ -48,8 +65,41 @@ export async function initNativeStorage(): Promise<void> {
       console.log('ℹ️ No saved session found in native storage');
     }
   } catch (e) {
-    console.warn('Failed to init native storage:', e);
+    console.warn('Failed to init native storage, using localStorage fallback:', e);
   }
+}
+
+/** Safely persist to native storage or fall back to localStorage */
+function persistValue(key: string, value: string): void {
+  if (!Capacitor.isNativePlatform()) return;
+
+  if (preferencesAvailable && Preferences) {
+    try {
+      Preferences.set({ key, value }).catch((e: any) =>
+        console.warn('Failed to persist to native storage:', e)
+      );
+    } catch {
+      // sync error — fall through to localStorage
+    }
+  }
+
+  // Always also write to localStorage as backup
+  try { localStorage.setItem(key, value); } catch { /* ignore */ }
+}
+
+/** Safely remove from native storage and localStorage */
+function removeValue(key: string): void {
+  if (!Capacitor.isNativePlatform()) return;
+
+  if (preferencesAvailable && Preferences) {
+    try {
+      Preferences.remove({ key }).catch((e: any) =>
+        console.warn('Failed to remove from native storage:', e)
+      );
+    } catch { /* ignore */ }
+  }
+
+  try { localStorage.removeItem(key); } catch { /* ignore */ }
 }
 
 /**
@@ -63,30 +113,11 @@ export const nativeStorageAdapter = {
 
   setItem: (key: string, value: string): void => {
     memoryCache.set(key, value);
-
-    // Write-through to native storage (fire-and-forget)
-    if (Capacitor.isNativePlatform()) {
-      getPreferences().then(prefs => {
-        if (prefs) {
-          prefs.set({ key, value }).catch((e: any) =>
-            console.warn('Failed to persist to native storage:', e)
-          );
-        }
-      });
-    }
+    persistValue(key, value);
   },
 
   removeItem: (key: string): void => {
     memoryCache.delete(key);
-
-    if (Capacitor.isNativePlatform()) {
-      getPreferences().then(prefs => {
-        if (prefs) {
-          prefs.remove({ key }).catch((e: any) =>
-            console.warn('Failed to remove from native storage:', e)
-          );
-        }
-      });
-    }
+    removeValue(key);
   },
 };
