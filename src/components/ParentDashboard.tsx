@@ -586,7 +586,28 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button onClick={handleGenerateCode} disabled={newCodeLoading} className="w-full">
+              {emailVerified === false && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+                  Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse, bevor Sie einen Einladungscode erstellen können.
+                </div>
+              )}
+
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="consent-dashboard"
+                  checked={consentChecked}
+                  onCheckedChange={(checked) => setConsentChecked(checked === true)}
+                  disabled={emailVerified === false}
+                />
+                <label htmlFor="consent-dashboard" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  Ich stimme den{' '}
+                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
+                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
+                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
+                </label>
+              </div>
+
+              <Button onClick={handleGenerateCode} disabled={newCodeLoading || !consentChecked || emailVerified === false} className="w-full">
                 {newCodeLoading ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Code wird erstellt...</>
                 ) : (
@@ -614,7 +635,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
               <div className="bg-accent/50 border border-border rounded-lg p-4">
                 <h4 className="font-medium mb-2">So funktioniert's:</h4>
                 <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>Erstellen Sie einen 6-stelligen Code</li>
+                  <li>Bestätigen Sie die Einwilligung und erstellen Sie einen Code</li>
                   <li>Geben Sie diesen Code Ihrem Kind</li>
                   <li>Ihr Kind gibt den Code in seiner App ein</li>
                   <li>Die Konten werden verknüpft</li>
