@@ -287,11 +287,11 @@ serve(async (req) => {
       }
     }
 
-    // 7. Generate POSITIVE REINFORCEMENT rules from thumbs_up feedback
+    // 7. Generate POSITIVE REINFORCEMENT rules from good_question feedback
     const positiveClusters = new Map<string, typeof feedbacks>();
     for (const fb of feedbacks) {
-      if (fb.feedback_type !== 'thumbs_up') continue;
-      const key = `thumbs_up__${fb.category}`;
+      if (fb.feedback_type !== 'good_question') continue;
+      const key = `good_question__${fb.category}`;
       if (!positiveClusters.has(key)) positiveClusters.set(key, []);
       positiveClusters.get(key)!.push(fb);
     }
@@ -309,7 +309,7 @@ serve(async (req) => {
       const positiveRule = await generateRule(LOVABLE_API_KEY, {
         type: 'positive_reinforcement',
         category,
-        feedbackType: 'thumbs_up',
+        feedbackType: 'good_question',
         sampleTexts,
         itemCount: items.length,
       });
