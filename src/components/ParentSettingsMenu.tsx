@@ -581,6 +581,8 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                   </>
                 )}
               </Button>
+
+              {activeCodes.length > 0 && (
                 <>
                   <Separator />
                   <div className="space-y-3">
