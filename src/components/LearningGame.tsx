@@ -61,6 +61,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const { trackAllAchievements } = useAchievementTracker(user?.id);
   const { checkCompletion: checkDailyChallenge } = useDailyChallenge(user?.id);
   const { addToQueue: addToReviewQueue, markAsReported: markReviewReported } = useReviewQueue(user?.id);
+  const { reportQuestion } = useQuestionReport();
   
   // Adaptive difficulty system — per subject, persisted across sessions
   const {
