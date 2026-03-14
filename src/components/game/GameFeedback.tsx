@@ -191,7 +191,10 @@ export function GameFeedback({
               <Button
                 variant="outline"
                 size={isMobile ? "sm" : "lg"}
-                onClick={() => onQuestionFeedback('thumbs_down')}
+                onClick={() => {
+                  onQuestionFeedback('thumbs_down');
+                  setShowReportDialog(true);
+                }}
                 className={`${isMobile ? 'text-xl px-3' : 'text-2xl'} hover:bg-red-100 hover:border-red-300`}
                 title="Schlecht"
               >
