@@ -120,18 +120,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-
-      // Save credentials for biometric login if available
-      if (biometricInfo.available) {
-        await biometricAuthService.saveCredentials(email, password);
-        setHasBiometricCredentials(true);
-      }
 
       toast({
         title: "Willkommen zurück!",
