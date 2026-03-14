@@ -36,7 +36,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
-  const { token: captchaToken, resetWidget: resetCaptcha } = useTurnstile('turnstile-container');
+  const { status: captchaStatus, ensureToken, resetWidget: resetCaptcha } = useTurnstile('turnstile-container');
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -68,14 +68,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     if (!resetEmail) return;
     setLoading(true);
     try {
-      if (!captchaToken) {
-        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+      const tokenToUse = await ensureToken();
+      if (!tokenToUse) {
+        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
         setLoading(false);
         return;
       }
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken,
+        captchaToken: tokenToUse,
       });
       if (error) throw error;
       setResetSent(true);
@@ -92,8 +93,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      if (!captchaToken) {
-        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+      const tokenToUse = await ensureToken();
+      if (!tokenToUse) {
+        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
         setLoading(false);
         return;
       }
@@ -101,7 +103,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         email,
         password,
         options: {
-          captchaToken,
+          captchaToken: tokenToUse,
           data: {
             name,
             role,
@@ -136,15 +138,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      if (!captchaToken) {
-        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+      const tokenToUse = await ensureToken();
+      if (!tokenToUse) {
+        toast({ title: 'Sicherheitsprüfung fehlgeschlagen', description: 'Bitte Seite neu laden und erneut versuchen.', variant: 'destructive' });
         setLoading(false);
         return;
       }
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: { captchaToken },
+        options: { captchaToken: tokenToUse },
       });
 
       if (error) throw error;
@@ -204,7 +207,13 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsList>
 
               {/* Shared Turnstile CAPTCHA widget */}
-              <div id="turnstile-container" className="flex justify-center mb-4 min-h-[65px]"></div>
+              <div id="turnstile-container" className="flex justify-center mb-2 min-h-[65px]"></div>
+              {captchaStatus === 'loading' && (
+                <p className="text-xs text-muted-foreground text-center mb-3">Sicherheitsprüfung wird geladen…</p>
+              )}
+              {captchaStatus === 'error' && (
+                <p className="text-xs text-destructive text-center mb-3">CAPTCHA konnte nicht geladen werden.</p>
+              )}
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
@@ -246,7 +255,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
-                    disabled={loading || !captchaToken}
+                    disabled={loading}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
@@ -434,7 +443,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-medium bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
-                    disabled={loading || !captchaToken}
+                    disabled={loading}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
