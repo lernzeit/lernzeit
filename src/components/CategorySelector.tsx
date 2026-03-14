@@ -44,7 +44,7 @@ const categories: { id: SubjectId; name: string; shortName: string; icon: any; c
   { id: 'math',      name: 'Mathematik',  shortName: 'Mathe',      icon: BookOpen,      color: 'bg-blue-500',    emoji: '🔢' },
   { id: 'german',    name: 'Deutsch',     shortName: 'Deutsch',    icon: Languages,     color: 'bg-green-500',   emoji: '📚' },
   { id: 'science',   name: 'Sachkunde',   shortName: 'Sachkunde',  icon: TreePine,      color: 'bg-lime-500',    emoji: '🌿' },
-  { id: 'english',   name: 'Englisch',    shortName: 'Englisch',   icon: GraduationCap, color: 'bg-purple-500',  emoji: '🇬🇧' },
+  { id: 'english',   name: 'Englisch',    shortName: 'Englisch',   icon: GraduationCap, color: 'bg-purple-500',  emoji: '🔤' },
   { id: 'geography', name: 'Geographie',  shortName: 'Geo',        icon: Globe,         color: 'bg-teal-500',    emoji: '🌍' },
   { id: 'history',   name: 'Geschichte',  shortName: 'Geschichte', icon: Clock,         color: 'bg-amber-500',   emoji: '🏛️' },
   { id: 'physics',   name: 'Physik',      shortName: 'Physik',     icon: Atom,          color: 'bg-cyan-500',    emoji: '⚡' },
