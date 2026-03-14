@@ -39,6 +39,8 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.validate-question]
     verify_jwt = false
+  [functions.cache-cleanup]
+    verify_jwt = false
 
 [inbucket]
   enabled = true
