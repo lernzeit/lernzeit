@@ -25,13 +25,13 @@ export const MagicLinkEmail = ({
 }: MagicLinkEmailProps) => (
   <Html lang="de" dir="ltr">
     <Head />
-    <Preview>Dein Login-Link für Lernzeit 🔗</Preview>
+    <Preview>Dein Anmeldelink für Lernzeit 🔗</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
           <Text style={logo}>🎓 Lernzeit</Text>
         </Section>
-        <Heading style={h1}>Dein Login-Link 🔗</Heading>
+        <Heading style={h1}>Dein Anmeldelink 🔗</Heading>
         <Text style={text}>
           Klicke auf den Button, um dich bei Lernzeit anzumelden. Der Link ist nur kurze Zeit gültig.
         </Text>
