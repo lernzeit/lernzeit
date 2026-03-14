@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
+import { useTurnstile } from '@/hooks/useTurnstile';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
@@ -35,6 +36,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
+  const { token: captchaToken, resetWidget: resetCaptcha } = useTurnstile('turnstile-container');
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
@@ -83,18 +86,24 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
+      if (!captchaToken) {
+        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          captchaToken,
           data: {
             name,
             role,
             grade: role === 'child' ? grade : null,
           },
-      emailRedirectTo: `${window.location.origin}/`
-          }
-        });
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
 
       if (error) throw error;
 
@@ -105,6 +114,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
+      resetCaptcha();
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -120,9 +130,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
+      if (!captchaToken) {
+        toast({ title: 'Bitte warte', description: 'CAPTCHA wird geladen...', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: { captchaToken },
       });
 
       if (error) throw error;
@@ -134,6 +150,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
+      resetCaptcha();
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -179,6 +196,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 <TabsTrigger value="signup" className="data-[state=active]:bg-background">Registrieren</TabsTrigger>
                 <TabsTrigger value="signin" className="data-[state=active]:bg-background">Anmelden</TabsTrigger>
               </TabsList>
+
+              {/* Shared Turnstile CAPTCHA widget */}
+              <div id="turnstile-container" className="flex justify-center mb-4"></div>
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
@@ -216,10 +236,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       />
                     </div>
                   </div>
+
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
-                    disabled={loading}
+                    disabled={loading || !captchaToken}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
@@ -407,7 +428,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-medium bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
-                    disabled={loading}
+                    disabled={loading || !captchaToken}
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
