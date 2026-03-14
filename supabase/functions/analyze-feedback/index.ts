@@ -287,7 +287,58 @@ serve(async (req) => {
       }
     }
 
-    // 7. Mark ALL feedbacks as analyzed
+    // 7. Generate POSITIVE REINFORCEMENT rules from thumbs_up feedback
+    const positiveClusters = new Map<string, typeof feedbacks>();
+    for (const fb of feedbacks) {
+      if (fb.feedback_type !== 'thumbs_up') continue;
+      const key = `thumbs_up__${fb.category}`;
+      if (!positiveClusters.has(key)) positiveClusters.set(key, []);
+      positiveClusters.get(key)!.push(fb);
+    }
+
+    for (const [key, items] of positiveClusters) {
+      if (items.length < MIN_CLUSTER_SIZE) continue;
+
+      const category = key.split('__')[1];
+      const sampleTexts = items.slice(0, 8).map(i =>
+        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Klasse: ${i.grade} | Typ: ${i.question_type}`
+      ).join('\n');
+
+      const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
+
+      const positiveRule = await generateRule(LOVABLE_API_KEY, {
+        type: 'positive_reinforcement',
+        category,
+        feedbackType: 'thumbs_up',
+        sampleTexts,
+        itemCount: items.length,
+      });
+
+      if (positiveRule) {
+        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, positiveRule.toLowerCase()) > 0.7);
+        if (!isDuplicate && activeRuleCount + newRulesCreated < MAX_ACTIVE_RULES) {
+          const ruleSubject = normalizeCategory(category);
+          const { error: insertError } = await supabase
+            .from('prompt_rules')
+            .insert({
+              rule_text: positiveRule,
+              subject: ruleSubject,
+              grade_min: grades.length > 0 ? Math.min(...grades) : null,
+              grade_max: grades.length > 0 ? Math.max(...grades) : null,
+              source_feedback_ids: items.map(i => i.id),
+              source_feedback_count: items.length,
+            });
+
+          if (!insertError) {
+            newRulesCreated++;
+            existingTexts.push(positiveRule.toLowerCase());
+            console.log(`✅ Positive reinforcement rule for ${category}: "${positiveRule}"`);
+          }
+        }
+      }
+    }
+
+    // 8. Mark ALL feedbacks as analyzed
     const allFeedbackIds = feedbacks.map(f => f.id);
     for (let i = 0; i < allFeedbackIds.length; i += 50) {
       const batch = allFeedbackIds.slice(i, i + 50);
