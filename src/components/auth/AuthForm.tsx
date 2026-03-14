@@ -112,16 +112,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     if (!resetEmail) return;
     setLoading(true);
     try {
-      const tokenToUse = await ensureToken();
-      if (!tokenToUse) {
-        handleCaptchaFailure();
+      const tokenToUse = await resolveCaptchaToken();
+      if (tokenToUse === null) {
         setLoading(false);
         return;
       }
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
-        captchaToken: tokenToUse,
+        ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
       });
+
       if (error) throw error;
       setResetSent(true);
       toast({ title: 'Link gesendet!', description: 'Prüfe dein E-Mail-Postfach für den Reset-Link.' });
@@ -137,17 +138,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const tokenToUse = await ensureToken();
-      if (!tokenToUse) {
-        handleCaptchaFailure();
+      const tokenToUse = await resolveCaptchaToken();
+      if (tokenToUse === null) {
         setLoading(false);
         return;
       }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          captchaToken: tokenToUse,
+          ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
           data: {
             name,
             role,
@@ -166,7 +167,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
-      resetCaptcha();
+      if (isCaptchaEnabled) {
+        resetCaptcha();
+      }
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -182,16 +185,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
 
     try {
-      const tokenToUse = await ensureToken();
-      if (!tokenToUse) {
-        handleCaptchaFailure();
+      const tokenToUse = await resolveCaptchaToken();
+      if (tokenToUse === null) {
         setLoading(false);
         return;
       }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: { captchaToken: tokenToUse },
+        ...(typeof tokenToUse === 'string' ? { options: { captchaToken: tokenToUse } } : {}),
       });
 
       if (error) throw error;
@@ -203,7 +206,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       onAuthSuccess();
     } catch (error: any) {
-      resetCaptcha();
+      if (isCaptchaEnabled) {
+        resetCaptcha();
+      }
       toast({
         title: "Fehler",
         description: translateError(error.message),
