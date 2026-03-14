@@ -569,8 +569,18 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                 disabled={newCodeLoading || !consentChecked || emailVerified === false}
                 className="w-full"
               >
-
-              {activeCodes.length > 0 && (
+                {newCodeLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Erstelle Code...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Neuen Einladungscode erstellen
+                  </>
+                )}
+              </Button>
                 <>
                   <Separator />
                   <div className="space-y-3">
