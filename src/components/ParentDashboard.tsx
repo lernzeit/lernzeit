@@ -279,15 +279,71 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
 
         {/* Tab: Kinder - kind-zentrisch mit Collapsibles */}
         <TabsContent value="children" className="space-y-4">
+          {/* Inline Einladungscode erstellen */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Key className="h-4 w-4 text-primary" />
+                Kind einladen
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Erstelle einen Einladungscode, den dein Kind in der App eingeben kann.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {emailVerified === false && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Bitte bestätige zuerst deine E-Mail-Adresse.
+                </p>
+              )}
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="consent-children-tab"
+                  checked={consentChecked}
+                  onCheckedChange={(v) => setConsentChecked(!!v)}
+                />
+                <Label htmlFor="consent-children-tab" className="text-xs leading-tight cursor-pointer">
+                  Ich willige in die Verarbeitung der Daten meines Kindes gemäß Art. 8 DSGVO ein.
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleGenerateCode}
+                  disabled={newCodeLoading || !consentChecked || emailVerified === false}
+                >
+                  {newCodeLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                  Code erstellen
+                </Button>
+              </div>
+              {activeCodes.length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground">Aktive Codes:</p>
+                  {activeCodes.map((code) => (
+                    <div key={code.id} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2">
+                      <div>
+                        <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          ({formatTimeRemaining(code.expires_at)})
+                        </span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(code.code)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {linkedChildren.length === 0 ? (
             <Card>
-              <CardContent className="text-center py-12">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-4">Noch keine Kinder verknüpft</p>
-                <Button onClick={() => { setConsentChecked(false); }} disabled={newCodeLoading}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Einladungscode erstellen (im Tab "Konto")
-                </Button>
+              <CardContent className="text-center py-8">
+                <Users className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Noch keine Kinder verknüpft</p>
+                <p className="text-xs text-muted-foreground mt-1">Erstelle oben einen Einladungscode und teile ihn mit deinem Kind.</p>
               </CardContent>
             </Card>
           ) : (
