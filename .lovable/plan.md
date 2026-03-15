@@ -1,36 +1,54 @@
 
 
-## Plan: ScreenTimeWidget durch sinnvolle Eltern-Karte ersetzen
+## Account-Löschung implementieren
 
-### Problem
-Die `ScreenTimeWidget`-Komponente auf dem Eltern-Dashboard ist ein Dummy. Sie prüft `Capacitor.isNativePlatform()`, das in der PWA/Web-Ansicht immer `false` zurückgibt, und zeigt dann "Familienkontrollen sind auf diesem Gerät nicht verfügbar". Selbst auf nativen Geräten liefert der `FamilyLinkService` nur Mock-Daten.
+### Übersicht
+Eine "Account löschen"-Funktion mit doppelter Bestätigung wird an zwei Stellen eingefügt:
+- **Eltern**: Im `ParentDashboard` unter dem Tab "Konto", nach der Passwort-Änderung
+- **Kinder**: Im `ChildSettingsMenu` unter "Mein Profil", nach den Profilinformationen
 
-Die eigentliche Bildschirmzeit-Verwaltung (Anfragen genehmigen, Zeitlimits setzen) läuft bereits vollständig über das `ParentDashboard` und die `ParentScreenTimeRequestsDashboard`-Komponente. Die ScreenTimeWidget ist also redundant und verwirrend.
+### Technische Umsetzung
 
-### Lösung
+**1. Edge Function `delete-account/index.ts`**
+- Authentifiziert den User via JWT
+- Prüft ob ein aktives Stripe-Abo existiert und gibt ggf. Fehler zurück ("Bitte kündige zuerst dein Abo")
+- Löscht folgende Daten (via service_role client):
+  - `parent_child_relationships` (parent_id OR child_id)
+  - `child_settings` (parent_id OR child_id)
+  - `child_subject_visibility` (parent_id OR child_id)
+  - `invitation_codes` (parent_id)
+  - `screen_time_requests` (child_id OR parent_id)
+  - `daily_request_summary` (user_id)
+  - `game_sessions` (user_id)
+  - `learning_sessions` (user_id)
+  - `learning_plans` (parent_id OR child_id)
+  - `user_achievements` (user_id)
+  - `user_difficulty_profiles` (user_id)
+  - `user_earned_minutes` (user_id)
+  - `daily_challenges` (user_id)
+  - `review_queue` (user_id)
+  - `subscriptions` (user_id)
+  - `profiles` (id)
+  - `user_roles` (user_id)
+- **Behält**: `question_feedback` (wichtig für App-Verbesserung)
+- Löscht zuletzt den Auth-User via `supabase.auth.admin.deleteUser(userId)`
+- Config: `verify_jwt = false` in config.toml, manuelle JWT-Validierung
 
-**Die `ScreenTimeWidget` im Eltern-Dashboard durch eine kompakte "Kindersicherung"-Karte ersetzen**, die:
+**2. Shared `AccountDeleteSection` Komponente**
+- Zeigt einen roten "Account löschen" Button
+- Erster Klick: AlertDialog mit Warnung + Premium-Hinweis (falls `isPremium`)
+- Zweiter Klick: Textfeld zur Eingabe von "LÖSCHEN" als Bestätigung
+- Ruft `supabase.functions.invoke('delete-account')` auf
+- Nach Erfolg: Sign-out und Redirect
 
-1. **Erkennt, ob ein natives Gerät vorliegt** (via `parentalControlsService.isNativePlatform()`)
-2. **Auf nativen Geräten**: Einen Button zeigt, der direkt Family Link (Android) oder Bildschirmzeit-Einstellungen (iOS) öffnet – über die bereits implementierten Deep-Links in `parentalControlsService`
-3. **Im Web/PWA**: Statt "nicht verfügbar" eine kurze Anleitung zeigt, wie man Family Link oder Bildschirmzeit auf dem Gerät einrichtet, mit Links zu den App-Stores
-4. **Immer**: Einen Hinweis zeigt, dass Bildschirmzeit-Anfragen der Kinder im Tab "Anfragen" im Dashboard unten verwaltet werden
+**3. Integration**
+- `ParentDashboard.tsx`: Neue Card nach "Passwort ändern" im Tab "account"
+- `ChildSettingsMenu.tsx`: Neue Card nach den Profilinformationen im Abschnitt "profile"
 
-### Technische Änderungen
-
-**`src/components/ScreenTimeWidget.tsx`** – Komplett umschreiben:
-- Entferne Abhängigkeit von `useScreenTime` und `familyLinkService` (die Mock-Daten liefern)
-- Nutze stattdessen `parentalControlsService` (bereits implementiert mit echten Deep-Links)
-- Zeige plattformspezifische UI: nativer Button vs. Web-Anleitung
-- Entferne den ganzen "Permission"-Flow (war ohnehin Mock)
-
-**`src/hooks/useScreenTime.ts`** und **`src/services/familyLink.ts`** – Können entfernt werden, da sie nur Mock-Daten liefern und von keiner anderen Komponente genutzt werden.
-
-### Dateiänderungen
-
-| Datei | Aktion |
-|---|---|
-| `src/components/ScreenTimeWidget.tsx` | Umschreiben (nutzt `parentalControlsService`) |
-| `src/hooks/useScreenTime.ts` | Entfernen (nur Mock-Daten) |
-| `src/services/familyLink.ts` | Entfernen (nur Mock-Daten) |
+### Zu löschende/erstellende Dateien
+- `supabase/functions/delete-account/index.ts` (neu)
+- `supabase/config.toml` (Eintrag ergänzen)
+- `src/components/AccountDeleteSection.tsx` (neu)
+- `src/components/ParentDashboard.tsx` (erweitern)
+- `src/components/ChildSettingsMenu.tsx` (erweitern)
 
