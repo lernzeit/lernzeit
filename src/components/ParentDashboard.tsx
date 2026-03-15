@@ -22,6 +22,7 @@ import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
+import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 
 interface ParentDashboardProps {
   userId: string;
