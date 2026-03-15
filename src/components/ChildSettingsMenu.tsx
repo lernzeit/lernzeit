@@ -374,56 +374,58 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
           )}
           
           {activeSection === 'profile' && (
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+            <>
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    Mein Profil
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                      <span className="text-muted-foreground">E-Mail:</span>
+                      <span className="text-sm font-medium">{user.email}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="text-sm font-medium">{profile?.name || 'Nicht gesetzt'}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                      <span className="text-muted-foreground">Klassenstufe:</span>
+                      <span className="text-sm font-medium">Klasse {profile?.grade || 1}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="text-sm font-medium">
+                        {loadingParentInfo ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Prüfe...
+                          </span>
+                        ) : hasParentLink ? (
+                          `👨‍👩‍👧‍👦 Mit ${parentInfoList.map(p => p.name).join(', ')} verknüpft` 
+                        ) : (
+                          '🔓 Unabhängig'
+                        )}
+                      </span>
+                    </div>
                   </div>
-                  Mein Profil
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-muted-foreground">E-Mail:</span>
-                    <span className="text-sm font-medium">{user.email}</span>
+                  <div className="pt-4 border-t">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Klassenstufe kann nur von Eltern geändert werden
+                    </p>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="text-sm font-medium">{profile?.name || 'Nicht gesetzt'}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-muted-foreground">Klassenstufe:</span>
-                    <span className="text-sm font-medium">Klasse {profile?.grade || 1}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className="text-sm font-medium">
-                      {loadingParentInfo ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Prüfe...
-                        </span>
-                      ) : hasParentLink ? (
-                        `👨‍👩‍👧‍👦 Mit ${parentInfoList.map(p => p.name).join(', ')} verknüpft` 
-                      ) : (
-                        '🔓 Unabhängig'
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-muted-foreground text-center">
-                    Klassenstufe kann nur von Eltern geändert werden
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <AccountDeleteSection
-              onDeleted={() => window.location.href = '/'}
-            />
+              <AccountDeleteSection
+                onDeleted={() => window.location.href = '/'}
+              />
+            </>
           )}
           
           {activeSection === 'achievements' && (
