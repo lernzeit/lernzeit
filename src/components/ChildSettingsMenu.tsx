@@ -420,6 +420,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                 </div>
               </CardContent>
             </Card>
+
+            <AccountDeleteSection
+              onDeleted={() => window.location.href = '/'}
+            />
           )}
           
           {activeSection === 'achievements' && (

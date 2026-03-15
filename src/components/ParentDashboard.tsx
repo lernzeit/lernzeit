@@ -631,6 +631,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
             </CardContent>
           </Card>
 
+          <AccountDeleteSection
+            isPremium={isPremium}
+            onDeleted={() => window.location.href = '/'}
+          />
+
         </TabsContent>
       </Tabs>
     </div>
