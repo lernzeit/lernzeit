@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
+import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 
 interface ChildSettingsMenuProps {
   user: any;
