@@ -390,8 +390,8 @@ export function useAchievementTracker(userId?: string) {
     if (!userId || streak < 3) return;
 
     try {
-      console.log(`📅 Tracking consistency: ${streak} day streak`);
-      await updateProgress('general', 'consistency', streak);
+      console.log(`📅 Tracking consistency: ${streak} day streak (absolute)`);
+      await updateProgress('general', 'consistency', streak, true);
     } catch (error) {
       console.error('Error tracking consistency:', error);
     }
