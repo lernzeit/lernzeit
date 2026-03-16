@@ -89,7 +89,8 @@ export function AccountDeleteSection({ isPremium = false, onDeleted }: AccountDe
     <div className="mt-8 pt-4 border-t border-border/40">
       <AlertDialog open={dialogOpen} onOpenChange={handleDialogChange}>
         <AlertDialogTrigger asChild>
-          <button className="text-xs text-muted-foreground/60 hover:text-destructive/70 transition-colors underline-offset-2 hover:underline cursor-pointer">
+          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive transition-colors cursor-pointer">
+            <Trash2 className="h-3.5 w-3.5" />
             Account löschen
           </button>
         </AlertDialogTrigger>
