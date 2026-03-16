@@ -691,7 +691,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top">
+    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom">
       {/* In-game animation overlay */}
       {gameAnimation && (
         <InGameAnimation
