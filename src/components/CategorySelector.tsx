@@ -159,7 +159,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const isYoung = age.group === 'young';
 
   return (
-    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top">
+    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom">
       <div className="page-container space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
