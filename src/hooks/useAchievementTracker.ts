@@ -419,8 +419,8 @@ export function useAchievementTracker(userId?: string) {
       );
 
       if (uniqueHours.size >= 4) {
-        console.log(`🕐 Tracking time_traveler: ${uniqueHours.size} different hours`);
-        await updateProgress('general', 'time_traveler', uniqueHours.size);
+        console.log(`🕐 Tracking time_traveler: ${uniqueHours.size} different hours (absolute)`);
+        await updateProgress('general', 'time_traveler', uniqueHours.size, true);
       }
     } catch (error) {
       console.error('Error tracking time patterns:', error);
