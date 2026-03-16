@@ -918,15 +918,26 @@ export type Database = {
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
       trigger_grade_upgrade: { Args: never; Returns: Json }
-      update_achievement_progress: {
-        Args: {
-          p_category: string
-          p_increment?: number
-          p_type: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
+      update_achievement_progress:
+        | {
+            Args: {
+              p_category: string
+              p_increment?: number
+              p_type: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_absolute?: boolean
+              p_category: string
+              p_increment?: number
+              p_type: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
     }
     Enums: {
       achievement_category:
