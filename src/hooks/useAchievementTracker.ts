@@ -193,9 +193,9 @@ export function useAchievementTracker(userId?: string) {
       // Get current streak from a fresh calculation
       const streakValue = await calculateFreshStreak(userId);
       if (streakValue > 0) {
-        console.log(`🔥 Tracking streak: ${streakValue} days`);
-        // For streak, we set the absolute value because it's a cumulative metric
-        const streakAchievements = await updateProgress('general', 'streak', streakValue);
+        console.log(`🔥 Tracking streak: ${streakValue} days (absolute)`);
+        // For streak, use absolute mode - set to current streak value, don't increment
+        const streakAchievements = await updateProgress('general', 'streak', streakValue, true);
         if (streakAchievements?.length) {
           allNewAchievements.push(...streakAchievements);
         }

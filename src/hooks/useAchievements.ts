@@ -93,18 +93,20 @@ export function useAchievements(userId?: string, options?: { suppressToast?: boo
   const updateProgress = async (
     category: string, 
     type: string, 
-    increment: number = 1
+    increment: number = 1,
+    absolute: boolean = false
   ): Promise<NewAchievement[]> => {
     if (!userId) return [];
 
     try {
-      console.log('🎯 Updating achievement progress:', { userId, category, type, increment });
+      console.log('🎯 Updating achievement progress:', { userId, category, type, increment, absolute });
       
       const { data, error } = await supabase.rpc('update_achievement_progress', {
         p_user_id: userId,
         p_category: category,
         p_type: type,
-        p_increment: increment
+        p_increment: increment,
+        p_absolute: absolute
       });
 
       if (error) {

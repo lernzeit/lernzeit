@@ -66,18 +66,18 @@ export function useEarnedMinutesTracker() {
       }
 
       // Calculate today's earned minutes from sessions
-      // IMPORTANT: time_earned is stored in SECONDS, so we always convert to minutes
-      const gameMinutes = (gameSessionsRes.data || []).reduce((sum: number, session: any) => {
-        const earnedSeconds = Number(session.time_earned) || 0;
-        // Always treat as seconds and convert to minutes
-        return sum + Math.ceil(earnedSeconds / 60);
+      // IMPORTANT: time_earned is stored in SECONDS - sum all seconds first, then convert once
+      const gameTotalSeconds = (gameSessionsRes.data || []).reduce((sum: number, session: any) => {
+        return sum + (Number(session.time_earned) || 0);
       }, 0);
 
-      const learningMinutes = (learningSessionsRes.data || []).reduce((sum: number, session: any) => {
-        const earnedSeconds = Number(session.time_earned) || 0;
-        // Always treat as seconds and convert to minutes
-        return sum + Math.ceil(earnedSeconds / 60);
+      const learningTotalSeconds = (learningSessionsRes.data || []).reduce((sum: number, session: any) => {
+        return sum + (Number(session.time_earned) || 0);
       }, 0);
+
+      // Convert total seconds to minutes (ceil once on the total, not per session)
+      const gameMinutes = Math.ceil(gameTotalSeconds / 60);
+      const learningMinutes = Math.ceil(learningTotalSeconds / 60);
 
       console.log('📊 Today session minutes calculation:', {
         gameSessions: gameSessionsRes.data?.length || 0,
