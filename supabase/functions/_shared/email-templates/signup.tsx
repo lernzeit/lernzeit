@@ -27,31 +27,32 @@ export const SignupEmail = ({
   recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="de" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Bestätige deine E-Mail für LernZeit 📚</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <div style={header}>
+          <Text style={logo}>📖 LernZeit</Text>
+        </div>
+        <Heading style={h1}>Willkommen bei LernZeit!</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          !
-        </Text>
-        <Text style={text}>
-          Please confirm your email address (
+          Schön, dass du dabei bist! Bitte bestätige deine E-Mail-Adresse (
           <Link href={`mailto:${recipient}`} style={link}>
             {recipient}
           </Link>
-          ) by clicking the button below:
+          ), damit du loslegen kannst.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
+        <div style={buttonSection}>
+          <Button style={button} href={confirmationUrl}>
+            E-Mail bestätigen
+          </Button>
+        </div>
+        <Text style={hint}>
+          Der Link ist 60 Minuten gültig. Danach kannst du einen neuen anfordern.
+        </Text>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          <span style={footerBrand}>LernZeit</span> – Dein persönlicher Lern-Assistent
         </Text>
       </Container>
     </Body>
@@ -60,27 +61,15 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Segoe UI', Arial, sans-serif" }
+const container = { padding: '0', maxWidth: '480px', margin: '0 auto' }
+const header = { backgroundColor: 'hsl(217, 91%, 60%)', padding: '24px 25px', borderRadius: '12px 12px 0 0' }
+const logo = { color: '#ffffff', fontSize: '22px', fontWeight: 'bold' as const, margin: '0', letterSpacing: '-0.5px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: 'hsl(240, 10%, 15%)', margin: '24px 25px 12px', padding: '0' }
+const text = { fontSize: '15px', color: 'hsl(240, 5%, 45%)', lineHeight: '1.6', margin: '0 25px 20px' }
+const link = { color: 'hsl(217, 91%, 60%)', textDecoration: 'underline' }
+const buttonSection = { textAlign: 'center' as const, margin: '8px 25px 24px' }
+const button = { backgroundColor: 'hsl(217, 91%, 60%)', color: '#ffffff', fontSize: '15px', fontWeight: '600' as const, borderRadius: '10px', padding: '14px 28px', textDecoration: 'none', display: 'inline-block' }
+const hint = { fontSize: '13px', color: 'hsl(240, 5%, 65%)', margin: '0 25px 24px', lineHeight: '1.5' }
+const footer = { fontSize: '12px', color: 'hsl(240, 5%, 65%)', margin: '0', padding: '16px 25px', borderTop: '1px solid hsl(240, 20%, 92%)', textAlign: 'center' as const }
+const footerBrand = { fontWeight: 'bold' as const, color: 'hsl(217, 91%, 60%)' }
