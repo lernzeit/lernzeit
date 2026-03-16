@@ -552,7 +552,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         <div className="text-center mt-6 text-xs text-muted-foreground animate-fade-in">
           <p>🔒 Deine Daten sind sicher und werden verschlüsselt übertragen</p>
-          <p className="mt-2 opacity-40">v1.0.5</p>
+          <p className="mt-2 opacity-40">v1.0.9</p>
         </div>
       </div>
     </div>
