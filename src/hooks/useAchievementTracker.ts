@@ -193,9 +193,9 @@ export function useAchievementTracker(userId?: string) {
       // Get current streak from a fresh calculation
       const streakValue = await calculateFreshStreak(userId);
       if (streakValue > 0) {
-        console.log(`🔥 Tracking streak: ${streakValue} days`);
-        // For streak, we set the absolute value because it's a cumulative metric
-        const streakAchievements = await updateProgress('general', 'streak', streakValue);
+        console.log(`🔥 Tracking streak: ${streakValue} days (absolute)`);
+        // For streak, use absolute mode - set to current streak value, don't increment
+        const streakAchievements = await updateProgress('general', 'streak', streakValue, true);
         if (streakAchievements?.length) {
           allNewAchievements.push(...streakAchievements);
         }
@@ -342,12 +342,10 @@ export function useAchievementTracker(userId?: string) {
       const subjectCount = uniqueSubjects.size;
 
       if (subjectCount > 0) {
-        console.log(`📚 Tracking subjects_mastered: ${subjectCount} subjects`);
-        // Set to absolute value (not increment) for subjects mastered
-        await updateProgress('general', 'subjects_mastered', subjectCount);
-        
-        // Also track subject_explorer
-        await updateProgress('general', 'subject_explorer', subjectCount);
+        console.log(`📚 Tracking subjects_mastered: ${subjectCount} subjects (absolute)`);
+        // Use absolute mode - set to current count, don't increment
+        await updateProgress('general', 'subjects_mastered', subjectCount, true);
+        await updateProgress('general', 'subject_explorer', subjectCount, true);
       }
     } catch (error) {
       console.error('Error tracking subjects mastered:', error);
@@ -392,8 +390,8 @@ export function useAchievementTracker(userId?: string) {
     if (!userId || streak < 3) return;
 
     try {
-      console.log(`📅 Tracking consistency: ${streak} day streak`);
-      await updateProgress('general', 'consistency', streak);
+      console.log(`📅 Tracking consistency: ${streak} day streak (absolute)`);
+      await updateProgress('general', 'consistency', streak, true);
     } catch (error) {
       console.error('Error tracking consistency:', error);
     }
@@ -421,8 +419,8 @@ export function useAchievementTracker(userId?: string) {
       );
 
       if (uniqueHours.size >= 4) {
-        console.log(`🕐 Tracking time_traveler: ${uniqueHours.size} different hours`);
-        await updateProgress('general', 'time_traveler', uniqueHours.size);
+        console.log(`🕐 Tracking time_traveler: ${uniqueHours.size} different hours (absolute)`);
+        await updateProgress('general', 'time_traveler', uniqueHours.size, true);
       }
     } catch (error) {
       console.error('Error tracking time patterns:', error);

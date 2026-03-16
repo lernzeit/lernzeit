@@ -257,11 +257,12 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .gte('session_date', todayStart.toISOString())
     .lte('session_date', todayEnd.toISOString());
 
-  const gameMinutes = gameSessionsForDay?.reduce((sum: number, s: any) =>
-    sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
-  const learningMinutes = learningSessionsForDay?.reduce((sum: number, s: any) =>
-    sum + Math.ceil((s.time_earned || 0) / 60), 0) || 0;
-  const sessionMinutes = gameMinutes + learningMinutes;
+  // Sum all seconds first, then convert to minutes once (consistent rounding)
+  const gameTotalSeconds = gameSessionsForDay?.reduce((sum: number, s: any) =>
+    sum + (Number(s.time_earned) || 0), 0) || 0;
+  const learningTotalSeconds = learningSessionsForDay?.reduce((sum: number, s: any) =>
+    sum + (Number(s.time_earned) || 0), 0) || 0;
+  const sessionMinutes = Math.ceil(gameTotalSeconds / 60) + Math.ceil(learningTotalSeconds / 60);
 
   const { data: todayAchievements, error: achievementError } = await supabase
     .from('user_achievements')
