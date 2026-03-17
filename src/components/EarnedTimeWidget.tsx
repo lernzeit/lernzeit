@@ -22,7 +22,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   
-  const { requests, loading: requestsLoading, createRequest } = useScreenTimeRequests('child');
+  const { requests, loading: requestsLoading, createRequest, refreshRequests } = useScreenTimeRequests('child');
   const { getAvailableMinutes } = useEarnedMinutesTracker();
   const { 
     todayMinutesUsed, 
@@ -35,7 +35,12 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
 
   const [availableMinutes, setAvailableMinutes] = useState(0);
 
-  // Load available minutes on mount and when requests change
+  const refreshAvailableMinutes = async () => {
+    const mins = await getAvailableMinutes(userId);
+    setAvailableMinutes(mins);
+    return mins;
+  };
+
   useEffect(() => {
     let isMounted = true;
     getAvailableMinutes(userId).then((mins) => {

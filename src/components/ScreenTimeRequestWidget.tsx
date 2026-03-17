@@ -17,7 +17,7 @@ interface ScreenTimeRequestWidgetProps {
 }
 
 export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidgetProps) {
-  const { requests, loading, createRequest, respondToRequest } = useScreenTimeRequests(role);
+  const { requests, loading, createRequest, respondToRequest, refreshRequests } = useScreenTimeRequests(role);
   const { 
     getAvailableMinutes, 
     getTodayRequestedMinutes, 
@@ -55,21 +55,21 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   const pendingRequest = requests.find(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 3);
 
-  // Load available minutes when component mounts
+  const loadMinutesData = async () => {
+    const [available, requested, breakdown] = await Promise.all([
+      getAvailableMinutes(userId),
+      getTodayRequestedMinutes(userId),
+      getAvailableMinutesBreakdown(userId)
+    ]);
+    setAvailableMinutes(available);
+    setTodayRequestedMinutes(requested);
+    setMinutesBreakdown(breakdown);
+    return { available, requested, breakdown };
+  };
+
   useEffect(() => {
-    const loadMinutesData = async () => {
-      const [available, requested, breakdown] = await Promise.all([
-        getAvailableMinutes(userId),
-        getTodayRequestedMinutes(userId),
-        getAvailableMinutesBreakdown(userId)
-      ]);
-      setAvailableMinutes(available);
-      setTodayRequestedMinutes(requested);
-      setMinutesBreakdown(breakdown);
-    };
-    
     loadMinutesData();
-  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]); // Refresh when requests change
+  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]);
 
   const handleRequestScreenTime = async () => {
     if (availableMinutes < 5) {

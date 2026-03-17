@@ -22,12 +22,18 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { requests, loading, createRequest } = useScreenTimeRequests('child');
+  const { requests, loading, createRequest, refreshRequests } = useScreenTimeRequests('child');
   const { toast } = useToast();
 
   // Minutes available today (reuse shared tracker)
   const { getAvailableMinutes } = useEarnedMinutesTracker();
   const [availableMinutes, setAvailableMinutes] = useState(0);
+
+  const refreshAvailableMinutes = async () => {
+    const mins = await getAvailableMinutes(userId);
+    setAvailableMinutes(mins);
+    return mins;
+  };
 
   // Load available minutes on mount and when requests change
   useEffect(() => {
