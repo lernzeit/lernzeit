@@ -225,7 +225,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                     <span className="text-sm font-medium text-blue-800">Verdiente Zeit</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    {getChildName(request.child_id)} hat durch Lernen <strong>{request.earned_minutes} Minuten</strong> verdient 
+                    {getChildName(request.child_id)} hat durch Lernen <strong>{Math.min(request.earned_minutes, request.requested_minutes)} Minuten</strong> verdient
                     und möchte diese als Bildschirmzeit nutzen.
                   </p>
                 </div>

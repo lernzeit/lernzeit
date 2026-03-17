@@ -15,6 +15,7 @@ export interface ScreenTimeRequest {
   created_at: string;
   responded_at?: string;
   expires_at: string;
+  parent_count?: number;
 }
 
 interface UseScreenTimeRequestsResult {
@@ -67,6 +68,46 @@ async function getFunctionErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function shouldMergeChildRequests(a: ScreenTimeRequest, b: ScreenTimeRequest) {
+  if (a.child_id !== b.child_id) return false;
+  if (a.status !== b.status) return false;
+  if (a.requested_minutes !== b.requested_minutes) return false;
+  if ((a.request_message || '') !== (b.request_message || '')) return false;
+
+  const createdDiff = Math.abs(
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+  return createdDiff <= 5000;
+}
+
+function normalizeRequests(requests: ScreenTimeRequest[], role: 'child' | 'parent') {
+  if (role !== 'child') {
+    return requests;
+  }
+
+  const normalized: ScreenTimeRequest[] = [];
+
+  for (const request of requests) {
+    const existing = normalized.find((item) => shouldMergeChildRequests(item, request));
+
+    if (existing) {
+      existing.parent_count = (existing.parent_count ?? 1) + 1;
+      if (new Date(request.created_at).getTime() > new Date(existing.created_at).getTime()) {
+        existing.created_at = request.created_at;
+      }
+      continue;
+    }
+
+    normalized.push({
+      ...request,
+      parent_count: 1,
+    });
+  }
+
+  return normalized;
+}
+
 export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRequestsResult {
   const [requests, setRequests] = useState<ScreenTimeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +127,7 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       });
 
       if (error) throw error;
-      setRequests(data.requests || []);
+      setRequests(normalizeRequests(data.requests || [], role));
     } catch (error) {
       console.error('Error loading screen time requests:', error);
       setRequests([]);
@@ -96,9 +137,9 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
   }, [role]);
 
   const createRequest = async (
-    parentId: string, 
-    requestedMinutes: number, 
-    earnedMinutes: number, 
+    parentId: string,
+    requestedMinutes: number,
+    earnedMinutes: number,
     message?: string
   ) => {
     try {
@@ -116,11 +157,11 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
 
       if (data.success) {
         await loadRequests();
-        return { 
-          success: true, 
-          request: data.request, 
+        return {
+          success: true,
+          request: data.request,
           deep_links: data.deep_links,
-          validation: data.validation 
+          validation: data.validation
         };
       }
 
@@ -139,8 +180,8 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
   };
 
   const respondToRequest = async (
-    requestId: string, 
-    status: 'approved' | 'denied', 
+    requestId: string,
+    status: 'approved' | 'denied',
     response?: string
   ) => {
     try {
@@ -170,21 +211,18 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
     }
   };
 
-  // Check for newly approved requests and show notification
   const checkForApprovals = useCallback((newRequests: ScreenTimeRequest[]) => {
     if (role !== 'child' || previousRequestsRef.current.length === 0) {
       previousRequestsRef.current = newRequests;
       return;
     }
 
-    // Find requests that were pending but are now approved
     for (const newReq of newRequests) {
       if (newReq.status === 'approved') {
         const oldReq = previousRequestsRef.current.find(r => r.id === newReq.id);
         if (oldReq && oldReq.status === 'pending') {
-          // This request was just approved! Trigger celebration!
           triggerCelebrationConfetti();
-          
+
           toast.success(`🎉 Bildschirmzeit genehmigt!`, {
             description: `Deine Eltern haben ${newReq.requested_minutes} Minuten Bildschirmzeit freigegeben!`,
             duration: 8000,
@@ -193,7 +231,6 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       } else if (newReq.status === 'denied') {
         const oldReq = previousRequestsRef.current.find(r => r.id === newReq.id);
         if (oldReq && oldReq.status === 'pending') {
-          // This request was just denied
           toast.error(`Bildschirmzeit abgelehnt`, {
             description: newReq.parent_response || 'Deine Anfrage wurde leider abgelehnt.',
             duration: 8000,
@@ -205,16 +242,13 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
     previousRequestsRef.current = newRequests;
   }, [role]);
 
-  // Subscribe to realtime updates for children
   useEffect(() => {
     loadRequests();
 
     if (role === 'child') {
-      // Get current user ID for filtering
       supabase.auth.getUser().then(({ data: { user } }) => {
         if (!user) return;
 
-        // Subscribe to changes on screen_time_requests table
         const channel = supabase
           .channel('screen-time-updates')
           .on(
@@ -225,17 +259,15 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
               table: 'screen_time_requests',
               filter: `child_id=eq.${user.id}`
             },
-            async (payload) => {
-              console.log('🔔 Screen time request updated:', payload);
-              
-              // Reload requests and check for approvals
+            async () => {
               const { data } = await supabase.functions.invoke('screen-time-request', {
                 body: { action: 'get_requests', role: 'child' }
               });
-              
+
               if (data?.requests) {
-                checkForApprovals(data.requests);
-                setRequests(data.requests);
+                const normalizedRequests = normalizeRequests(data.requests, 'child');
+                checkForApprovals(normalizedRequests);
+                setRequests(normalizedRequests);
               }
             }
           )

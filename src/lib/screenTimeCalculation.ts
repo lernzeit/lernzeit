@@ -17,6 +17,7 @@ export interface TodayScreenTimeBreakdown {
   totalClaimedToday: number;
   availableMinutes: number;
   achievementDetails: TodayAchievementDetail[];
+  dailyLimit: number;
 }
 
 export const EMPTY_TODAY_SCREEN_TIME_BREAKDOWN: TodayScreenTimeBreakdown = {
@@ -29,6 +30,7 @@ export const EMPTY_TODAY_SCREEN_TIME_BREAKDOWN: TodayScreenTimeBreakdown = {
   totalClaimedToday: 0,
   availableMinutes: 0,
   achievementDetails: [],
+  dailyLimit: 0,
 };
 
 export function getTodayUtcRange(referenceDate = new Date()) {
@@ -76,7 +78,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const startIso = start.toISOString();
   const endIso = end.toISOString();
 
-  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes] = await Promise.all([
+  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes, childSettingsRes] = await Promise.all([
     supabase
       .from('game_sessions')
       .select('time_earned')
@@ -106,6 +108,11 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       .eq('child_id', userId)
       .gte('created_at', startIso)
       .lt('created_at', endIso),
+    supabase
+      .from('child_settings')
+      .select('weekday_max_minutes, weekend_max_minutes')
+      .eq('child_id', userId)
+      .maybeSingle(),
   ]);
 
   const queryErrors = [
@@ -113,6 +120,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
     learningSessionsRes.error,
     achievementsRes.error,
     requestsRes.error,
+    childSettingsRes.error,
   ].filter(Boolean);
 
   if (queryErrors.length > 0) {
@@ -123,7 +131,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const totalSessionSeconds = sumTimeEarned(gameSessionsRes.data) + sumTimeEarned(learningSessionsRes.data);
   const todaySessionMinutes = Math.ceil(totalSessionSeconds / 60);
 
-  const achievementDetails: TodayAchievementDetail[] = (achievementsRes.data || [])
+  const rawAchievementDetails: TodayAchievementDetail[] = (achievementsRes.data || [])
     .filter((achievement: any) => (achievement.achievements_template?.reward_minutes || 0) > 0)
     .map((achievement: any) => ({
       name: achievement.achievements_template?.name || 'Unbekannt',
@@ -132,7 +140,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       earned_at: achievement.earned_at,
     }));
 
-  const todayAchievementMinutes = achievementDetails.reduce(
+  const rawAchievementMinutes = rawAchievementDetails.reduce(
     (sum, achievement) => sum + achievement.reward_minutes,
     0,
   );
@@ -140,12 +148,35 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const todayApprovedMinutes = sumRequestedMinutes(requestsRes.data, ['approved']);
   const todayPendingMinutes = sumRequestedMinutes(requestsRes.data, ['pending']);
   const todayRequestedMinutes = sumRequestedMinutes(requestsRes.data);
-  const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
   const totalClaimedToday = todayApprovedMinutes + todayPendingMinutes;
+
+  const isWeekend = isUtcWeekend(start);
+  const dailyLimit = childSettingsRes.data
+    ? (isWeekend ? childSettingsRes.data.weekend_max_minutes : childSettingsRes.data.weekday_max_minutes)
+    : (isWeekend ? 60 : 30);
+
+  const cappedSessionMinutes = Math.min(todaySessionMinutes, dailyLimit);
+  const maxAchievementMinutesWithinLimit = Math.max(0, dailyLimit - cappedSessionMinutes);
+  let remainingAchievementMinutes = maxAchievementMinutesWithinLimit;
+  const achievementDetails = rawAchievementDetails.map((achievement) => {
+    const effectiveReward = Math.min(achievement.reward_minutes, remainingAchievementMinutes);
+    remainingAchievementMinutes -= effectiveReward;
+
+    return {
+      ...achievement,
+      reward_minutes: effectiveReward,
+    };
+  }).filter((achievement) => achievement.reward_minutes > 0);
+
+  const todayAchievementMinutes = achievementDetails.reduce(
+    (sum, achievement) => sum + achievement.reward_minutes,
+    0,
+  );
+  const totalEarnedToday = cappedSessionMinutes + todayAchievementMinutes;
   const availableMinutes = Math.max(0, totalEarnedToday - totalClaimedToday);
 
   return {
-    todaySessionMinutes,
+    todaySessionMinutes: cappedSessionMinutes,
     todayAchievementMinutes,
     totalEarnedToday,
     todayApprovedMinutes,
@@ -154,5 +185,6 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
     totalClaimedToday,
     availableMinutes,
     achievementDetails,
+    dailyLimit,
   };
 }

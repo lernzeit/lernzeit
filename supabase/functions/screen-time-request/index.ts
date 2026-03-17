@@ -275,19 +275,23 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) =>
     sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
 
-  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - totalClaimedToday);
+  const rawEarnedMinutes = sessionMinutes + achievementMinutes;
+  const cappedEarnedMinutes = Math.min(rawEarnedMinutes, dailyLimit);
+  const canonicalAvailableMinutes = Math.max(0, cappedEarnedMinutes - totalClaimedToday);
   const effectiveRequestedMinutes = Math.min(
     requestedMinutes as number,
     canonicalAvailableMinutes,
     remainingDailyLimit,
   );
-  const serverEarnedMinutes = canonicalAvailableMinutes;
+  const serverEarnedMinutes = cappedEarnedMinutes;
 
   console.log('Available minutes (canonical UTC validation):', {
     gameTotalSeconds,
     learningTotalSeconds,
     sessionMinutes,
     achievementMinutes,
+    rawEarnedMinutes,
+    cappedEarnedMinutes,
     achievementError,
     pendingMinutesToday,
     approvedMinutesToday,
