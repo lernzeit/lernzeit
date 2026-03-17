@@ -95,10 +95,11 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
       );
 
       if (result.success) {
+        const grantedMinutes = result.request?.requested_minutes ?? freshAvailableMinutes;
         await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${freshAvailableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         
         if (result.validation) {

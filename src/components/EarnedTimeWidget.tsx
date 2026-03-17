@@ -118,10 +118,11 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
       );
 
       if (result.success) {
+        const grantedMinutes = result.request?.requested_minutes ?? minutesToRequest;
         await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${minutesToRequest} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         setMessage('');
         setIsDialogOpen(false);
