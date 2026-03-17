@@ -27,11 +27,21 @@ interface UseScreenTimeRequestsResult {
 
 async function getFunctionErrorMessage(error: unknown, fallback: string) {
   if (error && typeof error === 'object') {
-    const errorWithContext = error as { context?: Response; message?: string };
+    const errorWithContext = error as {
+      context?: {
+        clone?: () => {
+          json: () => Promise<unknown>;
+          text: () => Promise<string>;
+        };
+      };
+      message?: string;
+    };
 
-    if (errorWithContext.context instanceof Response) {
+    const responseLike = errorWithContext.context;
+
+    if (responseLike && typeof responseLike.clone === 'function') {
       try {
-        const payload = await errorWithContext.context.clone().json();
+        const payload = await responseLike.clone().json() as { error?: unknown };
         if (typeof payload?.error === 'string' && payload.error.trim()) {
           return payload.error;
         }
@@ -40,7 +50,7 @@ async function getFunctionErrorMessage(error: unknown, fallback: string) {
       }
 
       try {
-        const text = await errorWithContext.context.clone().text();
+        const text = await responseLike.clone().text();
         if (text.trim()) {
           return text;
         }

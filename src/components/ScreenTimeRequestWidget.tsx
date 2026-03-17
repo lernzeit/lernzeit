@@ -109,9 +109,10 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
       );
 
       if (result.success) {
+        const grantedMinutes = result.request?.requested_minutes ?? freshAvailableMinutes;
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${freshAvailableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         
         if (result.validation) {

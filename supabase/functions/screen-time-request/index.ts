@@ -183,7 +183,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .select('*')
     .eq('child_id', childId)
     .eq('parent_id', parentId)
-    .single();
+    .maybeSingle();
 
   if (!relationship) {
     return new Response(JSON.stringify({ error: 'Eltern-Kind-Beziehung nicht gefunden' }), {
@@ -197,7 +197,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .from('child_settings')
     .select('weekday_max_minutes, weekend_max_minutes')
     .eq('child_id', childId)
-    .single();
+    .maybeSingle();
 
   const { start: todayStart, end: todayEnd, dateKey: todayKey } = getUtcDayRange();
 
@@ -224,11 +224,11 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   const approvedMinutesToday = todayRequests?.filter((req: any) => req.status === 'approved')
     .reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
   const totalClaimedToday = pendingMinutesToday + approvedMinutesToday;
+  const remainingDailyLimit = Math.max(0, dailyLimit - totalClaimedToday);
 
-  // Validate request doesn't exceed daily limit (only count today's pending + approved)
-  if (totalClaimedToday + (requestedMinutes as number) > dailyLimit) {
-    return new Response(JSON.stringify({ 
-      error: `Die Anfrage würde das Tageslimit von ${dailyLimit} Minuten überschreiten. Bereits heute beantragt: ${totalClaimedToday} Minuten.` 
+  if (remainingDailyLimit < 1) {
+    return new Response(JSON.stringify({
+      error: `Dein Tageslimit von ${dailyLimit} Minuten ist für heute bereits ausgeschöpft.`
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -276,6 +276,11 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
 
   const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - totalClaimedToday);
+  const effectiveRequestedMinutes = Math.min(
+    requestedMinutes as number,
+    canonicalAvailableMinutes,
+    remainingDailyLimit,
+  );
   const serverEarnedMinutes = canonicalAvailableMinutes;
 
   console.log('Available minutes (canonical UTC validation):', {
@@ -287,15 +292,28 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     pendingMinutesToday,
     approvedMinutesToday,
     totalClaimedToday,
-    canonicalAvailableMinutes
+    remainingDailyLimit,
+    canonicalAvailableMinutes,
+    requestedMinutes,
+    effectiveRequestedMinutes,
   });
 
-  if ((requestedMinutes as number) > canonicalAvailableMinutes) {
+  if (effectiveRequestedMinutes < 1) {
     return new Response(JSON.stringify({
-      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${canonicalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.`
+      error: `Nicht genügend verdiente Minuten verfügbar. Aktuell sind ${canonicalAvailableMinutes} Minuten verfügbar.`
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (effectiveRequestedMinutes !== (requestedMinutes as number)) {
+    console.log('Adjusting requested minutes to current canonical availability', {
+      childId,
+      requestedMinutes,
+      effectiveRequestedMinutes,
+      canonicalAvailableMinutes,
+      remainingDailyLimit,
     });
   }
 
@@ -305,7 +323,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .insert({
       child_id: childId,
       parent_id: parentId,
-      requested_minutes: requestedMinutes,
+      requested_minutes: effectiveRequestedMinutes,
       earned_minutes: serverEarnedMinutes,
       request_message: sanitizedMessage
     })
@@ -326,14 +344,14 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .upsert({
       user_id: childId,
       request_date: todayKey,
-      total_minutes_requested: totalClaimedToday + (requestedMinutes as number),
+      total_minutes_requested: totalClaimedToday + effectiveRequestedMinutes,
       total_minutes_approved: approvedMinutesToday
     }, {
       onConflict: 'user_id,request_date'
     });
 
   // Keep legacy reservation table in sync for older flows, but do not use it for validation.
-  let remainingToReserve = requestedMinutes as number;
+  let remainingToReserve = effectiveRequestedMinutes;
   const { data: availableEarnedMinutes } = await supabase
     .from('user_earned_minutes')
     .select('*')
@@ -359,7 +377,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   if (remainingToReserve > 0) {
     console.warn('Legacy earned-minutes reservation out of sync with canonical calculation', {
       childId,
-      requestedMinutes,
+      requestedMinutes: effectiveRequestedMinutes,
       remainingToReserve,
       canonicalAvailableMinutes,
     });
@@ -370,22 +388,23 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .from('profiles')
     .select('name')
     .eq('id', childId)
-    .single();
+    .maybeSingle();
 
-  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Canonical available: ${canonicalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
+  console.log(`Screen time request from ${childProfile?.name}: ${effectiveRequestedMinutes} minutes (Daily limit: ${dailyLimit}, Canonical available: ${canonicalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
 
   // Send email notification to parent
-  await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', requestedMinutes as number, sanitizedMessage, request.id);
+  await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', effectiveRequestedMinutes, sanitizedMessage, request.id);
 
   return new Response(JSON.stringify({ 
     success: true, 
     request,
     validation: {
       dailyLimit,
-      totalClaimedToday: totalClaimedToday + (requestedMinutes as number),
-      availableMinutes: canonicalAvailableMinutes - (requestedMinutes as number)
+      totalClaimedToday: totalClaimedToday + effectiveRequestedMinutes,
+      availableMinutes: Math.max(0, canonicalAvailableMinutes - effectiveRequestedMinutes),
+      requestedMinutesApplied: effectiveRequestedMinutes,
     },
-    deep_links: generateDeepLinks(requestedMinutes as number)
+    deep_links: generateDeepLinks(effectiveRequestedMinutes)
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
