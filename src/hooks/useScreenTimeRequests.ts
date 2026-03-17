@@ -25,6 +25,38 @@ interface UseScreenTimeRequestsResult {
   refreshRequests: () => Promise<void>;
 }
 
+async function getFunctionErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object') {
+    const errorWithContext = error as { context?: Response; message?: string };
+
+    if (errorWithContext.context instanceof Response) {
+      try {
+        const payload = await errorWithContext.context.clone().json();
+        if (typeof payload?.error === 'string' && payload.error.trim()) {
+          return payload.error;
+        }
+      } catch {
+        // ignore JSON parsing errors and try text fallback
+      }
+
+      try {
+        const text = await errorWithContext.context.clone().text();
+        if (text.trim()) {
+          return text;
+        }
+      } catch {
+        // ignore text parsing errors and use message fallback
+      }
+    }
+
+    if (typeof errorWithContext.message === 'string' && errorWithContext.message.trim()) {
+      return errorWithContext.message;
+    }
+  }
+
+  return fallback;
+}
+
 export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRequestsResult {
   const [requests, setRequests] = useState<ScreenTimeRequest[]>([]);
   const [loading, setLoading] = useState(true);
