@@ -72,24 +72,25 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]);
 
   const handleRequestScreenTime = async () => {
-    if (availableMinutes < 5) {
-      toast({
-        title: "Nicht genügend verdiente Zeit",
-        description: "Du musst mindestens 5 Minuten durch Lernen verdienen, um Bildschirmzeit zu beantragen.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Get parent-child relationships to find parent ID
+      const { available: freshAvailableMinutes } = await loadMinutesData();
+
+      if (freshAvailableMinutes < 5) {
+        toast({
+          title: "Nicht genügend verdiente Zeit",
+          description: "Aktuell sind weniger als 5 Minuten verfügbar. Bitte aktualisiere kurz und versuche es erneut.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data: relationship } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', userId)
-        .single();
+        .maybeSingle();
 
       if (!relationship) {
         toast({
@@ -102,15 +103,15 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
 
       const result = await createRequest(
         relationship.parent_id,
-        availableMinutes, // Request all available earned minutes
-        availableMinutes,
+        freshAvailableMinutes,
+        freshAvailableMinutes,
         message.trim() || undefined
       );
 
       if (result.success) {
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${availableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${freshAvailableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         
         if (result.validation) {
@@ -119,39 +120,18 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
         
         setMessage('');
         setShowDialog(false);
-        
-        // Refresh minutes data
-        const [available, requested] = await Promise.all([
-          getAvailableMinutes(userId),
-          getTodayRequestedMinutes(userId)
-        ]);
-        setAvailableMinutes(available);
-        setTodayRequestedMinutes(requested);
-        
+        await Promise.all([loadMinutesData(), refreshRequests()]);
       } else {
-        // Handle specific validation errors
-        let errorMessage = result.error || "Die Anfrage konnte nicht gesendet werden.";
-        
-        if (result.validation) {
-          if (!result.validation.has_parent_link) {
-            errorMessage = "Du musst zuerst mit deinen Eltern verknüpft sein.";
-          } else if (!result.validation.within_daily_limit) {
-            errorMessage = `Du kannst heute nur noch ${result.validation.remaining_daily_minutes || 0} Minuten anfragen.`;
-          } else if (!result.validation.sufficient_earned_minutes) {
-            errorMessage = `Du hast nur ${result.validation.available_minutes || 0} Minuten verfügbar.`;
-          } else if (!result.validation.no_duplicate_request) {
-            errorMessage = "Du hast bereits eine ausstehende Anfrage.";
-          }
-        }
-        
+        await loadMinutesData();
         toast({
           title: "Fehler beim Senden",
-          description: errorMessage,
+          description: result.error || "Die Anfrage konnte nicht gesendet werden.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error creating request:', error);
+      await loadMinutesData();
       toast({
         title: "Fehler",
         description: "Es ist ein unerwarteter Fehler aufgetreten.",

@@ -79,25 +79,27 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
       return;
     }
 
-    if (availableMinutes < 5) {
-      toast({
-        title: "Nicht genügend Minuten",
-        description: "Du musst mindestens 5 Minuten verdient haben, um Bildschirmzeit zu beantragen.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const minutesToRequest = availableMinutes;
-
     setIsSubmitting(true);
 
     try {
+      const freshAvailableMinutes = await refreshAvailableMinutes();
+
+      if (freshAvailableMinutes < 5) {
+        toast({
+          title: "Nicht genügend Minuten",
+          description: "Aktuell sind weniger als 5 Minuten verfügbar. Bitte aktualisiere kurz und versuche es erneut.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const minutesToRequest = freshAvailableMinutes;
+
       const { data: relationship } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', userId)
-        .single();
+        .maybeSingle();
 
       if (!relationship) {
         toast({
@@ -111,11 +113,12 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
       const result = await createRequest(
         relationship.parent_id,
         minutesToRequest,
-        availableMinutes,
+        minutesToRequest,
         message.trim() || undefined
       );
 
       if (result.success) {
+        await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
           title: "Anfrage gesendet! 🎉",
           description: `Du hast ${minutesToRequest} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
@@ -123,6 +126,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
         setMessage('');
         setIsDialogOpen(false);
       } else {
+        await refreshAvailableMinutes();
         toast({
           title: "Fehler beim Senden",
           description: result.error || "Die Anfrage konnte nicht gesendet werden.",
@@ -131,6 +135,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
       }
     } catch (error) {
       console.error('Error creating request:', error);
+      await refreshAvailableMinutes();
       toast({
         title: "Fehler",
         description: "Es ist ein unerwarteter Fehler aufgetreten.",

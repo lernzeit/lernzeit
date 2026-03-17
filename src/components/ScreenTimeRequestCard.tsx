@@ -58,24 +58,25 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
       return;
     }
 
-    if (availableMinutes < 5) {
-      toast({
-        title: "Nicht genügend verdiente Zeit",
-        description: "Du musst mindestens 5 Minuten durch Lernen verdienen, um Bildschirmzeit zu beantragen.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Get parent ID from relationship
+      const freshAvailableMinutes = await refreshAvailableMinutes();
+
+      if (freshAvailableMinutes < 5) {
+        toast({
+          title: "Nicht genügend verdiente Zeit",
+          description: "Aktuell sind weniger als 5 Minuten verfügbar. Bitte aktualisiere kurz und versuche es erneut.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data: relationship } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', userId)
-        .single();
+        .maybeSingle();
 
       if (!relationship) {
         toast({
@@ -88,15 +89,16 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
 
       const result = await createRequest(
         relationship.parent_id,
-        availableMinutes, // Request all available earned minutes (today-based)
-        availableMinutes,
+        freshAvailableMinutes,
+        freshAvailableMinutes,
         message.trim() || undefined
       );
 
       if (result.success) {
+        await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${availableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${freshAvailableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
         });
         
         if (result.validation) {
@@ -106,6 +108,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
         setMessage('');
         setIsDialogOpen(false);
       } else {
+        await refreshAvailableMinutes();
         toast({
           title: "Fehler beim Senden",
           description: result.error || "Die Anfrage konnte nicht gesendet werden.",
@@ -114,6 +117,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
       }
     } catch (error) {
       console.error('Error creating request:', error);
+      await refreshAvailableMinutes();
       toast({
         title: "Fehler",
         description: "Es ist ein unerwarteter Fehler aufgetreten.",
