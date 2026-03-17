@@ -486,13 +486,13 @@ async function respondToRequest(supabase: any, parentId: string, body: Record<st
 
   // Update daily request summary
   if (status === 'approved') {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const { dateKey: todayKey } = getUtcDayRange();
+
     const { data: dailySummary } = await supabase
       .from('daily_request_summary')
       .select('*')
       .eq('user_id', request.child_id)
-      .eq('request_date', today)
+      .eq('request_date', todayKey)
       .single();
 
     if (dailySummary) {
