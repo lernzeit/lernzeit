@@ -262,7 +262,8 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     sum + (Number(s.time_earned) || 0), 0) || 0;
   const learningTotalSeconds = learningSessionsForDay?.reduce((sum: number, s: any) =>
     sum + (Number(s.time_earned) || 0), 0) || 0;
-  const sessionMinutes = Math.ceil(gameTotalSeconds / 60) + Math.ceil(learningTotalSeconds / 60);
+  const totalSessionSeconds = gameTotalSeconds + learningTotalSeconds;
+  const sessionMinutes = Math.ceil(totalSessionSeconds / 60);
 
   const { data: todayAchievements, error: achievementError } = await supabase
     .from('user_achievements')
