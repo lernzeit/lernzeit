@@ -569,7 +569,7 @@ function generateDeepLinks(minutes: number) {
 
 /**
  * Send email notification to parent when child creates a screen time request.
- * Uses the same pgmq email queue as auth emails (password reset etc.)
+ * Uses Resend HTTP API for reliable delivery.
  */
 async function sendParentNotification(
   supabase: any, 
@@ -580,6 +580,12 @@ async function sendParentNotification(
   requestId: string
 ) {
   try {
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured – skipping parent email');
+      return;
+    }
+
     // Get parent's email from auth.users table
     const { data: parentUser, error: userError } = await supabase.auth.admin.getUserById(parentId);
     
@@ -635,44 +641,27 @@ async function sendParentNotification(
 
     const plainText = `${childName} möchte ${requestedMinutes} Minuten Bildschirmzeit.\n${message ? `Nachricht: "${message}"\n` : ''}Öffne die LernZeit App, um zu antworten: ${approvalLink}`;
 
-    const messageId = crypto.randomUUID();
-
-    // Log pending
-    await supabase.from('email_send_log').insert({
-      message_id: messageId,
-      template_name: 'screen_time_request',
-      recipient_email: parentEmail,
-      status: 'pending',
-    });
-
-    // Enqueue via the same pgmq queue used by auth emails
-    const { error: enqueueError } = await supabase.rpc('enqueue_email', {
-      queue_name: 'transactional_emails',
-      payload: {
-        message_id: messageId,
-        to: parentEmail,
-        from: 'LernZeit <noreply@lernzeit.app>',
-        sender_domain: 'mail.lernzeit.app',
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'LernZeit <onboarding@resend.dev>',
+        to: [parentEmail],
         subject: emailSubject,
         html: emailHtml,
         text: plainText,
-        purpose: 'transactional',
-        label: 'screen_time_request',
-        queued_at: new Date().toISOString(),
-      },
+      }),
     });
 
-    if (enqueueError) {
-      console.error('Failed to enqueue parent notification email:', enqueueError);
-      await supabase.from('email_send_log').insert({
-        message_id: messageId,
-        template_name: 'screen_time_request',
-        recipient_email: parentEmail,
-        status: 'failed',
-        error_message: 'Failed to enqueue email',
-      });
+    if (!resendResponse.ok) {
+      const errBody = await resendResponse.text();
+      console.error(`Resend API error [${resendResponse.status}]: ${errBody}`);
     } else {
-      console.log(`📧 Parent notification email enqueued for: ${parentEmail}`);
+      const result = await resendResponse.json();
+      console.log(`📧 Parent notification email sent via Resend: ${result.id} → ${parentEmail}`);
     }
   } catch (error) {
     // Don't fail the request if email fails
