@@ -26,74 +26,88 @@ export function usePushNotifications({
 
   // Request notification permissions on mount
   const requestPermissions = useCallback(async () => {
-    if (!isNative) {
-      console.log('Local notifications only available on native platforms');
-      return false;
+    if (isNative) {
+      try {
+        const { display } = await LocalNotifications.checkPermissions();
+        if (display === 'granted') {
+          hasPermissionRef.current = true;
+          return true;
+        }
+        if (display === 'prompt' || display === 'prompt-with-rationale') {
+          const result = await LocalNotifications.requestPermissions();
+          hasPermissionRef.current = result.display === 'granted';
+          return hasPermissionRef.current;
+        }
+        return false;
+      } catch (error) {
+        console.error('Error requesting notification permissions:', error);
+        return false;
+      }
     }
 
-    try {
-      const { display } = await LocalNotifications.checkPermissions();
-      
-      if (display === 'granted') {
+    // Web/PWA: use browser Notification API
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
         hasPermissionRef.current = true;
         return true;
       }
-
-      if (display === 'prompt' || display === 'prompt-with-rationale') {
-        const result = await LocalNotifications.requestPermissions();
-        hasPermissionRef.current = result.display === 'granted';
+      if (Notification.permission === 'default') {
+        const result = await Notification.requestPermission();
+        hasPermissionRef.current = result === 'granted';
         return hasPermissionRef.current;
       }
-
-      return false;
-    } catch (error) {
-      console.error('Error requesting notification permissions:', error);
-      return false;
     }
+    return false;
   }, [isNative]);
 
-  // Show a local notification
+  // Show a local notification (native or web)
   const showNotification = useCallback(async (
     title: string, 
     body: string, 
     data?: Record<string, unknown>
   ) => {
-    if (!isNative) {
-      // Fallback for web - just show toast
-      console.log('Notification (web fallback):', title, body);
-      return;
-    }
-
-    if (!hasPermissionRef.current) {
-      const granted = await requestPermissions();
-      if (!granted) {
-        console.log('Notification permissions not granted');
-        return;
+    if (isNative) {
+      if (!hasPermissionRef.current) {
+        const granted = await requestPermissions();
+        if (!granted) return;
       }
-    }
-
-    try {
-      const notificationId = lastNotificationIdRef.current++;
-      
-      const scheduleOptions: ScheduleOptions = {
-        notifications: [
-          {
+      try {
+        const notificationId = lastNotificationIdRef.current++;
+        const scheduleOptions: ScheduleOptions = {
+          notifications: [{
             id: notificationId,
             title,
             body,
-            schedule: { at: new Date(Date.now() + 100) }, // Immediate
+            schedule: { at: new Date(Date.now() + 100) },
             sound: 'beep.wav',
             smallIcon: 'ic_stat_icon_config_sample',
             iconColor: '#3b82f6',
             extra: data,
-          }
-        ]
-      };
+          }]
+        };
+        await LocalNotifications.schedule(scheduleOptions);
+        console.log('Notification scheduled:', title);
+      } catch (error) {
+        console.error('Error showing notification:', error);
+      }
+      return;
+    }
 
-      await LocalNotifications.schedule(scheduleOptions);
-      console.log('Notification scheduled:', title);
-    } catch (error) {
-      console.error('Error showing notification:', error);
+    // Web/PWA fallback: browser Notification API
+    if ('Notification' in window) {
+      if (!hasPermissionRef.current) {
+        const granted = await requestPermissions();
+        if (!granted) {
+          console.log('Web notification permission not granted');
+          return;
+        }
+      }
+      try {
+        new Notification(title, { body, icon: '/pwa-192x192.png', data });
+        console.log('Web notification shown:', title);
+      } catch (error) {
+        console.error('Error showing web notification:', error);
+      }
     }
   }, [isNative, requestPermissions]);
 
