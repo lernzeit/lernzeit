@@ -146,14 +146,17 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       if (error) throw error;
 
       if (data.success) {
-        await loadRequests(); // Refresh the list
+        await loadRequests();
         return { success: true };
       }
 
-      return { success: false, error: 'Failed to respond to request' };
+      return { success: false, error: data.error || 'Failed to respond to request' };
     } catch (error) {
       console.error('Error responding to screen time request:', error);
-      return { success: false, error: (error as Error).message };
+      return {
+        success: false,
+        error: await getFunctionErrorMessage(error, 'Die Anfrage konnte nicht bearbeitet werden.'),
+      };
     }
   };
 
