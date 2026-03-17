@@ -333,14 +333,14 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .from('daily_request_summary')
     .upsert({
       user_id: childId,
-      request_date: todayStart.toISOString().split('T')[0],
+      request_date: todayKey,
       total_minutes_requested: totalClaimedToday + (requestedMinutes as number),
       total_minutes_approved: approvedMinutesToday
     }, {
       onConflict: 'user_id,request_date'
     });
 
-  // Reserve the requested minutes (mark as requested but not yet consumed)
+  // Keep legacy reservation table in sync for older flows, but do not use it for validation.
   let remainingToReserve = requestedMinutes as number;
   const { data: availableEarnedMinutes } = await supabase
     .from('user_earned_minutes')
@@ -351,17 +351,26 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
 
   for (const earnedRecord of availableEarnedMinutes || []) {
     if (remainingToReserve <= 0) break;
-    
+
     const minutesToReserve = Math.min(remainingToReserve, earnedRecord.minutes_remaining);
-    
+
     await supabase
       .from('user_earned_minutes')
       .update({
         minutes_requested: earnedRecord.minutes_requested + minutesToReserve
       })
       .eq('id', earnedRecord.id);
-    
+
     remainingToReserve -= minutesToReserve;
+  }
+
+  if (remainingToReserve > 0) {
+    console.warn('Legacy earned-minutes reservation out of sync with canonical calculation', {
+      childId,
+      requestedMinutes,
+      remainingToReserve,
+      canonicalAvailableMinutes,
+    });
   }
 
   // Get child profile for notification
@@ -371,7 +380,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .eq('id', childId)
     .single();
 
-  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Available: ${totalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
+  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Canonical available: ${canonicalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
 
   // Send email notification to parent
   await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', requestedMinutes as number, sanitizedMessage, request.id);
@@ -382,7 +391,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     validation: {
       dailyLimit,
       totalClaimedToday: totalClaimedToday + (requestedMinutes as number),
-      availableMinutes: totalAvailableMinutes - (requestedMinutes as number)
+      availableMinutes: canonicalAvailableMinutes - (requestedMinutes as number)
     },
     deep_links: generateDeepLinks(requestedMinutes as number)
   }), {
