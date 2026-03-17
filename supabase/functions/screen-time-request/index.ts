@@ -207,25 +207,23 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .eq('child_id', childId)
     .single();
 
-  // Determine daily limit based on current day
-  const today = new Date();
-  const isWeekend = today.getDay() === 0 || today.getDay() === 6;
-  const dailyLimit = childSettings ? 
-    (isWeekend ? childSettings.weekend_max_minutes : childSettings.weekday_max_minutes) : 
-    (isWeekend ? 60 : 30);
+  const { start: todayStart, end: todayEnd, dateKey: todayKey } = getUtcDayRange();
 
-  // Check existing requests for today - ONLY count today's requests
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
+  // Determine daily limit based on UTC day to match frontend + backend consistently
+  const isWeekend = todayStart.getUTCDay() === 0 || todayStart.getUTCDay() === 6;
+  const dailyLimit = childSettings
+    ? (isWeekend ? childSettings.weekend_max_minutes : childSettings.weekday_max_minutes)
+    : (isWeekend ? 60 : 30);
+
+  const todayStartIso = todayStart.toISOString();
+  const todayEndIso = todayEnd.toISOString();
 
   const { data: todayRequests } = await supabase
     .from('screen_time_requests')
     .select('requested_minutes, status')
     .eq('child_id', childId)
-    .gte('created_at', todayStart.toISOString())
-    .lte('created_at', todayEnd.toISOString());
+    .gte('created_at', todayStartIso)
+    .lt('created_at', todayEndIso);
 
   // Calculate total minutes already requested (pending + approved) today
   // Note: We now allow MULTIPLE parallel requests per day
@@ -245,33 +243,23 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     });
   }
 
-  // Get total available earned minutes from user_earned_minutes table (legacy/optional)
-  const { data: earnedMinutesData } = await supabase
-    .from('user_earned_minutes')
-    .select('minutes_remaining')
-    .eq('user_id', childId)
-    .gt('minutes_remaining', 0);
-
-  const legacyAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) =>
-    sum + (record.minutes_remaining || 0), 0) || 0;
-
-  // Canonical availability calculation (matches frontend):
-  // Sessions (seconds -> minutes, rounded up) + today's achievement bonus minutes - today's approved requests
+  // Canonical availability calculation:
+  // sum all today's session seconds, convert once to minutes, add today's achievement minutes,
+  // then subtract all today's pending + approved requests.
   const { data: gameSessionsForDay } = await supabase
     .from('game_sessions')
     .select('time_earned')
     .eq('user_id', childId)
-    .gte('session_date', todayStart.toISOString())
-    .lte('session_date', todayEnd.toISOString());
+    .gte('session_date', todayStartIso)
+    .lt('session_date', todayEndIso);
 
   const { data: learningSessionsForDay } = await supabase
     .from('learning_sessions')
     .select('time_earned')
     .eq('user_id', childId)
-    .gte('session_date', todayStart.toISOString())
-    .lte('session_date', todayEnd.toISOString());
+    .gte('session_date', todayStartIso)
+    .lt('session_date', todayEndIso);
 
-  // Sum all seconds first, then convert to minutes once (consistent rounding)
   const gameTotalSeconds = gameSessionsForDay?.reduce((sum: number, s: any) =>
     sum + (Number(s.time_earned) || 0), 0) || 0;
   const learningTotalSeconds = learningSessionsForDay?.reduce((sum: number, s: any) =>
@@ -289,51 +277,44 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     `)
     .eq('user_id', childId)
     .eq('is_completed', true)
-    .gte('earned_at', todayStart.toISOString())
-    .lte('earned_at', todayEnd.toISOString());
+    .gte('earned_at', todayStartIso)
+    .lt('earned_at', todayEndIso);
 
   const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) =>
     sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
 
-  // IMPORTANT: Subtract BOTH pending AND approved today - pending minutes are "reserved"
-  const claimedToday = todayRequests?.filter((r: any) => r.status === 'pending' || r.status === 'approved')
-    .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
+  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - totalClaimedToday);
+  const serverEarnedMinutes = canonicalAvailableMinutes;
 
-  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - claimedToday);
-
-  // Use the canonical value for validation (prevents false negatives when legacy table is out of sync)
-  const totalAvailableMinutes = Math.max(legacyAvailableMinutes, canonicalAvailableMinutes);
-
-  console.log('Available minutes (validation):', {
-    legacyAvailableMinutes,
-    canonicalAvailableMinutes,
+  console.log('Available minutes (canonical UTC validation):', {
     gameTotalSeconds,
     learningTotalSeconds,
     sessionMinutes,
     achievementMinutes,
     achievementError,
-    claimedToday,
-    totalAvailableMinutes
+    pendingMinutesToday,
+    approvedMinutesToday,
+    totalClaimedToday,
+    canonicalAvailableMinutes
   });
 
-  // Validate enough earned minutes available (canonical)
-  if ((requestedMinutes as number) > totalAvailableMinutes) {
+  if ((requestedMinutes as number) > canonicalAvailableMinutes) {
     return new Response(JSON.stringify({
-      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${totalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.`
+      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${canonicalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.`
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
-  // Create the request
+  // Create the request using server-side calculated earned minutes only
   const { data: request, error } = await supabase
     .from('screen_time_requests')
     .insert({
       child_id: childId,
       parent_id: parentId,
       requested_minutes: requestedMinutes,
-      earned_minutes: earnedMinutes,
+      earned_minutes: serverEarnedMinutes,
       request_message: sanitizedMessage
     })
     .select()
