@@ -159,7 +159,6 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   // Validate required fields
   const parentId = body.parentId;
   const requestedMinutes = body.requestedMinutes;
-  const earnedMinutes = body.earnedMinutes;
   const message = body.message;
 
   if (!isValidUUID(parentId as string)) {
@@ -171,13 +170,6 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
 
   if (!isValidNumber(requestedMinutes, 1, 480)) {
     return new Response(JSON.stringify({ error: 'Ungültige Minutenanzahl (1-480)' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  if (!isValidNumber(earnedMinutes, 0, 9999)) {
-    return new Response(JSON.stringify({ error: 'Ungültige verdiente Minuten' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
