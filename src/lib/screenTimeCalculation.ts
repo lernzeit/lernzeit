@@ -17,6 +17,7 @@ export interface TodayScreenTimeBreakdown {
   totalClaimedToday: number;
   availableMinutes: number;
   achievementDetails: TodayAchievementDetail[];
+  dailyLimit: number;
 }
 
 export const EMPTY_TODAY_SCREEN_TIME_BREAKDOWN: TodayScreenTimeBreakdown = {
@@ -29,6 +30,7 @@ export const EMPTY_TODAY_SCREEN_TIME_BREAKDOWN: TodayScreenTimeBreakdown = {
   totalClaimedToday: 0,
   availableMinutes: 0,
   achievementDetails: [],
+  dailyLimit: 0,
 };
 
 export function getTodayUtcRange(referenceDate = new Date()) {
@@ -76,7 +78,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const startIso = start.toISOString();
   const endIso = end.toISOString();
 
-  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes] = await Promise.all([
+  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes, childSettingsRes] = await Promise.all([
     supabase
       .from('game_sessions')
       .select('time_earned')
@@ -106,6 +108,11 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       .eq('child_id', userId)
       .gte('created_at', startIso)
       .lt('created_at', endIso),
+    supabase
+      .from('child_settings')
+      .select('weekday_max_minutes, weekend_max_minutes')
+      .eq('child_id', userId)
+      .maybeSingle(),
   ]);
 
   const queryErrors = [
@@ -113,6 +120,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
     learningSessionsRes.error,
     achievementsRes.error,
     requestsRes.error,
+    childSettingsRes.error,
   ].filter(Boolean);
 
   if (queryErrors.length > 0) {
@@ -140,8 +148,15 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const todayApprovedMinutes = sumRequestedMinutes(requestsRes.data, ['approved']);
   const todayPendingMinutes = sumRequestedMinutes(requestsRes.data, ['pending']);
   const todayRequestedMinutes = sumRequestedMinutes(requestsRes.data);
-  const totalEarnedToday = todaySessionMinutes + todayAchievementMinutes;
   const totalClaimedToday = todayApprovedMinutes + todayPendingMinutes;
+
+  const isWeekend = isUtcWeekend(start);
+  const dailyLimit = childSettingsRes.data
+    ? (isWeekend ? childSettingsRes.data.weekend_max_minutes : childSettingsRes.data.weekday_max_minutes)
+    : (isWeekend ? 60 : 30);
+
+  const rawEarnedToday = todaySessionMinutes + todayAchievementMinutes;
+  const totalEarnedToday = Math.min(rawEarnedToday, dailyLimit);
   const availableMinutes = Math.max(0, totalEarnedToday - totalClaimedToday);
 
   return {
@@ -154,5 +169,6 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
     totalClaimedToday,
     availableMinutes,
     achievementDetails,
+    dailyLimit,
   };
 }
