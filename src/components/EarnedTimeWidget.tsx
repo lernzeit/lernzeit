@@ -95,13 +95,12 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
 
       const minutesToRequest = freshAvailableMinutes;
 
-      const { data: relationship } = await supabase
+      const { data: relationships } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
-        .eq('child_id', userId)
-        .maybeSingle();
+        .eq('child_id', userId);
 
-      if (!relationship) {
+      if (!relationships || relationships.length === 0) {
         toast({
           title: "Fehler",
           description: "Eltern-Kind Beziehung nicht gefunden.",
@@ -110,27 +109,34 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
         return;
       }
 
-      const result = await createRequest(
-        relationship.parent_id,
-        minutesToRequest,
-        minutesToRequest,
-        message.trim() || undefined
+      // Send a request to EACH linked parent
+      const results = await Promise.all(
+        relationships.map(rel =>
+          createRequest(
+            rel.parent_id,
+            minutesToRequest,
+            minutesToRequest,
+            message.trim() || undefined
+          )
+        )
       );
 
-      if (result.success) {
-        const grantedMinutes = result.request?.requested_minutes ?? minutesToRequest;
+      const anySuccess = results.some(r => r.success);
+      if (anySuccess) {
+        const grantedMinutes = results.find(r => r.success)?.request?.requested_minutes ?? minutesToRequest;
         await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. ${relationships.length > 1 ? 'Beide Elternteile' : 'Deine Eltern'} wurden benachrichtigt.`,
         });
         setMessage('');
         setIsDialogOpen(false);
       } else {
         await refreshAvailableMinutes();
+        const firstError = results.find(r => r.error)?.error;
         toast({
           title: "Fehler beim Senden",
-          description: result.error || "Die Anfrage konnte nicht gesendet werden.",
+          description: firstError || "Die Anfrage konnte nicht gesendet werden.",
           variant: "destructive",
         });
       }

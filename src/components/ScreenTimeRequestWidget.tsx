@@ -86,13 +86,12 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
         return;
       }
 
-      const { data: relationship } = await supabase
+      const { data: relationships } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
-        .eq('child_id', userId)
-        .maybeSingle();
+        .eq('child_id', userId);
 
-      if (!relationship) {
+      if (!relationships || relationships.length === 0) {
         toast({
           title: "Kein Eltern-Link",
           description: "Du musst zuerst mit deinen Eltern verknüpft sein, um Bildschirmzeit zu beantragen.",
@@ -101,32 +100,35 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
         return;
       }
 
-      const result = await createRequest(
-        relationship.parent_id,
-        freshAvailableMinutes,
-        freshAvailableMinutes,
-        message.trim() || undefined
+      // Send a request to EACH linked parent
+      const results = await Promise.all(
+        relationships.map(rel =>
+          createRequest(
+            rel.parent_id,
+            freshAvailableMinutes,
+            freshAvailableMinutes,
+            message.trim() || undefined
+          )
+        )
       );
 
-      if (result.success) {
-        const grantedMinutes = result.request?.requested_minutes ?? freshAvailableMinutes;
+      const anySuccess = results.some(r => r.success);
+      if (anySuccess) {
+        const grantedMinutes = results.find(r => r.success)?.request?.requested_minutes ?? freshAvailableMinutes;
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. ${relationships.length > 1 ? 'Beide Elternteile' : 'Deine Eltern'} wurden benachrichtigt.`,
         });
-        
-        if (result.validation) {
-          console.log('Request validation:', result.validation);
-        }
         
         setMessage('');
         setShowDialog(false);
         await Promise.all([loadMinutesData(), refreshRequests()]);
       } else {
         await loadMinutesData();
+        const firstError = results.find(r => r.error)?.error;
         toast({
           title: "Fehler beim Senden",
-          description: result.error || "Die Anfrage konnte nicht gesendet werden.",
+          description: firstError || "Die Anfrage konnte nicht gesendet werden.",
           variant: "destructive",
         });
       }
