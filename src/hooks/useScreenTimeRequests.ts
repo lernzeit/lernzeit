@@ -105,7 +105,7 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       if (error) throw error;
 
       if (data.success) {
-        await loadRequests(); // Refresh the list
+        await loadRequests();
         return { 
           success: true, 
           request: data.request, 
@@ -114,10 +114,17 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
         };
       }
 
-      return { success: false, error: data.error || 'Failed to create request' };
+      return {
+        success: false,
+        error: data.error || 'Failed to create request',
+        validation: data.validation,
+      };
     } catch (error) {
       console.error('Error creating screen time request:', error);
-      return { success: false, error: (error as Error).message };
+      return {
+        success: false,
+        error: await getFunctionErrorMessage(error, 'Die Anfrage konnte nicht gesendet werden.'),
+      };
     }
   };
 
