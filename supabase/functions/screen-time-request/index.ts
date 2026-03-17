@@ -292,8 +292,8 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   console.log('Available minutes (validation):', {
     legacyAvailableMinutes,
     canonicalAvailableMinutes,
-    gameMinutes,
-    learningMinutes,
+    gameTotalSeconds,
+    learningTotalSeconds,
     sessionMinutes,
     achievementMinutes,
     achievementError,
