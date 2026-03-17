@@ -25,6 +25,38 @@ interface UseScreenTimeRequestsResult {
   refreshRequests: () => Promise<void>;
 }
 
+async function getFunctionErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object') {
+    const errorWithContext = error as { context?: Response; message?: string };
+
+    if (errorWithContext.context instanceof Response) {
+      try {
+        const payload = await errorWithContext.context.clone().json();
+        if (typeof payload?.error === 'string' && payload.error.trim()) {
+          return payload.error;
+        }
+      } catch {
+        // ignore JSON parsing errors and try text fallback
+      }
+
+      try {
+        const text = await errorWithContext.context.clone().text();
+        if (text.trim()) {
+          return text;
+        }
+      } catch {
+        // ignore text parsing errors and use message fallback
+      }
+    }
+
+    if (typeof errorWithContext.message === 'string' && errorWithContext.message.trim()) {
+      return errorWithContext.message;
+    }
+  }
+
+  return fallback;
+}
+
 export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRequestsResult {
   const [requests, setRequests] = useState<ScreenTimeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +105,7 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       if (error) throw error;
 
       if (data.success) {
-        await loadRequests(); // Refresh the list
+        await loadRequests();
         return { 
           success: true, 
           request: data.request, 
@@ -82,10 +114,17 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
         };
       }
 
-      return { success: false, error: data.error || 'Failed to create request' };
+      return {
+        success: false,
+        error: data.error || 'Failed to create request',
+        validation: data.validation,
+      };
     } catch (error) {
       console.error('Error creating screen time request:', error);
-      return { success: false, error: (error as Error).message };
+      return {
+        success: false,
+        error: await getFunctionErrorMessage(error, 'Die Anfrage konnte nicht gesendet werden.'),
+      };
     }
   };
 
@@ -107,14 +146,17 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
       if (error) throw error;
 
       if (data.success) {
-        await loadRequests(); // Refresh the list
+        await loadRequests();
         return { success: true };
       }
 
-      return { success: false, error: 'Failed to respond to request' };
+      return { success: false, error: data.error || 'Failed to respond to request' };
     } catch (error) {
       console.error('Error responding to screen time request:', error);
-      return { success: false, error: (error as Error).message };
+      return {
+        success: false,
+        error: await getFunctionErrorMessage(error, 'Die Anfrage konnte nicht bearbeitet werden.'),
+      };
     }
   };
 
