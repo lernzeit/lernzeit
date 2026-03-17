@@ -194,6 +194,12 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   };
 
   const activeCodes = invitationCodes.filter(code => !code.is_used && new Date(code.expires_at) > new Date());
+  const pendingChildren = linkedChildren.filter((child) => (summaries.get(child.id)?.pendingRequests || 0) > 0);
+  const totalPendingRequests = pendingChildren.reduce(
+    (sum, child) => sum + (summaries.get(child.id)?.pendingRequests || 0),
+    0,
+  );
+  const defaultTab = totalPendingRequests > 0 ? 'requests' : 'children';
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -208,6 +214,22 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           Aktualisieren
         </Button>
       </div>
+
+      {totalPendingRequests > 0 && (
+        <Card className="border-primary/30 bg-primary/5 shadow-card">
+          <CardContent className="py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-sm">Neue Bildschirmzeit-Anfragen verfügbar</p>
+              <p className="text-xs text-muted-foreground">
+                {pendingChildren.map((child) => child.name || 'Kind').join(', ')} {pendingChildren.length === 1 ? 'hat' : 'haben'} {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'} gestellt.
+              </p>
+            </div>
+            <Badge variant="secondary" className="shrink-0">
+              {totalPendingRequests} neu
+            </Badge>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trial Banner */}
       {trialDaysLeft !== null && trialDaysLeft > 0 && !isPremium && (
@@ -253,11 +275,16 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       )}
 
       {/* Main Tabs - reduced to 4 */}
-      <Tabs defaultValue="children" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
+            {totalPendingRequests > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 text-[10px]">
+                {totalPendingRequests}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="children" className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />

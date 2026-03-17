@@ -131,7 +131,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const totalSessionSeconds = sumTimeEarned(gameSessionsRes.data) + sumTimeEarned(learningSessionsRes.data);
   const todaySessionMinutes = Math.ceil(totalSessionSeconds / 60);
 
-  const achievementDetails: TodayAchievementDetail[] = (achievementsRes.data || [])
+  const rawAchievementDetails: TodayAchievementDetail[] = (achievementsRes.data || [])
     .filter((achievement: any) => (achievement.achievements_template?.reward_minutes || 0) > 0)
     .map((achievement: any) => ({
       name: achievement.achievements_template?.name || 'Unbekannt',
@@ -140,7 +140,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       earned_at: achievement.earned_at,
     }));
 
-  const todayAchievementMinutes = achievementDetails.reduce(
+  const rawAchievementMinutes = rawAchievementDetails.reduce(
     (sum, achievement) => sum + achievement.reward_minutes,
     0,
   );
@@ -155,12 +155,28 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
     ? (isWeekend ? childSettingsRes.data.weekend_max_minutes : childSettingsRes.data.weekday_max_minutes)
     : (isWeekend ? 60 : 30);
 
-  const rawEarnedToday = todaySessionMinutes + todayAchievementMinutes;
-  const totalEarnedToday = Math.min(rawEarnedToday, dailyLimit);
+  const cappedSessionMinutes = Math.min(todaySessionMinutes, dailyLimit);
+  const maxAchievementMinutesWithinLimit = Math.max(0, dailyLimit - cappedSessionMinutes);
+  let remainingAchievementMinutes = maxAchievementMinutesWithinLimit;
+  const achievementDetails = rawAchievementDetails.map((achievement) => {
+    const effectiveReward = Math.min(achievement.reward_minutes, remainingAchievementMinutes);
+    remainingAchievementMinutes -= effectiveReward;
+
+    return {
+      ...achievement,
+      reward_minutes: effectiveReward,
+    };
+  }).filter((achievement) => achievement.reward_minutes > 0);
+
+  const todayAchievementMinutes = achievementDetails.reduce(
+    (sum, achievement) => sum + achievement.reward_minutes,
+    0,
+  );
+  const totalEarnedToday = cappedSessionMinutes + todayAchievementMinutes;
   const availableMinutes = Math.max(0, totalEarnedToday - totalClaimedToday);
 
   return {
-    todaySessionMinutes,
+    todaySessionMinutes: cappedSessionMinutes,
     todayAchievementMinutes,
     totalEarnedToday,
     todayApprovedMinutes,
