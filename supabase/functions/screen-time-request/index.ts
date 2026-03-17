@@ -53,6 +53,20 @@ function getSafeErrorMessage(error: Error): string {
   return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
 
+function getUtcDayRange(referenceDate = new Date()) {
+  const start = new Date(referenceDate);
+  start.setUTCHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return {
+    start,
+    end,
+    dateKey: start.toISOString().split('T')[0],
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
