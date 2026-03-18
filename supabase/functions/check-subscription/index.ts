@@ -242,10 +242,10 @@ serve(async (req) => {
       });
     }
 
-    const subscriptionEnd = new Date(activeSub.current_period_end * 1000).toISOString();
+    const subscriptionEnd = toISOString(activeSub.current_period_end);
     const productId = activeSub.items.data[0].price.product;
     const isPremium = productId === PREMIUM_PRODUCT_ID;
-    const trialEnd = activeSub.trial_end ? new Date(activeSub.trial_end * 1000).toISOString() : null;
+    const trialEnd = toISOString(activeSub.trial_end);
 
     logStep("Subscription found", {
       status: activeSub.status,
