@@ -264,7 +264,7 @@ serve(async (req) => {
         status: activeSub.status,
         stripe_customer_id: customerId,
         stripe_subscription_id: activeSub.id,
-        current_period_start: new Date(activeSub.current_period_start * 1000).toISOString(),
+        current_period_start: toISOString(activeSub.current_period_start),
         current_period_end: subscriptionEnd,
         trial_end: trialEnd,
         updated_at: new Date().toISOString(),
