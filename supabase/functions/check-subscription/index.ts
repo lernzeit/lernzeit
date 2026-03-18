@@ -14,6 +14,21 @@ const logStep = (step: string, details?: any) => {
 
 const PREMIUM_PRODUCT_ID = "prod_TyldQAhtysrjzz";
 
+/**
+ * Safely convert a Stripe timestamp (number in seconds or ISO string) to an ISO string.
+ */
+function toISOString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === 'number') {
+    return new Date(value * 1000).toISOString();
+  }
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
+}
+
 // Default values matching the DB column defaults
 const DEFAULT_CHILD_SETTINGS = {
   weekday_max_minutes: 30,
@@ -227,10 +242,10 @@ serve(async (req) => {
       });
     }
 
-    const subscriptionEnd = new Date(activeSub.current_period_end * 1000).toISOString();
+    const subscriptionEnd = toISOString(activeSub.current_period_end);
     const productId = activeSub.items.data[0].price.product;
     const isPremium = productId === PREMIUM_PRODUCT_ID;
-    const trialEnd = activeSub.trial_end ? new Date(activeSub.trial_end * 1000).toISOString() : null;
+    const trialEnd = toISOString(activeSub.trial_end);
 
     logStep("Subscription found", {
       status: activeSub.status,
@@ -249,7 +264,7 @@ serve(async (req) => {
         status: activeSub.status,
         stripe_customer_id: customerId,
         stripe_subscription_id: activeSub.id,
-        current_period_start: new Date(activeSub.current_period_start * 1000).toISOString(),
+        current_period_start: toISOString(activeSub.current_period_start),
         current_period_end: subscriptionEnd,
         trial_end: trialEnd,
         updated_at: new Date().toISOString(),
