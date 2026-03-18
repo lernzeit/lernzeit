@@ -14,6 +14,21 @@ const logStep = (step: string, details?: any) => {
 
 const PREMIUM_PRODUCT_ID = "prod_TyldQAhtysrjzz";
 
+/**
+ * Safely convert a Stripe timestamp (number in seconds or ISO string) to an ISO string.
+ */
+function toISOString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === 'number') {
+    return new Date(value * 1000).toISOString();
+  }
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
+}
+
 // Default values matching the DB column defaults
 const DEFAULT_CHILD_SETTINGS = {
   weekday_max_minutes: 30,
