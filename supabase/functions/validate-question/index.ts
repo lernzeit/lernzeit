@@ -51,7 +51,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-lite-preview',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: getSystemPrompt() },
           { role: 'user', content: validationPrompt }

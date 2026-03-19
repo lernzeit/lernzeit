@@ -475,7 +475,7 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-lite-preview',
+        model: 'google/gemini-2.5-flash',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
       }),
