@@ -123,6 +123,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
+  const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
   // Save emoji feedback to question_feedback table
@@ -230,6 +231,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setIsCorrect(false);
     setShowExplanation(false);
     setSelectedFeedback(null);
+    setSpellingHint(null);
     clearExplanation();
   };
 
@@ -297,6 +299,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             if (!error && data?.accepted) {
               console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.reason})`);
               correct = true;
+              // Show spelling hint when AI accepted despite typo
+              setSpellingHint(freeTextCorrect);
             }
           } catch (e) {
             console.warn('AI recheck failed, using local result:', e);
@@ -885,6 +889,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       </>
                     )}
                   </div>
+                  {isCorrect && spellingHint && (
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                      ✏️ Richtige Schreibweise: <strong>{spellingHint}</strong>
+                    </p>
+                  )}
                   {!isCorrect && (
                     <p className="text-sm text-muted-foreground">
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
