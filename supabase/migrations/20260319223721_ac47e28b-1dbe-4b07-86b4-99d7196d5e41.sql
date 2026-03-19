@@ -1,0 +1,2 @@
+ALTER TABLE public.game_sessions DROP CONSTRAINT game_sessions_category_check;
+ALTER TABLE public.game_sessions ADD CONSTRAINT game_sessions_category_check CHECK (category = ANY (ARRAY['math', 'german', 'english', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin', 'science', 'mathematik', 'deutsch', 'englisch', 'geographie', 'geschichte', 'physik', 'biologie', 'chemie', 'unknown']));
