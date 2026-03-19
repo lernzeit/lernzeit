@@ -16,9 +16,11 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const results = {
+    const results: Record<string, number | string> = {
       duplicates_removed: 0,
       reported_cleaned: 0,
+      match_fixed: 0,
+      match_removed: 0,
       old_rotated: 0,
       timestamp: new Date().toISOString(),
     };
@@ -96,7 +98,48 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 3. Rotate old, heavily-served questions ──
+    // ── 3. Fix or remove broken MATCH questions ──
+    // MATCH questions need options with leftItems/rightItems derived from correct_answer
+    let matchFixed = 0;
+    let matchRemoved = 0;
+    const { data: matchQuestions, error: matchErr } = await supabase
+      .from("ai_question_cache")
+      .select("id, correct_answer, options, question_type")
+      .eq("question_type", "MATCH")
+      .limit(500);
+
+    if (!matchErr && matchQuestions) {
+      for (const q of matchQuestions) {
+        const ca = q.correct_answer;
+        const opts = q.options;
+        // Check if options already has leftItems/rightItems
+        if (opts && typeof opts === 'object' && (opts as any).leftItems && (opts as any).rightItems) {
+          continue; // Already properly structured
+        }
+        // Try to fix from correct_answer
+        if (ca && typeof ca === 'object' && !Array.isArray(ca) && Object.keys(ca as object).length >= 3) {
+          const leftItems = Object.keys(ca as object);
+          const rightItems = Object.values(ca as object) as string[];
+          const shuffledRight = [...rightItems].sort(() => Math.random() - 0.5);
+          const { error: updateErr } = await supabase
+            .from("ai_question_cache")
+            .update({ options: { leftItems, rightItems: shuffledRight } })
+            .eq("id", q.id);
+          if (!updateErr) matchFixed++;
+        } else {
+          // Broken MATCH question — remove it
+          const { error: delErr } = await supabase
+            .from("ai_question_cache")
+            .delete()
+            .eq("id", q.id);
+          if (!delErr) matchRemoved++;
+        }
+      }
+    }
+    results.match_fixed = matchFixed;
+    results.match_removed = matchRemoved;
+
+    // ── 4. Rotate old, heavily-served questions ──
     // Remove questions served 10+ times that are older than 30 days
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     
