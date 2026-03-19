@@ -117,11 +117,12 @@ serve(async (req) => {
 
     // Check if user is a child – if so, look up parent's email
     let emailToCheck = user.email;
-    const { data: relationship } = await supabaseClient
+    const { data: relationships } = await supabaseClient
       .from('parent_child_relationships')
       .select('parent_id')
       .eq('child_id', user.id)
-      .maybeSingle();
+      .limit(1);
+    const relationship = relationships?.[0] || null;
 
     if (relationship?.parent_id) {
       const { data: parentUser } = await supabaseClient.auth.admin.getUserById(relationship.parent_id);
