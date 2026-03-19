@@ -806,7 +806,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                         : []
                   }
                   hasAnswered={hasAnswered}
-                  onMatch={(left, right) => setMatches(prev => ({ ...prev, [left]: right }))}
+                  onMatch={(left, right) => {
+                    setMatches(prev => {
+                      if (!right) {
+                        const nextMatches = { ...prev };
+                        delete nextMatches[left];
+                        return nextMatches;
+                      }
+
+                      const nextMatches = Object.fromEntries(
+                        Object.entries(prev).filter(([, existingRight]) => existingRight !== right)
+                      );
+
+                      nextMatches[left] = right;
+                      return nextMatches;
+                    });
+                  }}
                 />
               )}
 
@@ -1209,104 +1224,120 @@ const MatchRenderer: React.FC<{
     return correctPairs.some(([l, r]) => l === left && r === right);
   };
 
-  // Get unmatched items for cleaner UI
-  const unmatchedLeftItems = leftItems.filter(item => !matches[item]);
   const usedRightItems = Object.values(matches);
-  const availableRightItems = rightItems.filter(item => !usedRightItems.includes(item));
+  const visibleLeftItems = leftItems;
+  const visibleRightItems = rightItems;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Wähle links, dann rechts um zuzuordnen:</p>
-      
-      {/* Stacked layout for better mobile UX */}
-      <div className="space-y-6">
-        {/* Left items - terms to match */}
+      <p className="text-sm text-muted-foreground">Tippe links auf einen Begriff und dann rechts auf die passende Zuordnung.</p>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Begriffe</div>
-          <div className="flex flex-wrap gap-2">
-            {unmatchedLeftItems.map((item) => (
-              <Button
-                key={item}
-                variant={selectedLeft === item ? 'default' : 'outline'}
-                size="sm"
-                className={cn(
-                  "h-auto py-2 px-3 text-sm whitespace-normal text-left",
-                  selectedLeft === item && "ring-2 ring-primary ring-offset-2"
-                )}
-                onClick={() => !hasAnswered && setSelectedLeft(selectedLeft === item ? null : item)}
-                disabled={hasAnswered}
-              >
-                {item}
-              </Button>
-            ))}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {visibleLeftItems.map((item) => {
+              const isMatched = Boolean(matches[item]);
+              return (
+                <Button
+                  key={item}
+                  variant={selectedLeft === item ? 'default' : 'outline'}
+                  size="sm"
+                  className={cn(
+                    "h-auto min-h-11 justify-start py-3 px-3 text-sm whitespace-normal text-left",
+                    isMatched && "border-primary/40 bg-primary/10",
+                    selectedLeft === item && "ring-2 ring-primary ring-offset-2"
+                  )}
+                  onClick={() => {
+                    if (hasAnswered) return;
+                    setSelectedLeft(selectedLeft === item ? null : item);
+                  }}
+                  disabled={hasAnswered}
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span>{item}</span>
+                    {matches[item] && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
+                  </div>
+                </Button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right items - targets to match to */}
-        {selectedLeft && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Ordne „{selectedLeft}" zu:
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {availableRightItems.map((item) => (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Zuordnungen</div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {visibleRightItems.map((item) => {
+              const isUsed = usedRightItems.includes(item);
+              const isActiveTarget = Boolean(selectedLeft) && matches[selectedLeft] !== item;
+
+              return (
                 <Button
                   key={item}
                   variant="outline"
                   size="sm"
-                  className="h-auto py-2 px-3 text-sm whitespace-normal text-left hover:bg-primary/10 hover:border-primary"
+                  className={cn(
+                    "h-auto min-h-11 justify-start py-3 px-3 text-sm whitespace-normal text-left",
+                    isUsed && "border-primary/40 bg-primary/10",
+                    isActiveTarget && "hover:border-primary hover:bg-primary/10"
+                  )}
                   onClick={() => {
+                    if (hasAnswered || !selectedLeft) return;
                     onMatch(selectedLeft, item);
                     setSelectedLeft(null);
                   }}
+                  disabled={hasAnswered || !selectedLeft}
                 >
-                  {item}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Already matched pairs */}
-        {Object.keys(matches).length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Zugeordnet ({Object.keys(matches).length})
-            </div>
-            <div className="space-y-2">
-              {Object.entries(matches).map(([left, right]) => {
-                const isCorrect = hasAnswered && isCorrectMatch(left, right);
-                const isWrong = hasAnswered && !isCorrectMatch(left, right);
-                return (
-                  <div 
-                    key={left}
-                    className={cn(
-                      "flex items-start gap-2 p-2 rounded-lg border text-sm",
-                      isCorrect && "bg-green-50 border-green-300 dark:bg-green-950",
-                      isWrong && "bg-red-50 border-red-300 dark:bg-red-950",
-                      !hasAnswered && "bg-muted/50"
-                    )}
-                  >
-                    <span className="font-medium flex-shrink-0">{left}</span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="flex-1">{right}</span>
-                    {!hasAnswered && (
-                      <button 
-                        onClick={() => onMatch(left, '')} 
-                        className="text-muted-foreground hover:text-destructive ml-auto"
-                      >
-                        ✕
-                      </button>
-                    )}
-                    {isCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
-                    {isWrong && <X className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span>{item}</span>
+                    {isUsed && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
                   </div>
-                );
-              })}
-            </div>
+                </Button>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
+
+      {Object.keys(matches).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Zugeordnet ({Object.keys(matches).length})
+          </div>
+          <div className="space-y-2">
+            {Object.entries(matches).map(([left, right]) => {
+              const isCorrect = hasAnswered && isCorrectMatch(left, right);
+              const isWrong = hasAnswered && !isCorrectMatch(left, right);
+
+              return (
+                <div
+                  key={left}
+                  className={cn(
+                    "flex items-start gap-2 rounded-lg border p-2 text-sm",
+                    isCorrect && "bg-green-50 border-green-300 dark:bg-green-950",
+                    isWrong && "bg-red-50 border-red-300 dark:bg-red-950",
+                    !hasAnswered && "bg-muted/50"
+                  )}
+                >
+                  <span className="font-medium flex-shrink-0">{left}</span>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="flex-1">{right}</span>
+                  {!hasAnswered && (
+                    <button
+                      onClick={() => onMatch(left, '')}
+                      className="ml-auto text-muted-foreground hover:text-destructive"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  {isCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                  {isWrong && <X className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
