@@ -534,8 +534,25 @@ serve(async (req) => {
     }
   }
 
+  // ── Step 2c: Load active prompt rules ─────────────────────────────────────
+  let rulesBlock = '';
+  try {
+    const { data: rules } = await adminClient
+      .from('prompt_rules')
+      .select('rule_text')
+      .eq('is_active', true);
+
+    if (rules && rules.length > 0) {
+      rulesBlock = '\n\nZUSÄTZLICHE QUALITÄTSREGELN (aus Nutzer-Feedback):\n' +
+        rules.map((r: { rule_text: string }) => `- ${r.rule_text}`).join('\n');
+      console.log(`📏 Injecting ${rules.length} prompt rules into cache-prefill`);
+    }
+  } catch (rulesErr) {
+    console.warn('Could not load prompt rules:', rulesErr);
+  }
+
   // ── Step 3: Generate questions with rate-limit-safe delays ───────────────
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt() + rulesBlock;
   let generated = 0;
   let failed = 0;
   const results: { grade: number; subject: string; type: string; status: string }[] = [];
