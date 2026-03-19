@@ -299,15 +299,32 @@ serve(async (req) => {
     }
 
     // Validate and enhance question structure
+    const rawType = question.question_type || question.questionType;
+    const rawCorrectAnswer = question.correct_answer || question.correctAnswer;
+    let rawOptions = question.options || null;
+
+    // For MATCH questions: extract leftItems/rightItems from correct_answer object
+    if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
+      const leftItems = Object.keys(rawCorrectAnswer);
+      const rightItems = Object.values(rawCorrectAnswer) as string[];
+      // Shuffle rightItems for display so it's not trivially solvable
+      const shuffledRight = [...rightItems].sort(() => Math.random() - 0.5);
+      rawOptions = {
+        leftItems,
+        rightItems: shuffledRight,
+      };
+      console.log(`🔀 MATCH question: ${leftItems.length} pairs, leftItems: ${leftItems.join(', ')}`);
+    }
+
     const enhancedQuestion = {
       id: crypto.randomUUID(),
       grade,
       subject,
       difficulty,
       questionText: question.question_text || question.questionText,
-      questionType: question.question_type || question.questionType,
-      correctAnswer: question.correct_answer || question.correctAnswer,
-      options: question.options || null,
+      questionType: rawType,
+      correctAnswer: rawCorrectAnswer,
+      options: rawOptions,
       hint: question.hint || null,
       task: question.task || null,
       createdAt: new Date().toISOString()
