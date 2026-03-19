@@ -298,6 +298,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             if (!error && data?.accepted) {
               console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.reason})`);
               correct = true;
+              // Show spelling hint when AI accepted despite typo
+              setSpellingHint(freeTextCorrect);
             }
           } catch (e) {
             console.warn('AI recheck failed, using local result:', e);
