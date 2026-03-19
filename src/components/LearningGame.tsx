@@ -806,7 +806,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                         : []
                   }
                   hasAnswered={hasAnswered}
-                  onMatch={(left, right) => setMatches(prev => ({ ...prev, [left]: right }))}
+                  onMatch={(left, right) => {
+                    setMatches(prev => {
+                      if (!right) {
+                        const nextMatches = { ...prev };
+                        delete nextMatches[left];
+                        return nextMatches;
+                      }
+
+                      const nextMatches = Object.fromEntries(
+                        Object.entries(prev).filter(([, existingRight]) => existingRight !== right)
+                      );
+
+                      nextMatches[left] = right;
+                      return nextMatches;
+                    });
+                  }}
                 />
               )}
 
