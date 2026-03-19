@@ -90,11 +90,12 @@ export function useSubscription(): SubscriptionState {
       // Fallback: check local subscriptions table
       try {
         let userIdToCheck = user.id;
-        const { data: relationship } = await supabase
+        const { data: relationships } = await supabase
           .from('parent_child_relationships')
           .select('parent_id')
           .eq('child_id', user.id)
-          .maybeSingle();
+          .limit(1);
+        const relationship = relationships?.[0] || null;
         if (relationship?.parent_id) userIdToCheck = relationship.parent_id;
 
         const { data: sub } = await supabase
