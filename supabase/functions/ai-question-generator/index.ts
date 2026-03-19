@@ -205,7 +205,7 @@ serve(async (req) => {
 
     const systemPrompt = getSystemPrompt() + rulesBlock;
 
-    const models = ['google/gemini-3.1-flash-lite-preview'];
+    const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
     let content: string | null = null;
 
     for (const model of models) {
