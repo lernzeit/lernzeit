@@ -798,7 +798,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   leftItems={question.options?.leftItems || []}
                   rightItems={question.options?.rightItems || []}
                   matches={matches}
-                  correctPairs={question.correctAnswer?.pairs || []}
+                  correctPairs={
+                    question.correctAnswer?.pairs && Array.isArray(question.correctAnswer.pairs)
+                      ? question.correctAnswer.pairs
+                      : question.correctAnswer && typeof question.correctAnswer === 'object' && !Array.isArray(question.correctAnswer)
+                        ? Object.entries(question.correctAnswer).map(([l, r]) => [l, String(r)] as [string, string])
+                        : []
+                  }
                   hasAnswered={hasAnswered}
                   onMatch={(left, right) => setMatches(prev => ({ ...prev, [left]: right }))}
                 />
