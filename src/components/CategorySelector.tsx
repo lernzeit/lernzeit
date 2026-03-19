@@ -106,7 +106,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         const { data: visibilitySettings } = await supabase
           .from('child_subject_visibility')
           .select('subject, is_visible, is_priority')
-          .eq('parent_id', relationships.parent_id)
+          .eq('parent_id', relationship.parent_id)
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
