@@ -98,13 +98,15 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', user.id)
-        .maybeSingle();
+        .limit(1);
 
-      if (relationships?.parent_id) {
+      const relationship = relationships?.[0] || null;
+
+      if (relationship?.parent_id) {
         const { data: visibilitySettings } = await supabase
           .from('child_subject_visibility')
           .select('subject, is_visible, is_priority')
-          .eq('parent_id', relationships.parent_id)
+          .eq('parent_id', relationship.parent_id)
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
