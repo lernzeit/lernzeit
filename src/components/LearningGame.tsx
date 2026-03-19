@@ -123,6 +123,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
+  const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
   // Save emoji feedback to question_feedback table
