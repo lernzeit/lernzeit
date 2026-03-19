@@ -889,6 +889,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       </>
                     )}
                   </div>
+                  {isCorrect && spellingHint && (
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                      ✏️ Richtige Schreibweise: <strong>{spellingHint}</strong>
+                    </p>
+                  )}
                   {!isCorrect && (
                     <p className="text-sm text-muted-foreground">
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
