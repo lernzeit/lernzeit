@@ -568,13 +568,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
           // Check if streak increased
           try {
-            const { useStreak: _unused, ...rest } = await import('@/hooks/useStreak');
             // Calculate fresh streak from DB
             const [lsRes, gsRes] = await Promise.all([
-              (await import('@/integrations/supabase/client')).supabase
-                .from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
-              (await import('@/integrations/supabase/client')).supabase
-                .from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
+              supabase.from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
+              supabase.from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
             ]);
             const allDates = new Set<string>();
             lsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
