@@ -560,10 +560,47 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               timeSpentSeconds,
             });
             if (challengeCompleted) {
-              toast.success('🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!', { duration: 4000 });
+              setDailyChallengeCompleted(true);
             }
           } catch (error) {
             console.error('❌ Error checking daily challenge:', error);
+          }
+
+          // Check if streak increased
+          try {
+            const { useStreak: _unused, ...rest } = await import('@/hooks/useStreak');
+            // Calculate fresh streak from DB
+            const [lsRes, gsRes] = await Promise.all([
+              (await import('@/integrations/supabase/client')).supabase
+                .from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
+              (await import('@/integrations/supabase/client')).supabase
+                .from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
+            ]);
+            const allDates = new Set<string>();
+            lsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
+            gsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
+            const sorted = Array.from(allDates).sort((a, b) => b.localeCompare(a));
+            let freshStreak = 0;
+            if (sorted.length > 0) {
+              const today = new Date().toISOString().split('T')[0];
+              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+              if (sorted[0] === today || sorted[0] === yesterday) {
+                let checkDate = new Date();
+                if (sorted[0] === yesterday) checkDate = new Date(Date.now() - 86400000);
+                for (let i = 0; i < sorted.length; i++) {
+                  const expected = new Date(checkDate.getTime() - i * 86400000).toISOString().split('T')[0];
+                  if (sorted[i] === expected) freshStreak++;
+                  else break;
+                }
+              }
+            }
+            const previousStreak = streakBeforeSession.current ?? 0;
+            if (freshStreak > previousStreak) {
+              setNewStreakValue(freshStreak);
+              setShowStreakAnimation(true);
+            }
+          } catch (error) {
+            console.error('❌ Error checking streak:', error);
           }
         } else {
           console.error('❌ Failed to save session:', result.error);
