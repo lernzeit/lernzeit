@@ -666,6 +666,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             onClose={() => setShowAchievementPopup(false)}
           />
         )}
+
+        {/* Streak Animation */}
+        {showStreakAnimation && (
+          <StreakAnimation
+            newStreak={newStreakValue}
+            onClose={() => setShowStreakAnimation(false)}
+          />
+        )}
+
+        {/* Daily Challenge Banner */}
+        {dailyChallengeCompleted && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold text-sm shadow-2xl animate-scale-in-bounce pointer-events-none">
+            🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!
+          </div>
+        )}
       </div>
     );
   }
