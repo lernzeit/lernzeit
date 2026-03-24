@@ -127,6 +127,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
   const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  const [newStreakValue, setNewStreakValue] = useState(0);
+  const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
+  const streakBeforeSession = useRef<number | null>(null);
+
+  // Track streak before session starts
+  const { streak: currentStreak } = useStreak(user?.id);
+  useEffect(() => {
+    if (streakBeforeSession.current === null && currentStreak !== undefined) {
+      streakBeforeSession.current = currentStreak;
+    }
+  }, [currentStreak]);
 
   // Save emoji feedback to question_feedback table
   const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
