@@ -21,48 +21,15 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ accepted: false, reason: 'Config error' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const prompt = `Du bist ein Lehrer, der die Antwort eines Schülers (Klasse ${grade}, Fach: ${subject}) prüft.
-
-Frage: "${question}"
-Korrekte Antwort: "${correctAnswer}"
-Antwort des Schülers: "${userAnswer}"
-
-Prüfe, ob die Antwort des Schülers inhaltlich korrekt ist. Berücksichtige:
-- Tippfehler (z.B. "Altlantik" statt "Atlantik")
-- Synonyme (z.B. "Atlantik" statt "Atlantischer Ozean")
-- Abkürzungen (z.B. "BRD" statt "Bundesrepublik Deutschland")
-- Umgangssprachliche Varianten (z.B. "Mathe" statt "Mathematik")
-- Groß-/Kleinschreibung ignorieren
-
-WICHTIG: Sei großzügig bei kleinen Tippfehlern, aber die Antwort muss inhaltlich stimmen.
-Antworte NUR mit gültigem JSON:
-{"accepted": true/false, "reason": "kurze Begründung"}`;
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-        }),
-        signal: controller.signal,
-      });
+      const { response } = await callAI({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+      }, controller.signal);
 
       clearTimeout(timeout);
 
