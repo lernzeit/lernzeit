@@ -17,7 +17,7 @@ const HeroSection = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+    <section ref={sectionRef} className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-safe-top">
       <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
       <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse" />
       <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
