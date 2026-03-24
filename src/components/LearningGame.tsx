@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,10 @@ import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
+import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 import { useReviewQueue } from '@/hooks/useReviewQueue';
+import { useStreak } from '@/hooks/useStreak';
 
 interface LearningGameProps {
   grade: number;
@@ -125,6 +127,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
   const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  const [newStreakValue, setNewStreakValue] = useState(0);
+  const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
+  const streakBeforeSession = useRef<number | null>(null);
+
+  // Track streak before session starts
+  const { streak: currentStreak } = useStreak(user?.id);
+  useEffect(() => {
+    if (streakBeforeSession.current === null && currentStreak !== undefined) {
+      streakBeforeSession.current = currentStreak;
+    }
+  }, [currentStreak]);
 
   // Save emoji feedback to question_feedback table
   const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
@@ -546,10 +560,44 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               timeSpentSeconds,
             });
             if (challengeCompleted) {
-              toast.success('🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!', { duration: 4000 });
+              setDailyChallengeCompleted(true);
             }
           } catch (error) {
             console.error('❌ Error checking daily challenge:', error);
+          }
+
+          // Check if streak increased
+          try {
+            // Calculate fresh streak from DB
+            const [lsRes, gsRes] = await Promise.all([
+              supabase.from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
+              supabase.from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
+            ]);
+            const allDates = new Set<string>();
+            lsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
+            gsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
+            const sorted = Array.from(allDates).sort((a, b) => b.localeCompare(a));
+            let freshStreak = 0;
+            if (sorted.length > 0) {
+              const today = new Date().toISOString().split('T')[0];
+              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+              if (sorted[0] === today || sorted[0] === yesterday) {
+                let checkDate = new Date();
+                if (sorted[0] === yesterday) checkDate = new Date(Date.now() - 86400000);
+                for (let i = 0; i < sorted.length; i++) {
+                  const expected = new Date(checkDate.getTime() - i * 86400000).toISOString().split('T')[0];
+                  if (sorted[i] === expected) freshStreak++;
+                  else break;
+                }
+              }
+            }
+            const previousStreak = streakBeforeSession.current ?? 0;
+            if (freshStreak > previousStreak) {
+              setNewStreakValue(freshStreak);
+              setShowStreakAnimation(true);
+            }
+          } catch (error) {
+            console.error('❌ Error checking streak:', error);
           }
         } else {
           console.error('❌ Failed to save session:', result.error);
@@ -614,6 +662,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             achievements={newAchievements}
             onClose={() => setShowAchievementPopup(false)}
           />
+        )}
+
+        {/* Streak Animation */}
+        {showStreakAnimation && (
+          <StreakAnimation
+            newStreak={newStreakValue}
+            onClose={() => setShowStreakAnimation(false)}
+          />
+        )}
+
+        {/* Daily Challenge Banner */}
+        {dailyChallengeCompleted && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold text-sm shadow-2xl animate-scale-in-bounce pointer-events-none">
+            🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!
+          </div>
         )}
       </div>
     );
