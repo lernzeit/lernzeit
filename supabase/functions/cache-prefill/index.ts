@@ -304,7 +304,7 @@ function getTypeInstructions(questionType: string): string {
 // ── Gemini 2.5 Pro API Call ───────────────────────────────────────────────────
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },

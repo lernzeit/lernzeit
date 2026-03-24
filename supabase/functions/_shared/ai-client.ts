@@ -8,11 +8,11 @@ const GEMINI_GATEWAY = 'https://generativelanguage.googleapis.com/v1beta/openai/
 
 // Map Lovable model names to Gemini-native model names
 const MODEL_MAP: Record<string, string> = {
-  'google/gemini-3-flash-preview': 'gemini-2.0-flash',
-  'google/gemini-3.1-flash-lite-preview': 'gemini-2.0-flash-lite',
-  'google/gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
-  'google/gemini-2.5-flash-lite': 'gemini-2.0-flash-lite',
-  'google/gemini-2.5-pro': 'gemini-2.5-pro-preview-05-06',
+  'google/gemini-3-flash-preview': 'gemini-2.5-flash',
+  'google/gemini-3.1-flash-lite-preview': 'gemini-2.5-flash-lite-preview-06-17',
+  'google/gemini-2.5-flash': 'gemini-2.5-flash',
+  'google/gemini-2.5-flash-lite': 'gemini-2.5-flash-lite-preview-06-17',
+  'google/gemini-2.5-pro': 'gemini-2.5-pro',
 };
 
 interface AiRequestOptions {
@@ -78,7 +78,7 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
     throw new Error('Neither LOVABLE_API_KEY nor GEMINI_API_KEY is configured');
   }
 
-  const geminiModel = MODEL_MAP[options.model] || 'gemini-2.0-flash';
+  const geminiModel = MODEL_MAP[options.model] || 'gemini-2.5-flash';
   console.log(`🔄 Using Gemini fallback with model: ${geminiModel}`);
 
   const geminiBody: Record<string, unknown> = {
