@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,27 +46,15 @@ serve(async (req) => {
     
     console.log(`📚 Generating explanation for Grade ${grade} ${subject}`);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
     const prompt = buildExplanationPrompt(question, correctAnswer, userAnswer, grade, subject);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: getSystemPrompt(grade) },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3, // Lower temperature for consistent explanations
-      }),
+    const { response } = await callAI({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: getSystemPrompt(grade) },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
     });
 
     if (!response.ok) {
@@ -78,7 +67,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      throw new Error(`AI Gateway error: ${response.status}`);
+      throw new Error(`AI error: ${response.status}`);
     }
 
     const result = await response.json();

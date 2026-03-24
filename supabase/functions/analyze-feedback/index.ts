@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -468,17 +469,10 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
   }
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-      }),
+    const { response } = await callAI({
+      model: 'google/gemini-2.5-flash',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
     });
 
     if (!response.ok) {

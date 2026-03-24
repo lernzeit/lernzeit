@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -166,8 +167,9 @@ serve(async (req) => {
     console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY is not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      console.error('Neither LOVABLE_API_KEY nor GEMINI_API_KEY is configured');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Konfigurationsfehler. Bitte kontaktiere den Support.' 
@@ -211,20 +213,13 @@ serve(async (req) => {
     for (const model of models) {
       try {
         console.log(`🤖 Trying model: ${model}`);
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: prompt }
-            ],
-            temperature: 0.9,
-          }),
+        const { response, usedFallback } = await callAI({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.9,
         });
 
         if (!response.ok) {
@@ -237,25 +232,16 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
           }
-          if (response.status === 402) {
-            return new Response(JSON.stringify({ 
-              success: false, 
-              error: 'API-Kontingent erschöpft. Bitte kontaktiere den Support.' 
-            }), {
-              status: 402,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
           const errorText = await response.text();
-          console.error(`AI Gateway error with ${model}: ${response.status} - ${errorText}`);
-          continue; // Try next model
+          console.error(`AI error with ${model}: ${response.status} - ${errorText}`);
+          continue;
         }
 
         const result = await response.json();
         content = result.choices?.[0]?.message?.content || null;
 
         if (content) {
-          console.log(`✅ Got response from ${model}`);
+          console.log(`✅ Got response from ${model}${usedFallback ? ' (Gemini fallback)' : ''}`);
           break;
         } else {
           console.warn(`⚠️ Empty content from ${model}, trying next...`);

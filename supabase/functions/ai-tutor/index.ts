@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,27 +45,15 @@ serve(async (req) => {
 
     const { messages, question, correctAnswer, userAnswer, grade, subject }: TutorRequest = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
-
     const systemPrompt = buildSystemPrompt(grade, subject, question, correctAnswer, userAnswer);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      }),
+    const { response } = await callAI({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
+      stream: true,
     });
 
     if (!response.ok) {
@@ -74,15 +63,9 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: 'Payment required' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
       const t = await response.text();
-      console.error('AI gateway error:', response.status, t);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error('AI error:', response.status, t);
+      throw new Error(`AI error: ${response.status}`);
     }
 
     return new Response(response.body, {
