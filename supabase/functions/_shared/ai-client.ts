@@ -78,7 +78,7 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
     throw new Error('Neither LOVABLE_API_KEY nor GEMINI_API_KEY is configured');
   }
 
-  const geminiModel = MODEL_MAP[options.model] || 'gemini-2.0-flash';
+  const geminiModel = MODEL_MAP[options.model] || 'gemini-2.5-flash';
   console.log(`🔄 Using Gemini fallback with model: ${geminiModel}`);
 
   const geminiBody: Record<string, unknown> = {
