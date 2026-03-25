@@ -1402,8 +1402,8 @@ const MatchRenderer: React.FC<{
                       ✕
                     </button>
                   )}
-                  {isCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
-                  {isWrong && <X className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                  {isCorrect && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                  {isWrong && <X className="w-4 h-4 text-destructive flex-shrink-0" />}
                 </div>
               );
             })}
