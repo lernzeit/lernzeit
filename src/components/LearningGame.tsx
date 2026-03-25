@@ -1178,8 +1178,8 @@ const MultipleChoiceRenderer: React.FC<{
         variant={selectedOption === option ? 'default' : 'outline'}
         className={cn(
           "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
-          hasAnswered && option === correctAnswer && "border-green-500 bg-green-50 dark:bg-green-950",
-          hasAnswered && selectedOption === option && option !== correctAnswer && "border-red-500 bg-red-50 dark:bg-red-950"
+          hasAnswered && option === correctAnswer && "border-primary bg-primary/10",
+          hasAnswered && selectedOption === option && option !== correctAnswer && "border-destructive bg-destructive/10"
         )}
         onClick={() => !hasAnswered && onSelect(option)}
         disabled={hasAnswered}
