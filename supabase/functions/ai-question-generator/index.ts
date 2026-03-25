@@ -387,8 +387,8 @@ serve(async (req) => {
               difficulty: picked.difficulty,
               questionText: picked.question_text,
               questionType: picked.question_type,
-              correctAnswer: picked.correct_answer,
-              options: picked.options,
+              correctAnswer: tryParseStructuredValue(picked.correct_answer),
+              options: tryParseStructuredValue(picked.options),
               hint: picked.hint,
               task: picked.task,
               createdAt: new Date().toISOString()
