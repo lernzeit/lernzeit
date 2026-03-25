@@ -54,42 +54,30 @@ export function AdminDashboard() {
     try {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      const [{ data: allCache }, { data: recentCache }] = await Promise.all([
-        supabase.from('ai_question_cache').select('grade, subject, times_served'),
-        supabase.from('ai_question_cache').select('id').gte('created_at', weekAgo)
+      const [{ data: cacheStatsData }, { count: recentCount }] = await Promise.all([
+        supabase.rpc('get_cache_stats'),
+        supabase.from('ai_question_cache').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo)
       ]);
 
-      if (allCache) {
-        const totalCached = allCache.length;
-        const avgTimesServed = totalCached > 0
-          ? allCache.reduce((sum, q) => sum + (q.times_served || 0), 0) / totalCached
-          : 0;
+      if (cacheStatsData && Array.isArray(cacheStatsData)) {
+        const totalCached = cacheStatsData.reduce((sum, row) => sum + Number(row.total_questions), 0);
+        const totalServed = cacheStatsData.reduce((sum, row) => sum + Number(row.avg_times_served) * Number(row.total_questions), 0);
+        const avgTimesServed = totalCached > 0 ? totalServed / totalCached : 0;
 
-        // Count unique grade+subject combinations
-        const combos = new Map<string, { count: number; served: number }>();
-        allCache.forEach(q => {
-          const key = `${q.grade}-${q.subject}`;
-          const existing = combos.get(key) || { count: 0, served: 0 };
-          combos.set(key, { count: existing.count + 1, served: existing.served + (q.times_served || 0) });
-        });
-
-        const combinationList: CombinationStat[] = Array.from(combos.entries())
-          .map(([key, val]) => {
-            const [grade, ...subjectParts] = key.split('-');
-            return {
-              grade: parseInt(grade),
-              subject: subjectParts.join('-'),
-              count: val.count,
-              avg_served: val.count > 0 ? Math.round(val.served / val.count * 10) / 10 : 0
-            };
-          })
+        const combinationList: CombinationStat[] = cacheStatsData
+          .map(row => ({
+            grade: row.grade,
+            subject: row.subject,
+            count: Number(row.total_questions),
+            avg_served: Math.round(Number(row.avg_times_served) * 10) / 10
+          }))
           .sort((a, b) => b.count - a.count);
 
         setCacheStats({
           totalCached,
-          uniqueCombinations: combos.size,
+          uniqueCombinations: cacheStatsData.length,
           avgTimesServed: Math.round(avgTimesServed * 10) / 10,
-          addedThisWeek: recentCache?.length || 0
+          addedThisWeek: recentCount || 0
         });
         setCombinationStats(combinationList);
       }
