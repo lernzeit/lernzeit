@@ -1507,8 +1507,8 @@ const FillBlankRenderer: React.FC<{
           !value && !isActive && "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
           !value && isActive && "border-primary bg-primary/10 text-primary animate-pulse",
           value && !hasAnswered && "border-primary bg-primary/20 text-foreground cursor-pointer hover:bg-primary/30",
-          isCorrect && "border-green-500 bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300",
-          isWrong && "border-red-500 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300",
+          isCorrect && "border-primary bg-primary/20 text-primary",
+          isWrong && "border-destructive bg-destructive/20 text-destructive",
           hasAnswered && "cursor-default"
         )}
       >
