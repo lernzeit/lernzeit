@@ -200,7 +200,11 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
     (sum, child) => sum + (summaries.get(child.id)?.pendingRequests || 0),
     0,
   );
-  const defaultTab = totalPendingRequests > 0 ? 'requests' : 'children';
+  useEffect(() => {
+    if (totalPendingRequests > 0) {
+      setActiveTab('requests');
+    }
+  }, [totalPendingRequests]);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
