@@ -37,6 +37,111 @@ const tryParseJsonString = (value: unknown) => {
   }
 };
 
+const sanitizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+const extractOptionList = (value: unknown): string[] => {
+  const parsed = tryParseJsonString(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (typeof parsed !== 'string') return [];
+
+  return Array.from(
+    new Set(
+      parsed
+        .replace(/\r/g, '\n')
+        .split(/[\n,;|]+/)
+        .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+const resolveMultipleChoiceAnswerText = (
+  question: Pick<PreloadedQuestion, 'correctAnswer' | 'options' | 'task'>
+): string | null => {
+  const options = extractOptionList(question.options).length > 0
+    ? extractOptionList(question.options)
+    : extractOptionList(question.task);
+
+  const answer = question.correctAnswer;
+
+  if (typeof answer === 'number') {
+    return options[answer] ?? null;
+  }
+
+  if (typeof answer === 'string') {
+    const trimmed = answer.trim();
+    if (!trimmed) return null;
+
+    const numericIndex = Number(trimmed);
+    if (Number.isInteger(numericIndex) && options[numericIndex] !== undefined) {
+      return options[numericIndex];
+    }
+
+    return trimmed;
+  }
+
+  if (answer && typeof answer === 'object' && 'value' in answer) {
+    const nestedValue = (answer as { value?: unknown }).value;
+
+    if (typeof nestedValue === 'number') {
+      return options[nestedValue] ?? null;
+    }
+
+    if (typeof nestedValue === 'string') {
+      return nestedValue.trim() || null;
+    }
+  }
+
+  return null;
+};
+
+const isQuestionRenderable = (question: PreloadedQuestion): boolean => {
+  switch (question.questionType) {
+    case 'MULTIPLE_CHOICE':
+      return extractOptionList(question.options).length >= 2;
+    case 'FREETEXT':
+      return resolveMultipleChoiceAnswerText({
+        correctAnswer: question.correctAnswer,
+        options: question.options,
+        task: question.task
+      }) !== null || String(question.correctAnswer ?? '').trim().length > 0;
+    case 'SORT': {
+      const order = Array.isArray(question.correctAnswer)
+        ? question.correctAnswer
+        : question.correctAnswer?.order;
+      return Array.isArray(order) && order.length >= 2;
+    }
+    case 'MATCH': {
+      const leftItems = question.options?.leftItems;
+      const rightItems = question.options?.rightItems;
+      return Array.isArray(leftItems) && leftItems.length > 0 && Array.isArray(rightItems) && rightItems.length > 0;
+    }
+    case 'FILL_BLANK': {
+      const blanks = question.correctAnswer?.blanks || (Array.isArray(question.correctAnswer) ? question.correctAnswer : []);
+      return Array.isArray(blanks) && blanks.length > 0;
+    }
+    case 'DRAG_DROP':
+      return Array.isArray(question.options?.items) && question.options.items.length > 0
+        && Array.isArray(question.options?.categories) && question.options.categories.length > 0;
+    default:
+      return false;
+  }
+};
+
 const normalizeQuestionPayload = (question: PreloadedQuestion): PreloadedQuestion => {
   const normalizedQuestion = {
     ...question,
@@ -47,6 +152,30 @@ const normalizeQuestionPayload = (question: PreloadedQuestion): PreloadedQuestio
   // Ensure questionType is always set
   if (!normalizedQuestion.questionType) {
     normalizedQuestion.questionType = 'FREETEXT';
+  }
+
+  if (normalizedQuestion.questionType === 'MULTIPLE_CHOICE') {
+    const directOptions = extractOptionList(normalizedQuestion.options);
+    const taskOptions = extractOptionList(normalizedQuestion.task);
+    const normalizedOptions = directOptions.length >= 2
+      ? directOptions
+      : taskOptions.length >= 2
+        ? taskOptions
+        : directOptions;
+
+    if (normalizedOptions.length > 0) {
+      normalizedQuestion.options = normalizedOptions;
+    }
+
+    if ((!Array.isArray(normalizedQuestion.options) || normalizedQuestion.options.length < 2)) {
+      const fallbackAnswer = resolveMultipleChoiceAnswerText(normalizedQuestion);
+
+      if (fallbackAnswer) {
+        normalizedQuestion.questionType = 'FREETEXT';
+        normalizedQuestion.correctAnswer = fallbackAnswer;
+        normalizedQuestion.options = undefined;
+      }
+    }
   }
 
   // MATCH: reconstruct leftItems/rightItems from correctAnswer if missing
@@ -261,7 +390,20 @@ export const useQuestionPreloader = ({
         data.question.correctAnswer = data.question.correct_answer;
       }
       
-      return normalizeQuestionPayload(data.question);
+      const normalizedQuestion = normalizeQuestionPayload(data.question);
+
+      if (!isQuestionRenderable(normalizedQuestion)) {
+        console.warn('⚠️ Discarding unrenderable question payload:', {
+          questionType: normalizedQuestion.questionType,
+          questionText: normalizedQuestion.questionText,
+          options: normalizedQuestion.options,
+          correctAnswer: normalizedQuestion.correctAnswer,
+          task: normalizedQuestion.task
+        });
+        return null;
+      }
+
+      return normalizedQuestion;
     } catch (err) {
       if (signal?.aborted) return null;
       console.error('❌ Question fetch error:', err);

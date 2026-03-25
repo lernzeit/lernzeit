@@ -315,10 +315,75 @@ serve(async (req) => {
       console.log('🤖 AI Response received');
 
       // Validate question structure
-      rawType = question.question_type || question.questionType;
-      rawCorrectAnswer = question.correct_answer || question.correctAnswer;
-      rawOptions = question.options || null;
-      rawQuestionText = question.question_text || question.questionText;
+      rawType = question.question_type ?? question.questionType;
+      rawCorrectAnswer = tryParseStructuredValue(question.correct_answer ?? question.correctAnswer);
+      rawOptions = tryParseStructuredValue(question.options ?? null);
+      rawQuestionText = question.question_text ?? question.questionText;
+      const rawTask = typeof question.task === 'string' ? question.task : null;
+
+      if (rawType === 'MULTIPLE_CHOICE') {
+        const directOptions = extractChoiceOptions(rawOptions);
+        const taskOptions = extractChoiceOptions(rawTask);
+        const normalizedOptions = directOptions.length >= 2 ? directOptions : taskOptions;
+        rawOptions = normalizedOptions.length > 0 ? normalizedOptions : null;
+
+        if (typeof rawCorrectAnswer === 'string') {
+          const trimmed = rawCorrectAnswer.trim();
+          const index = Number(trimmed);
+          if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
+            rawCorrectAnswer = index;
+          }
+        }
+
+        if (typeof rawCorrectAnswer === 'object' && rawCorrectAnswer && 'value' in rawCorrectAnswer) {
+          const nestedValue = (rawCorrectAnswer as { value?: unknown }).value;
+          if (typeof nestedValue === 'string') {
+            const index = Number(nestedValue.trim());
+            if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
+              rawCorrectAnswer = index;
+            }
+          }
+        }
+      }
+
+      if (rawType === 'SORT') {
+        const normalizedOrder = Array.isArray(rawCorrectAnswer)
+          ? sanitizeStringArray(rawCorrectAnswer)
+          : sanitizeStringArray((rawCorrectAnswer as { order?: unknown } | null)?.order);
+
+        rawCorrectAnswer = { order: normalizedOrder };
+        rawOptions = shuffleArray(normalizedOrder);
+      }
+
+      if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
+        const metaKeys = ['pairs', 'value', 'order', 'blanks', 'alternatives', 'placements'];
+        const pairEntries = Object.entries(rawCorrectAnswer).filter(([key, value]) => !metaKeys.includes(key) && String(value).trim());
+
+        if (pairEntries.length > 0) {
+          rawCorrectAnswer = Object.fromEntries(pairEntries);
+          rawOptions = {
+            leftItems: pairEntries.map(([left]) => left),
+            rightItems: shuffleArray(pairEntries.map(([, right]) => String(right)))
+          };
+        }
+      }
+
+      if (rawType === 'FILL_BLANK') {
+        const blanks = extractFillBlankAnswers(rawCorrectAnswer);
+        rawCorrectAnswer = { blanks };
+      }
+
+      if (!isRenderableQuestionPayload(rawType, rawCorrectAnswer, rawOptions, rawQuestionText, rawTask)) {
+        lastError = `invalid ${String(rawType).toLowerCase()} payload`;
+        console.warn(`⚠️ Attempt ${attempt + 1}: ${lastError}`, {
+          question_text: rawQuestionText,
+          correct_answer: rawCorrectAnswer,
+          options: rawOptions,
+          task: rawTask,
+        });
+        question = null;
+        continue;
+      }
 
       // Check for empty correct_answer
       const isEmptyAnswer = rawCorrectAnswer === null || 
@@ -411,17 +476,8 @@ serve(async (req) => {
       });
     }
 
-    // For MATCH questions: extract leftItems/rightItems from correct_answer object
-    if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
-      const leftItems = Object.keys(rawCorrectAnswer);
-      const rightItems = Object.values(rawCorrectAnswer) as string[];
-      // Shuffle rightItems for display so it's not trivially solvable
-      const shuffledRight = [...rightItems].sort(() => Math.random() - 0.5);
-      rawOptions = {
-        leftItems,
-        rightItems: shuffledRight,
-      };
-      console.log(`🔀 MATCH question: ${leftItems.length} pairs, leftItems: ${leftItems.join(', ')}`);
+    if (rawType === 'MATCH' && rawOptions && typeof rawOptions === 'object' && !Array.isArray(rawOptions)) {
+      console.log(`🔀 MATCH question prepared with ${(rawOptions as { leftItems?: unknown[] }).leftItems?.length || 0} pairs`);
     }
 
     const enhancedQuestion = {
@@ -434,7 +490,7 @@ serve(async (req) => {
       correctAnswer: rawCorrectAnswer,
       options: rawOptions,
       hint: question.hint || null,
-      task: question.task || null,
+      task: typeof question.task === 'string' ? question.task : null,
       createdAt: new Date().toISOString()
     };
 
@@ -501,6 +557,146 @@ function tryParseStructuredValue(value: unknown): unknown {
     return JSON.parse(trimmed);
   } catch {
     return value;
+  }
+}
+
+function sanitizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function extractChoiceOptions(value: unknown): string[] {
+  const parsed = tryParseStructuredValue(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (typeof parsed !== 'string') return [];
+
+  return Array.from(
+    new Set(
+      parsed
+        .replace(/\r/g, '\n')
+        .split(/[\n,;|]+/)
+        .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function extractFillBlankAnswers(value: unknown): string[] {
+  const parsed = tryParseStructuredValue(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (parsed && typeof parsed === 'object' && 'blanks' in parsed) {
+    return sanitizeStringArray((parsed as { blanks?: unknown }).blanks);
+  }
+
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  return [];
+}
+
+function hasNonEmptyTextAnswer(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+
+  if (value && typeof value === 'object' && 'value' in value) {
+    const nested = (value as { value?: unknown }).value;
+    return typeof nested === 'string'
+      ? nested.trim().length > 0
+      : typeof nested === 'number';
+  }
+
+  return typeof value === 'number';
+}
+
+function isRenderableQuestionPayload(
+  questionType: unknown,
+  correctAnswer: unknown,
+  options: unknown,
+  questionText: unknown,
+  task: unknown
+): boolean {
+  if (typeof questionText !== 'string' || questionText.trim().length === 0) return false;
+
+  switch (questionType) {
+    case 'MULTIPLE_CHOICE': {
+      const choiceOptions = extractChoiceOptions(options);
+      if (choiceOptions.length < 2) return false;
+
+      if (typeof correctAnswer === 'number') {
+        return correctAnswer >= 0 && correctAnswer < choiceOptions.length;
+      }
+
+      if (typeof correctAnswer === 'string') {
+        const trimmed = correctAnswer.trim();
+        if (!trimmed) return false;
+        const index = Number(trimmed);
+        return Number.isInteger(index)
+          ? index >= 0 && index < choiceOptions.length
+          : choiceOptions.includes(trimmed);
+      }
+
+      if (correctAnswer && typeof correctAnswer === 'object' && 'value' in correctAnswer) {
+        const nested = (correctAnswer as { value?: unknown }).value;
+        if (typeof nested === 'number') {
+          return nested >= 0 && nested < choiceOptions.length;
+        }
+        if (typeof nested === 'string') {
+          const trimmed = nested.trim();
+          return trimmed.length > 0;
+        }
+      }
+
+      return false;
+    }
+
+    case 'FREETEXT':
+      return hasNonEmptyTextAnswer(correctAnswer);
+
+    case 'SORT': {
+      const order = sanitizeStringArray((correctAnswer as { order?: unknown } | null)?.order);
+      return order.length >= 2;
+    }
+
+    case 'MATCH': {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
+      const leftItems = sanitizeStringArray((options as { leftItems?: unknown }).leftItems);
+      const rightItems = sanitizeStringArray((options as { rightItems?: unknown }).rightItems);
+      return leftItems.length >= 2 && rightItems.length >= 2 && leftItems.length === rightItems.length;
+    }
+
+    case 'FILL_BLANK': {
+      const blanks = extractFillBlankAnswers(correctAnswer);
+      const blankText = typeof questionText === 'string' && questionText.includes('___');
+      const blankTask = typeof task === 'string' && task.includes('___');
+      return blanks.length > 0 && (blankText || blankTask || typeof task === 'string');
+    }
+
+    case 'DRAG_DROP': {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
+      const items = sanitizeStringArray((options as { items?: unknown }).items);
+      const categories = sanitizeStringArray((options as { categories?: unknown }).categories);
+      const placements = (correctAnswer as { placements?: unknown } | null)?.placements;
+      return items.length >= 2 && categories.length >= 2 && placements && typeof placements === 'object' && !Array.isArray(placements);
+    }
+
+    default:
+      return false;
   }
 }
 
@@ -700,10 +896,11 @@ function getTypeSpecificInstructions(questionType: string): string {
 - options: null
 - Minimum 3, Maximum 5 Zuordnungspaare`,
     
-    'DRAG_DROP': `Erstelle eine Lückentextaufgabe zum Einsetzen.
-- correct_answer: Array der einzusetzenden Wörter in richtiger Reihenfolge
-- task: Der Satz mit ___ für die Lücken
-- options: Array der verfügbaren Wörter (inklusive 1-2 Distraktoren)`,
+    'DRAG_DROP': `Erstelle eine Drag-and-Drop-Zuordnungsaufgabe.
+- options: Objekt mit { "items": ["Element 1", "Element 2"], "categories": ["Kategorie A", "Kategorie B"] }
+- correct_answer: Objekt mit { "placements": { "Kategorie A": ["passendes Element"], "Kategorie B": ["anderes Element"] } }
+- task: Kurze Anweisung zum Zuordnen
+- Mindestens 2 Kategorien und mindestens 4 Elemente insgesamt`,
     
     'FILL_BLANK': `Erstelle eine Lückentextaufgabe.
 - question_text: Der Satz mit ___ für die Lücke(n). WICHTIG: question_text MUSS mindestens ein ___ (drei Unterstriche) enthalten!

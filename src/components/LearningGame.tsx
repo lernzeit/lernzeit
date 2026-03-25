@@ -249,27 +249,75 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     clearExplanation();
   };
 
+  const extractMultipleChoiceOptions = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return Array.from(
+        new Set(
+          value
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+        )
+      );
+    }
+
+    if (typeof value !== 'string') return [];
+
+    return Array.from(
+      new Set(
+        value
+          .replace(/\r/g, '\n')
+          .split(/[\n,;|]+/)
+          .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
+          .filter(Boolean)
+      )
+    );
+  };
+
+  const getMultipleChoiceOptions = (q: PreloadedQuestion): string[] => {
+    const directOptions = extractMultipleChoiceOptions(q.options);
+    if (directOptions.length >= 2) return directOptions;
+
+    return extractMultipleChoiceOptions(q.task);
+  };
+
   // Resolve MULTIPLE_CHOICE correctAnswer which can be:
   // - a number index (from AI/cache): 2 → options[2]
   // - an object { value: "text" } (legacy)
   // - a string directly
   const resolveCorrectAnswerText = (q: PreloadedQuestion): string => {
+    const options = getMultipleChoiceOptions(q);
     const ca = q.correctAnswer;
     if (ca == null) return '';
     // If it's a number (index into options)
     if (typeof ca === 'number') {
-      return q.options?.[ca] ?? String(ca);
+      return options[ca] ?? String(ca);
     }
     // If it's an object with .value
     if (typeof ca === 'object' && ca.value != null) {
-      if (typeof ca.value === 'number' && q.options) {
-        return q.options[ca.value] ?? String(ca.value);
+      if (typeof ca.value === 'number') {
+        return options[ca.value] ?? String(ca.value);
       }
       return String(ca.value);
+    }
+    if (typeof ca === 'string') {
+      const trimmed = ca.trim();
+      const index = Number(trimmed);
+      if (Number.isInteger(index) && options[index] !== undefined) {
+        return options[index];
+      }
+      return trimmed;
     }
     // If it's a plain string
     return String(ca);
   };
+
+  const multipleChoiceOptions = useMemo(
+    () => (question ? getMultipleChoiceOptions(question) : []),
+    [question]
+  );
+
+  const shouldUseTextFallbackForMultipleChoice =
+    question?.questionType === 'MULTIPLE_CHOICE' && multipleChoiceOptions.length < 2;
 
   const checkAnswer = async () => {
     if (!question) return;
@@ -279,7 +327,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
         const resolvedCorrect = resolveCorrectAnswerText(question);
-        correct = selectedOption === resolvedCorrect;
+        correct = shouldUseTextFallbackForMultipleChoice
+          ? userTextAnswer.toLowerCase().trim() === resolvedCorrect.toLowerCase().trim()
+          : selectedOption === resolvedCorrect;
         break;
 
       case 'FREETEXT':
@@ -481,7 +531,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
-        return selectedOption || '';
+        return selectedOption || userTextAnswer;
       case 'FREETEXT':
         return userTextAnswer;
       case 'SORT':
@@ -831,9 +881,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Question Type Renderers */}
-              {question.questionType === 'MULTIPLE_CHOICE' && (
+              {question.questionType === 'MULTIPLE_CHOICE' && !shouldUseTextFallbackForMultipleChoice && (
                 <MultipleChoiceRenderer
-                  options={Array.isArray(question.options) ? question.options : []}
+                  options={multipleChoiceOptions}
                   selectedOption={selectedOption}
                   correctAnswer={resolveCorrectAnswerText(question)}
                   hasAnswered={hasAnswered}
@@ -841,13 +891,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 />
               )}
 
-              {question.questionType === 'FREETEXT' && (
+              {(question.questionType === 'FREETEXT' || shouldUseTextFallbackForMultipleChoice) && (
                 <FreetextRenderer
                   value={userTextAnswer}
                   onChange={setUserTextAnswer}
                   hasAnswered={hasAnswered}
                   isCorrect={isCorrect}
-                  correctAnswer={question.correctAnswer?.value}
+                  correctAnswer={getCorrectAnswerText()}
                 />
               )}
 
@@ -1154,7 +1204,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
-        return selectedOption !== null;
+        return shouldUseTextFallbackForMultipleChoice
+          ? userTextAnswer.trim() !== ''
+          : selectedOption !== null;
       case 'FREETEXT':
         return userTextAnswer.trim() !== '';
       case 'SORT':
