@@ -36,6 +36,7 @@ interface LinkedChild {
 
 export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>('children');
+  const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
