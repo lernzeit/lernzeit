@@ -296,7 +296,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       )}
 
       {/* Main Tabs - reduced to 4 */}
-      <Tabs defaultValue={defaultTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
