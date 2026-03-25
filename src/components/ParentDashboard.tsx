@@ -238,10 +238,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                   size="sm" 
                   variant="destructive"
                   className="mt-3"
-                  onClick={() => {
-                    const tabsTrigger = document.querySelector('[data-state][value="requests"]') as HTMLElement;
-                    tabsTrigger?.click();
-                  }}
+                  onClick={() => setActiveTab('requests')}
                 >
                   <Smartphone className="h-4 w-4 mr-2" />
                   Jetzt antworten
