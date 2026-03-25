@@ -216,9 +216,28 @@ serve(async (req) => {
     let rawQuestionText: string | undefined;
     let lastError = '';
 
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      let content: string | null = null;
+    // Tool definition for structured output — guarantees correct_answer is present
+    const questionTool = {
+      type: "function" as const,
+      function: {
+        name: "submit_question",
+        description: "Submit a generated educational question with all required fields",
+        parameters: {
+          type: "object",
+          properties: {
+            question_text: { type: "string", description: "The question text in German" },
+            question_type: { type: "string", enum: ["MULTIPLE_CHOICE", "FREETEXT", "SORT", "MATCH", "DRAG_DROP", "FILL_BLANK"] },
+            correct_answer: { description: "The correct answer: number (MC index 0-3), string (FREETEXT), array (SORT/DRAG_DROP), or object (MATCH pairs)" },
+            options: { description: "Array of 4 options for MULTIPLE_CHOICE, shuffled items for SORT, or null" },
+            hint: { type: "string", description: "Optional hint for the student" },
+            task: { type: "string", description: "Task instruction for FILL_BLANK/DRAG_DROP, or null" }
+          },
+          required: ["question_text", "question_type", "correct_answer"]
+        }
+      }
+    };
 
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       for (const model of models) {
         try {
           console.log(`🤖 Trying model: ${model} (attempt ${attempt + 1}/${MAX_ATTEMPTS})`);
@@ -229,6 +248,8 @@ serve(async (req) => {
               { role: 'user', content: prompt }
             ],
             temperature: 0.9,
+            tools: [questionTool],
+            tool_choice: { type: "function", function: { name: "submit_question" } },
           });
 
           if (!response.ok) {
@@ -247,41 +268,51 @@ serve(async (req) => {
           }
 
           const result = await response.json();
-          content = result.choices?.[0]?.message?.content || null;
-
-          if (content) {
-            console.log(`✅ Got response from ${model}${usedFallback ? ' (Gemini fallback)' : ''}`);
-            break;
-          } else {
-            console.warn(`⚠️ Empty content from ${model}, trying next...`);
+          console.log(`✅ Got response from ${model}${usedFallback ? ' (Gemini fallback)' : ''}`);
+          
+          // Extract from tool call response
+          const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+          const content = result.choices?.[0]?.message?.content;
+          
+          if (toolCall?.function?.arguments) {
+            // Tool calling worked — parse structured arguments
+            try {
+              question = typeof toolCall.function.arguments === 'string' 
+                ? JSON.parse(toolCall.function.arguments) 
+                : toolCall.function.arguments;
+              console.log('🔧 Parsed from tool_call arguments');
+            } catch (e) {
+              console.warn('⚠️ Failed to parse tool_call arguments:', e);
+              question = null;
+            }
+          } else if (content) {
+            // Fallback: model returned content instead of tool call
+            try {
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                question = JSON.parse(jsonMatch[0]);
+                console.log('📝 Parsed from content fallback');
+              }
+            } catch (e) {
+              console.warn('⚠️ Failed to parse content:', e);
+              question = null;
+            }
           }
+
+          if (question) break;
         } catch (modelError) {
           console.error(`Error with model ${model}:`, modelError);
           continue;
         }
       }
 
-      if (!content) {
+      if (!question) {
         lastError = 'All models failed to generate content';
         console.error(lastError);
-        continue; // retry
+        continue;
       }
 
       console.log('🤖 AI Response received');
-
-      // Parse JSON from response
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error('No JSON found in response');
-        }
-        question = JSON.parse(jsonMatch[0]);
-      } catch (parseError) {
-        lastError = 'JSON parse error';
-        console.error('JSON parse error:', parseError);
-        question = null;
-        continue; // retry
-      }
 
       // Validate question structure
       rawType = question.question_type || question.questionType;
@@ -298,21 +329,19 @@ serve(async (req) => {
       
       if (isEmptyAnswer) {
         lastError = 'empty correct_answer';
-        console.warn(`⚠️ Attempt ${attempt + 1}: AI generated question with empty correct_answer, retrying...`);
-        console.warn(`⚠️ Raw parsed question keys: ${JSON.stringify(Object.keys(question))}, correct_answer value: ${JSON.stringify(rawCorrectAnswer)}, full question: ${JSON.stringify(question).substring(0, 500)}`);
+        console.warn(`⚠️ Attempt ${attempt + 1}: empty correct_answer. Raw keys: ${JSON.stringify(Object.keys(question))}, value: ${JSON.stringify(rawCorrectAnswer)}`);
         question = null;
-        continue; // retry
+        continue;
       }
 
-      // Check for empty question text
       if (!rawQuestionText || rawQuestionText.trim() === '') {
         lastError = 'empty question_text';
-        console.warn(`⚠️ Attempt ${attempt + 1}: AI generated question with empty question_text, retrying...`);
+        console.warn(`⚠️ Attempt ${attempt + 1}: empty question_text`);
         question = null;
-        continue; // retry
+        continue;
       }
 
-      // Valid question found, break out of retry loop
+      // Valid question found
       break;
     }
 
