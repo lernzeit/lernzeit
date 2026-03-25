@@ -181,28 +181,44 @@ export const useQuestionPreloader = ({
       console.log('✅ Question generated:', data.question?.questionType, '-', data.question?.questionText?.substring(0, 50));
       
       // Normalize questionType to prevent rendering issues
-      if (data.question?.questionType) {
-        const normalized = data.question.questionType.trim().toUpperCase();
-        const typeMap: Record<string, string> = {
-          'MULTIPLE_CHOICE': 'MULTIPLE_CHOICE',
-          'MULTIPLECHOICE': 'MULTIPLE_CHOICE',
-          'MC': 'MULTIPLE_CHOICE',
-          'FREETEXT': 'FREETEXT',
-          'FREE_TEXT': 'FREETEXT',
-          'TEXT': 'FREETEXT',
-          'SORT': 'SORT',
-          'MATCH': 'MATCH',
-          'MATCHING': 'MATCH',
-          'FILL_BLANK': 'FILL_BLANK',
-          'FILLBLANK': 'FILL_BLANK',
-          'DRAG_DROP': 'DRAG_DROP',
-          'DRAGDROP': 'DRAG_DROP',
-          'DRAG-DROP': 'DRAG_DROP',
-        };
+      // Also handle snake_case question_type from edge function
+      const rawType = data.question?.questionType || data.question?.question_type;
+      const typeMap: Record<string, string> = {
+        'MULTIPLE_CHOICE': 'MULTIPLE_CHOICE',
+        'MULTIPLECHOICE': 'MULTIPLE_CHOICE',
+        'MC': 'MULTIPLE_CHOICE',
+        'FREETEXT': 'FREETEXT',
+        'FREE_TEXT': 'FREETEXT',
+        'TEXT': 'FREETEXT',
+        'SORT': 'SORT',
+        'MATCH': 'MATCH',
+        'MATCHING': 'MATCH',
+        'FILL_BLANK': 'FILL_BLANK',
+        'FILLBLANK': 'FILL_BLANK',
+        'DRAG_DROP': 'DRAG_DROP',
+        'DRAGDROP': 'DRAG_DROP',
+        'DRAG-DROP': 'DRAG_DROP',
+      };
+      if (rawType && typeof rawType === 'string') {
+        const normalized = rawType.trim().toUpperCase();
         data.question.questionType = typeMap[normalized] || 'FREETEXT';
         if (!typeMap[normalized]) {
           console.warn('⚠️ Unknown questionType normalized to FREETEXT:', normalized);
         }
+      } else {
+        // No questionType at all — default to FREETEXT
+        console.warn('⚠️ Missing questionType, defaulting to FREETEXT');
+        data.question.questionType = 'FREETEXT';
+      }
+      
+      // Ensure questionText is set (handle snake_case too)
+      if (!data.question.questionText && data.question.question_text) {
+        data.question.questionText = data.question.question_text;
+      }
+      
+      // Ensure correctAnswer is set (handle snake_case too)
+      if (data.question.correctAnswer === undefined && data.question.correct_answer !== undefined) {
+        data.question.correctAnswer = data.question.correct_answer;
       }
       
       return normalizeQuestionPayload(data.question);
