@@ -299,6 +299,7 @@ serve(async (req) => {
       if (isEmptyAnswer) {
         lastError = 'empty correct_answer';
         console.warn(`⚠️ Attempt ${attempt + 1}: AI generated question with empty correct_answer, retrying...`);
+        console.warn(`⚠️ Raw parsed question keys: ${JSON.stringify(Object.keys(question))}, correct_answer value: ${JSON.stringify(rawCorrectAnswer)}, full question: ${JSON.stringify(question).substring(0, 500)}`);
         question = null;
         continue; // retry
       }
@@ -315,9 +316,63 @@ serve(async (req) => {
       break;
     }
 
-    // If all attempts failed, return error
+    // If all attempts failed, try serving from cache
     if (!question || !rawQuestionText) {
-      console.error(`❌ All ${MAX_ATTEMPTS} attempts failed. Last error: ${lastError}`);
+      console.warn(`⚠️ All ${MAX_ATTEMPTS} attempts failed (${lastError}). Trying cache fallback...`);
+      
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const cacheClient = createClient(supabaseUrl, serviceRoleKey);
+        
+        let cacheQuery = cacheClient
+          .from('ai_question_cache')
+          .select('*')
+          .eq('grade', grade)
+          .eq('subject', subject)
+          .eq('difficulty', difficulty)
+          .order('times_served', { ascending: true })
+          .limit(5);
+
+        const { data: cachedQuestions } = await cacheQuery;
+        
+        if (cachedQuestions && cachedQuestions.length > 0) {
+          // Pick a random one from least-served
+          const picked = cachedQuestions[Math.floor(Math.random() * cachedQuestions.length)];
+          console.log(`✅ Cache fallback: serving cached question ${picked.id}`);
+          
+          // Update times_served
+          EdgeRuntime.waitUntil(
+            cacheClient.from('ai_question_cache')
+              .update({ times_served: picked.times_served + 1, last_served_at: new Date().toISOString() })
+              .eq('id', picked.id)
+              .then(() => {})
+          );
+          
+          return new Response(JSON.stringify({
+            success: true,
+            question: {
+              id: crypto.randomUUID(),
+              grade: picked.grade,
+              subject: picked.subject,
+              difficulty: picked.difficulty,
+              questionText: picked.question_text,
+              questionType: picked.question_type,
+              correctAnswer: picked.correct_answer,
+              options: picked.options,
+              hint: picked.hint,
+              task: picked.task,
+              createdAt: new Date().toISOString()
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (cacheErr) {
+        console.error('Cache fallback failed:', cacheErr);
+      }
+      
+      console.error(`❌ All ${MAX_ATTEMPTS} attempts AND cache fallback failed.`);
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
