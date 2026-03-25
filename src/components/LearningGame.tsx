@@ -1178,8 +1178,8 @@ const MultipleChoiceRenderer: React.FC<{
         variant={selectedOption === option ? 'default' : 'outline'}
         className={cn(
           "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
-          hasAnswered && option === correctAnswer && "border-green-500 bg-green-50 dark:bg-green-950",
-          hasAnswered && selectedOption === option && option !== correctAnswer && "border-red-500 bg-red-50 dark:bg-red-950"
+          hasAnswered && option === correctAnswer && "border-primary bg-primary/10",
+          hasAnswered && selectedOption === option && option !== correctAnswer && "border-destructive bg-destructive/10"
         )}
         onClick={() => !hasAnswered && onSelect(option)}
         disabled={hasAnswered}
@@ -1386,8 +1386,8 @@ const MatchRenderer: React.FC<{
                   key={left}
                   className={cn(
                     "flex items-start gap-2 rounded-lg border p-2 text-sm",
-                    isCorrect && "bg-green-50 border-green-300 dark:bg-green-950",
-                    isWrong && "bg-red-50 border-red-300 dark:bg-red-950",
+                    isCorrect && "bg-primary/10 border-primary",
+                    isWrong && "bg-destructive/10 border-destructive",
                     !hasAnswered && "bg-muted/50"
                   )}
                 >
@@ -1402,8 +1402,8 @@ const MatchRenderer: React.FC<{
                       ✕
                     </button>
                   )}
-                  {isCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
-                  {isWrong && <X className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                  {isCorrect && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                  {isWrong && <X className="w-4 h-4 text-destructive flex-shrink-0" />}
                 </div>
               );
             })}
