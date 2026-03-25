@@ -77,30 +77,30 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
       const expectedRight = question.correctMatches[leftItem];
       const actualRight = matches[leftItem];
       const isCorrect = actualRight === expectedRight;
-      return isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50';
+      return isCorrect ? 'border-primary bg-primary/10' : 'border-destructive bg-destructive/10';
     }
-    return selectedLeft === leftItem ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300';
+    return selectedLeft === leftItem ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/50';
   };
 
   const getRightItemClass = (rightItem: string) => {
-    if (!selectedLeft || hasCompleted) return 'border-gray-200 hover:border-gray-300';
+    if (!selectedLeft || hasCompleted) return 'border-border hover:border-muted-foreground/50';
     
     const matchKey = `${selectedLeft}-${rightItem}`;
     const feedbackState = feedback[matchKey];
     
     if (feedbackState === 'correct') {
-      return 'border-green-500 bg-green-50';
+      return 'border-primary bg-primary/10';
     } else if (feedbackState === 'incorrect') {
-      return 'border-red-500 bg-red-50';
+      return 'border-destructive bg-destructive/10';
     }
     
     // Check if this right item is already matched
     const isAlreadyMatched = Object.values(matches).includes(rightItem);
     if (isAlreadyMatched) {
-      return 'border-gray-200 bg-gray-50 opacity-50';
+      return 'border-border bg-muted opacity-50';
     }
     
-    return 'border-gray-200 hover:border-blue-300 hover:bg-blue-50';
+    return 'border-border hover:border-primary/50 hover:bg-primary/5';
   };
 
   return (
@@ -118,7 +118,7 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
         )}
 
         {hasCompleted && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full">
             <Check className="h-5 w-5" />
             <span className="font-medium">Aufgabe abgeschlossen!</span>
           </div>
@@ -177,8 +177,8 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                     className={`
                       p-3 rounded-lg border-2 text-sm
                       ${isCorrect 
-                        ? 'border-green-300 bg-green-50' 
-                        : 'border-red-300 bg-red-50'
+                        ? 'border-primary/50 bg-primary/10' 
+                        : 'border-destructive/50 bg-destructive/10'
                       }
                     `}
                   >
@@ -188,9 +188,9 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                         <div className="text-xs text-muted-foreground truncate">→ {right}</div>
                       </div>
                       {isCorrect ? (
-                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        <Check className="h-5 w-5 text-primary flex-shrink-0" />
                       ) : (
-                        <X className="h-5 w-5 text-red-600 flex-shrink-0" />
+                        <X className="h-5 w-5 text-destructive flex-shrink-0" />
                       )}
                     </div>
                   </div>
@@ -228,8 +228,8 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                     w-full p-4 rounded-xl border-2 transition-all text-left
                     ${disabled || hasCompleted ? 'opacity-50 cursor-not-allowed' : ''}
                     ${!selectedLeft ? 'cursor-default' : 'cursor-pointer hover:scale-[1.02]'}
-                    ${feedbackState === 'correct' ? 'border-green-500 bg-green-50' : ''}
-                    ${feedbackState === 'incorrect' ? 'border-red-500 bg-red-50' : ''}
+                    ${feedbackState === 'correct' ? 'border-primary bg-primary/10' : ''}
+                    ${feedbackState === 'incorrect' ? 'border-destructive bg-destructive/10' : ''}
                     ${!feedbackState && selectedLeft ? 'hover:border-primary/50 hover:bg-primary/5' : ''}
                     ${!feedbackState && !selectedLeft ? 'border-border' : ''}
                   `}
@@ -239,10 +239,10 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                       {rightItem}
                     </span>
                     {feedbackState === 'correct' && (
-                      <Check className="h-6 w-6 text-green-600 flex-shrink-0" />
+                      <Check className="h-6 w-6 text-primary flex-shrink-0" />
                     )}
                     {feedbackState === 'incorrect' && (
-                      <X className="h-6 w-6 text-red-600 flex-shrink-0" />
+                      <X className="h-6 w-6 text-destructive flex-shrink-0" />
                     )}
                   </div>
                 </button>
