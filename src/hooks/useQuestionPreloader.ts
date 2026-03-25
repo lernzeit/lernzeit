@@ -247,7 +247,8 @@ interface UseQuestionPreloaderOptions {
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
 const RECENT_QUESTIONS_MAX = 30;
-const REQUEST_TIMEOUT_MS = 20000; // 20 second timeout per question
+const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
+const PARALLEL_BATCH_SIZE = 2; // Max simultaneous Edge Function calls
 
 export const useQuestionPreloader = ({
   grade,
