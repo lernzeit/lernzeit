@@ -247,7 +247,8 @@ interface UseQuestionPreloaderOptions {
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
 const RECENT_QUESTIONS_MAX = 30;
-const REQUEST_TIMEOUT_MS = 20000; // 20 second timeout per question
+const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
+const PARALLEL_BATCH_SIZE = 2; // Max simultaneous Edge Function calls
 
 export const useQuestionPreloader = ({
   grade,
@@ -459,31 +460,41 @@ export const useQuestionPreloader = ({
       setLoadingProgress(1);
       setIsInitialLoading(false);
       
-      // Load remaining questions IN PARALLEL
+      // Load remaining questions in BATCHES of PARALLEL_BATCH_SIZE (not all at once)
       if (total > 1) {
-        const remainingPromises = [];
+        const remainingIndices = [];
         for (let i = 1; i < total; i++) {
-          const difficulty = difficulties[i] || 'medium';
-          remainingPromises.push(generateSingleQuestion(difficulty, signal, recentTexts));
+          remainingIndices.push(i);
         }
         
-        const results = await Promise.allSettled(remainingPromises);
-        
-        if (!signal.aborted && mountedRef.current) {
-          const successfulQuestions = results
-            .filter((r): r is PromiseFulfilledResult<PreloadedQuestion | null> => 
-              r.status === 'fulfilled' && r.value !== null
-            )
-            .map(r => r.value as PreloadedQuestion)
-            .filter(q => {
-              if (seenTextsRef.current.has(q.questionText)) return false;
-              seenTextsRef.current.add(q.questionText);
-              recentTexts.add(q.questionText);
-              return true;
-            });
+        // Process in batches of PARALLEL_BATCH_SIZE
+        for (let batchStart = 0; batchStart < remainingIndices.length; batchStart += PARALLEL_BATCH_SIZE) {
+          if (signal.aborted || !mountedRef.current) break;
           
-          setQuestions(prev => [...prev, ...successfulQuestions]);
-          setLoadingProgress(1 + successfulQuestions.length);
+          const batch = remainingIndices.slice(batchStart, batchStart + PARALLEL_BATCH_SIZE);
+          const batchPromises = batch.map(i => {
+            const difficulty = difficulties[i] || 'medium';
+            return generateSingleQuestion(difficulty, signal, recentTexts);
+          });
+          
+          const results = await Promise.allSettled(batchPromises);
+          
+          if (!signal.aborted && mountedRef.current) {
+            const successfulQuestions = results
+              .filter((r): r is PromiseFulfilledResult<PreloadedQuestion | null> => 
+                r.status === 'fulfilled' && r.value !== null
+              )
+              .map(r => r.value as PreloadedQuestion)
+              .filter(q => {
+                if (seenTextsRef.current.has(q.questionText)) return false;
+                seenTextsRef.current.add(q.questionText);
+                recentTexts.add(q.questionText);
+                return true;
+              });
+            
+            setQuestions(prev => [...prev, ...successfulQuestions]);
+            setLoadingProgress(prev => prev + successfulQuestions.length);
+          }
         }
       }
 

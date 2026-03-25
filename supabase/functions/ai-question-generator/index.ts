@@ -207,8 +207,6 @@ serve(async (req) => {
 
     const systemPrompt = getSystemPrompt() + rulesBlock;
 
-    const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
-    const MAX_ATTEMPTS = 3;
     let question: any = null;
     let rawType: string | undefined;
     let rawCorrectAnswer: any;
@@ -216,7 +214,7 @@ serve(async (req) => {
     let rawQuestionText: string | undefined;
     let lastError = '';
 
-    // Tool definition for structured output — guarantees correct_answer is present
+    // Tool definition for structured output
     const questionTool = {
       type: "function" as const,
       function: {
@@ -237,84 +235,67 @@ serve(async (req) => {
       }
     };
 
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      for (const model of models) {
-        try {
-          console.log(`🤖 Trying model: ${model} (attempt ${attempt + 1}/${MAX_ATTEMPTS})`);
-          const { response, usedFallback } = await callAI({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: prompt }
-            ],
-            temperature: 0.9,
-            tools: [questionTool],
-            tool_choice: { type: "function", function: { name: "submit_question" } },
-          });
+    // ── SINGLE AI attempt (callAI handles Lovable→Gemini fallback internally) ──
+    try {
+      console.log('🤖 Generating question via callAI (single attempt)');
+      const { response, usedFallback } = await callAI({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.9,
+        tools: [questionTool],
+        tool_choice: { type: "function", function: { name: "submit_question" } },
+      });
 
-          if (!response.ok) {
-            if (response.status === 429) {
-              return new Response(JSON.stringify({ 
-                success: false, 
-                error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
-              }), {
-                status: 429,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              });
-            }
-            const errorText = await response.text();
-            console.error(`AI error with ${model}: ${response.status} - ${errorText}`);
-            continue;
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Got response${usedFallback ? ' (Gemini fallback)' : ''}`);
+        
+        const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+        const content = result.choices?.[0]?.message?.content;
+        
+        if (toolCall?.function?.arguments) {
+          try {
+            question = typeof toolCall.function.arguments === 'string' 
+              ? JSON.parse(toolCall.function.arguments) 
+              : toolCall.function.arguments;
+            console.log('🔧 Parsed from tool_call arguments');
+          } catch (e) {
+            console.warn('⚠️ Failed to parse tool_call arguments:', e);
           }
-
-          const result = await response.json();
-          console.log(`✅ Got response from ${model}${usedFallback ? ' (Gemini fallback)' : ''}`);
-          
-          // Extract from tool call response
-          const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-          const content = result.choices?.[0]?.message?.content;
-          
-          if (toolCall?.function?.arguments) {
-            // Tool calling worked — parse structured arguments
-            try {
-              question = typeof toolCall.function.arguments === 'string' 
-                ? JSON.parse(toolCall.function.arguments) 
-                : toolCall.function.arguments;
-              console.log('🔧 Parsed from tool_call arguments');
-            } catch (e) {
-              console.warn('⚠️ Failed to parse tool_call arguments:', e);
-              question = null;
+        } else if (content) {
+          try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              question = JSON.parse(jsonMatch[0]);
+              console.log('📝 Parsed from content fallback');
             }
-          } else if (content) {
-            // Fallback: model returned content instead of tool call
-            try {
-              const jsonMatch = content.match(/\{[\s\S]*\}/);
-              if (jsonMatch) {
-                question = JSON.parse(jsonMatch[0]);
-                console.log('📝 Parsed from content fallback');
-              }
-            } catch (e) {
-              console.warn('⚠️ Failed to parse content:', e);
-              question = null;
-            }
+          } catch (e) {
+            console.warn('⚠️ Failed to parse content:', e);
           }
-
-          if (question) break;
-        } catch (modelError) {
-          console.error(`Error with model ${model}:`, modelError);
-          continue;
         }
+      } else if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } else {
+        const errorText = await response.text();
+        lastError = `AI error: ${response.status}`;
+        console.error(`AI error: ${response.status} - ${errorText}`);
       }
+    } catch (aiError) {
+      lastError = `AI call failed: ${(aiError as Error).message}`;
+      console.error(lastError);
+    }
 
-      if (!question) {
-        lastError = 'All models failed to generate content';
-        console.error(lastError);
-        continue;
-      }
-
-      console.log('🤖 AI Response received');
-
-      // Validate question structure
+    // ── Validate & normalize the AI response ──
+    if (question) {
       rawType = question.question_type ?? question.questionType;
       rawCorrectAnswer = tryParseStructuredValue(question.correct_answer ?? question.correctAnswer);
       rawOptions = tryParseStructuredValue(question.options ?? null);
@@ -350,7 +331,6 @@ serve(async (req) => {
         const normalizedOrder = Array.isArray(rawCorrectAnswer)
           ? sanitizeStringArray(rawCorrectAnswer)
           : sanitizeStringArray((rawCorrectAnswer as { order?: unknown } | null)?.order);
-
         rawCorrectAnswer = { order: normalizedOrder };
         rawOptions = shuffleArray(normalizedOrder);
       }
@@ -358,7 +338,6 @@ serve(async (req) => {
       if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
         const metaKeys = ['pairs', 'value', 'order', 'blanks', 'alternatives', 'placements'];
         const pairEntries = Object.entries(rawCorrectAnswer).filter(([key, value]) => !metaKeys.includes(key) && String(value).trim());
-
         if (pairEntries.length > 0) {
           rawCorrectAnswer = Object.fromEntries(pairEntries);
           rawOptions = {
@@ -375,44 +354,32 @@ serve(async (req) => {
 
       if (!isRenderableQuestionPayload(rawType, rawCorrectAnswer, rawOptions, rawQuestionText, rawTask)) {
         lastError = `invalid ${String(rawType).toLowerCase()} payload`;
-        console.warn(`⚠️ Attempt ${attempt + 1}: ${lastError}`, {
-          question_text: rawQuestionText,
-          correct_answer: rawCorrectAnswer,
-          options: rawOptions,
-          task: rawTask,
-        });
+        console.warn(`⚠️ Unrenderable: ${lastError}`);
         question = null;
-        continue;
       }
 
-      // Check for empty correct_answer
       const isEmptyAnswer = rawCorrectAnswer === null || 
         rawCorrectAnswer === undefined || 
         rawCorrectAnswer === '' || 
         (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
         (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
       
-      if (isEmptyAnswer) {
+      if (question && isEmptyAnswer) {
         lastError = 'empty correct_answer';
-        console.warn(`⚠️ Attempt ${attempt + 1}: empty correct_answer. Raw keys: ${JSON.stringify(Object.keys(question))}, value: ${JSON.stringify(rawCorrectAnswer)}`);
+        console.warn('⚠️ Empty correct_answer');
         question = null;
-        continue;
       }
 
-      if (!rawQuestionText || rawQuestionText.trim() === '') {
+      if (question && (!rawQuestionText || rawQuestionText.trim() === '')) {
         lastError = 'empty question_text';
-        console.warn(`⚠️ Attempt ${attempt + 1}: empty question_text`);
+        console.warn('⚠️ Empty question_text');
         question = null;
-        continue;
       }
-
-      // Valid question found
-      break;
     }
 
-    // If all attempts failed, try serving from cache
+    // If AI failed, try serving from cache
     if (!question || !rawQuestionText) {
-      console.warn(`⚠️ All ${MAX_ATTEMPTS} attempts failed (${lastError}). Trying cache fallback...`);
+      console.warn(`⚠️ AI generation failed (${lastError}). Trying cache fallback...`);
       
       try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
