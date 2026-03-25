@@ -1227,8 +1227,8 @@ const SortRenderer: React.FC<{
           key={index}
           className={cn(
             "flex items-center gap-2 p-3 border rounded-lg",
-            hasAnswered && isCorrectPosition && "bg-green-50 border-green-300",
-            hasAnswered && !isCorrectPosition && "bg-red-50 border-red-300"
+            hasAnswered && isCorrectPosition && "bg-primary/10 border-primary",
+            hasAnswered && !isCorrectPosition && "bg-destructive/10 border-destructive"
           )}
         >
           <div className="flex flex-col gap-1">
