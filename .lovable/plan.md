@@ -1,36 +1,62 @@
 
 
-## Plan: ScreenTimeWidget durch sinnvolle Eltern-Karte ersetzen
+## Diagnose
 
-### Problem
-Die `ScreenTimeWidget`-Komponente auf dem Eltern-Dashboard ist ein Dummy. Sie prüft `Capacitor.isNativePlatform()`, das in der PWA/Web-Ansicht immer `false` zurückgibt, und zeigt dann "Familienkontrollen sind auf diesem Gerät nicht verfügbar". Selbst auf nativen Geräten liefert der `FamilyLinkService` nur Mock-Daten.
+**Cache-Bestand ist unzureichend für Cache-First:**
 
-Die eigentliche Bildschirmzeit-Verwaltung (Anfragen genehmigen, Zeitlimits setzen) läuft bereits vollständig über das `ParentDashboard` und die `ParentScreenTimeRequestsDashboard`-Komponente. Die ScreenTimeWidget ist also redundant und verwirrend.
+| Grade | Gut bestückt | Lückenhaft/leer |
+|-------|-------------|-----------------|
+| 1 | math (163) | german (15), science (23) |
+| 2 | math (133) | english (19), german (19), rest <10 |
+| 3 | math (205), german (98) | - |
+| 4 | **komplett leer** | alle Fächer |
+| 5 | german (59) | math (14), rest <6 |
+| 6 | geography (300), german (72), history (64) | rest <41 |
+| 7-10 | **fast komplett leer** | nur 1 history-Frage in Kl.7 |
 
-### Lösung
+Cache-First würde für ~60% der Kombinationen sofort scheitern oder endlos die gleichen Fragen wiederholen.
 
-**Die `ScreenTimeWidget` im Eltern-Dashboard durch eine kompakte "Kindersicherung"-Karte ersetzen**, die:
+**Wahre Ursache des Ladeproblems:** 5 parallele Edge-Function-Aufrufe × 3 Retries × 2 Modelle = bis zu 30 AI-Calls gleichzeitig → WORKER_LIMIT / 402 Fehler.
 
-1. **Erkennt, ob ein natives Gerät vorliegt** (via `parentalControlsService.isNativePlatform()`)
-2. **Auf nativen Geräten**: Einen Button zeigt, der direkt Family Link (Android) oder Bildschirmzeit-Einstellungen (iOS) öffnet – über die bereits implementierten Deep-Links in `parentalControlsService`
-3. **Im Web/PWA**: Statt "nicht verfügbar" eine kurze Anleitung zeigt, wie man Family Link oder Bildschirmzeit auf dem Gerät einrichtet, mit Links zu den App-Stores
-4. **Immer**: Einen Hinweis zeigt, dass Bildschirmzeit-Anfragen der Kinder im Tab "Anfragen" im Dashboard unten verwaltet werden
+## Plan: AI-First beibehalten, Last reduzieren
 
-### Technische Änderungen
+### 1. Edge Function vereinfachen (`ai-question-generator/index.ts`)
 
-**`src/components/ScreenTimeWidget.tsx`** – Komplett umschreiben:
-- Entferne Abhängigkeit von `useScreenTime` und `familyLinkService` (die Mock-Daten liefern)
-- Nutze stattdessen `parentalControlsService` (bereits implementiert mit echten Deep-Links)
-- Zeige plattformspezifische UI: nativer Button vs. Web-Anleitung
-- Entferne den ganzen "Permission"-Flow (war ohnehin Mock)
+- **Retry-Loop von 3×2=6 auf 1 Versuch reduzieren**: `callAI` hat bereits eingebauten Lovable→Gemini-Fallback. Bei Fehlschlag direkt zum bestehenden Cache-Fallback.
+- Validierung und Normalisierung (`isRenderableQuestionPayload`, `tryParseStructuredValue`, MATCH/SORT-Rekonstruktion) bleiben vollständig erhalten.
+- Gesamtlänge sinkt von ~939 auf ~700 Zeilen.
 
-**`src/hooks/useScreenTime.ts`** und **`src/services/familyLink.ts`** – Können entfernt werden, da sie nur Mock-Daten liefern und von keiner anderen Komponente genutzt werden.
+### 2. Preloader entschärfen (`useQuestionPreloader.ts`)
 
-### Dateiänderungen
+- **Erste Frage einzeln laden** (wie bisher), dann restliche Fragen in **Batches von 2** statt alle 4 gleichzeitig.
+- **Timeout von 20s auf 30s erhöhen** (Gemini-Fallback braucht Zeit).
+- Gesamte Normalisierungs- und Renderability-Logik bleibt unverändert.
 
-| Datei | Aktion |
-|---|---|
-| `src/components/ScreenTimeWidget.tsx` | Umschreiben (nutzt `parentalControlsService`) |
-| `src/hooks/useScreenTime.ts` | Entfernen (nur Mock-Daten) |
-| `src/services/familyLink.ts` | Entfernen (nur Mock-Daten) |
+### 3. Konkreter Ablauf
+
+```text
+Client: Frage 1 laden (einzeln, 30s Timeout)
+  → Edge Function: 1x callAI → Erfolg? Zurückgeben + Cache-Write
+                               → Fehlschlag? Cache-Fallback (least-served)
+Client: Frage 1 anzeigen, isInitialLoading = false
+Client: Fragen 2+3 parallel laden (Batch 1)
+Client: Fragen 4+5 parallel laden (Batch 2)
+```
+
+Maximale gleichzeitige Edge-Function-Aufrufe: **2** (statt 5).
+Maximale AI-Calls pro Request: **1** (statt 6).
+Worst-Case gesamt: 5 sequentielle Requests statt 30 parallele.
+
+### Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `supabase/functions/ai-question-generator/index.ts` | Retry-Loop auf 1 Versuch, Rest bleibt |
+| `src/hooks/useQuestionPreloader.ts` | Batch-Loading (max 2 parallel), 30s Timeout |
+
+### Was NICHT geändert wird
+- `LearningGame.tsx` (Rendering funktioniert)
+- `normalizeQuestionPayload`, `isQuestionRenderable` im Preloader
+- `callAI` shared client
+- Cache-Prefill und Cleanup Funktionen
 
