@@ -128,6 +128,32 @@ export const useQuestionPreloader = ({
       }
 
       console.log('✅ Question generated:', data.question?.questionType, '-', data.question?.questionText?.substring(0, 50));
+      
+      // Normalize questionType to prevent rendering issues
+      if (data.question?.questionType) {
+        const normalized = data.question.questionType.trim().toUpperCase();
+        const typeMap: Record<string, string> = {
+          'MULTIPLE_CHOICE': 'MULTIPLE_CHOICE',
+          'MULTIPLECHOICE': 'MULTIPLE_CHOICE',
+          'MC': 'MULTIPLE_CHOICE',
+          'FREETEXT': 'FREETEXT',
+          'FREE_TEXT': 'FREETEXT',
+          'TEXT': 'FREETEXT',
+          'SORT': 'SORT',
+          'MATCH': 'MATCH',
+          'MATCHING': 'MATCH',
+          'FILL_BLANK': 'FILL_BLANK',
+          'FILLBLANK': 'FILL_BLANK',
+          'DRAG_DROP': 'DRAG_DROP',
+          'DRAGDROP': 'DRAG_DROP',
+          'DRAG-DROP': 'DRAG_DROP',
+        };
+        data.question.questionType = typeMap[normalized] || 'FREETEXT';
+        if (!typeMap[normalized]) {
+          console.warn('⚠️ Unknown questionType normalized to FREETEXT:', normalized);
+        }
+      }
+      
       return data.question;
     } catch (err) {
       if (signal?.aborted) return null;
