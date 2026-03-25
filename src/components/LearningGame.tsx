@@ -1205,8 +1205,8 @@ const FreetextRenderer: React.FC<{
     disabled={hasAnswered}
     className={cn(
       "text-lg h-14",
-      hasAnswered && isCorrect && "border-green-500",
-      hasAnswered && !isCorrect && "border-red-500"
+      hasAnswered && isCorrect && "border-primary bg-primary/10",
+      hasAnswered && !isCorrect && "border-destructive bg-destructive/10"
     )}
     autoComplete="off"
   />
@@ -1227,8 +1227,8 @@ const SortRenderer: React.FC<{
           key={index}
           className={cn(
             "flex items-center gap-2 p-3 border rounded-lg",
-            hasAnswered && isCorrectPosition && "bg-green-50 border-green-300",
-            hasAnswered && !isCorrectPosition && "bg-red-50 border-red-300"
+            hasAnswered && isCorrectPosition && "bg-primary/10 border-primary",
+            hasAnswered && !isCorrectPosition && "bg-destructive/10 border-destructive"
           )}
         >
           <div className="flex flex-col gap-1">
@@ -1487,8 +1487,8 @@ const FillBlankRenderer: React.FC<{
           disabled={hasAnswered}
           className={cn(
             "inline-block w-32 mx-1 h-8 text-center",
-            isCorrect && "border-green-500 bg-green-50 dark:bg-green-950",
-            isWrong && "border-red-500 bg-red-50 dark:bg-red-950"
+            isCorrect && "border-primary bg-primary/10",
+            isWrong && "border-destructive bg-destructive/10"
           )}
           placeholder="..."
         />
@@ -1507,8 +1507,8 @@ const FillBlankRenderer: React.FC<{
           !value && !isActive && "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
           !value && isActive && "border-primary bg-primary/10 text-primary animate-pulse",
           value && !hasAnswered && "border-primary bg-primary/20 text-foreground cursor-pointer hover:bg-primary/30",
-          isCorrect && "border-green-500 bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300",
-          isWrong && "border-red-500 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300",
+          isCorrect && "border-primary bg-primary/20 text-primary",
+          isWrong && "border-destructive bg-destructive/20 text-destructive",
           hasAnswered && "cursor-default"
         )}
       >
