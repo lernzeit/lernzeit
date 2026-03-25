@@ -15,6 +15,10 @@ const MODEL_MAP: Record<string, string> = {
   'google/gemini-2.5-pro': 'gemini-2.5-pro',
 };
 
+// Track when Lovable credits were last exhausted to skip futile retries
+let lovableExhaustedUntil = 0;
+const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 interface AiRequestOptions {
   model: string;
   messages: Array<{ role: string; content: string }>;
@@ -31,7 +35,7 @@ interface AiCallResult {
 
 /**
  * Call AI with automatic fallback.
- * 1. Try Lovable AI Gateway
+ * 1. Try Lovable AI Gateway (skipped if credits were recently exhausted)
  * 2. On 402 (credits exhausted), retry with direct Gemini API
  * 3. On 429 (rate limit), return immediately (no fallback)
  */
@@ -39,8 +43,8 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
-  // Try Lovable Gateway first
-  if (LOVABLE_API_KEY) {
+  // Try Lovable Gateway first — but skip if credits were recently exhausted
+  if (LOVABLE_API_KEY && Date.now() >= lovableExhaustedUntil) {
     try {
       const response = await fetch(LOVABLE_GATEWAY, {
         method: 'POST',
@@ -62,7 +66,8 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
       }
 
       if (response.status === 402) {
-        console.warn('⚠️ Lovable AI credits exhausted (402), falling back to Gemini API...');
+        lovableExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
+        console.warn('⚠️ Lovable AI credits exhausted (402), falling back to Gemini API (cooldown 5min)...');
       } else {
         await response.text().catch(() => {});
         console.warn(`⚠️ Lovable AI error (${response.status}), falling back to Gemini API...`);
