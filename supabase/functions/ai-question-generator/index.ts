@@ -299,6 +299,7 @@ serve(async (req) => {
       if (isEmptyAnswer) {
         lastError = 'empty correct_answer';
         console.warn(`⚠️ Attempt ${attempt + 1}: AI generated question with empty correct_answer, retrying...`);
+        console.warn(`⚠️ Raw parsed question keys: ${JSON.stringify(Object.keys(question))}, correct_answer value: ${JSON.stringify(rawCorrectAnswer)}, full question: ${JSON.stringify(question).substring(0, 500)}`);
         question = null;
         continue; // retry
       }
