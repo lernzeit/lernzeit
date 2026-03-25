@@ -629,11 +629,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     });
   };
 
-  // Move sort item
+  // Move/swap sort items
   const moveSortItem = (fromIndex: number, toIndex: number) => {
     const newOrder = [...sortOrder];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, removed);
+    // Swap the two items
+    [newOrder[fromIndex], newOrder[toIndex]] = [newOrder[toIndex], newOrder[fromIndex]];
     setSortOrder(newOrder);
   };
 
@@ -1168,7 +1168,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         const placedItems = Object.values(dragDropPlacements).flat();
         return placedItems.length === allItems.length;
       default:
-        return false;
+        // Fallback for unknown types treated as FREETEXT
+        return userTextAnswer.trim() !== '';
     }
   }
 };
@@ -1228,47 +1229,63 @@ const SortRenderer: React.FC<{
   correctOrder: string[];
   hasAnswered: boolean;
   onMove: (fromIndex: number, toIndex: number) => void;
-}> = ({ items, correctOrder, hasAnswered, onMove }) => (
-  <div className="space-y-2">
-    <p className="text-sm text-muted-foreground mb-3">Klicke auf ↑↓ um die Reihenfolge zu ändern:</p>
-    {items.map((item, index) => {
-      const isCorrectPosition = hasAnswered && item === correctOrder[index];
-      return (
-        <div 
-          key={index}
-          className={cn(
-            "flex items-center gap-2 p-3 border rounded-lg",
-            hasAnswered && isCorrectPosition && "bg-primary/10 border-primary",
-            hasAnswered && !isCorrectPosition && "bg-destructive/10 border-destructive"
-          )}
-        >
-          <div className="flex flex-col gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0"
-              onClick={() => index > 0 && onMove(index, index - 1)}
-              disabled={hasAnswered || index === 0}
-            >
-              ↑
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0"
-              onClick={() => index < items.length - 1 && onMove(index, index + 1)}
-              disabled={hasAnswered || index === items.length - 1}
-            >
-              ↓
-            </Button>
-          </div>
-          <span className="flex-1">{item}</span>
-          <span className="text-muted-foreground text-sm">{index + 1}</span>
-        </div>
-      );
-    })}
-  </div>
-);
+}> = ({ items, correctOrder, hasAnswered, onMove }) => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const handleTap = (index: number) => {
+    if (hasAnswered) return;
+    if (selectedIndex === null) {
+      setSelectedIndex(index);
+    } else if (selectedIndex === index) {
+      setSelectedIndex(null);
+    } else {
+      onMove(selectedIndex, index);
+      setSelectedIndex(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground mb-3">
+        Tippe auf zwei Elemente, um ihre Position zu tauschen:
+      </p>
+      {items.map((item, index) => {
+        const isCorrectPosition = hasAnswered && item === correctOrder[index];
+        const isSelected = selectedIndex === index;
+        return (
+          <button
+            key={index}
+            onClick={() => handleTap(index)}
+            disabled={hasAnswered}
+            className={cn(
+              "flex items-center gap-3 p-4 w-full border-2 rounded-xl transition-all text-left",
+              "active:scale-[0.98] touch-manipulation",
+              isSelected && "ring-2 ring-primary ring-offset-2 border-primary bg-primary/10 scale-[1.02]",
+              !isSelected && !hasAnswered && "border-border hover:border-primary/50 hover:bg-muted/50",
+              hasAnswered && isCorrectPosition && "bg-primary/10 border-primary",
+              hasAnswered && !isCorrectPosition && "bg-destructive/10 border-destructive"
+            )}
+          >
+            <span className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold flex-shrink-0",
+              isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            )}>
+              {index + 1}
+            </span>
+            <span className="flex-1 font-medium">{item}</span>
+            {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
+            {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-destructive flex-shrink-0" />}
+          </button>
+        );
+      })}
+      {selectedIndex !== null && (
+        <p className="text-xs text-primary text-center mt-2 animate-pulse">
+          Tippe jetzt auf das Element, mit dem du tauschen möchtest
+        </p>
+      )}
+    </div>
+  );
+};
 
 // Collapsible hint component
 const HintToggle: React.FC<{ hint: string }> = ({ hint }) => {
