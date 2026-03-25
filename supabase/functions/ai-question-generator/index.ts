@@ -609,32 +609,47 @@ function getDifficultyGuidelines(difficulty: string, grade: number): { label: st
 }
 
 function selectQuestionType(subject: string, grade: number): string {
-  // Vary question types for diversity
+  // Vary question types for diversity — all types should appear regularly
   const rand = Math.random();
   
   if (subject === 'math') {
-    if (grade <= 4) return rand < 0.5 ? 'FREETEXT' : 'MULTIPLE_CHOICE';
-    return rand < 0.4 ? 'FREETEXT' : rand < 0.7 ? 'MULTIPLE_CHOICE' : 'FILL_BLANK';
+    if (grade <= 4) {
+      // Grundschule Mathe: MC, Freitext, Sortieren, Zuordnung
+      if (rand < 0.35) return 'MULTIPLE_CHOICE';
+      if (rand < 0.65) return 'FREETEXT';
+      if (rand < 0.80) return 'SORT';
+      return 'MATCH';
+    }
+    // Ab Klasse 5: volle Vielfalt
+    if (rand < 0.30) return 'FREETEXT';
+    if (rand < 0.55) return 'MULTIPLE_CHOICE';
+    if (rand < 0.70) return 'FILL_BLANK';
+    if (rand < 0.82) return 'SORT';
+    return 'MATCH';
   }
 
   if (subject === 'science') {
-    // Sachkunde (Klasse 1-4): mostly MC and simple matching
-    if (rand < 0.5) return 'MULTIPLE_CHOICE';
-    if (rand < 0.75) return 'MATCH';
+    // Sachkunde (Klasse 1-4): MC, MATCH, SORT
+    if (rand < 0.40) return 'MULTIPLE_CHOICE';
+    if (rand < 0.65) return 'MATCH';
+    if (rand < 0.85) return 'SORT';
     return 'FREETEXT';
   }
   
   if (subject === 'german') {
-    if (rand < 0.35) return 'MULTIPLE_CHOICE';
-    if (rand < 0.65) return 'FREETEXT';
-    if (rand < 0.80) return 'SORT';
-    return 'FILL_BLANK';
+    if (rand < 0.25) return 'MULTIPLE_CHOICE';
+    if (rand < 0.45) return 'FREETEXT';
+    if (rand < 0.60) return 'FILL_BLANK';
+    if (rand < 0.75) return 'SORT';
+    return 'MATCH';
   }
   
-  // Default: mix of types
-  if (rand < 0.5) return 'MULTIPLE_CHOICE';
-  if (rand < 0.75) return 'FREETEXT';
-  return 'SORT';
+  // Default (english, geography, history, etc.): alle Typen
+  if (rand < 0.30) return 'MULTIPLE_CHOICE';
+  if (rand < 0.50) return 'FREETEXT';
+  if (rand < 0.65) return 'MATCH';
+  if (rand < 0.80) return 'SORT';
+  return 'FILL_BLANK';
 }
 
 function getTypeSpecificInstructions(questionType: string): string {
