@@ -35,6 +35,7 @@ interface LinkedChild {
 }
 
 export function ParentDashboard({ userId }: ParentDashboardProps) {
+  const [activeTab, setActiveTab] = useState<string>('children');
   const [profileName, setProfileName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
