@@ -131,7 +131,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'bounce-gentle': 'bounce-gentle 1s infinite',
 				'scale-in': 'scale-in 0.2s ease-out',
-				'celebrate': 'celebrate 0.6s ease-in-out'
+				'celebrate': 'celebrate 0.6s ease-in-out',
+				'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite'
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
