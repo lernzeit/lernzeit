@@ -66,7 +66,8 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
       }
 
       if (response.status === 402) {
-        console.warn('⚠️ Lovable AI credits exhausted (402), falling back to Gemini API...');
+        lovableExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
+        console.warn('⚠️ Lovable AI credits exhausted (402), falling back to Gemini API (cooldown 5min)...');
       } else {
         await response.text().catch(() => {});
         console.warn(`⚠️ Lovable AI error (${response.status}), falling back to Gemini API...`);
