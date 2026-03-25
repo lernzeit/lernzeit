@@ -216,17 +216,36 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       </div>
 
       {totalPendingRequests > 0 && (
-        <Card className="border-primary/30 bg-primary/5 shadow-card">
-          <CardContent className="py-4 flex items-center justify-between gap-4">
-            <div>
-              <p className="font-semibold text-sm">Neue Bildschirmzeit-Anfragen verfügbar</p>
-              <p className="text-xs text-muted-foreground">
-                {pendingChildren.map((child) => child.name || 'Kind').join(', ')} {pendingChildren.length === 1 ? 'hat' : 'haben'} {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'} gestellt.
-              </p>
+        <Card className="border-destructive bg-destructive/10 shadow-lg animate-pulse-subtle">
+          <CardContent className="py-5 px-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base text-destructive">
+                  {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'}!
+                </p>
+                <p className="text-sm text-foreground mt-1">
+                  {pendingChildren.map((child) => child.name || 'Kind').join(', ')} {pendingChildren.length === 1 ? 'wartet' : 'warten'} auf deine Antwort.
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  className="mt-3"
+                  onClick={() => {
+                    const tabsTrigger = document.querySelector('[data-state][value="requests"]') as HTMLElement;
+                    tabsTrigger?.click();
+                  }}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Jetzt antworten
+                </Button>
+              </div>
+              <Badge variant="destructive" className="shrink-0 text-sm px-3 py-1">
+                {totalPendingRequests}
+              </Badge>
             </div>
-            <Badge variant="secondary" className="shrink-0">
-              {totalPendingRequests} neu
-            </Badge>
           </CardContent>
         </Card>
       )}
