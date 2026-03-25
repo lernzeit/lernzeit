@@ -560,6 +560,146 @@ function tryParseStructuredValue(value: unknown): unknown {
   }
 }
 
+function sanitizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function extractChoiceOptions(value: unknown): string[] {
+  const parsed = tryParseStructuredValue(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (typeof parsed !== 'string') return [];
+
+  return Array.from(
+    new Set(
+      parsed
+        .replace(/\r/g, '\n')
+        .split(/[\n,;|]+/)
+        .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function extractFillBlankAnswers(value: unknown): string[] {
+  const parsed = tryParseStructuredValue(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (parsed && typeof parsed === 'object' && 'blanks' in parsed) {
+    return sanitizeStringArray((parsed as { blanks?: unknown }).blanks);
+  }
+
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  return [];
+}
+
+function hasNonEmptyTextAnswer(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+
+  if (value && typeof value === 'object' && 'value' in value) {
+    const nested = (value as { value?: unknown }).value;
+    return typeof nested === 'string'
+      ? nested.trim().length > 0
+      : typeof nested === 'number';
+  }
+
+  return typeof value === 'number';
+}
+
+function isRenderableQuestionPayload(
+  questionType: unknown,
+  correctAnswer: unknown,
+  options: unknown,
+  questionText: unknown,
+  task: unknown
+): boolean {
+  if (typeof questionText !== 'string' || questionText.trim().length === 0) return false;
+
+  switch (questionType) {
+    case 'MULTIPLE_CHOICE': {
+      const choiceOptions = extractChoiceOptions(options);
+      if (choiceOptions.length < 2) return false;
+
+      if (typeof correctAnswer === 'number') {
+        return correctAnswer >= 0 && correctAnswer < choiceOptions.length;
+      }
+
+      if (typeof correctAnswer === 'string') {
+        const trimmed = correctAnswer.trim();
+        if (!trimmed) return false;
+        const index = Number(trimmed);
+        return Number.isInteger(index)
+          ? index >= 0 && index < choiceOptions.length
+          : choiceOptions.includes(trimmed);
+      }
+
+      if (correctAnswer && typeof correctAnswer === 'object' && 'value' in correctAnswer) {
+        const nested = (correctAnswer as { value?: unknown }).value;
+        if (typeof nested === 'number') {
+          return nested >= 0 && nested < choiceOptions.length;
+        }
+        if (typeof nested === 'string') {
+          const trimmed = nested.trim();
+          return trimmed.length > 0;
+        }
+      }
+
+      return false;
+    }
+
+    case 'FREETEXT':
+      return hasNonEmptyTextAnswer(correctAnswer);
+
+    case 'SORT': {
+      const order = sanitizeStringArray((correctAnswer as { order?: unknown } | null)?.order);
+      return order.length >= 2;
+    }
+
+    case 'MATCH': {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
+      const leftItems = sanitizeStringArray((options as { leftItems?: unknown }).leftItems);
+      const rightItems = sanitizeStringArray((options as { rightItems?: unknown }).rightItems);
+      return leftItems.length >= 2 && rightItems.length >= 2 && leftItems.length === rightItems.length;
+    }
+
+    case 'FILL_BLANK': {
+      const blanks = extractFillBlankAnswers(correctAnswer);
+      const blankText = typeof questionText === 'string' && questionText.includes('___');
+      const blankTask = typeof task === 'string' && task.includes('___');
+      return blanks.length > 0 && (blankText || blankTask || typeof task === 'string');
+    }
+
+    case 'DRAG_DROP': {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
+      const items = sanitizeStringArray((options as { items?: unknown }).items);
+      const categories = sanitizeStringArray((options as { categories?: unknown }).categories);
+      const placements = (correctAnswer as { placements?: unknown } | null)?.placements;
+      return items.length >= 2 && categories.length >= 2 && placements && typeof placements === 'object' && !Array.isArray(placements);
+    }
+
+    default:
+      return false;
+  }
+}
+
 function shuffleArray<T>(items: T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i--) {
