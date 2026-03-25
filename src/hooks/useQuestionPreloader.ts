@@ -15,6 +15,57 @@ export interface PreloadedQuestion {
   createdAt: string;
 }
 
+const shuffleArray = <T,>(items: T[]): T[] => {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
+
+const tryParseJsonString = (value: unknown) => {
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return value;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeQuestionPayload = (question: PreloadedQuestion): PreloadedQuestion => {
+  const normalizedQuestion = {
+    ...question,
+    correctAnswer: tryParseJsonString(question.correctAnswer),
+    options: tryParseJsonString(question.options)
+  };
+
+  if (
+    normalizedQuestion.questionType === 'MATCH' &&
+    normalizedQuestion.correctAnswer &&
+    typeof normalizedQuestion.correctAnswer === 'object' &&
+    !Array.isArray(normalizedQuestion.correctAnswer)
+  ) {
+    const correctMatches = normalizedQuestion.correctAnswer as Record<string, string>;
+    const leftItems = Object.keys(correctMatches);
+    const rightItems = shuffleArray(Object.values(correctMatches).map(String));
+
+    normalizedQuestion.options = {
+      ...(normalizedQuestion.options && typeof normalizedQuestion.options === 'object' && !Array.isArray(normalizedQuestion.options)
+        ? normalizedQuestion.options
+        : {}),
+      leftItems,
+      rightItems
+    };
+  }
+
+  return normalizedQuestion;
+};
+
 interface UseQuestionPreloaderOptions {
   grade: number;
   subject: string;
@@ -154,7 +205,7 @@ export const useQuestionPreloader = ({
         }
       }
       
-      return data.question;
+      return normalizeQuestionPayload(data.question);
     } catch (err) {
       if (signal?.aborted) return null;
       console.error('❌ Question fetch error:', err);
