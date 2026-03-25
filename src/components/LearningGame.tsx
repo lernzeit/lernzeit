@@ -1205,8 +1205,8 @@ const FreetextRenderer: React.FC<{
     disabled={hasAnswered}
     className={cn(
       "text-lg h-14",
-      hasAnswered && isCorrect && "border-green-500",
-      hasAnswered && !isCorrect && "border-red-500"
+      hasAnswered && isCorrect && "border-primary bg-primary/10",
+      hasAnswered && !isCorrect && "border-destructive bg-destructive/10"
     )}
     autoComplete="off"
   />
