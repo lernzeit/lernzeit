@@ -1487,8 +1487,8 @@ const FillBlankRenderer: React.FC<{
           disabled={hasAnswered}
           className={cn(
             "inline-block w-32 mx-1 h-8 text-center",
-            isCorrect && "border-green-500 bg-green-50 dark:bg-green-950",
-            isWrong && "border-red-500 bg-red-50 dark:bg-red-950"
+            isCorrect && "border-primary bg-primary/10",
+            isWrong && "border-destructive bg-destructive/10"
           )}
           placeholder="..."
         />
