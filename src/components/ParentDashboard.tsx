@@ -36,6 +36,7 @@ interface LinkedChild {
 
 export function ParentDashboard({ userId }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>('children');
+  const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -238,7 +239,10 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                   size="sm" 
                   variant="destructive"
                   className="mt-3"
-                  onClick={() => setActiveTab('requests')}
+                  onClick={() => {
+                    setActiveTab('requests');
+                    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                  }}
                 >
                   <Smartphone className="h-4 w-4 mr-2" />
                   Jetzt antworten
@@ -296,7 +300,7 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
       )}
 
       {/* Main Tabs - reduced to 4 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
