@@ -208,109 +208,116 @@ serve(async (req) => {
     const systemPrompt = getSystemPrompt() + rulesBlock;
 
     const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
-    let content: string | null = null;
+    const MAX_ATTEMPTS = 3;
+    let question: any = null;
+    let rawType: string | undefined;
+    let rawCorrectAnswer: any;
+    let rawOptions: any;
+    let rawQuestionText: string | undefined;
+    let lastError = '';
 
-    for (const model of models) {
-      try {
-        console.log(`🤖 Trying model: ${model}`);
-        const { response, usedFallback } = await callAI({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.9,
-        });
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      let content: string | null = null;
 
-        if (!response.ok) {
-          if (response.status === 429) {
-            return new Response(JSON.stringify({ 
-              success: false, 
-              error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
-            }), {
-              status: 429,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
+      for (const model of models) {
+        try {
+          console.log(`🤖 Trying model: ${model} (attempt ${attempt + 1}/${MAX_ATTEMPTS})`);
+          const { response, usedFallback } = await callAI({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.9,
+          });
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              return new Response(JSON.stringify({ 
+                success: false, 
+                error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
+              }), {
+                status: 429,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+            const errorText = await response.text();
+            console.error(`AI error with ${model}: ${response.status} - ${errorText}`);
+            continue;
           }
-          const errorText = await response.text();
-          console.error(`AI error with ${model}: ${response.status} - ${errorText}`);
+
+          const result = await response.json();
+          content = result.choices?.[0]?.message?.content || null;
+
+          if (content) {
+            console.log(`✅ Got response from ${model}${usedFallback ? ' (Gemini fallback)' : ''}`);
+            break;
+          } else {
+            console.warn(`⚠️ Empty content from ${model}, trying next...`);
+          }
+        } catch (modelError) {
+          console.error(`Error with model ${model}:`, modelError);
           continue;
         }
+      }
 
-        const result = await response.json();
-        content = result.choices?.[0]?.message?.content || null;
+      if (!content) {
+        lastError = 'All models failed to generate content';
+        console.error(lastError);
+        continue; // retry
+      }
 
-        if (content) {
-          console.log(`✅ Got response from ${model}${usedFallback ? ' (Gemini fallback)' : ''}`);
-          break;
-        } else {
-          console.warn(`⚠️ Empty content from ${model}, trying next...`);
+      console.log('🤖 AI Response received');
+
+      // Parse JSON from response
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('No JSON found in response');
         }
-      } catch (modelError) {
-        console.error(`Error with model ${model}:`, modelError);
-        continue;
+        question = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        lastError = 'JSON parse error';
+        console.error('JSON parse error:', parseError);
+        question = null;
+        continue; // retry
       }
-    }
 
-    if (!content) {
-      console.error('All models failed to generate content');
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+      // Validate question structure
+      rawType = question.question_type || question.questionType;
+      rawCorrectAnswer = question.correct_answer || question.correctAnswer;
+      rawOptions = question.options || null;
+      rawQuestionText = question.question_text || question.questionText;
 
-    console.log('🤖 AI Response received');
-
-    // Parse JSON from response
-    let question: any;
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      // Check for empty correct_answer
+      const isEmptyAnswer = rawCorrectAnswer === null || 
+        rawCorrectAnswer === undefined || 
+        rawCorrectAnswer === '' || 
+        (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
+        (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
+      
+      if (isEmptyAnswer) {
+        lastError = 'empty correct_answer';
+        console.warn(`⚠️ Attempt ${attempt + 1}: AI generated question with empty correct_answer, retrying...`);
+        question = null;
+        continue; // retry
       }
-      question = JSON.parse(jsonMatch[0]);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+
+      // Check for empty question text
+      if (!rawQuestionText || rawQuestionText.trim() === '') {
+        lastError = 'empty question_text';
+        console.warn(`⚠️ Attempt ${attempt + 1}: AI generated question with empty question_text, retrying...`);
+        question = null;
+        continue; // retry
+      }
+
+      // Valid question found, break out of retry loop
+      break;
     }
 
-    // Validate and enhance question structure
-    const rawType = question.question_type || question.questionType;
-    const rawCorrectAnswer = question.correct_answer || question.correctAnswer;
-    let rawOptions = question.options || null;
-
-    // CRITICAL: Reject questions with empty or missing correct_answer
-    const isEmptyAnswer = rawCorrectAnswer === null || 
-      rawCorrectAnswer === undefined || 
-      rawCorrectAnswer === '' || 
-      (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
-      (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
-    
-    if (isEmptyAnswer) {
-      console.error('❌ AI generated question with empty correct_answer, rejecting');
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Also reject questions with missing question text
-    const rawQuestionText = question.question_text || question.questionText;
-    if (!rawQuestionText || rawQuestionText.trim() === '') {
-      console.error('❌ AI generated question with empty question_text, rejecting');
+    // If all attempts failed, return error
+    if (!question || !rawQuestionText) {
+      console.error(`❌ All ${MAX_ATTEMPTS} attempts failed. Last error: ${lastError}`);
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
