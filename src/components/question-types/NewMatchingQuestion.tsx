@@ -77,30 +77,30 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
       const expectedRight = question.correctMatches[leftItem];
       const actualRight = matches[leftItem];
       const isCorrect = actualRight === expectedRight;
-      return isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50';
+      return isCorrect ? 'border-primary bg-primary/10' : 'border-destructive bg-destructive/10';
     }
-    return selectedLeft === leftItem ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300';
+    return selectedLeft === leftItem ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/50';
   };
 
   const getRightItemClass = (rightItem: string) => {
-    if (!selectedLeft || hasCompleted) return 'border-gray-200 hover:border-gray-300';
+    if (!selectedLeft || hasCompleted) return 'border-border hover:border-muted-foreground/50';
     
     const matchKey = `${selectedLeft}-${rightItem}`;
     const feedbackState = feedback[matchKey];
     
     if (feedbackState === 'correct') {
-      return 'border-green-500 bg-green-50';
+      return 'border-primary bg-primary/10';
     } else if (feedbackState === 'incorrect') {
-      return 'border-red-500 bg-red-50';
+      return 'border-destructive bg-destructive/10';
     }
     
     // Check if this right item is already matched
     const isAlreadyMatched = Object.values(matches).includes(rightItem);
     if (isAlreadyMatched) {
-      return 'border-gray-200 bg-gray-50 opacity-50';
+      return 'border-border bg-muted opacity-50';
     }
     
-    return 'border-gray-200 hover:border-blue-300 hover:bg-blue-50';
+    return 'border-border hover:border-primary/50 hover:bg-primary/5';
   };
 
   return (
