@@ -177,8 +177,8 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                     className={`
                       p-3 rounded-lg border-2 text-sm
                       ${isCorrect 
-                        ? 'border-green-300 bg-green-50' 
-                        : 'border-red-300 bg-red-50'
+                        ? 'border-primary/50 bg-primary/10' 
+                        : 'border-destructive/50 bg-destructive/10'
                       }
                     `}
                   >
@@ -188,9 +188,9 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
                         <div className="text-xs text-muted-foreground truncate">→ {right}</div>
                       </div>
                       {isCorrect ? (
-                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                        <Check className="h-5 w-5 text-primary flex-shrink-0" />
                       ) : (
-                        <X className="h-5 w-5 text-red-600 flex-shrink-0" />
+                        <X className="h-5 w-5 text-destructive flex-shrink-0" />
                       )}
                     </div>
                   </div>
