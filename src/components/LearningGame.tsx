@@ -931,6 +931,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 />
               )}
 
+              {/* Fallback: unbekannter questionType → Freitext-Eingabe */}
+              {!['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MATCH', 'FILL_BLANK', 'DRAG_DROP'].includes(question.questionType) && (
+                <FreetextRenderer
+                  value={userTextAnswer}
+                  onChange={setUserTextAnswer}
+                  hasAnswered={hasAnswered}
+                  isCorrect={isCorrect}
+                  correctAnswer={question.correctAnswer?.value || String(question.correctAnswer || '')}
+                />
+              )}
+
               {/* Answer Feedback */}
               {hasAnswered && (
                 <div className={cn(
