@@ -629,11 +629,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     });
   };
 
-  // Move sort item
+  // Move/swap sort items
   const moveSortItem = (fromIndex: number, toIndex: number) => {
     const newOrder = [...sortOrder];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, removed);
+    // Swap the two items
+    [newOrder[fromIndex], newOrder[toIndex]] = [newOrder[toIndex], newOrder[fromIndex]];
     setSortOrder(newOrder);
   };
 
