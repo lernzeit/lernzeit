@@ -118,7 +118,7 @@ export function NewMatchingQuestion({ question, onComplete, disabled = false }: 
         )}
 
         {hasCompleted && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full">
             <Check className="h-5 w-5" />
             <span className="font-medium">Aufgabe abgeschlossen!</span>
           </div>
