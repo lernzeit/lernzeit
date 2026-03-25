@@ -239,7 +239,10 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                   size="sm" 
                   variant="destructive"
                   className="mt-3"
-                  onClick={() => setActiveTab('requests')}
+                  onClick={() => {
+                    setActiveTab('requests');
+                    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                  }}
                 >
                   <Smartphone className="h-4 w-4 mr-2" />
                   Jetzt antworten
