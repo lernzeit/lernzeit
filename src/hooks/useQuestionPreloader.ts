@@ -44,6 +44,12 @@ const normalizeQuestionPayload = (question: PreloadedQuestion): PreloadedQuestio
     options: tryParseJsonString(question.options)
   };
 
+  // Ensure questionType is always set
+  if (!normalizedQuestion.questionType) {
+    normalizedQuestion.questionType = 'FREETEXT';
+  }
+
+  // MATCH: reconstruct leftItems/rightItems from correctAnswer if missing
   if (
     normalizedQuestion.questionType === 'MATCH' &&
     normalizedQuestion.correctAnswer &&
@@ -51,16 +57,50 @@ const normalizeQuestionPayload = (question: PreloadedQuestion): PreloadedQuestio
     !Array.isArray(normalizedQuestion.correctAnswer)
   ) {
     const correctMatches = normalizedQuestion.correctAnswer as Record<string, string>;
-    const leftItems = Object.keys(correctMatches);
-    const rightItems = shuffleArray(Object.values(correctMatches).map(String));
+    // Only check keys that aren't meta fields like 'pairs', 'value', 'order'
+    const metaKeys = ['pairs', 'value', 'order', 'blanks', 'alternatives', 'placements'];
+    const matchKeys = Object.keys(correctMatches).filter(k => !metaKeys.includes(k));
+    
+    if (matchKeys.length > 0) {
+      const leftItems = matchKeys;
+      const rightItems = shuffleArray(matchKeys.map(k => String(correctMatches[k])));
+      
+      normalizedQuestion.options = {
+        ...(normalizedQuestion.options && typeof normalizedQuestion.options === 'object' && !Array.isArray(normalizedQuestion.options)
+          ? normalizedQuestion.options
+          : {}),
+        leftItems,
+        rightItems
+      };
+    }
+  }
 
-    normalizedQuestion.options = {
-      ...(normalizedQuestion.options && typeof normalizedQuestion.options === 'object' && !Array.isArray(normalizedQuestion.options)
-        ? normalizedQuestion.options
-        : {}),
-      leftItems,
-      rightItems
-    };
+  // SORT: ensure correctAnswer.order is an array and options has shuffled items
+  if (normalizedQuestion.questionType === 'SORT') {
+    const ca = normalizedQuestion.correctAnswer;
+    if (Array.isArray(ca)) {
+      // correctAnswer is already the order array — wrap it
+      normalizedQuestion.correctAnswer = { order: ca };
+    } else if (ca?.order && Array.isArray(ca.order)) {
+      // Already correct format
+    } else if (typeof ca === 'string') {
+      // Try to parse as array
+      const parsed = tryParseJsonString(ca);
+      if (Array.isArray(parsed)) {
+        normalizedQuestion.correctAnswer = { order: parsed };
+      }
+    }
+
+    // Ensure options has shuffled items for display
+    if (normalizedQuestion.correctAnswer?.order && !Array.isArray(normalizedQuestion.options)) {
+      normalizedQuestion.options = shuffleArray([...normalizedQuestion.correctAnswer.order]);
+    }
+  }
+
+  // FREETEXT: ensure correctAnswer is accessible (handle plain string/number)
+  if (normalizedQuestion.questionType === 'FREETEXT') {
+    const ca = normalizedQuestion.correctAnswer;
+    // If it's a plain string or number, it works fine as-is since checkAnswer handles both formats
   }
 
   return normalizedQuestion;
