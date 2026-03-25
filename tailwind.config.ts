@@ -120,6 +120,10 @@ export default {
 					'50%': { transform: 'scale(1.05) rotate(-5deg)' },
 					'75%': { transform: 'scale(1.1) rotate(3deg)' },
 					'100%': { transform: 'scale(1) rotate(0deg)' }
+				},
+				'pulse-subtle': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.85' }
 				}
 			},
 			animation: {
