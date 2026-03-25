@@ -21,6 +21,24 @@ serve(async (req) => {
       });
     }
 
+    // Build the prompt for AI validation
+    const prompt = `Du bist ein Lehrer für Klasse ${grade || '?'} im Fach ${subject || 'unbekannt'}.
+Prüfe, ob die Schülerantwort inhaltlich korrekt ist, auch wenn sie Tippfehler, Abkürzungen oder Synonyme enthält.
+
+Frage: ${question}
+Korrekte Antwort: ${correctAnswer}
+Schülerantwort: ${userAnswer}
+
+REGELN:
+- Akzeptiere die Antwort, wenn sie inhaltlich korrekt ist (z.B. "Atlantik" vs "Altlantik" = akzeptieren wegen Tippfehler)
+- Akzeptiere Synonyme und alternative korrekte Schreibweisen
+- Bei Mathematik: Akzeptiere äquivalente Zahlendarstellungen (z.B. "0,5" vs "1/2")
+- Lehne ab, wenn die Antwort inhaltlich falsch ist
+- Bei Tippfehlern, die akzeptiert werden: Weise in "reason" auf die korrekte Schreibweise hin (z.B. "Richtig gemeint! Die korrekte Schreibweise ist: Atlantik")
+
+Antworte NUR mit JSON:
+{"accepted": true/false, "reason": "Kurze Begründung. Bei akzeptierten Tippfehlern: Hinweis auf korrekte Schreibweise."}`;
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
