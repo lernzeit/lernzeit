@@ -1386,8 +1386,8 @@ const MatchRenderer: React.FC<{
                   key={left}
                   className={cn(
                     "flex items-start gap-2 rounded-lg border p-2 text-sm",
-                    isCorrect && "bg-green-50 border-green-300 dark:bg-green-950",
-                    isWrong && "bg-red-50 border-red-300 dark:bg-red-950",
+                    isCorrect && "bg-primary/10 border-primary",
+                    isWrong && "bg-destructive/10 border-destructive",
                     !hasAnswered && "bg-muted/50"
                   )}
                 >
