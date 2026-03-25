@@ -931,8 +931,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 />
               )}
 
-              {/* Fallback: unbekannter questionType → Freitext-Eingabe */}
-              {!['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MATCH', 'FILL_BLANK', 'DRAG_DROP'].includes(question.questionType) && (
+              {/* Fallback: unbekannter oder fehlender questionType → Freitext-Eingabe */}
+              {(!question.questionType || !['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MATCH', 'FILL_BLANK', 'DRAG_DROP'].includes(question.questionType)) && (
                 <FreetextRenderer
                   value={userTextAnswer}
                   onChange={setUserTextAnswer}
