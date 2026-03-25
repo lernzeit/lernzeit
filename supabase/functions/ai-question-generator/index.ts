@@ -289,6 +289,37 @@ serve(async (req) => {
     const rawCorrectAnswer = question.correct_answer || question.correctAnswer;
     let rawOptions = question.options || null;
 
+    // CRITICAL: Reject questions with empty or missing correct_answer
+    const isEmptyAnswer = rawCorrectAnswer === null || 
+      rawCorrectAnswer === undefined || 
+      rawCorrectAnswer === '' || 
+      (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
+      (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
+    
+    if (isEmptyAnswer) {
+      console.error('❌ AI generated question with empty correct_answer, rejecting');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Also reject questions with missing question text
+    const rawQuestionText = question.question_text || question.questionText;
+    if (!rawQuestionText || rawQuestionText.trim() === '') {
+      console.error('❌ AI generated question with empty question_text, rejecting');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // For MATCH questions: extract leftItems/rightItems from correct_answer object
     if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
       const leftItems = Object.keys(rawCorrectAnswer);
@@ -307,7 +338,7 @@ serve(async (req) => {
       grade,
       subject,
       difficulty,
-      questionText: question.question_text || question.questionText,
+      questionText: rawQuestionText,
       questionType: rawType,
       correctAnswer: rawCorrectAnswer,
       options: rawOptions,
