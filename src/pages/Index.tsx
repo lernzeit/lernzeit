@@ -90,16 +90,6 @@ const Index = () => {
 
   const handleGameComplete = (stats: {correct: number;total: number;timeSpent: number;earnedMinutes: number;subject: string;}) => {
     // Show completion toast
-    if (stats.correct === stats.total) {
-      toast.success(`Perfekt! 🎉 Alle ${stats.total} Fragen richtig!`);
-    } else {
-      toast.success(`Gut gemacht! ${stats.correct} von ${stats.total} richtig`);
-    }
-
-    if (stats.earnedMinutes > 0) {
-      toast.success(`+${stats.earnedMinutes} Minuten verdient! ⏰`, { duration: 3000 });
-    }
-
     // Go back to grade/category selection
     if (user) {
       setSelectedGrade(null);

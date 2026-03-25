@@ -199,10 +199,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       if (error) throw error;
 
-      toast({
-        title: "Willkommen zurück!",
-        description: `Du bist erfolgreich angemeldet.`,
-      });
+      // No toast needed - the UI transition is sufficient feedback
 
       onAuthSuccess();
     } catch (error: any) {
