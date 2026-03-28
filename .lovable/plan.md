@@ -1,62 +1,79 @@
 
 
-## Diagnose
+## Kombinierter Plan: Kinderfreundliche UI + Einfachere Fragetexte (Klasse 1–4)
 
-**Cache-Bestand ist unzureichend für Cache-First:**
+Beide vorherigen Pläne werden in einem Durchgang umgesetzt. Alle Änderungen betreffen **nur** die "young"-Variante (grade ≤ 4). Teen-Ansicht (5–10) und Eltern-Dashboard bleiben unverändert.
 
-| Grade | Gut bestückt | Lückenhaft/leer |
-|-------|-------------|-----------------|
-| 1 | math (163) | german (15), science (23) |
-| 2 | math (133) | english (19), german (19), rest <10 |
-| 3 | math (205), german (98) | - |
-| 4 | **komplett leer** | alle Fächer |
-| 5 | german (59) | math (14), rest <6 |
-| 6 | geography (300), german (72), history (64) | rest <41 |
-| 7-10 | **fast komplett leer** | nur 1 history-Frage in Kl.7 |
+---
 
-Cache-First würde für ~60% der Kombinationen sofort scheitern oder endlos die gleichen Fragen wiederholen.
+### 1. Kinder-Dashboard vereinfachen (`UserProfile.tsx`)
 
-**Wahre Ursache des Ladeproblems:** 5 parallele Edge-Function-Aufrufe × 3 Retries × 2 Modelle = bis zu 30 AI-Calls gleichzeitig → WORKER_LIMIT / 402 Fehler.
+**Für grade ≤ 4:**
+- Game-Start-Card: Text kürzen — nur großer "🚀 Los geht's!"-Button, kein Beschreibungstext
+- Stats-Grid: von 4 auf 2 Karten reduzieren — nur "⏰ {Minuten}" und "🏆 {Spiele}", ohne beschreibende Unter-Labels
+- Motivationstext am Ende entfernen (überflüssig für Kleine)
 
-## Plan: AI-First beibehalten, Last reduzieren
+### 2. Fächerwahl vereinfachen (`CategorySelector.tsx`)
 
-### 1. Edge Function vereinfachen (`ai-question-generator/index.ts`)
+**Für young:**
+- Motivations-Card (🏆 "Lerne und verdiene Handyzeit!") entfernen — Kinder wissen, warum sie da sind
+- Fach-Kacheln: "+{seconds}s ⏱️" Zeile entfernen (Kinder verstehen Sekunden-pro-Aufgabe nicht)
+- Lernplan-Card: Text kürzen, nur Emoji + Fachname + "Heute: [Focus]"
 
-- **Retry-Loop von 3×2=6 auf 1 Versuch reduzieren**: `callAI` hat bereits eingebauten Lovable→Gemini-Fallback. Bei Fehlschlag direkt zum bestehenden Cache-Fallback.
-- Validierung und Normalisierung (`isRenderableQuestionPayload`, `tryParseStructuredValue`, MATCH/SORT-Rekonstruktion) bleiben vollständig erhalten.
-- Gesamtlänge sinkt von ~939 auf ~700 Zeilen.
+### 3. Spiel-UI vereinfachen (`LearningGame.tsx`)
 
-### 2. Preloader entschärfen (`useQuestionPreloader.ts`)
+**Für grade ≤ 4:**
+- **Header**: Kein "Klasse X" Badge, nur Fach-Emoji + Zurück-Button
+- **Timer**: Komplett ausblenden (erzeugt Druck bei Kleinen)
+- **Fortschritt**: "⭐ {score}" statt "🏆 {score} richtig", "3 von 5" statt "Frage 3 von 5"
+- **Frage-Text**: `text-2xl` statt `text-xl`
+- **Feedback nach Antwort**:
+  - Nur großes ✅ "Super!" oder ❌ + richtige Antwort
+  - Keine Emoji-Bewertungsbuttons (👍👎😰😴)
+  - Kein Report-Button, kein KI-Tutor-Hinweis
+  - Erklärung bleibt verfügbar (optional)
+- **Buttons kürzer**: "Prüfen ✓", "💡 Hilfe", "Weiter ➡️"
+- **Lade-Screens**: "Gleich geht's los! 🚀" statt "Deine Fragen werden vorbereitet..."
+- **Error**: "🔄 Nochmal!" statt "Nochmal versuchen"
 
-- **Erste Frage einzeln laden** (wie bisher), dann restliche Fragen in **Batches von 2** statt alle 4 gleichzeitig.
-- **Timeout von 20s auf 30s erhöhen** (Gemini-Fallback braucht Zeit).
-- Gesamte Normalisierungs- und Renderability-Logik bleibt unverändert.
+### 4. Ergebnis-Screen vereinfachen (`GameCompletionScreen.tsx`)
 
-### 3. Konkreter Ablauf
+**Neue `grade` prop hinzufügen. Für grade ≤ 4:**
+- Nur: riesiges Emoji + "Super gemacht!" + große Zahl "{X} Minuten gewonnen!"
+- Keine Prozent-Genauigkeit, keine Zeitberechnung, kein Bonus-Detail
+- Button: "🎉 Weiter!" statt "X Min. Bildschirmzeit erhalten!"
 
-```text
-Client: Frage 1 laden (einzeln, 30s Timeout)
-  → Edge Function: 1x callAI → Erfolg? Zurückgeben + Cache-Write
-                               → Fehlschlag? Cache-Fallback (least-served)
-Client: Frage 1 anzeigen, isInitialLoading = false
-Client: Fragen 2+3 parallel laden (Batch 1)
-Client: Fragen 4+5 parallel laden (Batch 2)
-```
+### 5. Einfachere Fragetexte für Klasse 1–2 (`ai-question-generator/index.ts`)
 
-Maximale gleichzeitige Edge-Function-Aufrufe: **2** (statt 5).
-Maximale AI-Calls pro Request: **1** (statt 6).
-Worst-Case gesamt: 5 sequentielle Requests statt 30 parallele.
+**System-Prompt (`getSystemPrompt()`):**
+- Neue Regel: "Für Klasse 1–2: Maximal 1 kurzer Satz (max 10–12 Wörter). Nur einfache Alltagswörter. Keine Fachbegriffe."
+
+**Grade-Guidelines (`getGradeGuidelines()`):**
+- Klasse 1: "Zahlen bis 20, nur ganz kurze einfache Sätze, max 10 Wörter"
+- Klasse 2: "Zahlen bis 100, kurze Sätze, max 12 Wörter"
+- Klasse 3–4 bleibt wie bisher
+
+**Prompt-Builder (`buildQuestionPrompt()`):**
+- Für grade ≤ 2 zusätzlicher Block mit Beispielen:
+  - Gut: "Was ist 3 + 5?", "Wie viele Äpfel sind es?"
+  - Schlecht: "Berechne die Summe der folgenden Zahlen"
+
+---
 
 ### Dateien
 
 | Datei | Änderung |
 |-------|----------|
-| `supabase/functions/ai-question-generator/index.ts` | Retry-Loop auf 1 Versuch, Rest bleibt |
-| `src/hooks/useQuestionPreloader.ts` | Batch-Loading (max 2 parallel), 30s Timeout |
+| `src/components/auth/UserProfile.tsx` | Dashboard für grade ≤ 4 vereinfachen |
+| `src/components/CategorySelector.tsx` | Motivations-Card + Sekundenangabe für young entfernen |
+| `src/components/LearningGame.tsx` | Header, Timer, Feedback, Buttons, Ladetext für young |
+| `src/components/GameCompletionScreen.tsx` | `grade` prop, vereinfachte Ansicht für grade ≤ 4 |
+| `supabase/functions/ai-question-generator/index.ts` | Prompt für Klasse 1–2 vereinfachen + redeploy |
 
 ### Was NICHT geändert wird
-- `LearningGame.tsx` (Rendering funktioniert)
-- `normalizeQuestionPayload`, `isQuestionRenderable` im Preloader
-- `callAI` shared client
-- Cache-Prefill und Cleanup Funktionen
+- Teen-Ansicht (Klasse 5–10)
+- Eltern-Dashboard
+- Spiellogik, Fragengenerierung (Retry/Batch-Logik)
+- `useAgeGroup` Hook
+- Validierung und Normalisierung
 
