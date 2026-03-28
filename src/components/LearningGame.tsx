@@ -1147,9 +1147,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       disabled={!canSubmitAnswer() || isValidatingAnswer}
                     >
                       {isValidatingAnswer ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Antwort wird geprüft...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{grade <= 4 ? 'Wird geprüft...' : 'Antwort wird geprüft...'}</>
                       ) : (
-                        'Antwort prüfen'
+                        grade <= 4 ? 'Prüfen ✓' : 'Antwort prüfen'
                       )}
                     </Button>
                     <Button 
@@ -1159,7 +1159,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <Lightbulb className="w-4 h-4 mr-2" />
-                      Antwort anzeigen
+                      {grade <= 4 ? '💡 Hilfe' : 'Antwort anzeigen'}
                     </Button>
                   </>
                 ) : (
@@ -1178,13 +1178,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       {currentIndex + 1 >= totalQuestions ? (
                         <>
                           <Trophy className="w-4 h-4 mr-2" />
-                          Ergebnis anzeigen
+                          {grade <= 4 ? '🏆 Fertig!' : 'Ergebnis anzeigen'}
                         </>
                       ) : (
-                        <>
-                          Nächste Frage
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </>
+                        grade <= 4 ? 'Weiter ➡️' : <>Nächste Frage <ArrowRight className="w-4 h-4 ml-2" /></>
                       )}
                     </Button>
                   </>
