@@ -445,13 +445,15 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               {/* Game Start Card - Now First */}
               <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
                 <CardContent className="p-6">
-                  <div className="text-center mb-4">
-                    <div className="text-4xl mb-3">🎮</div>
-                    <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
-                    <p className="text-green-700 text-sm">
-                      Löse Übungen und verdiene wertvolle Handyzeit!
-                    </p>
-                  </div>
+                  {(profile?.grade || 5) > 4 && (
+                    <div className="text-center mb-4">
+                      <div className="text-4xl mb-3">🎮</div>
+                      <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
+                      <p className="text-green-700 text-sm">
+                        Löse Übungen und verdiene wertvolle Handyzeit!
+                      </p>
+                    </div>
+                  )}
                   <Button 
                     onClick={() => onStartGame(profile?.grade || 1)} 
                     className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
@@ -471,68 +473,88 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           )}
 
           {/* Stats & Quick Actions */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-              <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
-                <div className="text-xs text-orange-600">Min. verdient ⏰</div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-              <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Trophy className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
-                <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
-              </CardContent>
-            </Card>
-            <AchievementQuickView 
-              userId={user.id} 
-              onClick={() => {
-                setSettingsInitialSection('achievements');
-                setShowSettingsMenu(true);
-              }} 
-            />
-            <Card className="shadow-card">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                    <Star className="w-6 h-6 text-white" />
+          {(profile?.grade || 5) <= 4 ? (
+            /* Young mode: only 2 simple cards */
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                <CardContent className="p-4 text-center">
+                  <div className="text-3xl mb-1">⏰</div>
+                  <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <CardContent className="p-4 text-center">
+                  <div className="text-3xl mb-1">🏆</div>
+                  <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            /* Teen mode: full 4 cards */
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Clock className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium">Streak</div>
-                    <div className="text-sm text-muted-foreground">
-                      {streakLoading ? 'Wird geladen...' : `${streak} Tage in Folge! 🔥`}
+                  <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
+                  <div className="text-xs text-orange-600">Min. verdient ⏰</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Trophy className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
+                  <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
+                </CardContent>
+              </Card>
+              <AchievementQuickView 
+                userId={user.id} 
+                onClick={() => {
+                  setSettingsInitialSection('achievements');
+                  setShowSettingsMenu(true);
+                }} 
+              />
+              <Card className="shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                      <Star className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">Streak</div>
+                      <div className="text-sm text-muted-foreground">
+                        {streakLoading ? 'Wird geladen...' : `${streak} Tage in Folge! 🔥`}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Parent Linking - only show if no parent link exists */}
           {!hasParentLink && !checkingParentLink && profile?.role === 'child' && (
             <ChildLinking 
               userId={user.id} 
               onLinked={() => {
-                // Reload profile and check parent link status
                 loadProfile();
                 checkParentLink();
               }} 
             />
           )}
 
-          {/* Fun Motivation */}
-          <div className="text-center py-2">
-            <div className="text-2xl mb-2">🌟</div>
-            <p className="text-sm text-muted-foreground">
-              Du schaffst das! Jeden Tag ein bisschen besser! 💪
-            </p>
-          </div>
+          {/* Fun Motivation - only for teen */}
+          {(profile?.grade || 5) > 4 && (
+            <div className="text-center py-2">
+              <div className="text-2xl mb-2">🌟</div>
+              <p className="text-sm text-muted-foreground">
+                Du schaffst das! Jeden Tag ein bisschen besser! 💪
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );

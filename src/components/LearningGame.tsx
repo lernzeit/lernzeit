@@ -703,6 +703,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           timePerTask={secondsPerTask}
           achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
+          grade={grade}
           onContinue={handleCompletionContinue}
         />
         
@@ -739,10 +740,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <Card className="w-full max-w-2xl">
           <CardContent className="p-12 text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Deine Fragen werden vorbereitet...</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Das dauert nur einen Moment ✨
+            <p className="mt-4 text-lg text-muted-foreground">
+              {grade <= 4 ? 'Gleich geht\'s los! 🚀' : 'Deine Fragen werden vorbereitet...'}
             </p>
+            {grade > 4 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Das dauert nur einen Moment ✨
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -760,11 +765,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Zurück
+                {grade <= 4 ? 'Zurück' : 'Zurück'}
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Nochmal versuchen
+                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
               </Button>
             </div>
           </CardContent>
@@ -798,7 +803,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Nochmal versuchen
+                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
               </Button>
             </div>
           </CardContent>
@@ -822,33 +827,38 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Zurück
+            {grade <= 4 ? '' : 'Zurück'}
           </Button>
           <div className="flex items-center gap-4">
-            <Badge variant="secondary">{getSubjectEmoji(subject)} {getSubjectName(subject)}</Badge>
-            <Badge variant="outline">Klasse {grade}</Badge>
+            <Badge variant="secondary">{getSubjectEmoji(subject)} {grade <= 4 ? '' : getSubjectName(subject)}</Badge>
+            {grade > 4 && <Badge variant="outline">Klasse {grade}</Badge>}
           </div>
         </div>
 
         {/* Progress with Active Timer */}
         <div className="mb-6">
-          {/* Timer Display */}
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
-            <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
-            <span className={cn(
-              "font-mono text-lg transition-colors",
-              isRunning ? "text-foreground" : "text-muted-foreground/70"
-            )}>
-              {formattedTime}
-            </span>
-            {!isRunning && hasAnswered && (
-              <span className="text-xs text-muted-foreground">(pausiert)</span>
-            )}
-          </div>
+          {/* Timer Display - hidden for young */}
+          {grade > 4 && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
+              <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn(
+                "font-mono text-lg transition-colors",
+                isRunning ? "text-foreground" : "text-muted-foreground/70"
+              )}>
+                {formattedTime}
+              </span>
+              {!isRunning && hasAnswered && (
+                <span className="text-xs text-muted-foreground">(pausiert)</span>
+              )}
+            </div>
+          )}
           
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span className="flex items-center gap-2">
-              Frage {currentIndex + 1} von {totalQuestions}
+              {grade <= 4 
+                ? `${currentIndex + 1} von ${totalQuestions}`
+                : <>Frage {currentIndex + 1} von {totalQuestions}</>
+              }
               {loadingProgress < totalQuestions && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -857,11 +867,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               )}
             </span>
             <span className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-primary" />
-              {score} richtig
+              {grade <= 4 ? (
+                <span className="text-lg">⭐ {score}</span>
+              ) : (
+                <>
+                  <Trophy className="w-4 h-4 text-primary" />
+                  {score} richtig
+                </>
+              )}
             </span>
           </div>
-          <Progress value={(currentIndex / totalQuestions) * 100} className="h-2" />
+          <Progress value={(currentIndex / totalQuestions) * 100} className={grade <= 4 ? "h-4" : "h-2"} />
         </div>
 
         {/* Question Card */}
@@ -871,7 +887,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               <div className="flex items-center justify-between">
                 {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
                 {question.questionType !== 'FILL_BLANK' && (
-                  <CardTitle className="text-xl leading-relaxed">{question.questionText}</CardTitle>
+                  <CardTitle className={grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed"}>{question.questionText}</CardTitle>
                 )}
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
               </div>
@@ -1003,13 +1019,25 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   <div className="flex items-center gap-2 mb-2">
                     {isCorrect ? (
                       <>
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <span className="font-semibold text-green-700 dark:text-green-400">Richtig!</span>
+                        {grade <= 4 ? (
+                          <span className="text-2xl">✅</span>
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        )}
+                        <span className="font-semibold text-green-700 dark:text-green-400">
+                          {grade <= 4 ? 'Super!' : 'Richtig!'}
+                        </span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="w-5 h-5 text-red-600" />
-                        <span className="font-semibold text-red-700 dark:text-red-400">Nicht ganz richtig</span>
+                        {grade <= 4 ? (
+                          <span className="text-2xl">❌</span>
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-600" />
+                        )}
+                        <span className="font-semibold text-red-700 dark:text-red-400">
+                          {grade <= 4 ? 'Nicht ganz' : 'Nicht ganz richtig'}
+                        </span>
                       </>
                     )}
                   </div>
@@ -1023,8 +1051,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
-                  {/* Report Button for incorrect answers */}
-                  {!isCorrect && question && (
+                  {/* Report Button - only for teen */}
+                  {grade > 4 && !isCorrect && question && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1035,8 +1063,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Frage melden (Antwort falsch?)
                     </Button>
                   )}
-                  {/* KI-Tutor Premium Hint */}
-                  {!isCorrect && question && (
+                  {/* KI-Tutor - only for teen */}
+                  {grade > 4 && !isCorrect && question && (
                     <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
                       {isPremium ? (
                         <Button
@@ -1060,16 +1088,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       )}
                     </div>
                   )}
-                  {/* Emoji Feedback Buttons — feed adaptive difficulty system */}
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
-                    <div className="flex gap-1.5 justify-center">
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                  {/* Emoji Feedback Buttons - only for teen */}
+                  {grade > 4 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
+                      <div className="flex gap-1.5 justify-center">
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -1117,9 +1147,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       disabled={!canSubmitAnswer() || isValidatingAnswer}
                     >
                       {isValidatingAnswer ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Antwort wird geprüft...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{grade <= 4 ? 'Wird geprüft...' : 'Antwort wird geprüft...'}</>
                       ) : (
-                        'Antwort prüfen'
+                        grade <= 4 ? 'Prüfen ✓' : 'Antwort prüfen'
                       )}
                     </Button>
                     <Button 
@@ -1129,7 +1159,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <Lightbulb className="w-4 h-4 mr-2" />
-                      Antwort anzeigen
+                      {grade <= 4 ? '💡 Hilfe' : 'Antwort anzeigen'}
                     </Button>
                   </>
                 ) : (
@@ -1148,13 +1178,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       {currentIndex + 1 >= totalQuestions ? (
                         <>
                           <Trophy className="w-4 h-4 mr-2" />
-                          Ergebnis anzeigen
+                          {grade <= 4 ? '🏆 Fertig!' : 'Ergebnis anzeigen'}
                         </>
                       ) : (
-                        <>
-                          Nächste Frage
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </>
+                        grade <= 4 ? 'Weiter ➡️' : <>Nächste Frage <ArrowRight className="w-4 h-4 ml-2" /></>
                       )}
                     </Button>
                   </>
