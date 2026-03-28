@@ -703,6 +703,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           timePerTask={secondsPerTask}
           achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
+          grade={grade}
           onContinue={handleCompletionContinue}
         />
         
@@ -739,10 +740,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <Card className="w-full max-w-2xl">
           <CardContent className="p-12 text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Deine Fragen werden vorbereitet...</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Das dauert nur einen Moment ✨
+            <p className="mt-4 text-lg text-muted-foreground">
+              {grade <= 4 ? 'Gleich geht\'s los! 🚀' : 'Deine Fragen werden vorbereitet...'}
             </p>
+            {grade > 4 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Das dauert nur einen Moment ✨
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -760,11 +765,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Zurück
+                {grade <= 4 ? 'Zurück' : 'Zurück'}
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Nochmal versuchen
+                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
               </Button>
             </div>
           </CardContent>
@@ -798,7 +803,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Nochmal versuchen
+                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
               </Button>
             </div>
           </CardContent>
