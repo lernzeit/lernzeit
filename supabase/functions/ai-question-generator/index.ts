@@ -686,6 +686,16 @@ REGELN:
 - Klar formuliert, eindeutig und pädagogisch wertvoll
 - Antworte NUR mit gültigem JSON, ohne Markdown oder Erklärungen
 
+SPRACHREGELN FÜR KLEINE KINDER (Klasse 1-2):
+- Maximal 1 kurzer Satz als Frage (max 10-12 Wörter)
+- Nur einfache, alltägliche Wörter, die ein 6-7-Jähriges Kind versteht
+- Keine Fachbegriffe, keine verschachtelten Sätze, keine Nebensätze
+- Direkte, klare Aufforderungen: "Rechne", "Was ist", "Wie viele"
+- Beispiel GUT: "Was ist 3 + 5?"
+- Beispiel GUT: "Wie viele Äpfel sind es?"
+- Beispiel SCHLECHT: "Berechne die Summe der folgenden Zahlen"
+- Beispiel SCHLECHT: "Welches der folgenden Ergebnisse ist korrekt, wenn man..."
+
 KRITISCHE REGEL FÜR MATHEMATIK:
 - Bei Mathematik-Fragen ist die Antwort IMMER NUR eine Zahl (z.B. "10", nicht "10 Murmeln", nicht "10 Brötchen").
 - Keine Einheiten, keine Wörter in der Antwort – NUR die reine Zahl.
@@ -725,6 +735,18 @@ function buildQuestionPrompt(
     topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
   }
 
+  let youngLanguageNote = '';
+  if (grade <= 2) {
+    youngLanguageNote = `\n\nSPRACHE FÜR KLEINE KINDER (Klasse ${grade}):
+- Maximal 1 kurzer Satz als Fragetext (max ${grade === 1 ? '10' : '12'} Wörter)
+- Nur einfache, alltägliche Wörter
+- Keine Fachbegriffe, keine langen zusammengesetzten Wörter
+- Beispiel gut: "Was ist 3 + 5?"
+- Beispiel gut: "Wie viele Äpfel sind es?"  
+- Beispiel schlecht: "Berechne die Summe der folgenden Zahlen"
+- Beispiel schlecht: "Ermittle das Ergebnis der nachstehenden Rechenoperation"`;
+  }
+
   const subjectScope = getSubjectContentScope(subject, grade);
 
   return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
@@ -736,7 +758,7 @@ ${subjectScope}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
-FRAGETYP: ${questionType}${exclusionNote}${topicNote}
+FRAGETYP: ${questionType}${exclusionNote}${topicNote}${youngLanguageNote}
 
 ${typeInstructions}
 
@@ -768,7 +790,8 @@ function getSubjectGerman(subject: string): string {
 }
 
 function getGradeGuidelines(grade: number): string {
-  if (grade <= 2) return 'Grundschule Klasse 1-2: Einfache Konzepte, kurze Sätze, Zahlen bis 100, Buchstaben';
+  if (grade === 1) return 'Grundschule Klasse 1: NUR ganz kurze, einfache Sätze. Maximal 10 Wörter pro Frage. Zahlenraum bis 20. Nur einfache Alltagswörter, die ein 6-Jähriges Kind kennt. Keine Fachbegriffe, keine Nebensätze.';
+  if (grade === 2) return 'Grundschule Klasse 2: Kurze, einfache Sätze. Maximal 12 Wörter pro Frage. Zahlenraum bis 100. Nur einfache Alltagswörter. Keine Fachbegriffe.';
   if (grade <= 4) return 'Grundschule Klasse 3-4: Grundrechenarten, einfache Texte, Sachkunde';
   if (grade <= 6) return 'Sekundarstufe I Klasse 5-6: Brüche, Dezimalzahlen, Grammatik, Geschichte';
   if (grade <= 8) return 'Sekundarstufe I Klasse 7-8: Algebra, Gleichungen, Literatur, Wissenschaften';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, Clock, Zap, Target, Award, Star, Gift } from 'lucide-react';
+import { Trophy, Clock, Target, Award, Star, Gift } from 'lucide-react';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -9,7 +9,8 @@ interface GameCompletionScreenProps {
   sessionDuration: number;
   timePerTask: number;
   achievementBonusMinutes: number;
-  perfectSessionBonus?: number; // in minutes
+  perfectSessionBonus?: number;
+  grade?: number;
   onContinue: () => void;
 }
 
@@ -20,6 +21,7 @@ export function GameCompletionScreen({
   timePerTask,
   achievementBonusMinutes,
   perfectSessionBonus = 0,
+  grade = 5,
   onContinue
 }: GameCompletionScreenProps) {
   const earnedSeconds = score * timePerTask;
@@ -29,6 +31,8 @@ export function GameCompletionScreen({
   const efficiency = Math.round((score / totalQuestions) * 100);
   const earnedMinutes = Number((netTimeSeconds / 60).toFixed(1));
 
+  const isYoung = grade <= 4;
+
   // Determine celebration level
   const getCelebrationLevel = () => {
     if (efficiency >= 90) return 'excellent';
@@ -37,6 +41,62 @@ export function GameCompletionScreen({
   };
 
   const celebrationLevel = getCelebrationLevel();
+
+  // === YOUNG MODE (Klasse 1-4): super simple ===
+  if (isYoung) {
+    const youngEmojis = {
+      excellent: '🏆',
+      good: '🎉',
+      okay: '💪'
+    };
+    const youngTitles = {
+      excellent: 'Super gemacht!',
+      good: 'Toll gemacht!',
+      okay: 'Gut gemacht!'
+    };
+
+    return (
+      <div className="w-full max-w-xl mx-auto space-y-6 overflow-hidden">
+        <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
+          <CardContent className="p-8">
+            {/* Big emoji */}
+            <div className="text-8xl mb-4 animate-bounce">
+              {youngEmojis[celebrationLevel]}
+            </div>
+            
+            {/* Simple title */}
+            <h1 className="text-3xl font-bold text-primary mb-6">
+              {youngTitles[celebrationLevel]}
+            </h1>
+
+            {/* Score as simple stars */}
+            <div className="flex justify-center gap-1 mb-6">
+              {Array.from({ length: totalQuestions }).map((_, i) => (
+                <span key={i} className={`text-3xl ${i < score ? '' : 'opacity-20'}`}>⭐</span>
+              ))}
+            </div>
+            
+            {/* Big minutes display */}
+            <div className="bg-primary/10 rounded-2xl p-6 mb-6">
+              <div className="text-5xl font-bold text-primary mb-1">{earnedMinutes}</div>
+              <div className="text-lg text-muted-foreground">Minuten gewonnen! 📱</div>
+            </div>
+
+            {/* Simple continue button */}
+            <Button 
+              onClick={onContinue}
+              size="lg" 
+              className="w-full text-xl py-7 bg-primary hover:bg-primary/90"
+            >
+              🎉 Weiter!
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // === TEEN MODE (Klasse 5-10): full detail ===
   const celebrationEmojis = {
     excellent: '🏆🌟✨',
     good: '🎉👏💫',
@@ -60,21 +120,15 @@ export function GameCompletionScreen({
       {/* Celebration Header */}
       <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
         <CardHeader className="pb-4">
-          {/* Animated Celebration Icons */}
           <div className="text-6xl mb-4 animate-bounce">
             {celebrationEmojis[celebrationLevel]}
           </div>
-          
-          {/* Dynamic Title */}
           <h1 className="text-3xl font-bold text-primary mb-2">
             {celebrationTitles[celebrationLevel]}
           </h1>
-          
           <p className="text-muted-foreground">
             {celebrationMessages[celebrationLevel]}
           </p>
-
-          {/* Score Badge */}
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mt-4">
             <Award className="w-4 h-4" />
             {score} von {totalQuestions} richtig!
@@ -85,14 +139,12 @@ export function GameCompletionScreen({
       {/* Main Results */}
       <Card>
         <CardContent className="p-6">
-          {/* Key Stats Grid */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="text-center p-4 bg-primary/5 rounded-xl border border-primary/10">
               <Target className="w-8 h-8 mx-auto mb-2 text-primary" />
               <div className="text-3xl font-bold text-primary">{efficiency}%</div>
               <div className="text-sm text-muted-foreground">Genauigkeit</div>
             </div>
-            
             <div className="text-center p-4 bg-accent/20 rounded-xl border border-accent/30">
               <Gift className="w-8 h-8 mx-auto mb-2 text-accent-foreground" />
               <div className="text-3xl font-bold text-accent-foreground">{earnedMinutes}</div>
@@ -100,7 +152,6 @@ export function GameCompletionScreen({
             </div>
           </div>
 
-          {/* Bonus Summary */}
           {(achievementBonusMinutes > 0 || perfectSessionBonus > 0) && (
             <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 rounded-xl p-4 mb-6 border border-yellow-200 dark:border-yellow-800/30">
               <div className="flex items-center gap-2 mb-2">
@@ -124,7 +175,6 @@ export function GameCompletionScreen({
             </div>
           )}
 
-          {/* Detailed Time Calculation */}
           <div className="text-center text-sm text-muted-foreground mb-6">
             <Clock className="w-4 h-4 inline mr-1" />
             {score} richtige × {timePerTask}s = {earnedSeconds}s<br/>
@@ -139,7 +189,6 @@ export function GameCompletionScreen({
         </CardContent>
       </Card>
 
-      {/* Action Button */}
       <div className="space-y-3">
         <Button 
           onClick={onContinue}
@@ -149,7 +198,6 @@ export function GameCompletionScreen({
           <Trophy className="w-5 h-5 mr-2" />
           {earnedMinutes} Min. Bildschirmzeit erhalten!
         </Button>
-        
         <div className="text-center text-sm text-muted-foreground">
           Deine Zeit wurde hinzugefügt! 📱✨
         </div>

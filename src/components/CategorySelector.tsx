@@ -173,20 +173,18 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           </h1>
         </div>
 
-        {/* Motivation */}
-        <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
-          <CardContent className={`${isYoung ? 'p-5' : 'p-4'} text-center`}>
-            <div className={isYoung ? 'text-4xl mb-2' : 'text-3xl mb-2'}>🏆</div>
-            <h3 className={`font-bold text-green-800 ${isYoung ? 'text-lg' : 'text-base'} mb-1`}>
-              {isYoung ? 'Lerne und verdiene Handyzeit!' : 'Verdiene Handyzeit!'}
-            </h3>
-            {!isYoung && (
+        {/* Motivation - only for teen */}
+        {!isYoung && (
+          <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl mb-2">🏆</div>
+              <h3 className="font-bold text-green-800 text-base mb-1">Verdiene Handyzeit!</h3>
               <p className="text-sm text-green-700">
                 Löse Aufgaben und verdiene wertvolle Bildschirmzeit
               </p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Learning Plan Card */}
         {activePlan && (() => {
@@ -259,9 +257,6 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                         <Star className="w-3 h-3" /> Wichtig
                       </Badge>
                     )}
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      <span className="text-xs text-green-600 font-medium">+{seconds}s ⏱️</span>
-                    </div>
                   </CardContent>
                 </Card>
               );
