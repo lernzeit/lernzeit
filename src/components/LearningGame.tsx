@@ -827,33 +827,38 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Zurück
+            {grade <= 4 ? '' : 'Zurück'}
           </Button>
           <div className="flex items-center gap-4">
-            <Badge variant="secondary">{getSubjectEmoji(subject)} {getSubjectName(subject)}</Badge>
-            <Badge variant="outline">Klasse {grade}</Badge>
+            <Badge variant="secondary">{getSubjectEmoji(subject)} {grade <= 4 ? '' : getSubjectName(subject)}</Badge>
+            {grade > 4 && <Badge variant="outline">Klasse {grade}</Badge>}
           </div>
         </div>
 
         {/* Progress with Active Timer */}
         <div className="mb-6">
-          {/* Timer Display */}
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
-            <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
-            <span className={cn(
-              "font-mono text-lg transition-colors",
-              isRunning ? "text-foreground" : "text-muted-foreground/70"
-            )}>
-              {formattedTime}
-            </span>
-            {!isRunning && hasAnswered && (
-              <span className="text-xs text-muted-foreground">(pausiert)</span>
-            )}
-          </div>
+          {/* Timer Display - hidden for young */}
+          {grade > 4 && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
+              <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn(
+                "font-mono text-lg transition-colors",
+                isRunning ? "text-foreground" : "text-muted-foreground/70"
+              )}>
+                {formattedTime}
+              </span>
+              {!isRunning && hasAnswered && (
+                <span className="text-xs text-muted-foreground">(pausiert)</span>
+              )}
+            </div>
+          )}
           
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span className="flex items-center gap-2">
-              Frage {currentIndex + 1} von {totalQuestions}
+              {grade <= 4 
+                ? `${currentIndex + 1} von ${totalQuestions}`
+                : <>Frage {currentIndex + 1} von {totalQuestions}</>
+              }
               {loadingProgress < totalQuestions && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -862,11 +867,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               )}
             </span>
             <span className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-primary" />
-              {score} richtig
+              {grade <= 4 ? (
+                <span className="text-lg">⭐ {score}</span>
+              ) : (
+                <>
+                  <Trophy className="w-4 h-4 text-primary" />
+                  {score} richtig
+                </>
+              )}
             </span>
           </div>
-          <Progress value={(currentIndex / totalQuestions) * 100} className="h-2" />
+          <Progress value={(currentIndex / totalQuestions) * 100} className={grade <= 4 ? "h-4" : "h-2"} />
         </div>
 
         {/* Question Card */}
