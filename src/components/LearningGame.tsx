@@ -887,7 +887,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               <div className="flex items-center justify-between">
                 {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
                 {question.questionType !== 'FILL_BLANK' && (
-                  <CardTitle className="text-xl leading-relaxed">{question.questionText}</CardTitle>
+                  <CardTitle className={grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed"}>{question.questionText}</CardTitle>
                 )}
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
               </div>
@@ -1019,13 +1019,25 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   <div className="flex items-center gap-2 mb-2">
                     {isCorrect ? (
                       <>
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <span className="font-semibold text-green-700 dark:text-green-400">Richtig!</span>
+                        {grade <= 4 ? (
+                          <span className="text-2xl">✅</span>
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        )}
+                        <span className="font-semibold text-green-700 dark:text-green-400">
+                          {grade <= 4 ? 'Super!' : 'Richtig!'}
+                        </span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="w-5 h-5 text-red-600" />
-                        <span className="font-semibold text-red-700 dark:text-red-400">Nicht ganz richtig</span>
+                        {grade <= 4 ? (
+                          <span className="text-2xl">❌</span>
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-600" />
+                        )}
+                        <span className="font-semibold text-red-700 dark:text-red-400">
+                          {grade <= 4 ? 'Nicht ganz' : 'Nicht ganz richtig'}
+                        </span>
                       </>
                     )}
                   </div>
@@ -1039,8 +1051,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
-                  {/* Report Button for incorrect answers */}
-                  {!isCorrect && question && (
+                  {/* Report Button - only for teen */}
+                  {grade > 4 && !isCorrect && question && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1051,8 +1063,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Frage melden (Antwort falsch?)
                     </Button>
                   )}
-                  {/* KI-Tutor Premium Hint */}
-                  {!isCorrect && question && (
+                  {/* KI-Tutor - only for teen */}
+                  {grade > 4 && !isCorrect && question && (
                     <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
                       {isPremium ? (
                         <Button
@@ -1076,16 +1088,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       )}
                     </div>
                   )}
-                  {/* Emoji Feedback Buttons — feed adaptive difficulty system */}
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
-                    <div className="flex gap-1.5 justify-center">
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                  {/* Emoji Feedback Buttons - only for teen */}
+                  {grade > 4 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
+                      <div className="flex gap-1.5 justify-center">
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
