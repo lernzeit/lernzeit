@@ -10,7 +10,7 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODELS = [
   "google/gemma-3-4b-it:free",
   "google/gemma-3-12b-it:free",
-  "google/gemini-2.5-flash-lite-preview-06-17:free",
+  "google/gemma-3-27b-it:free",
 ];
 
 const PROMPT = `Du bist ein Lehrer für Klasse 3 im Fach Mathematik in Deutschland.
