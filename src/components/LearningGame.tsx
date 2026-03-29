@@ -695,7 +695,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       triggerRainbow();
     }
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-bg flex flex-col items-center justify-center p-4 pt-safe-top pb-safe-bottom">
         <GameCompletionScreen
           score={score}
           totalQuestions={totalQuestions}

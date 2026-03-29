@@ -56,42 +56,42 @@ export function GameCompletionScreen({
     };
 
     return (
-      <div className="w-full max-w-xl mx-auto space-y-6 pb-safe-bottom">
+      <div className="w-full max-w-xl mx-auto space-y-4 px-2 pb-safe-bottom">
         <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
-          <CardContent className="p-8">
+          <CardContent className="p-5 sm:p-8">
             {/* Big emoji */}
-            <div className="text-8xl mb-4 animate-bounce">
+            <div className="text-6xl sm:text-8xl mb-3 animate-bounce">
               {youngEmojis[celebrationLevel]}
             </div>
             
             {/* Simple title */}
-            <h1 className="text-3xl font-bold text-primary mb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-3">
               {youngTitles[celebrationLevel]}
             </h1>
 
             {/* Score as simple stars */}
-            <div className="flex justify-center gap-1 mb-4">
+            <div className="flex justify-center gap-1 mb-3 flex-wrap">
               {Array.from({ length: totalQuestions }).map((_, i) => (
-                <span key={i} className={`text-3xl ${i < score ? '' : 'opacity-20'}`}>⭐</span>
+                <span key={i} className={`text-2xl sm:text-3xl ${i < score ? '' : 'opacity-20'}`}>⭐</span>
               ))}
             </div>
 
             {/* Score text */}
-            <p className="text-lg text-muted-foreground mb-6">
+            <p className="text-base sm:text-lg text-muted-foreground mb-4">
               {score} von {totalQuestions} richtig!
             </p>
             
             {/* Big minutes display */}
-            <div className="bg-primary/10 rounded-2xl p-6 mb-6">
-              <div className="text-5xl font-bold text-primary mb-1">{earnedMinutes}</div>
-              <div className="text-lg text-muted-foreground">Minuten gewonnen! 📱</div>
+            <div className="bg-primary/10 rounded-2xl p-4 sm:p-6 mb-4">
+              <div className="text-4xl sm:text-5xl font-bold text-primary mb-1">{earnedMinutes}</div>
+              <div className="text-base sm:text-lg text-muted-foreground">Minuten gewonnen! 📱</div>
             </div>
 
             {/* Simple continue button */}
             <Button 
               onClick={onContinue}
               size="lg" 
-              className="w-full text-xl py-7 bg-primary hover:bg-primary/90"
+              className="w-full text-lg sm:text-xl py-5 sm:py-7 bg-primary hover:bg-primary/90"
             >
               🎉 Weiter!
             </Button>
