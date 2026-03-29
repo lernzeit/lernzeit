@@ -121,7 +121,7 @@ export function GameCompletionScreen({
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto space-y-4 overflow-hidden">
+    <div className="w-full max-w-xl mx-auto space-y-4 pb-safe-bottom">
       {/* Celebration Header */}
       <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
         <CardHeader className="pb-4">
