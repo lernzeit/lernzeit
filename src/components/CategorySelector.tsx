@@ -234,7 +234,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         })()}
 
         {/* Categories */}
-        <div className={`grid ${age.gridCols} gap-${isYoung ? '4' : '3'}`}>
+        <div className={`grid ${age.gridCols} ${isYoung ? 'gap-4' : 'gap-3'}`}>
           {sortedCategories.map((category) => {
             const seconds = getSecondsForCategory(category.id);
             const isPriority = prioritySubjects.has(category.id);
