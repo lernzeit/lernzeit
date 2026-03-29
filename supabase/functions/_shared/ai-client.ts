@@ -31,6 +31,7 @@ const GEMINI_MODEL_MAP: Record<string, string> = {
 
 // Cooldown tracking per provider to avoid futile retries after 402
 const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const ERROR_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes for non-auth errors (404, 500, etc.)
 let openrouterExhaustedUntil = 0;
 let geminiExhaustedUntil = 0;
 let lovableExhaustedUntil = 0;
