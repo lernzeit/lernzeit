@@ -445,7 +445,11 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               {/* Game Start Card - Now First */}
               <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
                 <CardContent className="p-6">
-                  {(profile?.grade || 5) > 4 && (
+                  {(profile?.grade || 5) <= 4 ? (
+                    <div className="text-center mb-3">
+                      <div className="text-4xl mb-2">🎮</div>
+                    </div>
+                  ) : (
                     <div className="text-center mb-4">
                       <div className="text-4xl mb-3">🎮</div>
                       <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>

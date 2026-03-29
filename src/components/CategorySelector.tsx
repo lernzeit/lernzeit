@@ -247,11 +247,11 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                   className={`rounded-2xl border-2 shadow-lg hover:scale-105 cursor-pointer transition-all duration-300 ${isPriority ? 'ring-2 ring-primary border-primary' : ''}`}
                   onClick={() => onCategorySelect(category.id)}
                 >
-                  <CardContent className="p-5 text-center">
-                    <div className={`w-16 h-16 mx-auto ${category.color} rounded-full flex items-center justify-center text-3xl mb-3`}>
+                  <CardContent className="p-4 sm:p-5 text-center">
+                    <div className={`w-14 h-14 sm:w-16 sm:h-16 mx-auto ${category.color} rounded-full flex items-center justify-center text-2xl sm:text-3xl mb-2 sm:mb-3`}>
                       {category.emoji}
                     </div>
-                    <h3 className="text-lg font-bold">{category.shortName}</h3>
+                    <h3 className="text-base sm:text-lg font-bold">{category.shortName}</h3>
                     {isPriority && (
                       <Badge variant="default" className="mt-2 text-xs gap-1">
                         <Star className="w-3 h-3" /> Wichtig
