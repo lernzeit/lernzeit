@@ -99,8 +99,10 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
         openrouterExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
         console.warn('⚠️ OpenRouter credits exhausted (402), falling back...');
       } else {
+        // For 404, 500, etc. — apply shorter cooldown to avoid wasting CPU on every request
+        openrouterExhaustedUntil = Date.now() + ERROR_COOLDOWN_MS;
         await response.text().catch(() => {});
-        console.warn(`⚠️ OpenRouter error (${response.status}), falling back...`);
+        console.warn(`⚠️ OpenRouter error (${response.status}), cooldown ${ERROR_COOLDOWN_MS / 1000}s, falling back...`);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') throw err;
