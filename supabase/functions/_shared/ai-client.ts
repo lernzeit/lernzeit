@@ -13,11 +13,11 @@ const LOVABLE_GATEWAY = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
 // Map Lovable model names → OpenRouter model names
 const OPENROUTER_MODEL_MAP: Record<string, string> = {
-  'google/gemini-3-flash-preview': 'google/gemma-3-12b-it',
-  'google/gemini-3.1-flash-lite-preview': 'google/gemma-3-12b-it',
-  'google/gemini-2.5-flash': 'google/gemma-3-12b-it',
-  'google/gemini-2.5-flash-lite': 'google/gemma-3-4b-it',
-  'google/gemini-2.5-pro': 'google/gemma-3-27b-it',
+  'google/gemini-3-flash-preview': 'google/gemma-3-12b-it:free',
+  'google/gemini-3.1-flash-lite-preview': 'google/gemma-3-12b-it:free',
+  'google/gemini-2.5-flash': 'google/gemma-3-12b-it:free',
+  'google/gemini-2.5-flash-lite': 'google/gemma-3-4b-it:free',
+  'google/gemini-2.5-pro': 'google/gemma-3-27b-it:free',
 };
 
 // Map Lovable model names → Gemini-native model names
