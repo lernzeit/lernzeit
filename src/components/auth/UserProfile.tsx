@@ -474,18 +474,20 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
           {/* Stats & Quick Actions */}
           {(profile?.grade || 5) <= 4 ? (
-            /* Young mode: only 2 simple cards */
+            /* Young mode: 2 simple cards with labels */
             <div className="grid grid-cols-2 gap-4">
               <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-                <CardContent className="p-4 text-center">
-                  <div className="text-3xl mb-1">⏰</div>
-                  <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
+                <CardContent className="p-5 text-center">
+                  <div className="text-3xl mb-2">⏰</div>
+                  <div className="text-3xl font-bold text-orange-700">{totalTimeEarned}</div>
+                  <div className="text-sm text-orange-600 mt-1">Minuten</div>
                 </CardContent>
               </Card>
               <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-                <CardContent className="p-4 text-center">
-                  <div className="text-3xl mb-1">🏆</div>
-                  <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
+                <CardContent className="p-5 text-center">
+                  <div className="text-3xl mb-2">🏆</div>
+                  <div className="text-3xl font-bold text-green-700">{gamesPlayed}</div>
+                  <div className="text-sm text-green-600 mt-1">Spiele</div>
                 </CardContent>
               </Card>
             </div>

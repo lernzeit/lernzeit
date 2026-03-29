@@ -56,7 +56,7 @@ export function GameCompletionScreen({
     };
 
     return (
-      <div className="w-full max-w-xl mx-auto space-y-6 overflow-hidden">
+      <div className="w-full max-w-xl mx-auto space-y-6 pb-safe-bottom">
         <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
           <CardContent className="p-8">
             {/* Big emoji */}
@@ -65,16 +65,21 @@ export function GameCompletionScreen({
             </div>
             
             {/* Simple title */}
-            <h1 className="text-3xl font-bold text-primary mb-6">
+            <h1 className="text-3xl font-bold text-primary mb-4">
               {youngTitles[celebrationLevel]}
             </h1>
 
             {/* Score as simple stars */}
-            <div className="flex justify-center gap-1 mb-6">
+            <div className="flex justify-center gap-1 mb-4">
               {Array.from({ length: totalQuestions }).map((_, i) => (
                 <span key={i} className={`text-3xl ${i < score ? '' : 'opacity-20'}`}>⭐</span>
               ))}
             </div>
+
+            {/* Score text */}
+            <p className="text-lg text-muted-foreground mb-6">
+              {score} von {totalQuestions} richtig!
+            </p>
             
             {/* Big minutes display */}
             <div className="bg-primary/10 rounded-2xl p-6 mb-6">
@@ -116,7 +121,7 @@ export function GameCompletionScreen({
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto space-y-4 overflow-hidden">
+    <div className="w-full max-w-xl mx-auto space-y-4 pb-safe-bottom">
       {/* Celebration Header */}
       <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
         <CardHeader className="pb-4">

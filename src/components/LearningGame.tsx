@@ -822,21 +822,23 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           onComplete={() => setGameAnimation(null)}
         />
       )}
-      <div className="page-container">
+      <div className="page-container space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             {grade <= 4 ? '' : 'Zurück'}
           </Button>
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary">{getSubjectEmoji(subject)} {grade <= 4 ? '' : getSubjectName(subject)}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className={grade <= 4 ? 'text-base px-3 py-1' : ''}>
+              {getSubjectEmoji(subject)} {grade <= 4 ? '' : getSubjectName(subject)}
+            </Badge>
             {grade > 4 && <Badge variant="outline">Klasse {grade}</Badge>}
           </div>
         </div>
 
         {/* Progress with Active Timer */}
-        <div className="mb-6">
+        <div>
           {/* Timer Display - hidden for young */}
           {grade > 4 && (
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
@@ -882,7 +884,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
         {/* Question Card */}
         {question && (
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
