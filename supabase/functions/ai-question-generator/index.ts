@@ -433,7 +433,7 @@ serve(async (req) => {
         console.error('Cache fallback failed:', cacheErr);
       }
       
-      console.error(`❌ All ${MAX_ATTEMPTS} attempts AND cache fallback failed.`);
+      console.error('❌ AI generation and cache fallback failed.');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
