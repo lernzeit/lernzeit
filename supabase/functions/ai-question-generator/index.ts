@@ -238,7 +238,7 @@ serve(async (req) => {
     // ── SINGLE AI attempt (callAI handles Lovable→Gemini fallback internally) ──
     try {
       console.log('🤖 Generating question via callAI (single attempt)');
-      const { response, usedFallback } = await callAI({
+      const { response, provider } = await callAI({
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -251,7 +251,7 @@ serve(async (req) => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ Got response${usedFallback ? ' (Gemini fallback)' : ''}`);
+        console.log(`✅ Got response (provider: ${provider})`);
         
         const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
         const content = result.choices?.[0]?.message?.content;
