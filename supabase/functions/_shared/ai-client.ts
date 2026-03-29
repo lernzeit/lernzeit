@@ -13,11 +13,11 @@ const LOVABLE_GATEWAY = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
 // Map Lovable model names → OpenRouter model names
 const OPENROUTER_MODEL_MAP: Record<string, string> = {
-  'google/gemini-3-flash-preview': 'google/gemma-3-12b-it',
-  'google/gemini-3.1-flash-lite-preview': 'google/gemma-3-12b-it',
-  'google/gemini-2.5-flash': 'google/gemma-3-12b-it',
-  'google/gemini-2.5-flash-lite': 'google/gemma-3-4b-it',
-  'google/gemini-2.5-pro': 'google/gemma-3-27b-it',
+  'google/gemini-3-flash-preview': 'google/gemma-3-12b-it:free',
+  'google/gemini-3.1-flash-lite-preview': 'google/gemma-3-12b-it:free',
+  'google/gemini-2.5-flash': 'google/gemma-3-12b-it:free',
+  'google/gemini-2.5-flash-lite': 'google/gemma-3-4b-it:free',
+  'google/gemini-2.5-pro': 'google/gemma-3-27b-it:free',
 };
 
 // Map Lovable model names → Gemini-native model names
@@ -31,6 +31,7 @@ const GEMINI_MODEL_MAP: Record<string, string> = {
 
 // Cooldown tracking per provider to avoid futile retries after 402
 const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const ERROR_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes for non-auth errors (404, 500, etc.)
 let openrouterExhaustedUntil = 0;
 let geminiExhaustedUntil = 0;
 let lovableExhaustedUntil = 0;
@@ -98,8 +99,10 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
         openrouterExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
         console.warn('⚠️ OpenRouter credits exhausted (402), falling back...');
       } else {
+        // For 404, 500, etc. — apply shorter cooldown to avoid wasting CPU on every request
+        openrouterExhaustedUntil = Date.now() + ERROR_COOLDOWN_MS;
         await response.text().catch(() => {});
-        console.warn(`⚠️ OpenRouter error (${response.status}), falling back...`);
+        console.warn(`⚠️ OpenRouter error (${response.status}), cooldown ${ERROR_COOLDOWN_MS / 1000}s, falling back...`);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') throw err;
