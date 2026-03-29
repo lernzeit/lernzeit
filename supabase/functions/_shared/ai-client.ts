@@ -1,23 +1,23 @@
 /**
  * Shared AI client with automatic fallback chain:
- *   1. OpenRouter (primary)
- *   2. Gemini API (secondary)
+ *   1. Gemini API (primary – fastest, direct)
+ *   2. OpenRouter (secondary – paid models only)
  *   3. Lovable AI Gateway (tertiary)
  *
  * Each provider is skipped if its API key is missing or if it was recently exhausted (402).
  */
 
-const OPENROUTER_GATEWAY = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI_GATEWAY = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const OPENROUTER_GATEWAY = 'https://openrouter.ai/api/v1/chat/completions';
 const LOVABLE_GATEWAY = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
-// Map Lovable model names → OpenRouter model names
+// Map Lovable model names → OpenRouter PAID model names (no :free suffix)
 const OPENROUTER_MODEL_MAP: Record<string, string> = {
-  'google/gemini-3-flash-preview': 'google/gemma-3-12b-it:free',
-  'google/gemini-3.1-flash-lite-preview': 'google/gemma-3-12b-it:free',
-  'google/gemini-2.5-flash': 'google/gemma-3-12b-it:free',
-  'google/gemini-2.5-flash-lite': 'google/gemma-3-4b-it:free',
-  'google/gemini-2.5-pro': 'google/gemma-3-27b-it:free',
+  'google/gemini-3-flash-preview': 'google/gemma-3-12b-it',
+  'google/gemini-3.1-flash-lite-preview': 'google/gemma-3-12b-it',
+  'google/gemini-2.5-flash': 'google/gemma-3-12b-it',
+  'google/gemini-2.5-flash-lite': 'google/gemma-3-4b-it',
+  'google/gemini-2.5-pro': 'google/gemma-3-27b-it',
 };
 
 // Map Lovable model names → Gemini-native model names
@@ -29,13 +29,10 @@ const GEMINI_MODEL_MAP: Record<string, string> = {
   'google/gemini-2.5-pro': 'gemini-2.5-pro',
 };
 
-// OpenRouter currently returns persistent 404s for the configured models.
-// Disable it temporarily so edge functions do not waste compute before falling back.
-const OPENROUTER_ENABLED = false;
 const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-const ERROR_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes for non-auth errors (404, 500, etc.)
-let openrouterExhaustedUntil = 0;
+const ERROR_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes for non-auth errors
 let geminiExhaustedUntil = 0;
+let openrouterExhaustedUntil = 0;
 let lovableExhaustedUntil = 0;
 
 interface AiRequestOptions {
@@ -49,24 +46,72 @@ interface AiRequestOptions {
 
 interface AiCallResult {
   response: Response;
-  provider: 'openrouter' | 'gemini' | 'lovable';
+  provider: 'gemini' | 'openrouter' | 'lovable';
 }
 
 /**
- * Call AI with automatic fallback chain: OpenRouter → Gemini → Lovable.
+ * Call AI with automatic fallback chain: Gemini → OpenRouter (paid) → Lovable.
  * On 429 (rate limit) the error is returned immediately (no fallback).
  * On 402 (credits exhausted) the provider is skipped for 5 minutes.
  */
 export async function callAI(options: AiRequestOptions, signal?: AbortSignal): Promise<AiCallResult> {
-  const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+  const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-  // ── 1. OpenRouter (primary) ──────────────────────────────────────────
+  // ── 1. Gemini API (primary) ──────────────────────────────────────────
+  if (GEMINI_API_KEY && Date.now() >= geminiExhaustedUntil) {
+    try {
+      const geminiModel = GEMINI_MODEL_MAP[options.model] || 'gemini-2.5-flash';
+      console.log(`🟢 Trying Gemini (primary) with model: ${geminiModel}`);
+
+      const geminiBody: Record<string, unknown> = {
+        model: geminiModel,
+        messages: options.messages,
+      };
+      if (options.temperature !== undefined) geminiBody.temperature = options.temperature;
+      if (options.stream !== undefined) geminiBody.stream = options.stream;
+      if (options.tools) geminiBody.tools = options.tools;
+      if (options.tool_choice) geminiBody.tool_choice = options.tool_choice;
+
+      const response = await fetch(GEMINI_GATEWAY, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GEMINI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(geminiBody),
+        signal,
+      });
+
+      if (response.ok) {
+        console.log(`✅ Gemini success (${geminiModel})`);
+        return { response, provider: 'gemini' };
+      }
+
+      if (response.status === 429) {
+        console.warn('⚠️ Gemini rate-limited (429), returning error');
+        return { response, provider: 'gemini' };
+      }
+
+      if (response.status === 402) {
+        geminiExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
+        console.warn('⚠️ Gemini credits exhausted (402), falling back to OpenRouter...');
+      } else {
+        await response.text().catch(() => {});
+        console.warn(`⚠️ Gemini error (${response.status}), falling back to OpenRouter...`);
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') throw err;
+      console.warn('⚠️ Gemini API unreachable, falling back to OpenRouter...', err);
+    }
+  }
+
+  // ── 2. OpenRouter (secondary – paid models) ──────────────────────────
   if (OPENROUTER_API_KEY && Date.now() >= openrouterExhaustedUntil) {
     try {
       const orModel = OPENROUTER_MODEL_MAP[options.model] || 'google/gemma-3-12b-it';
-      console.log(`🔵 Trying OpenRouter with model: ${orModel}`);
+      console.log(`🔵 Trying OpenRouter (fallback) with model: ${orModel}`);
 
       const orBody: Record<string, unknown> = {
         model: orModel,
@@ -93,70 +138,21 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
       }
 
       if (response.status === 429) {
-        console.warn('⚠️ OpenRouter rate-limited (429), returning error (no fallback for rate limits)');
+        console.warn('⚠️ OpenRouter rate-limited (429), returning error');
         return { response, provider: 'openrouter' };
       }
 
       if (response.status === 402) {
         openrouterExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
-        console.warn('⚠️ OpenRouter credits exhausted (402), falling back...');
+        console.warn('⚠️ OpenRouter credits exhausted (402), falling back to Lovable...');
       } else {
-        // For 404, 500, etc. — apply shorter cooldown to avoid wasting CPU on every request
         openrouterExhaustedUntil = Date.now() + ERROR_COOLDOWN_MS;
         await response.text().catch(() => {});
-        console.warn(`⚠️ OpenRouter error (${response.status}), cooldown ${ERROR_COOLDOWN_MS / 1000}s, falling back...`);
+        console.warn(`⚠️ OpenRouter error (${response.status}), cooldown ${ERROR_COOLDOWN_MS / 1000}s, falling back to Lovable...`);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') throw err;
-      console.warn('⚠️ OpenRouter unreachable, falling back...', err);
-    }
-  }
-
-  // ── 2. Gemini API (secondary) ────────────────────────────────────────
-  if (GEMINI_API_KEY && Date.now() >= geminiExhaustedUntil) {
-    try {
-      const geminiModel = GEMINI_MODEL_MAP[options.model] || 'gemini-2.5-flash';
-      console.log(`🟡 Trying Gemini fallback with model: ${geminiModel}`);
-
-      const geminiBody: Record<string, unknown> = {
-        model: geminiModel,
-        messages: options.messages,
-      };
-      if (options.temperature !== undefined) geminiBody.temperature = options.temperature;
-      if (options.stream !== undefined) geminiBody.stream = options.stream;
-      if (options.tools) geminiBody.tools = options.tools;
-      if (options.tool_choice) geminiBody.tool_choice = options.tool_choice;
-
-      const response = await fetch(GEMINI_GATEWAY, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GEMINI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(geminiBody),
-        signal,
-      });
-
-      if (response.ok) {
-        console.log(`✅ Gemini fallback success (${geminiModel})`);
-        return { response, provider: 'gemini' };
-      }
-
-      if (response.status === 429) {
-        console.warn('⚠️ Gemini rate-limited (429), returning error');
-        return { response, provider: 'gemini' };
-      }
-
-      if (response.status === 402) {
-        geminiExhaustedUntil = Date.now() + EXHAUSTED_COOLDOWN_MS;
-        console.warn('⚠️ Gemini credits exhausted (402), falling back to Lovable...');
-      } else {
-        await response.text().catch(() => {});
-        console.warn(`⚠️ Gemini error (${response.status}), falling back to Lovable...`);
-      }
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') throw err;
-      console.warn('⚠️ Gemini API unreachable, falling back to Lovable...', err);
+      console.warn('⚠️ OpenRouter unreachable, falling back to Lovable...', err);
     }
   }
 
@@ -198,5 +194,5 @@ export async function callAI(options: AiRequestOptions, signal?: AbortSignal): P
   }
 
   // ── All providers failed ─────────────────────────────────────────────
-  throw new Error('All AI providers failed (OpenRouter, Gemini, Lovable). Check API keys and credits.');
+  throw new Error('All AI providers failed (Gemini, OpenRouter, Lovable). Check API keys and credits.');
 }
