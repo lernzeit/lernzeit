@@ -248,7 +248,7 @@ const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
 const RECENT_QUESTIONS_MAX = 30;
 const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
-const PARALLEL_BATCH_SIZE = 2; // Max simultaneous Edge Function calls
+const PARALLEL_BATCH_SIZE = 1; // Keep edge-function generation strictly sequential to avoid WORKER_LIMIT
 
 export const useQuestionPreloader = ({
   grade,

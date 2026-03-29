@@ -29,7 +29,9 @@ const GEMINI_MODEL_MAP: Record<string, string> = {
   'google/gemini-2.5-pro': 'gemini-2.5-pro',
 };
 
-// Cooldown tracking per provider to avoid futile retries after 402
+// OpenRouter currently returns persistent 404s for the configured models.
+// Disable it temporarily so edge functions do not waste compute before falling back.
+const OPENROUTER_ENABLED = false;
 const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const ERROR_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes for non-auth errors (404, 500, etc.)
 let openrouterExhaustedUntil = 0;
