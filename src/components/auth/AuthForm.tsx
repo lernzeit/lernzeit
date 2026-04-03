@@ -199,7 +199,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           },
         });
 
-        if (createError) throw new Error(createError.message || 'Konto konnte nicht erstellt werden.');
+        if (createError) {
+          // For FunctionsHttpError, the body may contain the real message
+          const errorBody = createData?.error || createError.message || 'Konto konnte nicht erstellt werden.';
+          throw new Error(errorBody);
+        }
         if (createData?.error) throw new Error(createData.error);
 
         const userId = createData?.user_id;
