@@ -35,6 +35,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Server-side username uniqueness check (authoritative)
+    const { data: existing } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("username", username)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return new Response(
+        JSON.stringify({ error: "Dieser Benutzername ist bereits vergeben." }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create user with admin API - auto-confirmed, no email sent
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
