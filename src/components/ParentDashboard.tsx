@@ -23,6 +23,7 @@ import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTime
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
+import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 
 interface ParentDashboardProps {
   userId: string;
@@ -32,6 +33,7 @@ interface LinkedChild {
   id: string;
   name: string | null;
   grade: number;
+  username?: string | null;
 }
 
 export function ParentDashboard({ userId }: ParentDashboardProps) {
@@ -445,6 +447,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                               childGrade={child.grade}
                             />
                           </div>
+                          {child.username && (
+                            <ChildPasswordReset childId={child.id} childName={child.name || 'Kind'} />
+                          )}
                           <div className="pt-2 border-t">
                             <Button
                               variant="ghost"
