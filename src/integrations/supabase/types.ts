@@ -497,6 +497,7 @@ export type Database = {
           name: string | null
           role: string | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           avatar_color?: string | null
@@ -507,6 +508,7 @@ export type Database = {
           name?: string | null
           role?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           avatar_color?: string | null
@@ -517,6 +519,7 @@ export type Database = {
           name?: string | null
           role?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }
@@ -909,6 +912,7 @@ export type Database = {
           total_questions: number
         }[]
       }
+      get_email_by_username: { Args: { p_username: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
