@@ -11,20 +11,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify the calling user is authenticated
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    const { email, password, name, role, grade, username } = await req.json();
+
+    // Validate required fields
+    if (!email || !password || !username) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "email, password, and username are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { user_id } = await req.json();
-    if (!user_id) {
+    // Only allow @lernzeit.internal emails
+    if (!email.endsWith("@lernzeit.internal")) {
       return new Response(
-        JSON.stringify({ error: "user_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Only internal child accounts can be created this way" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -34,37 +35,28 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch the user to verify the email domain
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(user_id);
-    if (userError || !userData?.user) {
-      return new Response(
-        JSON.stringify({ error: "User not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const email = userData.user.email || "";
-    if (!email.endsWith("@lernzeit.internal")) {
-      return new Response(
-        JSON.stringify({ error: "Only internal child accounts can be confirmed this way" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Confirm the user's email
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
+    // Create user with admin API - auto-confirmed, no email sent
+    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
       email_confirm: true,
+      user_metadata: {
+        name: name || username,
+        role: role || "child",
+        grade: grade || 1,
+        username: username.toLowerCase(),
+      },
     });
 
-    if (updateError) {
+    if (createError) {
       return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: createError.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, user_id: userData.user.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
