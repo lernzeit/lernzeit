@@ -141,6 +141,26 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     }
   }, [profile, user?.id]);
 
+  // Detect Google OAuth users who haven't confirmed their role yet
+  useEffect(() => {
+    if (profile && user?.id) {
+      const roleConfirmed = localStorage.getItem(`lernzeit_role_confirmed_${user.id}`);
+      if (roleConfirmed) return;
+
+      // Check if user signed in via Google (no explicit role in user_metadata)
+      const providers = user.app_metadata?.providers || [];
+      const isGoogleUser = providers.includes('google') || user.app_metadata?.provider === 'google';
+      const hasExplicitRole = user.user_metadata?.role;
+
+      if (isGoogleUser && !hasExplicitRole) {
+        setNeedsRoleSelection(true);
+      } else {
+        // Not a Google user or role was explicitly set → mark as confirmed
+        localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
+      }
+    }
+  }, [profile, user?.id]);
+
   // Check parent link when profile is loaded
   useEffect(() => {
     if (profile?.role === 'child') {
