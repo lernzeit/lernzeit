@@ -1,79 +1,106 @@
 
 
-## Kombinierter Plan: Kinderfreundliche UI + Einfachere Fragetexte (Klasse 1–4)
+## Plan: Kinder-Registrierung ohne E-Mail (Benutzername + Passwort + Code)
 
-Beide vorherigen Pläne werden in einem Durchgang umgesetzt. Alle Änderungen betreffen **nur** die "young"-Variante (grade ≤ 4). Teen-Ansicht (5–10) und Eltern-Dashboard bleiben unverändert.
+### Zusammenfassung
 
----
+Kinder konnen sich mit einem selbst gewahlten **Benutzernamen**, einem **Passwort** und dem **Einladungscode** der Eltern registrieren. Im Hintergrund wird eine Pseudo-E-Mail generiert (z.B. `max2015@lernzeit.internal`). Beim Login gibt das Kind seinen Benutzernamen + Passwort ein.
 
-### 1. Kinder-Dashboard vereinfachen (`UserProfile.tsx`)
+### Ablauf
 
-**Für grade ≤ 4:**
-- Game-Start-Card: Text kürzen — nur großer "🚀 Los geht's!"-Button, kein Beschreibungstext
-- Stats-Grid: von 4 auf 2 Karten reduzieren — nur "⏰ {Minuten}" und "🏆 {Spiele}", ohne beschreibende Unter-Labels
-- Motivationstext am Ende entfernen (überflüssig für Kleine)
+```text
+Registrierung (Kind ohne E-Mail):
+┌──────────────────────────────────┐
+│ 1. Kind wahlt "Ohne E-Mail"     │
+│ 2. Benutzername eingeben         │
+│ 3. Passwort eingeben             │
+│ 4. Einladungscode eingeben       │
+│ 5. Klassenstufe wahlen           │
+│ 6. → Pseudo-E-Mail generiert     │
+│ 7. → supabase.auth.signUp(...)   │
+│ 8. → claim_invitation_code(...)  │
+│ 9. → Direkt eingeloggt (kein     │
+│      E-Mail-Bestatigung notig)   │
+└──────────────────────────────────┘
 
-### 2. Fächerwahl vereinfachen (`CategorySelector.tsx`)
+Login (Kind mit Benutzername):
+┌──────────────────────────────────┐
+│ 1. Benutzername eingeben         │
+│ 2. Passwort eingeben             │
+│ 3. → Lookup: username → email    │
+│ 4. → signInWithPassword(email)   │
+└──────────────────────────────────┘
+```
 
-**Für young:**
-- Motivations-Card (🏆 "Lerne und verdiene Handyzeit!") entfernen — Kinder wissen, warum sie da sind
-- Fach-Kacheln: "+{seconds}s ⏱️" Zeile entfernen (Kinder verstehen Sekunden-pro-Aufgabe nicht)
-- Lernplan-Card: Text kürzen, nur Emoji + Fachname + "Heute: [Focus]"
+### Technische Details
 
-### 3. Spiel-UI vereinfachen (`LearningGame.tsx`)
+#### 1. Datenbank: `username`-Spalte in `profiles` hinzufugen
 
-**Für grade ≤ 4:**
-- **Header**: Kein "Klasse X" Badge, nur Fach-Emoji + Zurück-Button
-- **Timer**: Komplett ausblenden (erzeugt Druck bei Kleinen)
-- **Fortschritt**: "⭐ {score}" statt "🏆 {score} richtig", "3 von 5" statt "Frage 3 von 5"
-- **Frage-Text**: `text-2xl` statt `text-xl`
-- **Feedback nach Antwort**:
-  - Nur großes ✅ "Super!" oder ❌ + richtige Antwort
-  - Keine Emoji-Bewertungsbuttons (👍👎😰😴)
-  - Kein Report-Button, kein KI-Tutor-Hinweis
-  - Erklärung bleibt verfügbar (optional)
-- **Buttons kürzer**: "Prüfen ✓", "💡 Hilfe", "Weiter ➡️"
-- **Lade-Screens**: "Gleich geht's los! 🚀" statt "Deine Fragen werden vorbereitet..."
-- **Error**: "🔄 Nochmal!" statt "Nochmal versuchen"
+Migration:
+- `ALTER TABLE profiles ADD COLUMN username text UNIQUE`
+- Index auf `username` fur schnelle Lookups
+- Neue DB-Funktion `get_email_by_username(p_username text)` als `SECURITY DEFINER` die die Pseudo-E-Mail aus `auth.users` anhand des username-Lookups zuruckgibt (wird vom Login benotigt)
+- RLS-Policy: Offentlicher SELECT auf `username`-Spalte fur Login-Lookup
 
-### 4. Ergebnis-Screen vereinfachen (`GameCompletionScreen.tsx`)
+#### 2. Supabase Auth: E-Mail-Bestatigung umgehen
 
-**Neue `grade` prop hinzufügen. Für grade ≤ 4:**
-- Nur: riesiges Emoji + "Super gemacht!" + große Zahl "{X} Minuten gewonnen!"
-- Keine Prozent-Genauigkeit, keine Zeitberechnung, kein Bonus-Detail
-- Button: "🎉 Weiter!" statt "X Min. Bildschirmzeit erhalten!"
+Das Kind registriert sich mit einer generierten Pseudo-E-Mail (`{username}_{random}@lernzeit.internal`). Da diese E-Mail nicht erreichbar ist, muss die E-Mail-Bestatigung umgangen werden:
+- Option A: `autoconfirm` per Supabase-Einstellung (betrifft ALLE Nutzer)
+- Option B: Edge Function die nach Signup den User uber Service Role bestatigt
+- **Empfehlung: Option B** -- eine neue Edge Function `confirm-child-account` die mit dem Service Role Key den User bestatigt, nur wenn die E-Mail auf `@lernzeit.internal` endet
 
-### 5. Einfachere Fragetexte für Klasse 1–2 (`ai-question-generator/index.ts`)
+#### 3. AuthForm.tsx: Kinder-Registrierung erweitern
 
-**System-Prompt (`getSystemPrompt()`):**
-- Neue Regel: "Für Klasse 1–2: Maximal 1 kurzer Satz (max 10–12 Wörter). Nur einfache Alltagswörter. Keine Fachbegriffe."
+- Wenn `role === 'child'`: Toggle-Button "Ohne E-Mail registrieren" / "Mit E-Mail registrieren"
+- Ohne-E-Mail-Modus zeigt:
+  - Benutzername-Feld (alphanumerisch, 3-20 Zeichen, Eindeutigkeit prufen)
+  - Passwort-Feld
+  - Einladungscode-Feld (6-stellig, Pflicht)
+  - Klassenstufe-Auswahl
+- Bei Submit:
+  1. Benutzername-Verfugbarkeit prufen (`profiles` WHERE `username = ...`)
+  2. Pseudo-E-Mail generieren: `{username}_{4-char-random}@lernzeit.internal`
+  3. `signUp()` mit Pseudo-E-Mail, Passwort, metadata `{name, role: 'child', grade, username}`
+  4. Edge Function `confirm-child-account` aufrufen (bestatigt die E-Mail automatisch)
+  5. `claim_invitation_code()` aufrufen (verknupft mit Eltern)
+  6. Direkt eingeloggt -- kein Umweg uber E-Mail-Bestatigung
 
-**Grade-Guidelines (`getGradeGuidelines()`):**
-- Klasse 1: "Zahlen bis 20, nur ganz kurze einfache Sätze, max 10 Wörter"
-- Klasse 2: "Zahlen bis 100, kurze Sätze, max 12 Wörter"
-- Klasse 3–4 bleibt wie bisher
+#### 4. AuthForm.tsx: Login mit Benutzername
 
-**Prompt-Builder (`buildQuestionPrompt()`):**
-- Für grade ≤ 2 zusätzlicher Block mit Beispielen:
-  - Gut: "Was ist 3 + 5?", "Wie viele Äpfel sind es?"
-  - Schlecht: "Berechne die Summe der folgenden Zahlen"
+- Im Login-Tab: Erkennung ob Eingabe ein Benutzername oder eine E-Mail ist (enthalt `@` → E-Mail, sonst → Benutzername)
+- Bei Benutzername: RPC `get_email_by_username(username)` aufrufen, dann `signInWithPassword(email, password)`
+- Label andern: "E-Mail oder Benutzername"
 
----
+#### 5. Edge Function: `confirm-child-account`
 
-### Dateien
+- Nimmt `user_id` entgegen
+- Pruft ob die E-Mail auf `@lernzeit.internal` endet
+- Bestatigt den User uber Supabase Admin API (`auth.admin.updateUserById(id, { email_confirm: true })`)
+- Nur aufrufbar mit gultigem Auth-Token
 
-| Datei | Änderung |
-|-------|----------|
-| `src/components/auth/UserProfile.tsx` | Dashboard für grade ≤ 4 vereinfachen |
-| `src/components/CategorySelector.tsx` | Motivations-Card + Sekundenangabe für young entfernen |
-| `src/components/LearningGame.tsx` | Header, Timer, Feedback, Buttons, Ladetext für young |
-| `src/components/GameCompletionScreen.tsx` | `grade` prop, vereinfachte Ansicht für grade ≤ 4 |
-| `supabase/functions/ai-question-generator/index.ts` | Prompt für Klasse 1–2 vereinfachen + redeploy |
+#### 6. `handle_new_user` Trigger anpassen
 
-### Was NICHT geändert wird
-- Teen-Ansicht (Klasse 5–10)
-- Eltern-Dashboard
-- Spiellogik, Fragengenerierung (Retry/Batch-Logik)
-- `useAgeGroup` Hook
-- Validierung und Normalisierung
+- Speichert `username` aus `raw_user_meta_data` in `profiles.username`
+
+#### 7. Profil/Einstellungen: Benutzername anzeigen
+
+- Im Kinderprofil den Benutzernamen anzeigen ("Dein Benutzername: max2015")
+- Hinweis: "Merke dir deinen Benutzernamen fur die Anmeldung"
+
+### Dateien die geandert/erstellt werden
+
+| Datei | Anderung |
+|---|---|
+| Migration (SQL) | `username`-Spalte, Index, `get_email_by_username` RPC, Trigger-Update |
+| `supabase/functions/confirm-child-account/index.ts` | Neue Edge Function |
+| `src/components/auth/AuthForm.tsx` | Ohne-E-Mail-Registrierung + Benutzername-Login |
+| `src/components/auth/UserProfile.tsx` | Benutzername im Profil anzeigen |
+| `src/components/ProfileEdit.tsx` | Benutzername anzeigen (read-only) |
+
+### Sicherheit
+
+- Benutzernamen sind offentlich sichtbar (nur fur Login-Lookup), keine sensiblen Daten
+- Pseudo-E-Mail-Domain `@lernzeit.internal` wird nie fur echten E-Mail-Versand genutzt
+- `confirm-child-account` validiert die Domain vor der Bestatigung
+- Einladungscode wird bei Registrierung validiert -- ohne gultigen Code kein Konto
 
