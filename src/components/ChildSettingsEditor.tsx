@@ -324,7 +324,9 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     );
   }
 
-  const availableSubjects = SUBJECTS.filter(s => isSubjectAvailableForGrade(s.key, grade));
+  const availableSubjects = (isPremium || isTrialing)
+    ? SUBJECTS
+    : SUBJECTS.filter(s => isSubjectAvailableForGrade(s.key, grade));
 
   return (
     <div className="space-y-4">
