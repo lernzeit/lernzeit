@@ -27,6 +27,7 @@ import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
+import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 
 interface UserProfileProps {
   user: any;
