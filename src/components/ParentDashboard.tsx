@@ -446,6 +446,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                               childGrade={child.grade}
                             />
                           </div>
+                          {child.username && (
+                            <ChildPasswordReset childId={child.id} childName={child.name || 'Kind'} />
+                          )}
                           <div className="pt-2 border-t">
                             <Button
                               variant="ghost"
