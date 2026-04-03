@@ -386,10 +386,15 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                     <CardTitle className="text-xl">
                       Hallo, {profile?.name || 'Nutzer'}! 👋
                     </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                         Klasse {profile?.grade}
                       </Badge>
+                      {profile?.username && (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border font-mono text-xs">
+                          @{profile.username}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
