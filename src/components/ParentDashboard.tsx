@@ -32,6 +32,7 @@ interface LinkedChild {
   id: string;
   name: string | null;
   grade: number;
+  username?: string | null;
 }
 
 export function ParentDashboard({ userId }: ParentDashboardProps) {

@@ -55,7 +55,7 @@ export function useFamilyLinking() {
         
         const { data: children, error: childrenError } = await supabase
           .from('profiles')
-          .select('id, name, grade')
+          .select('id, name, grade, username')
           .in('id', childIds);
 
         console.log('👶 Children query result:', { children, childrenError });
