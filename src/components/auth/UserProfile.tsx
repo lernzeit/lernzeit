@@ -27,6 +27,7 @@ import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
+import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 
 interface UserProfileProps {
   user: any;
@@ -45,6 +46,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [hasParentLink, setHasParentLink] = useState(false);
   const [checkingParentLink, setCheckingParentLink] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
@@ -135,6 +137,26 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
       } else {
         // Profile is old → mark as seen so we never check again
         localStorage.setItem(key, 'true');
+      }
+    }
+  }, [profile, user?.id]);
+
+  // Detect Google OAuth users who haven't confirmed their role yet
+  useEffect(() => {
+    if (profile && user?.id) {
+      const roleConfirmed = localStorage.getItem(`lernzeit_role_confirmed_${user.id}`);
+      if (roleConfirmed) return;
+
+      // Check if user signed in via Google (no explicit role in user_metadata)
+      const providers = user.app_metadata?.providers || [];
+      const isGoogleUser = providers.includes('google') || user.app_metadata?.provider === 'google';
+      const hasExplicitRole = user.user_metadata?.role;
+
+      if (isGoogleUser && !hasExplicitRole) {
+        setNeedsRoleSelection(true);
+      } else {
+        // Not a Google user or role was explicitly set → mark as confirmed
+        localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
       }
     }
   }, [profile, user?.id]);
@@ -287,6 +309,21 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
         </Card>
         {/* Onboarding won't show while loading */}
       </div>
+    );
+  }
+
+  // Show role selection for Google OAuth users who haven't chosen a role
+  if (needsRoleSelection) {
+    return (
+      <GoogleRoleSelection
+        userId={user.id}
+        onComplete={(selectedRole, selectedGrade) => {
+          setNeedsRoleSelection(false);
+          // Reload profile with new role
+          loadProfile();
+          loadStats();
+        }}
+      />
     );
   }
 
