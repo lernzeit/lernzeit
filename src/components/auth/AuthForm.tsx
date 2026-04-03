@@ -36,6 +36,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const {
     status: captchaStatus,
     errorCode: captchaErrorCode,
