@@ -35,6 +35,11 @@ const App = () => (
               <Start />
             </Suspense>
           } />
+          <Route path="/email-bestaetigung" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <EmailBestaetigung />
+            </Suspense>
+          } />
           <Route path="/datenschutz" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
               <Datenschutz />
