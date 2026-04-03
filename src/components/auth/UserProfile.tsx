@@ -312,6 +312,21 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     );
   }
 
+  // Show role selection for Google OAuth users who haven't chosen a role
+  if (needsRoleSelection) {
+    return (
+      <GoogleRoleSelection
+        userId={user.id}
+        onComplete={(selectedRole, selectedGrade) => {
+          setNeedsRoleSelection(false);
+          // Reload profile with new role
+          loadProfile();
+          loadStats();
+        }}
+      />
+    );
+  }
+
   const handleOnboardingComplete = () => {
     if (user?.id) {
       localStorage.setItem(`lernzeit_onboarding_${user.id}`, 'true');
