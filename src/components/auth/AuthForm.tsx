@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
 
 // Google Icon SVG component
@@ -36,6 +36,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  // Child email-less registration
+  const [childNoEmail, setChildNoEmail] = useState(false);
+  const [username, setUsername] = useState('');
+  const [invitationCode, setInvitationCode] = useState('');
+  // Login identifier (email or username)
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
@@ -50,15 +56,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     if (captchaErrorCode === '110200') {
       return `Domain "${window.location.hostname}" ist in Cloudflare Turnstile nicht freigegeben.`;
     }
-
     if (captchaErrorCode === 'init_failed') {
       return 'Turnstile konnte nicht initialisiert werden. Bitte Adblocker/Tracking-Schutz deaktivieren und challenges.cloudflare.com erlauben.';
     }
-
     if (captchaErrorCode) {
       return `Turnstile-Fehlercode: ${captchaErrorCode}. Bitte Seite neu laden und erneut versuchen.`;
     }
-
     return 'Bitte Seite neu laden und erneut versuchen.';
   };
 
@@ -71,16 +74,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   };
 
   const resolveCaptchaToken = async (): Promise<string | null | undefined> => {
-    if (!isCaptchaEnabled) {
-      return undefined;
-    }
-
+    if (!isCaptchaEnabled) return undefined;
     const tokenToUse = await ensureToken();
     if (!tokenToUse) {
       handleCaptchaFailure();
       return null;
     }
-
     return tokenToUse;
   };
 
@@ -91,13 +90,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          queryParams: { access_type: 'offline', prompt: 'consent' },
         },
       });
-
       if (error) throw error;
     } catch (error: any) {
       toast({
@@ -115,16 +110,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
     try {
       const tokenToUse = await resolveCaptchaToken();
-      if (tokenToUse === null) {
-        setLoading(false);
-        return;
-      }
-
+      if (tokenToUse === null) { setLoading(false); return; }
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
         ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
       });
-
       if (error) throw error;
       setResetSent(true);
       toast({ title: 'Link gesendet!', description: 'Prüfe dein E-Mail-Postfach für den Reset-Link.' });
@@ -135,17 +125,128 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     }
   };
 
+  const validateUsername = (value: string): boolean => {
+    return /^[a-zA-Z0-9_]{3,20}$/.test(value);
+  };
+
+  const checkUsernameAvailability = async (uname: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', uname)
+      .limit(1);
+    if (error) return false;
+    return !data || data.length === 0;
+  };
+
+  const generatePseudoEmail = (uname: string): string => {
+    const random = Math.random().toString(36).substring(2, 6);
+    return `${uname.toLowerCase()}_${random}@lernzeit.internal`;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const tokenToUse = await resolveCaptchaToken();
-      if (tokenToUse === null) {
-        setLoading(false);
+      if (tokenToUse === null) { setLoading(false); return; }
+
+      // Child without email registration
+      if (role === 'child' && childNoEmail) {
+        if (!validateUsername(username)) {
+          toast({
+            title: 'Ungültiger Benutzername',
+            description: 'Der Benutzername muss 3–20 Zeichen lang sein und darf nur Buchstaben, Zahlen und _ enthalten.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
+        if (!invitationCode || invitationCode.length !== 6) {
+          toast({
+            title: 'Einladungscode fehlt',
+            description: 'Bitte gib den 6-stelligen Code deiner Eltern ein.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
+        const isAvailable = await checkUsernameAvailability(username);
+        if (!isAvailable) {
+          toast({
+            title: 'Benutzername vergeben',
+            description: 'Dieser Benutzername ist bereits vergeben. Bitte wähle einen anderen.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
+        const pseudoEmail = generatePseudoEmail(username);
+
+        const { data, error } = await supabase.auth.signUp({
+          email: pseudoEmail,
+          password,
+          options: {
+            ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
+            data: {
+              name: name || username,
+              role: 'child',
+              grade,
+              username: username.toLowerCase(),
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        const userId = data.user?.id;
+        if (!userId) throw new Error('Benutzer konnte nicht erstellt werden.');
+
+        // Auto-confirm the child account via edge function
+        try {
+          await supabase.functions.invoke('confirm-child-account', {
+            body: { user_id: userId },
+          });
+        } catch (confirmErr) {
+          console.warn('Auto-confirm failed, child may need manual confirmation:', confirmErr);
+        }
+
+        // Sign in immediately (after confirm)
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: pseudoEmail,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
+        // Claim invitation code to link with parent
+        try {
+          await supabase.rpc('claim_invitation_code', {
+            code_to_claim: invitationCode,
+            claiming_child_id: userId,
+          });
+        } catch (claimErr) {
+          console.warn('Code claim failed:', claimErr);
+          toast({
+            title: 'Hinweis',
+            description: 'Dein Konto wurde erstellt, aber der Einladungscode konnte nicht eingelöst werden. Du kannst ihn später in den Einstellungen eingeben.',
+          });
+        }
+
+        toast({
+          title: 'Willkommen! 🎉',
+          description: `Dein Konto wurde erstellt. Merke dir deinen Benutzernamen: ${username.toLowerCase()}`,
+        });
+
+        onAuthSuccess();
         return;
       }
 
+      // Standard email registration
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -161,13 +262,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
 
       if (error) throw error;
-
-      // Navigate to confirmation page instead of just showing a toast
       navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      if (isCaptchaEnabled) {
-        resetCaptcha();
-      }
+      if (isCaptchaEnabled) resetCaptcha();
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -184,26 +281,38 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
     try {
       const tokenToUse = await resolveCaptchaToken();
-      if (tokenToUse === null) {
-        setLoading(false);
-        return;
+      if (tokenToUse === null) { setLoading(false); return; }
+
+      let resolvedEmail = loginIdentifier;
+
+      // If no @ sign, treat as username and resolve to email
+      if (!loginIdentifier.includes('@')) {
+        const { data, error } = await supabase.rpc('get_email_by_username', {
+          p_username: loginIdentifier,
+        });
+
+        if (error || !data) {
+          toast({
+            title: 'Benutzer nicht gefunden',
+            description: 'Dieser Benutzername existiert nicht.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+        resolvedEmail = data as string;
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: resolvedEmail,
         password,
         ...(typeof tokenToUse === 'string' ? { options: { captchaToken: tokenToUse } } : {}),
       });
 
       if (error) throw error;
-
-      // No toast needed - the UI transition is sufficient feedback
-
       onAuthSuccess();
     } catch (error: any) {
-      if (isCaptchaEnabled) {
-        resetCaptcha();
-      }
+      if (isCaptchaEnabled) resetCaptcha();
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -278,16 +387,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 </div>
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">E-Mail</Label>
+                    <Label htmlFor="login-identifier" className="text-sm font-medium">E-Mail oder Benutzername</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                      <User className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                       <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        id="login-identifier"
+                        type="text"
+                        value={loginIdentifier}
+                        onChange={(e) => setLoginIdentifier(e.target.value)}
                         required
-                        placeholder="deine-email@beispiel.de"
+                        placeholder="E-Mail oder Benutzername"
                         className="pl-10 h-12 border-2 focus:border-primary transition-colors"
                       />
                     </div>
@@ -356,7 +465,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => { setShowForgotPassword(true); setResetEmail(email); }}
+                    onClick={() => { setShowForgotPassword(true); setResetEmail(loginIdentifier.includes('@') ? loginIdentifier : ''); }}
                     className="mt-2 text-sm text-primary hover:underline w-full text-center"
                   >
                     Passwort vergessen?
@@ -405,7 +514,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         id="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        required
+                        required={!childNoEmail || !username}
                         placeholder="Dein Name"
                         className="pl-10 h-12 border-2 focus:border-primary transition-colors"
                       />
@@ -414,7 +523,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Ich bin ein...</Label>
-                    <RadioGroup value={role} onValueChange={(value) => setRole(value as 'parent' | 'child')}>
+                    <RadioGroup value={role} onValueChange={(value) => { setRole(value as 'parent' | 'child'); if (value === 'parent') setChildNoEmail(false); }}>
                       <div className="space-y-2">
                         <div className={`flex items-center space-x-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 ${role === 'child' ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/50'}`}>
                           <RadioGroupItem value="child" id="child" className="border-2" />
@@ -461,44 +570,118 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       </div>
                     </div>
                   )}
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email-signup" className="text-sm font-medium">E-Mail</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="email-signup"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="deine-email@beispiel.de"
-                        className="pl-10 h-12 border-2 focus:border-primary transition-colors"
-                      />
+
+                  {/* Toggle: with or without email for children */}
+                  {role === 'child' && (
+                    <div className="animate-fade-in">
+                      <button
+                        type="button"
+                        onClick={() => setChildNoEmail(!childNoEmail)}
+                        className="w-full text-sm text-primary hover:underline flex items-center justify-center gap-2 py-2"
+                      >
+                        <KeyRound className="w-4 h-4" />
+                        {childNoEmail ? 'Mit E-Mail registrieren' : 'Ohne E-Mail registrieren (mit Eltern-Code)'}
+                      </button>
                     </div>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      Du erhältst eine Bestätigungs-E-Mail
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="password-signup" className="text-sm font-medium">Passwort</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="password-signup"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        placeholder="••••••••"
-                        minLength={6}
-                        className="pl-10 h-12 border-2 focus:border-primary transition-colors"
-                      />
+                  )}
+
+                  {/* Email-less child registration fields */}
+                  {role === 'child' && childNoEmail ? (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="space-y-2">
+                        <Label htmlFor="username" className="text-sm font-medium">Benutzername</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="username"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
+                            required
+                            placeholder="z.B. max2015"
+                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">3–20 Zeichen, Buchstaben, Zahlen und _</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="invitation-code" className="text-sm font-medium">Einladungscode der Eltern</Label>
+                        <div className="relative">
+                          <KeyRound className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="invitation-code"
+                            type="text"
+                            value={invitationCode}
+                            onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            required
+                            placeholder="6-stelliger Code"
+                            maxLength={6}
+                            className="pl-10 h-12 border-2 focus:border-primary transition-colors text-center text-lg tracking-widest font-mono"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Frage deine Eltern nach dem Code</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="password-signup-nomail" className="text-sm font-medium">Passwort</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="password-signup-nomail"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="••••••••"
+                            minLength={6}
+                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="email-signup" className="text-sm font-medium">E-Mail</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="email-signup"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            placeholder="deine-email@beispiel.de"
+                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          Du erhältst eine Bestätigungs-E-Mail
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="password-signup" className="text-sm font-medium">Passwort</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="password-signup"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="••••••••"
+                            minLength={6}
+                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
+                      </div>
+                    </>
+                  )}
                   
                   <Button 
                     type="submit" 
@@ -520,26 +703,30 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 </form>
 
                 {/* Divider */}
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">oder</span>
-                  </div>
-                </div>
+                {!(role === 'child' && childNoEmail) && (
+                  <>
+                    <div className="relative my-6">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">oder</span>
+                      </div>
+                    </div>
 
-                {/* Google Sign Up */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <GoogleIcon />
-                  <span className="ml-2">Mit Google registrieren</span>
-                </Button>
+                    {/* Google Sign Up */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
+                      onClick={handleGoogleSignIn}
+                      disabled={loading}
+                    >
+                      <GoogleIcon />
+                      <span className="ml-2">Mit Google registrieren</span>
+                    </Button>
+                  </>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
