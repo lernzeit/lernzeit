@@ -15,6 +15,7 @@ interface ChildProfile {
   id: string;
   name: string;
   grade: number;
+  username?: string | null;
 }
 
 export function useFamilyLinking() {
