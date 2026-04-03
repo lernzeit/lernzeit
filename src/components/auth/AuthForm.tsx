@@ -162,12 +162,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       if (error) throw error;
 
-      toast({
-        title: "Konto erstellt!",
-        description: "Bitte überprüfe deine E-Mail für die Bestätigung.",
-      });
-
-      onAuthSuccess();
+      // Navigate to confirmation page instead of just showing a toast
+      navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       if (isCaptchaEnabled) {
         resetCaptcha();
