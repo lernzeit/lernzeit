@@ -130,13 +130,13 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   };
 
   const checkUsernameAvailability = async (uname: string): Promise<boolean> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('username', uname)
-      .limit(1);
+    // Use SECURITY DEFINER RPC to bypass RLS (anon can't read profiles)
+    const { data, error } = await supabase.rpc('get_email_by_username', {
+      p_username: uname,
+    });
     if (error) return false;
-    return !data || data.length === 0;
+    // If data is null/empty, username is available
+    return !data;
   };
 
   const generatePseudoEmail = (uname: string): string => {
