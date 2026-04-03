@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 // Lazy load pages - not needed on initial load
 const Start = lazy(() => import("./pages/Start"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const EmailBestaetigung = lazy(() => import("./pages/EmailBestaetigung"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Datenschutz = lazy(() => import("./pages/Datenschutz"));
 const Nutzungsbedingungen = lazy(() => import("./pages/Nutzungsbedingungen"));
@@ -32,6 +33,11 @@ const App = () => (
           <Route path="/start" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
               <Start />
+            </Suspense>
+          } />
+          <Route path="/email-bestaetigung" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <EmailBestaetigung />
             </Suspense>
           } />
           <Route path="/datenschutz" element={

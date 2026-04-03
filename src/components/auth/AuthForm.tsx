@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const {
     status: captchaStatus,
     errorCode: captchaErrorCode,
@@ -160,12 +162,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
       if (error) throw error;
 
-      toast({
-        title: "Konto erstellt!",
-        description: "Bitte überprüfe deine E-Mail für die Bestätigung.",
-      });
-
-      onAuthSuccess();
+      // Navigate to confirmation page instead of just showing a toast
+      navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       if (isCaptchaEnabled) {
         resetCaptcha();
