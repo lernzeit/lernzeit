@@ -46,6 +46,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [hasParentLink, setHasParentLink] = useState(false);
   const [checkingParentLink, setCheckingParentLink] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
