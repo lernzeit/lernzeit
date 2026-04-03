@@ -199,12 +199,25 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           },
         });
 
-        if (createError) {
-          // For FunctionsHttpError, the body may contain the real message
-          const errorBody = createData?.error || createError.message || 'Konto konnte nicht erstellt werden.';
-          throw new Error(errorBody);
+        if (createError || createData?.error) {
+          // Extract error message: createData may be null for non-2xx responses
+          let errorMsg = 'Konto konnte nicht erstellt werden.';
+          if (createData?.error) {
+            errorMsg = createData.error;
+          } else if (createError && 'context' in createError) {
+            try {
+              const errBody = await (createError as any).context.json();
+              errorMsg = errBody?.error || errorMsg;
+            } catch { /* fallback to generic */ }
+          }
+          toast({
+            title: 'Registrierung fehlgeschlagen',
+            description: errorMsg,
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
         }
-        if (createData?.error) throw new Error(createData.error);
 
         const userId = createData?.user_id;
         if (!userId) throw new Error('Benutzer konnte nicht erstellt werden.');
