@@ -143,21 +143,52 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
   // Detect Google OAuth users who haven't confirmed their role yet
   useEffect(() => {
-    if (profile && user?.id) {
-      const roleConfirmed = localStorage.getItem(`lernzeit_role_confirmed_${user.id}`);
-      if (roleConfirmed) return;
+    if (!profile || !user?.id) return;
 
-      // Check if user signed in via Google (no explicit role in user_metadata)
-      const providers = user.app_metadata?.providers || [];
-      const isGoogleUser = providers.includes('google') || user.app_metadata?.provider === 'google';
-      const hasExplicitRole = user.user_metadata?.role;
+    const roleConfirmed = localStorage.getItem(`lernzeit_role_confirmed_${user.id}`);
+    if (roleConfirmed) return;
 
-      if (isGoogleUser && !hasExplicitRole) {
-        setNeedsRoleSelection(true);
-      } else {
-        // Not a Google user or role was explicitly set → mark as confirmed
-        localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
-      }
+    // Check if user signed in via Google
+    const providers = user.app_metadata?.providers || [];
+    const isGoogleUser = providers.includes('google') || user.app_metadata?.provider === 'google';
+    const hasExplicitRole = user.user_metadata?.role;
+
+    if (!isGoogleUser || hasExplicitRole) {
+      localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
+      return;
+    }
+
+    // Check if we have a pending role from pre-OAuth selection
+    const pendingRole = localStorage.getItem('lernzeit_pending_google_role');
+    if (pendingRole && (pendingRole === 'parent' || pendingRole === 'child')) {
+      const pendingGrade = pendingRole === 'child'
+        ? parseInt(localStorage.getItem('lernzeit_pending_google_grade') || '1', 10)
+        : null;
+
+      // Auto-apply the pending role
+      (async () => {
+        try {
+          const updateData: any = {
+            role: pendingRole,
+            ...(pendingRole === 'child' ? { grade: pendingGrade } : { grade: null }),
+          };
+          await supabase.from('profiles').update(updateData).eq('id', user.id);
+          await supabase.auth.updateUser({
+            data: { role: pendingRole, ...(pendingRole === 'child' ? { grade: pendingGrade } : {}) },
+          });
+          localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
+          localStorage.removeItem('lernzeit_pending_google_role');
+          localStorage.removeItem('lernzeit_pending_google_grade');
+          // Reload profile with correct role
+          loadProfile();
+        } catch (err) {
+          console.error('Failed to auto-apply Google role:', err);
+          setNeedsRoleSelection(true);
+        }
+      })();
+    } else {
+      // No pending role → show role selection dialog
+      setNeedsRoleSelection(true);
     }
   }, [profile, user?.id]);
 

@@ -86,6 +86,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // Store selected role/grade before OAuth redirect so we can apply it after callback
+      localStorage.setItem('lernzeit_pending_google_role', role);
+      if (role === 'child') {
+        localStorage.setItem('lernzeit_pending_google_grade', String(grade));
+      } else {
+        localStorage.removeItem('lernzeit_pending_google_grade');
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
