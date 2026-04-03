@@ -187,35 +187,25 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         const pseudoEmail = generatePseudoEmail(username);
 
-        const { data, error } = await supabase.auth.signUp({
-          email: pseudoEmail,
-          password,
-          options: {
-            ...(typeof tokenToUse === 'string' ? { captchaToken: tokenToUse } : {}),
-            data: {
-              name: name || username,
-              role: 'child',
-              grade,
-              username: username.toLowerCase(),
-            },
+        // Create child account via edge function (admin API, auto-confirmed)
+        const { data: createData, error: createError } = await supabase.functions.invoke('confirm-child-account', {
+          body: {
+            email: pseudoEmail,
+            password,
+            name: name || username,
+            role: 'child',
+            grade,
+            username: username.toLowerCase(),
           },
         });
 
-        if (error) throw error;
+        if (createError) throw new Error(createError.message || 'Konto konnte nicht erstellt werden.');
+        if (createData?.error) throw new Error(createData.error);
 
-        const userId = data.user?.id;
+        const userId = createData?.user_id;
         if (!userId) throw new Error('Benutzer konnte nicht erstellt werden.');
 
-        // Auto-confirm the child account via edge function
-        try {
-          await supabase.functions.invoke('confirm-child-account', {
-            body: { user_id: userId },
-          });
-        } catch (confirmErr) {
-          console.warn('Auto-confirm failed, child may need manual confirmation:', confirmErr);
-        }
-
-        // Sign in immediately (after confirm)
+        // Sign in immediately (account is already confirmed)
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: pseudoEmail,
           password,
