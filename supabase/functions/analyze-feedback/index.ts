@@ -321,26 +321,15 @@ serve(async (req) => {
       });
 
       if (positiveRule) {
-        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, positiveRule.toLowerCase()) > 0.7);
-        if (!isDuplicate && activeRuleCount + newRulesCreated < MAX_ACTIVE_RULES) {
-          const ruleSubject = normalizeCategory(category);
-          const { error: insertError } = await supabase
-            .from('prompt_rules')
-            .insert({
-              rule_text: positiveRule,
-              subject: ruleSubject,
-              grade_min: grades.length > 0 ? Math.min(...grades) : null,
-              grade_max: grades.length > 0 ? Math.max(...grades) : null,
-              source_feedback_ids: items.map(i => i.id),
-              source_feedback_count: items.length,
-            });
-
-          if (!insertError) {
-            newRulesCreated++;
-            existingTexts.push(positiveRule.toLowerCase());
-            console.log(`✅ Positive reinforcement rule for ${category}: "${positiveRule}"`);
-          }
-        }
+        const ruleSubject = normalizeCategory(category);
+        const mergeResult = await mergeOrInsertRule(supabase, LOVABLE_API_KEY, activeRules, positiveRule, {
+          subject: ruleSubject,
+          grade_min: grades.length > 0 ? Math.min(...grades) : null,
+          grade_max: grades.length > 0 ? Math.max(...grades) : null,
+          feedbackIds: items.map(i => i.id),
+          feedbackCount: items.length,
+        }, activeRuleCount, newRulesCreated, MAX_ACTIVE_RULES);
+        if (mergeResult === 'inserted') newRulesCreated++;
       }
     }
 
