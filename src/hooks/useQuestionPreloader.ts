@@ -123,20 +123,20 @@ const isQuestionRenderable = (question: PreloadedQuestion): boolean => {
       const order = Array.isArray(question.correctAnswer)
         ? question.correctAnswer
         : question.correctAnswer?.order;
-      return Array.isArray(order) && order.length >= 2;
+      return Array.isArray(order) && order.length >= 3 && order.length <= 6;
     }
     case 'MATCH': {
       const leftItems = question.options?.leftItems;
       const rightItems = question.options?.rightItems;
-      return Array.isArray(leftItems) && leftItems.length > 0 && Array.isArray(rightItems) && rightItems.length > 0;
+      return Array.isArray(leftItems) && leftItems.length >= 2 && leftItems.length <= 5 && Array.isArray(rightItems) && rightItems.length > 0;
     }
     case 'FILL_BLANK': {
       const blanks = question.correctAnswer?.blanks || (Array.isArray(question.correctAnswer) ? question.correctAnswer : []);
-      return Array.isArray(blanks) && blanks.length > 0;
+      return Array.isArray(blanks) && blanks.length > 0 && blanks.length <= 2;
     }
     case 'DRAG_DROP':
-      return Array.isArray(question.options?.items) && question.options.items.length > 0
-        && Array.isArray(question.options?.categories) && question.options.categories.length > 0;
+      return Array.isArray(question.options?.items) && question.options.items.length > 0 && question.options.items.length <= 8
+        && Array.isArray(question.options?.categories) && question.options.categories.length > 0 && question.options.categories.length <= 3;
     default:
       return false;
   }
