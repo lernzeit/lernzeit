@@ -1,106 +1,99 @@
 
 
-## Plan: Kinder-Registrierung ohne E-Mail (Benutzername + Passwort + Code)
+# Prompt-Optimierung: Regeleinhaltung & Token-Effizienz
 
-### Zusammenfassung
+## Probleme im aktuellen Prompt
 
-Kinder konnen sich mit einem selbst gewahlten **Benutzernamen**, einem **Passwort** und dem **Einladungscode** der Eltern registrieren. Im Hintergrund wird eine Pseudo-E-Mail generiert (z.B. `max2015@lernzeit.internal`). Beim Login gibt das Kind seinen Benutzernamen + Passwort ein.
+### 1. Fehlende Item-Limits bei SORT (Hauptproblem)
+- **`ai-question-generator`**: Die SORT-Instruktion (Zeile 879-882) enthält **kein Maximum** fur Items: `"correct_answer: Array von Strings in der richtigen Reihenfolge"` -- kein Hinweis auf min/max
+- **`cache-prefill`**: Dort steht korrekt `"Mindestens 4, maximal 6 Elemente"` (Zeile 292)
+- Die KI generiert deshalb teils 10+ SORT-Items im Generator, wahrend der Prefill korrekt limitiert
 
-### Ablauf
+### 2. Redundante Regeln (Token-Verschwendung)
+- Der System-Prompt (`getSystemPrompt()`) enthalt ~700 Worter mit vielen Beispielen
+- Der User-Prompt (`buildQuestionPrompt()`) wiederholt Sprachregeln fur Klasse 1-2, die bereits im System-Prompt stehen
+- Dynamische `prompt_rules` aus der DB werden angehängt -- bei vielen Regeln wachst der Token-Verbrauch linear
+
+### 3. Fehlende Regeln
+- **MATCH**: Kein min/max im Generator (Zeile 884-887 sagt nur "Minimum 3, Maximum 5" aber unvollstandig formuliert)
+- **DRAG_DROP**: Keine Item-Limits
+- **FILL_BLANK**: Kein Limit fur Lucken-Anzahl
+- Keine explizite Gesamt-Token-Begrenzung fur Antworten
+
+## Optimierungskonzept
+
+### Strategie: "Layered Prompt Architecture"
 
 ```text
-Registrierung (Kind ohne E-Mail):
-┌──────────────────────────────────┐
-│ 1. Kind wahlt "Ohne E-Mail"     │
-│ 2. Benutzername eingeben         │
-│ 3. Passwort eingeben             │
-│ 4. Einladungscode eingeben       │
-│ 5. Klassenstufe wahlen           │
-│ 6. → Pseudo-E-Mail generiert     │
-│ 7. → supabase.auth.signUp(...)   │
-│ 8. → claim_invitation_code(...)  │
-│ 9. → Direkt eingeloggt (kein     │
-│      E-Mail-Bestatigung notig)   │
-└──────────────────────────────────┘
-
-Login (Kind mit Benutzername):
-┌──────────────────────────────────┐
-│ 1. Benutzername eingeben         │
-│ 2. Passwort eingeben             │
-│ 3. → Lookup: username → email    │
-│ 4. → signInWithPassword(email)   │
-└──────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  Layer 1: Kompakter System-Prompt       │  ← Statisch, einmalig, ~300 Worter
+│  (Rolle + globale Regeln komprimiert)   │
+├─────────────────────────────────────────┤
+│  Layer 2: Type-Specific Micro-Prompt    │  ← Nur Regeln fur den gewahlten Typ
+│  (SORT: 4-6 Items, MC: 4 Optionen)     │  ← ~50-80 Worter pro Typ
+├─────────────────────────────────────────┤
+│  Layer 3: Grade-Conditional Rules       │  ← Nur wenn zutreffend (z.B. Klasse 1-2)
+│  (Sprachregeln nur fur junge Kinder)    │  ← 0 Worter fur Klasse 5+
+├─────────────────────────────────────────┤
+│  Layer 4: Komprimierte DB-Regeln        │  ← Max 5 aktivste Regeln, gekurzt
+│  (Priorisiert nach Relevanz)            │
+└─────────────────────────────────────────┘
 ```
 
-### Technische Details
+### Konkrete Anderungen
 
-#### 1. Datenbank: `username`-Spalte in `profiles` hinzufugen
+#### A. SORT/MATCH/DRAG_DROP Item-Limits einfugen (Kritisch)
+In `getTypeSpecificInstructions()` im `ai-question-generator`:
 
-Migration:
-- `ALTER TABLE profiles ADD COLUMN username text UNIQUE`
-- Index auf `username` fur schnelle Lookups
-- Neue DB-Funktion `get_email_by_username(p_username text)` als `SECURITY DEFINER` die die Pseudo-E-Mail aus `auth.users` anhand des username-Lookups zuruckgibt (wird vom Login benotigt)
-- RLS-Policy: Offentlicher SELECT auf `username`-Spalte fur Login-Lookup
+- **SORT**: `"Genau 4-6 Elemente. NIEMALS mehr als 6."` hinzufugen
+- **MATCH**: `"Genau 3-5 Paare. NIEMALS mehr als 5."` klarstellen
+- **DRAG_DROP**: `"2-3 Kategorien, 4-6 Elemente total."` hinzufugen
+- **FILL_BLANK**: `"Maximal 2 Lucken."` hinzufugen
 
-#### 2. Supabase Auth: E-Mail-Bestatigung umgehen
+#### B. System-Prompt komprimieren (~40% Token-Reduktion)
+- Beispiele entfernen (GUT/SCHLECHT) -- stattdessen 1 kompaktes Beispiel pro Regel
+- "VERBOTENE FRAGENTYPEN" in Stichpunkte umwandeln statt ausfuhrlicher Erklarungen
+- Mathematik-Regeln auf 2 Zeilen komprimieren
+- Sprachregeln fur Klasse 1-2 **nur** in `buildQuestionPrompt` (nicht doppelt im System-Prompt)
 
-Das Kind registriert sich mit einer generierten Pseudo-E-Mail (`{username}_{random}@lernzeit.internal`). Da diese E-Mail nicht erreichbar ist, muss die E-Mail-Bestatigung umgangen werden:
-- Option A: `autoconfirm` per Supabase-Einstellung (betrifft ALLE Nutzer)
-- Option B: Edge Function die nach Signup den User uber Service Role bestatigt
-- **Empfehlung: Option B** -- eine neue Edge Function `confirm-child-account` die mit dem Service Role Key den User bestatigt, nur wenn die E-Mail auf `@lernzeit.internal` endet
+#### C. Dynamische DB-Regeln begrenzen und komprimieren
+- **Max 5 Regeln** laden (aktuell unbegrenzt)
+- Regeln nach `source_feedback_count` absteigend sortieren (relevanteste zuerst)
+- Jede Regel auf **max 100 Zeichen** kappen
+- Nur Regeln laden, die exakt zum Fach UND zur Klassenstufe passen (strengerer Filter)
 
-#### 3. AuthForm.tsx: Kinder-Registrierung erweitern
+#### D. Redundanzen eliminieren
+- Klasse-1-2-Sprachregeln aus `getSystemPrompt()` entfernen (bleiben nur in `buildQuestionPrompt` wenn `grade <= 2`)
+- `getGradeGuidelines()` auf 1 Zeile pro Stufe kurzen
+- JSON-Format-Beschreibung aus dem User-Prompt entfernen (Tool-Calling erzwingt das Schema bereits)
 
-- Wenn `role === 'child'`: Toggle-Button "Ohne E-Mail registrieren" / "Mit E-Mail registrieren"
-- Ohne-E-Mail-Modus zeigt:
-  - Benutzername-Feld (alphanumerisch, 3-20 Zeichen, Eindeutigkeit prufen)
-  - Passwort-Feld
-  - Einladungscode-Feld (6-stellig, Pflicht)
-  - Klassenstufe-Auswahl
-- Bei Submit:
-  1. Benutzername-Verfugbarkeit prufen (`profiles` WHERE `username = ...`)
-  2. Pseudo-E-Mail generieren: `{username}_{4-char-random}@lernzeit.internal`
-  3. `signUp()` mit Pseudo-E-Mail, Passwort, metadata `{name, role: 'child', grade, username}`
-  4. Edge Function `confirm-child-account` aufrufen (bestatigt die E-Mail automatisch)
-  5. `claim_invitation_code()` aufrufen (verknupft mit Eltern)
-  6. Direkt eingeloggt -- kein Umweg uber E-Mail-Bestatigung
+### Erwartete Token-Einsparung
 
-#### 4. AuthForm.tsx: Login mit Benutzername
+| Bereich | Aktuell (ca.) | Optimiert (ca.) | Ersparnis |
+|---|---|---|---|
+| System-Prompt | ~800 Tokens | ~450 Tokens | -44% |
+| User-Prompt (Klasse 5+) | ~400 Tokens | ~250 Tokens | -38% |
+| User-Prompt (Klasse 1-2) | ~550 Tokens | ~350 Tokens | -36% |
+| DB-Regeln (10 Regeln) | ~300 Tokens | ~150 Tokens | -50% |
+| **Gesamt pro Request** | **~1500** | **~850** | **~43%** |
 
-- Im Login-Tab: Erkennung ob Eingabe ein Benutzername oder eine E-Mail ist (enthalt `@` → E-Mail, sonst → Benutzername)
-- Bei Benutzername: RPC `get_email_by_username(username)` aufrufen, dann `signInWithPassword(email, password)`
-- Label andern: "E-Mail oder Benutzername"
+### Validierungs-Sicherheit (Backend)
+Zusatzlich zur Prompt-Optimierung: In der `isRenderableQuestionPayload`-Funktion harte Limits erzwingen:
+- SORT: `order.length >= 3 && order.length <= 6` (aktuell nur `>= 2`)
+- MATCH: `leftItems.length <= 5` hinzufugen
+- DRAG_DROP: `items.length <= 8` hinzufugen
 
-#### 5. Edge Function: `confirm-child-account`
+So werden selbst bei KI-Fehlverhalten zu grosse Aufgaben abgelehnt und aus dem Cache bedient.
 
-- Nimmt `user_id` entgegen
-- Pruft ob die E-Mail auf `@lernzeit.internal` endet
-- Bestatigt den User uber Supabase Admin API (`auth.admin.updateUserById(id, { email_confirm: true })`)
-- Nur aufrufbar mit gultigem Auth-Token
+### Dateien die geandert werden
 
-#### 6. `handle_new_user` Trigger anpassen
+1. **`supabase/functions/ai-question-generator/index.ts`**
+   - `getSystemPrompt()` komprimieren
+   - `getTypeSpecificInstructions()` um Item-Limits erweitern
+   - `buildQuestionPrompt()` Redundanzen entfernen, JSON-Format-Block entfernen (Tool-Calling reicht)
+   - `isRenderableQuestionPayload()` harte Limits hinzufugen
+   - DB-Regel-Query: `.order('source_feedback_count', { ascending: false }).limit(5)`
 
-- Speichert `username` aus `raw_user_meta_data` in `profiles.username`
-
-#### 7. Profil/Einstellungen: Benutzername anzeigen
-
-- Im Kinderprofil den Benutzernamen anzeigen ("Dein Benutzername: max2015")
-- Hinweis: "Merke dir deinen Benutzernamen fur die Anmeldung"
-
-### Dateien die geandert/erstellt werden
-
-| Datei | Anderung |
-|---|---|
-| Migration (SQL) | `username`-Spalte, Index, `get_email_by_username` RPC, Trigger-Update |
-| `supabase/functions/confirm-child-account/index.ts` | Neue Edge Function |
-| `src/components/auth/AuthForm.tsx` | Ohne-E-Mail-Registrierung + Benutzername-Login |
-| `src/components/auth/UserProfile.tsx` | Benutzername im Profil anzeigen |
-| `src/components/ProfileEdit.tsx` | Benutzername anzeigen (read-only) |
-
-### Sicherheit
-
-- Benutzernamen sind offentlich sichtbar (nur fur Login-Lookup), keine sensiblen Daten
-- Pseudo-E-Mail-Domain `@lernzeit.internal` wird nie fur echten E-Mail-Versand genutzt
-- `confirm-child-account` validiert die Domain vor der Bestatigung
-- Einladungscode wird bei Registrierung validiert -- ohne gultigen Code kein Konto
+2. **`supabase/functions/cache-prefill/index.ts`**
+   - `parseAndValidate()` SORT-Limit von `answer.length < 3` auf `answer.length < 3 || answer.length > 6` erweitern
 
