@@ -126,13 +126,18 @@ serve(async (req) => {
       });
     }
 
-    // Load existing rules for deduplication
+    // Load existing rules for deduplication & merging
     const { data: existingRules } = await supabase
       .from('prompt_rules')
-      .select('rule_text')
+      .select('id, rule_text, subject, grade_min, grade_max, source_feedback_count, source_feedback_ids')
       .eq('is_active', true);
 
-    const existingTexts = (existingRules || []).map(r => r.rule_text.toLowerCase());
+    const activeRules = (existingRules || []) as Array<{
+      id: string; rule_text: string; subject: string | null;
+      grade_min: number | null; grade_max: number | null;
+      source_feedback_count: number; source_feedback_ids: string[];
+    }>;
+    const existingTexts = activeRules.map(r => r.rule_text.toLowerCase());
     const activeRuleCount = existingTexts.length;
 
     let newRulesCreated = 0;
