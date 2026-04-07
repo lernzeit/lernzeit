@@ -237,28 +237,14 @@ serve(async (req) => {
       });
 
       if (variantRule) {
-        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, variantRule.toLowerCase()) > 0.7);
-        if (!isDuplicate) {
-          if (activeRuleCount + newRulesCreated >= MAX_ACTIVE_RULES) {
-            await deactivateOldestRule(supabase);
-          }
-
-          const { error: insertError } = await supabase
-            .from('prompt_rules')
-            .insert({
-              rule_text: variantRule,
-              subject: null, // applies to all subjects
-              grade_min: null,
-              grade_max: null,
-              source_feedback_ids: variantIssues.map(i => i.id),
-              source_feedback_count: variantIssues.length,
-            });
-
-          if (!insertError) {
-            newRulesCreated++;
-            console.log(`✅ Variant optimization rule: "${variantRule}"`);
-          }
-        }
+        const mergeResult = await mergeOrInsertRule(supabase, LOVABLE_API_KEY, activeRules, variantRule, {
+          subject: null,
+          grade_min: null,
+          grade_max: null,
+          feedbackIds: variantIssues.map(i => i.id),
+          feedbackCount: variantIssues.length,
+        }, activeRuleCount, newRulesCreated, MAX_ACTIVE_RULES);
+        if (mergeResult === 'inserted') newRulesCreated++;
       }
     }
 
@@ -295,26 +281,15 @@ serve(async (req) => {
       });
 
       if (variantRule) {
-        const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, variantRule.toLowerCase()) > 0.7);
-        if (!isDuplicate && activeRuleCount + newRulesCreated < MAX_ACTIVE_RULES) {
-          const ruleSubject = normalizeCategory(category);
-          const { error: insertError } = await supabase
-            .from('prompt_rules')
-            .insert({
-              rule_text: variantRule,
-              subject: ruleSubject,
-              grade_min: null,
-              grade_max: null,
-              source_feedback_ids: items.map(i => i.id),
-              source_feedback_count: items.length,
-            });
-
-          if (!insertError) {
-            newRulesCreated++;
-            existingTexts.push(variantRule.toLowerCase());
-            console.log(`✅ Variant selection rule for ${category}: "${variantRule}"`);
-          }
-        }
+        const ruleSubject = normalizeCategory(category);
+        const mergeResult = await mergeOrInsertRule(supabase, LOVABLE_API_KEY, activeRules, variantRule, {
+          subject: ruleSubject,
+          grade_min: null,
+          grade_max: null,
+          feedbackIds: items.map(i => i.id),
+          feedbackCount: items.length,
+        }, activeRuleCount, newRulesCreated, MAX_ACTIVE_RULES);
+        if (mergeResult === 'inserted') newRulesCreated++;
       }
     }
 
