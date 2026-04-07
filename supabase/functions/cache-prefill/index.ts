@@ -382,14 +382,15 @@ function parseAndValidate(
   if (qt === 'SORT') {
     const answer = parsed.correct_answer;
     const opts = parsed.options;
-    if (!Array.isArray(answer) || answer.length < 3) return null;
+    if (!Array.isArray(answer) || answer.length < 3 || answer.length > 6) return null;
     if (!Array.isArray(opts) || opts.length !== answer.length) return null;
   }
 
   if (qt === 'MATCH') {
     const answer = parsed.correct_answer;
     if (typeof answer !== 'object' || answer === null || Array.isArray(answer)) return null;
-    if (Object.keys(answer as object).length < 3) return null;
+    const matchCount = Object.keys(answer as object).length;
+    if (matchCount < 3 || matchCount > 5) return null;
   }
 
   if (qt === 'FILL_BLANK') {

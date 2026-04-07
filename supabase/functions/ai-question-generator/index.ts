@@ -181,7 +181,7 @@ serve(async (req) => {
 
     const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint);
 
-    // Load active prompt rules from DB
+    // Load active prompt rules from DB (max 5, most relevant first)
     let rulesBlock = '';
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -194,11 +194,13 @@ serve(async (req) => {
         .eq('is_active', true)
         .or(`subject.is.null,subject.eq.${subject}`)
         .or(`grade_min.is.null,grade_min.lte.${grade}`)
-        .or(`grade_max.is.null,grade_max.gte.${grade}`);
+        .or(`grade_max.is.null,grade_max.gte.${grade}`)
+        .order('source_feedback_count', { ascending: false })
+        .limit(5);
 
       if (rules && rules.length > 0) {
-        rulesBlock = '\n\nZUSÄTZLICHE QUALITÄTSREGELN (aus Nutzer-Feedback):\n' +
-          rules.map((r: { rule_text: string }) => `- ${r.rule_text}`).join('\n');
+        rulesBlock = '\n\nQUALITÄTSREGELN:\n' +
+          rules.map((r: { rule_text: string }) => `- ${r.rule_text.substring(0, 100)}`).join('\n');
         console.log(`📏 Injecting ${rules.length} prompt rules`);
       }
     } catch (rulesErr) {
@@ -637,21 +639,22 @@ function isRenderableQuestionPayload(
 
     case 'SORT': {
       const order = sanitizeStringArray((correctAnswer as { order?: unknown } | null)?.order);
-      return order.length >= 2;
+      return order.length >= 3 && order.length <= 6;
     }
 
     case 'MATCH': {
       if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
       const leftItems = sanitizeStringArray((options as { leftItems?: unknown }).leftItems);
       const rightItems = sanitizeStringArray((options as { rightItems?: unknown }).rightItems);
-      return leftItems.length >= 2 && rightItems.length >= 2 && leftItems.length === rightItems.length;
+      return leftItems.length >= 2 && leftItems.length <= 5 && rightItems.length >= 2 && leftItems.length === rightItems.length;
     }
 
     case 'FILL_BLANK': {
       const blanks = extractFillBlankAnswers(correctAnswer);
+      if (blanks.length === 0 || blanks.length > 2) return false;
       const blankText = typeof questionText === 'string' && questionText.includes('___');
       const blankTask = typeof task === 'string' && task.includes('___');
-      return blanks.length > 0 && (blankText || blankTask || typeof task === 'string');
+      return blankText || blankTask || typeof task === 'string';
     }
 
     case 'DRAG_DROP': {
@@ -659,7 +662,7 @@ function isRenderableQuestionPayload(
       const items = sanitizeStringArray((options as { items?: unknown }).items);
       const categories = sanitizeStringArray((options as { categories?: unknown }).categories);
       const placements = (correctAnswer as { placements?: unknown } | null)?.placements;
-      return items.length >= 2 && categories.length >= 2 && placements && typeof placements === 'object' && !Array.isArray(placements);
+      return items.length >= 2 && items.length <= 8 && categories.length >= 2 && categories.length <= 3 && placements && typeof placements === 'object' && !Array.isArray(placements);
     }
 
     default:
@@ -677,38 +680,17 @@ function shuffleArray<T>(items: T[]): T[] {
 }
 
 function getSystemPrompt(): string {
-  return `Du bist ein erfahrener Grundschul- und Sekundarschulpädagoge aus Deutschland. 
-Deine Aufgabe ist es, qualitativ hochwertige, altersgerechte Lernfragen auf Deutsch zu erstellen.
+  return `Du bist ein erfahrener deutscher Pädagoge. Erstelle altersgerechte Lernfragen auf Deutsch.
 
 REGELN:
-- Alle Fragen und Antworten auf Deutsch
-- Altersgerecht und lehrplankonform für die angegebene Klassenstufe
-- Klar formuliert, eindeutig und pädagogisch wertvoll
-- Antworte NUR mit gültigem JSON, ohne Markdown oder Erklärungen
-
-SPRACHREGELN FÜR KLEINE KINDER (Klasse 1-2):
-- Maximal 1 kurzer Satz als Frage (max 10-12 Wörter)
-- Nur einfache, alltägliche Wörter, die ein 6-7-Jähriges Kind versteht
-- Keine Fachbegriffe, keine verschachtelten Sätze, keine Nebensätze
-- Direkte, klare Aufforderungen: "Rechne", "Was ist", "Wie viele"
-- Beispiel GUT: "Was ist 3 + 5?"
-- Beispiel GUT: "Wie viele Äpfel sind es?"
-- Beispiel SCHLECHT: "Berechne die Summe der folgenden Zahlen"
-- Beispiel SCHLECHT: "Welches der folgenden Ergebnisse ist korrekt, wenn man..."
-
-KRITISCHE REGEL FÜR MATHEMATIK:
-- Bei Mathematik-Fragen ist die Antwort IMMER NUR eine Zahl (z.B. "10", nicht "10 Murmeln", nicht "10 Brötchen").
-- Keine Einheiten, keine Wörter in der Antwort – NUR die reine Zahl.
-- Bei Multiple-Choice: Auch die Optionen enthalten NUR Zahlen, keine Einheiten.
-- PRÜFE JEDE BERECHNUNG DOPPELT: Rechne die Aufgabe selbst Schritt für Schritt durch und stelle sicher, dass die korrekte Antwort mathematisch stimmt.
-- Beispiel: "Ein Bäcker hat 25 Brötchen und verkauft 10. Wie viele hat er übrig?" → correct_answer: "15", NICHT "15 Brötchen"
-
-VERBOTENE FRAGENTYPEN (STRIKT EINHALTEN):
-1. KEINE offenen Erläuterungsfragen als FREETEXT: Fragen wie "Erkläre den Unterschied zwischen Klima und Wetter" oder "Beschreibe..." erfordern lange Antworten und sind NUR als MULTIPLE_CHOICE erlaubt. FREETEXT-Antworten müssen IMMER kurz sein: maximal 1-3 Wörter oder eine Zahl. Wenn die korrekte Antwort mehr als 3 Wörter hätte, mache eine MULTIPLE_CHOICE-Frage daraus.
-2. KEINE Vergleichsfragen ohne konkrete Daten: Fragen wie "Was ist länger: ein Bleistift oder ein Lineal?" sind VERBOTEN, weil sie ohne konkrete Maße nicht eindeutig beantwortbar sind. Vergleichsfragen NUR mit konkreten Zahlen stellen (z.B. "Was ist länger: 15 cm oder 2 dm?").
-3. KEINE Tautologien: Fragen, deren Antwort bereits in der Frage steht, sind VERBOTEN (z.B. "Wie lang ist ein Bleistift, wenn er 15 cm lang ist?" → Antwort: 15).
-4. KEINE Emoji-Vergleiche: Emojis haben keine physische Größe. Fragen wie "Was ist größer: 🐘 oder 🐁?" sind VERBOTEN. Verwende stattdessen Textnamen oder konkrete Maße.
-5. KEINE mehrdeutigen Antworten: Jede Frage muss genau EINE eindeutige korrekte Antwort haben. Wenn mehrere Antworten plausibel wären, formuliere die Frage präziser oder verwende MULTIPLE_CHOICE.`;
+- Altersgerecht, lehrplankonform, eindeutig, pädagogisch wertvoll
+- Mathematik-Antworten: NUR Zahlen, keine Einheiten (z.B. "15", nicht "15 Brötchen")
+- Mathematik: Rechne jede Aufgabe Schritt für Schritt durch und prüfe das Ergebnis
+- FREETEXT: Antwort max 1-3 Wörter oder eine Zahl. Längere Antworten → MULTIPLE_CHOICE
+- Vergleichsfragen NUR mit konkreten Zahlen/Daten (keine vagen Vergleiche)
+- Keine Tautologien (Antwort darf nicht in der Frage stehen)
+- Keine Emoji-Vergleiche für physische Eigenschaften
+- Jede Frage hat genau EINE eindeutige korrekte Antwort`;
 }
 
 function buildQuestionPrompt(
@@ -737,14 +719,7 @@ function buildQuestionPrompt(
 
   let youngLanguageNote = '';
   if (grade <= 2) {
-    youngLanguageNote = `\n\nSPRACHE FÜR KLEINE KINDER (Klasse ${grade}):
-- Maximal 1 kurzer Satz als Fragetext (max ${grade === 1 ? '10' : '12'} Wörter)
-- Nur einfache, alltägliche Wörter
-- Keine Fachbegriffe, keine langen zusammengesetzten Wörter
-- Beispiel gut: "Was ist 3 + 5?"
-- Beispiel gut: "Wie viele Äpfel sind es?"  
-- Beispiel schlecht: "Berechne die Summe der folgenden Zahlen"
-- Beispiel schlecht: "Ermittle das Ergebnis der nachstehenden Rechenoperation"`;
+    youngLanguageNote = `\n\nKLASSE ${grade} SPRACHE: Max ${grade === 1 ? '10' : '12'} Wörter, nur Alltagswörter, keine Fachbegriffe, keine Nebensätze. Beispiel: "Was ist 3 + 5?"`;
   }
 
   const subjectScope = getSubjectContentScope(subject, grade);
@@ -790,12 +765,12 @@ function getSubjectGerman(subject: string): string {
 }
 
 function getGradeGuidelines(grade: number): string {
-  if (grade === 1) return 'Grundschule Klasse 1: NUR ganz kurze, einfache Sätze. Maximal 10 Wörter pro Frage. Zahlenraum bis 20. Nur einfache Alltagswörter, die ein 6-Jähriges Kind kennt. Keine Fachbegriffe, keine Nebensätze.';
-  if (grade === 2) return 'Grundschule Klasse 2: Kurze, einfache Sätze. Maximal 12 Wörter pro Frage. Zahlenraum bis 100. Nur einfache Alltagswörter. Keine Fachbegriffe.';
-  if (grade <= 4) return 'Grundschule Klasse 3-4: Grundrechenarten, einfache Texte, Sachkunde';
-  if (grade <= 6) return 'Sekundarstufe I Klasse 5-6: Brüche, Dezimalzahlen, Grammatik, Geschichte';
-  if (grade <= 8) return 'Sekundarstufe I Klasse 7-8: Algebra, Gleichungen, Literatur, Wissenschaften';
-  return 'Sekundarstufe I Klasse 9-10: Erweiterte Algebra, Trigonometrie, komplexe Analysen';
+  if (grade === 1) return 'Klasse 1: ZR bis 20, max 10 Wörter, einfache Alltagssprache';
+  if (grade === 2) return 'Klasse 2: ZR bis 100, max 12 Wörter, einfache Sprache';
+  if (grade <= 4) return `Klasse ${grade}: Grundrechenarten, einfache Texte, Sachkunde`;
+  if (grade <= 6) return `Klasse ${grade}: Brüche, Dezimalzahlen, Grammatik, Geschichte`;
+  if (grade <= 8) return `Klasse ${grade}: Algebra, Gleichungen, Literatur, Wissenschaften`;
+  return `Klasse ${grade}: Erweiterte Algebra, Trigonometrie, komplexe Analysen`;
 }
 
 function getDifficultyGuidelines(difficulty: string, grade: number): { label: string; description: string } {
@@ -862,44 +837,39 @@ function selectQuestionType(subject: string, grade: number): string {
 
 function getTypeSpecificInstructions(questionType: string): string {
   const instructions: Record<string, string> = {
-    'MULTIPLE_CHOICE': `Erstelle eine Multiple-Choice-Frage mit genau 4 Antwortoptionen.
-- correct_answer: Index der korrekten Antwort (0-3)
-- options: Array mit genau 4 Strings ["Option A", "Option B", "Option C", "Option D"]
-- Bei Mathematik: Optionen sind NUR Zahlen (z.B. ["10", "15", "20", "25"]), KEINE Einheiten!
-- Eine klar korrekte Antwort, plausible Distraktoren
-- WICHTIG: Rechne die Aufgabe selbst durch und prüfe, dass correct_answer auf die tatsächlich richtige Option zeigt!`,
+    'MULTIPLE_CHOICE': `MULTIPLE_CHOICE:
+- correct_answer: Index 0-3 der korrekten Option
+- options: Array mit genau 4 Strings. Mathe-Optionen: NUR Zahlen, keine Einheiten
+- Plausible Distraktoren, eine eindeutig korrekte Antwort
+- Prüfe: correct_answer zeigt auf die richtige Option!`,
     
-    'FREETEXT': `Erstelle eine offene Frage mit einer klar definierten korrekten Antwort.
-- correct_answer: String mit der erwarteten Antwort
-- Bei Mathematik: correct_answer ist NUR eine Zahl (z.B. "15"), KEINE Einheiten!
+    'FREETEXT': `FREETEXT:
+- correct_answer: Kurze Antwort (max 1-3 Wörter oder Zahl). Mathe: NUR Zahl
 - options: null
-- Die Frage sollte eine eindeutige kurze Antwort haben
-- WICHTIG: Rechne die Aufgabe selbst durch und stelle sicher, dass correct_answer mathematisch korrekt ist!`,
+- Prüfe Berechnung doppelt!`,
     
-    'SORT': `Erstelle eine Sortieraufgabe.
-- correct_answer: Array von Strings in der richtigen Reihenfolge
-- options: Das gleiche Array, gemischt (für die Anzeige)
-- Beispiel: Ereignisse chronologisch sortieren, Zahlen der Größe nach`,
+    'SORT': `SORT – Elemente sortieren:
+- correct_answer: Array von Strings in richtiger Reihenfolge
+- options: null (wird automatisch gemischt)
+- GENAU 4-6 Elemente. NIEMALS mehr als 6, NIEMALS weniger als 4!`,
     
-    'MATCH': `Erstelle eine Zuordnungsaufgabe.
-- correct_answer: Object mit Schlüssel-Wert-Paaren {"Begriff1": "Definition1", "Begriff2": "Definition2"}
+    'MATCH': `MATCH – Zuordnung:
+- correct_answer: Object {"Begriff": "Zuordnung"} mit Paaren
 - options: null
-- Minimum 3, Maximum 5 Zuordnungspaare`,
+- GENAU 3-5 Paare. NIEMALS mehr als 5!`,
     
-    'DRAG_DROP': `Erstelle eine Drag-and-Drop-Zuordnungsaufgabe.
-- options: Objekt mit { "items": ["Element 1", "Element 2"], "categories": ["Kategorie A", "Kategorie B"] }
-- correct_answer: Objekt mit { "placements": { "Kategorie A": ["passendes Element"], "Kategorie B": ["anderes Element"] } }
-- task: Kurze Anweisung zum Zuordnen
-- Mindestens 2 Kategorien und mindestens 4 Elemente insgesamt`,
+    'DRAG_DROP': `DRAG_DROP – Kategorisierung:
+- options: {"items": [...], "categories": [...]}
+- correct_answer: {"placements": {"Kategorie": ["Element1"]}}
+- task: Kurze Anweisung
+- 2-3 Kategorien, 4-6 Elemente total. NIEMALS mehr als 6 Elemente oder 3 Kategorien!`,
     
-    'FILL_BLANK': `Erstelle eine Lückentextaufgabe.
-- question_text: Der Satz mit ___ für die Lücke(n). WICHTIG: question_text MUSS mindestens ein ___ (drei Unterstriche) enthalten!
-- task: Kurze Anweisung (z.B. "Setze das passende Tunwort (Verb) in die Lücke ein.")
-- correct_answer: String oder Array mit den fehlenden Wörtern
-- options: null
-- GROSS-/KLEINSCHREIBUNG: Die korrekte Antwort muss die deutsche Rechtschreibung korrekt wiedergeben. Wenn das Wort mitten im Satz steht, gilt: Nomen groß, Verben/Adjektive klein. Beispiel: "Die Katze ___ auf dem Dach." → correct_answer: "saß" (klein, weil Verb mitten im Satz).
-- GRUNDFORM-HINWEIS (WICHTIG für Deutsch-Fragen): Wenn ein Verb oder Adjektiv in konjugierter/flektierter Form eingesetzt werden muss, schreibe die Grundform (Infinitiv) in Klammern direkt hinter die Lücke im question_text. Beispiel: "Der Vogel ___ (singen) im Garten." → correct_answer: "singt". So weiß das Kind, welches Wort gemeint ist, und muss nur die richtige Form finden.
-- Für Nomen (Substantive) ist kein Grundform-Hinweis nötig, da sie eindeutig sind.`
+    'FILL_BLANK': `FILL_BLANK – Lückentext:
+- question_text MUSS ___ (drei Unterstriche) enthalten
+- task: Kurze Anweisung
+- correct_answer: String oder Array der fehlenden Wörter
+- Maximal 2 Lücken! Rechtschreibung beachten (Nomen groß, Verben klein)
+- Bei Verben: Grundform in Klammern hinter die Lücke (z.B. "___ (singen)")`
   };
   
   return instructions[questionType] || instructions['MULTIPLE_CHOICE'];
