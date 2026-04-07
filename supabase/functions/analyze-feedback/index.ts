@@ -165,9 +165,27 @@ serve(async (req) => {
 
       if (!ruleText) continue;
 
-      const isDuplicate = existingTexts.some(existing => calculateSimilarity(existing, ruleText.toLowerCase()) > 0.7);
-      if (isDuplicate) {
-        console.log(`⏭️ Skipping duplicate rule for ${clusterKey}`);
+      // Check for similar existing rule → merge instead of skip
+      const similarMatch = findSimilarRule(activeRules, ruleText);
+      if (similarMatch) {
+        console.log(`🔀 Merging with existing rule ${similarMatch.id} for ${clusterKey}`);
+        const merged = await mergeRules(LOVABLE_API_KEY, similarMatch.rule_text, ruleText);
+        if (merged) {
+          const newFeedbackIds = [...new Set([...similarMatch.source_feedback_ids, ...items.map(i => i.id)])];
+          await supabase
+            .from('prompt_rules')
+            .update({
+              rule_text: merged,
+              source_feedback_count: similarMatch.source_feedback_count + items.length,
+              source_feedback_ids: newFeedbackIds,
+              grade_min: grades.length > 0 ? Math.min(similarMatch.grade_min ?? Infinity, ...grades) : similarMatch.grade_min,
+              grade_max: grades.length > 0 ? Math.max(similarMatch.grade_max ?? -Infinity, ...grades) : similarMatch.grade_max,
+            })
+            .eq('id', similarMatch.id);
+          // Update local cache
+          similarMatch.rule_text = merged;
+          console.log(`✅ Merged rule: "${merged}"`);
+        }
         continue;
       }
 
@@ -189,7 +207,15 @@ serve(async (req) => {
       }
 
       newRulesCreated++;
-      existingTexts.push(ruleText.toLowerCase());
+      activeRules.push({
+        id: 'new',
+        rule_text: ruleText,
+        subject: normalizeCategory(category),
+        grade_min: grades.length > 0 ? Math.min(...grades) : null,
+        grade_max: grades.length > 0 ? Math.max(...grades) : null,
+        source_feedback_count: items.length,
+        source_feedback_ids: items.map(i => i.id),
+      });
       console.log(`✅ Content rule for ${clusterKey}: "${ruleText}"`);
     }
 
