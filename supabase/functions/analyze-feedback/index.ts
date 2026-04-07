@@ -498,3 +498,116 @@ function calculateSimilarity(a: string, b: string): number {
   const union = new Set([...wordsA, ...wordsB]);
   return union.size === 0 ? 0 : intersection.size / union.size;
 }
+
+type ActiveRule = {
+  id: string; rule_text: string; subject: string | null;
+  grade_min: number | null; grade_max: number | null;
+  source_feedback_count: number; source_feedback_ids: string[];
+};
+
+function findSimilarRule(activeRules: ActiveRule[], newRuleText: string): ActiveRule | null {
+  const newLower = newRuleText.toLowerCase();
+  let bestMatch: ActiveRule | null = null;
+  let bestScore = 0;
+  for (const rule of activeRules) {
+    const score = calculateSimilarity(rule.rule_text.toLowerCase(), newLower);
+    if (score > 0.7 && score > bestScore) {
+      bestScore = score;
+      bestMatch = rule;
+    }
+  }
+  return bestMatch;
+}
+
+async function mergeRules(apiKey: string, existingRule: string, newRule: string): Promise<string | null> {
+  const prompt = `Du bist ein Qualitätsmanager. Zwei Regeln für einen KI-Fragengenerator sind sich sehr ähnlich.
+
+Bestehende Regel: "${existingRule}"
+Neue Regel: "${newRule}"
+
+Kombiniere beide zu EINER optimierten, präzisen Regel (max. 2 Sätze), die alle Aspekte beider Regeln abdeckt. Entferne Redundanzen. Falls die neue Regel einen neuen Aspekt hinzufügt, integriere ihn.
+
+Antworte NUR mit der kombinierten Regel, ohne Anführungszeichen, ohne Erklärung.`;
+
+  try {
+    const { response } = await callAI({
+      model: 'google/gemini-2.5-flash',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+    });
+    if (!response.ok) return null;
+    const result = await response.json();
+    const merged = result.choices?.[0]?.message?.content?.trim();
+    if (!merged || merged.length < 10 || merged.length > 500) return null;
+    return merged;
+  } catch {
+    return null;
+  }
+}
+
+interface InsertRuleParams {
+  subject: string | null;
+  grade_min: number | null;
+  grade_max: number | null;
+  feedbackIds: string[];
+  feedbackCount: number;
+}
+
+async function mergeOrInsertRule(
+  supabase: any, apiKey: string, activeRules: ActiveRule[],
+  newRuleText: string, params: InsertRuleParams,
+  activeRuleCount: number, newRulesCreated: number, maxActive: number,
+): Promise<'merged' | 'inserted' | 'skipped'> {
+  const similarMatch = findSimilarRule(activeRules, newRuleText);
+
+  if (similarMatch) {
+    console.log(`🔀 Merging with existing rule ${similarMatch.id}`);
+    const merged = await mergeRules(apiKey, similarMatch.rule_text, newRuleText);
+    if (merged) {
+      const newFeedbackIds = [...new Set([...similarMatch.source_feedback_ids, ...params.feedbackIds])];
+      await supabase
+        .from('prompt_rules')
+        .update({
+          rule_text: merged,
+          source_feedback_count: similarMatch.source_feedback_count + params.feedbackCount,
+          source_feedback_ids: newFeedbackIds,
+        })
+        .eq('id', similarMatch.id);
+      similarMatch.rule_text = merged;
+      console.log(`✅ Merged rule: "${merged}"`);
+    }
+    return 'merged';
+  }
+
+  if (activeRuleCount + newRulesCreated >= maxActive) {
+    await deactivateOldestRule(supabase);
+  }
+
+  const { error } = await supabase
+    .from('prompt_rules')
+    .insert({
+      rule_text: newRuleText,
+      subject: params.subject,
+      grade_min: params.grade_min,
+      grade_max: params.grade_max,
+      source_feedback_ids: params.feedbackIds,
+      source_feedback_count: params.feedbackCount,
+    });
+
+  if (error) {
+    console.error(`Error inserting rule: ${error.message}`);
+    return 'skipped';
+  }
+
+  activeRules.push({
+    id: 'new',
+    rule_text: newRuleText,
+    subject: params.subject,
+    grade_min: params.grade_min,
+    grade_max: params.grade_max,
+    source_feedback_count: params.feedbackCount,
+    source_feedback_ids: params.feedbackIds,
+  });
+  console.log(`✅ New rule: "${newRuleText}"`);
+  return 'inserted';
+}
