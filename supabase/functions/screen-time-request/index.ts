@@ -648,9 +648,9 @@ async function sendParentNotification(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'LernZeit <noreply@lernzeit.app>',
+        from: 'LernZeit <info@lernzeit.app>',
         to: [parentEmail],
-        reply_to: 'support@lernzeit.app',
+        reply_to: 'info@lernzeit.app',
         subject: emailSubject,
         html: emailHtml,
         text: plainText,
