@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
 let AppLauncher: any = null;
+let Browser: any = null;
 
 async function getAppLauncher() {
   if (!AppLauncher && Capacitor.isNativePlatform()) {
@@ -8,10 +9,22 @@ async function getAppLauncher() {
       const mod = await import('@capacitor/app-launcher');
       AppLauncher = mod.AppLauncher;
     } catch (e) {
-      console.warn('AppLauncher not available:', e);
+      console.warn('[ParentalControls] AppLauncher not available:', e);
     }
   }
   return AppLauncher;
+}
+
+async function getBrowser() {
+  if (!Browser && Capacitor.isNativePlatform()) {
+    try {
+      const mod = await import('@capacitor/browser');
+      Browser = mod.Browser;
+    } catch (e) {
+      console.warn('[ParentalControls] Browser not available:', e);
+    }
+  }
+  return Browser;
 }
 
 export type Platform = 'android' | 'ios' | 'web';
@@ -22,8 +35,22 @@ export interface OpenParentalControlsResult {
   platform: Platform;
   appName: string;
   message: string;
+  fallbackUrl?: string;
 }
 
+/**
+ * Service to open native parental control apps (Family Link / Screen Time).
+ *
+ * Strategy:
+ * - Android: Try Family Link app via documented URL schemes, fall back to Play Store.
+ *   NOTE: Direct deep-linking into Family Link is not officially supported by Google.
+ *   We use the publicly documented web URL `https://families.google.com/familylink`
+ *   which opens the app on devices where it is installed (via Android App Links),
+ *   otherwise falls back to the browser/Play Store.
+ * - iOS: Try `App-Prefs:` (works on some iOS versions), then fall back to instructions.
+ *   Apple does not provide a public deep-link for Screen Time settings.
+ * - Web/PWA: Show platform-specific instructions and store links.
+ */
 class ParentalControlsService {
   private static instance: ParentalControlsService;
 
@@ -61,167 +88,144 @@ class ParentalControlsService {
     }
   }
 
+  /**
+   * Try to open Family Link on Android.
+   * Order of attempts:
+   * 1. Official Family Link web URL (Android App Links → opens app if installed)
+   * 2. Play Store (market://) → falls back to web Play Store
+   */
   private async openFamilyLink(minutes?: number): Promise<OpenParentalControlsResult> {
-    const parentPackageName = 'com.google.android.apps.kids.familylink';
-    const playStoreLink = `https://play.google.com/store/apps/details?id=${parentPackageName}`;
+    const packageName = 'com.google.android.apps.kids.familylink';
+    const familyLinkWebUrl = 'https://families.google.com/familylink/';
+    const playStoreWeb = `https://play.google.com/store/apps/details?id=${packageName}`;
     const minutesMsg = minutes
-      ? `Bitte vergeben Sie ${minutes} Minuten zusätzliche Bildschirmzeit für Ihr Kind.`
+      ? `Bitte ${minutes} Minuten zusätzliche Bildschirmzeit für Ihr Kind freigeben.`
       : '';
 
-    try {
-      const launcher = await getAppLauncher();
+    const launcher = await getAppLauncher();
 
-      if (launcher) {
-        // 1) Try direct deep link schemes that Family Link registers
-        //    Note: intent:// URIs are NOT supported by Capacitor AppLauncher.
-        //    Use familylink:// custom scheme and https App Links instead.
-        const directUrls = [
-          'familylink://',
-          'https://families.google.com/familylink/',
-          'https://families.google.com/',
-        ];
-
-        // First pass: check canOpenUrl then open
-        for (const url of directUrls) {
-          try {
-            const { value: canOpen } = await launcher.canOpenUrl({ url });
-            if (canOpen) {
-              await launcher.openUrl({ url });
-              console.log('✅ Family Link opened via:', url);
-              return {
-                success: true,
-                opened: true,
-                platform: 'android',
-                appName: 'Family Link',
-                message: `Family Link wurde geöffnet. ${minutesMsg}`.trim(),
-              };
-            }
-          } catch (e) {
-            console.warn(`Family Link canOpen/open failed for ${url}:`, e);
-          }
-        }
-
-        // Second pass: try opening without canOpenUrl check (some devices report incorrectly)
-        for (const url of directUrls) {
-          try {
-            await launcher.openUrl({ url });
-            console.log('✅ Family Link opened (no canOpen check) via:', url);
-            return {
-              success: true,
-              opened: true,
-              platform: 'android',
-              appName: 'Family Link',
-              message: `Family Link wurde geöffnet. ${minutesMsg}`.trim(),
-            };
-          } catch (e) {
-            console.warn(`Direct open failed for ${url}:`, e);
-          }
-        }
-
-        // 3) Open Play Store as fallback
-        const storeUrls = [
-          `market://details?id=${parentPackageName}`,
-          playStoreLink,
-        ];
-
-        for (const url of storeUrls) {
-          try {
-            await launcher.openUrl({ url });
-            console.log('✅ Play Store opened via:', url);
-            return {
-              success: true,
-              opened: false,
-              platform: 'android',
-              appName: 'Family Link',
-              message: `Family Link konnte nicht direkt geöffnet werden. Im Play Store bitte auf „Öffnen" tippen. ${minutesMsg}`.trim(),
-            };
-          } catch (e) {
-            console.warn(`Store link failed for ${url}:`, e);
-          }
-        }
+    if (launcher) {
+      // 1) Official Family Link App Link (most reliable, opens app if installed)
+      try {
+        await launcher.openUrl({ url: familyLinkWebUrl });
+        console.log('[ParentalControls] ✅ Opened Family Link via App Link');
+        return {
+          success: true,
+          opened: true,
+          platform: 'android',
+          appName: 'Family Link',
+          message: `Family Link wurde geöffnet. ${minutesMsg}`.trim(),
+          fallbackUrl: familyLinkWebUrl,
+        };
+      } catch (e) {
+        console.warn('[ParentalControls] App Link failed:', e);
       }
 
-      // Final fallback
-      console.warn('All AppLauncher methods failed, using window.location fallback');
-      window.location.href = playStoreLink;
-      return {
-        success: true,
-        opened: false,
-        platform: 'android',
-        appName: 'Family Link',
-        message: 'Family Link konnte nicht direkt geöffnet werden. Bitte öffnen Sie die App manuell oder tippen Sie im Play Store auf „Öffnen".',
-      };
-    } catch (error) {
-      console.error('Error opening Family Link:', error);
-      return {
-        success: false,
-        opened: false,
-        platform: 'android',
-        appName: 'Family Link',
-        message: 'Family Link konnte nicht geöffnet werden. Bitte öffnen Sie die App manuell.',
-      };
+      // 2) Play Store deep link (market://)
+      try {
+        await launcher.openUrl({ url: `market://details?id=${packageName}` });
+        console.log('[ParentalControls] ✅ Opened Play Store (market://)');
+        return {
+          success: true,
+          opened: false,
+          platform: 'android',
+          appName: 'Family Link',
+          message: `Family Link konnte nicht direkt geöffnet werden. Im Play Store auf „Öffnen" tippen. ${minutesMsg}`.trim(),
+          fallbackUrl: playStoreWeb,
+        };
+      } catch (e) {
+        console.warn('[ParentalControls] Play Store deep link failed:', e);
+      }
+
+      // 3) Web Play Store
+      try {
+        await launcher.openUrl({ url: playStoreWeb });
+        return {
+          success: true,
+          opened: false,
+          platform: 'android',
+          appName: 'Family Link',
+          message: `Bitte öffnen Sie Family Link manuell. ${minutesMsg}`.trim(),
+          fallbackUrl: playStoreWeb,
+        };
+      } catch (e) {
+        console.warn('[ParentalControls] Web Play Store failed:', e);
+      }
     }
+
+    // Final fallback: in-app browser
+    const browser = await getBrowser();
+    if (browser) {
+      try {
+        await browser.open({ url: playStoreWeb });
+      } catch (e) {
+        console.warn('[ParentalControls] Browser fallback failed:', e);
+      }
+    }
+
+    return {
+      success: false,
+      opened: false,
+      platform: 'android',
+      appName: 'Family Link',
+      message: 'Family Link konnte nicht geöffnet werden. Bitte manuell öffnen oder aus dem Play Store installieren.',
+      fallbackUrl: playStoreWeb,
+    };
   }
 
+  /**
+   * Try to open iOS Screen Time settings.
+   * Apple does not provide a public deep-link, so we try undocumented schemes
+   * and fall back to instructions if they fail.
+   */
   private async openScreenTimeSettings(minutes?: number): Promise<OpenParentalControlsResult> {
-    const screenTimeUrls = [
-      'App-Prefs:SCREENTIME',
-      'App-Prefs:root=SCREENTIME',
-      'prefs:root=SCREENTIME',
-      'app-settings:',
-    ];
     const minutesMsg = minutes
-      ? `Bitte vergeben Sie ${minutes} Minuten zusätzliche Zeit für Ihr Kind.`
+      ? `Bitte ${minutes} Minuten zusätzliche Zeit für Ihr Kind freigeben.`
       : '';
 
-    try {
-      const launcher = await getAppLauncher();
+    const launcher = await getAppLauncher();
 
-      if (launcher) {
-        for (const url of screenTimeUrls) {
-          try {
-            const { value: canOpen } = await launcher.canOpenUrl({ url });
-            if (canOpen) {
-              await launcher.openUrl({ url });
-              return {
-                success: true, opened: true, platform: 'ios',
-                appName: 'Bildschirmzeit',
-                message: `Bildschirmzeit-Einstellungen wurden geöffnet. ${minutesMsg}`.trim(),
-              };
-            }
-          } catch { /* try next */ }
-        }
+    if (launcher) {
+      // Try opening the Settings app at root (this is reliable on all iOS versions)
+      try {
+        await launcher.openUrl({ url: 'app-settings:' });
+        return {
+          success: true,
+          opened: true,
+          platform: 'ios',
+          appName: 'Einstellungen',
+          message: `Einstellungen geöffnet. Bitte navigieren Sie zu „Bildschirmzeit → [Kind] → App-Limits". ${minutesMsg}`.trim(),
+        };
+      } catch (e) {
+        console.warn('[ParentalControls] iOS Settings open failed:', e);
       }
-
-      return {
-        success: false, opened: false, platform: 'ios',
-        appName: 'Bildschirmzeit',
-        message: 'Bildschirmzeit konnte nicht automatisch geöffnet werden. Bitte öffnen Sie: Einstellungen → Bildschirmzeit → [Kind] → App-Limits',
-      };
-    } catch (error) {
-      console.error('Error opening Screen Time settings:', error);
-      return {
-        success: false, opened: false, platform: 'ios',
-        appName: 'Bildschirmzeit',
-        message: 'Bitte öffnen Sie manuell: Einstellungen → Bildschirmzeit → [Kind] → App-Limits',
-      };
     }
+
+    return {
+      success: false,
+      opened: false,
+      platform: 'ios',
+      appName: 'Bildschirmzeit',
+      message: `Bitte manuell öffnen: Einstellungen → Bildschirmzeit → [Kind] → App-Limits. ${minutesMsg}`.trim(),
+    };
   }
 
   private getWebInstructions(minutes?: number): OpenParentalControlsResult {
     const minutesText = minutes ? ` ${minutes} Minuten` : '';
     return {
-      success: true, opened: false, platform: 'web',
+      success: true,
+      opened: false,
+      platform: 'web',
       appName: 'Kindersicherung',
-      message: `Um${minutesText} Bildschirmzeit freizugeben, öffnen Sie bitte:\n• Android: Family Link App → [Kind] → Gerätezeit → Heute mehr Zeit\n• iPhone/iPad: Einstellungen → Bildschirmzeit → [Kind] → App-Limits`,
+      message: `Um${minutesText} Bildschirmzeit freizugeben:\n• Android: Family Link App → [Kind] → Tageslimit\n• iPhone/iPad: Einstellungen → Bildschirmzeit → [Kind] → App-Limits`,
     };
   }
 
   getInstructions(minutes?: number): { android: string; ios: string } {
     const minutesText = minutes ? `${minutes} Minuten` : 'zusätzliche Zeit';
     return {
-      android: `Family Link App öffnen → [Kind auswählen] → Gerätezeit → Heute mehr Zeit → ${minutesText} hinzufügen`,
-      ios: `Einstellungen → Bildschirmzeit → [Kind auswählen] → App-Limits → ${minutesText} gewähren`
+      android: `Family Link App öffnen → [Kind auswählen] → Tageslimit → ${minutesText} hinzufügen`,
+      ios: `Einstellungen → Bildschirmzeit → [Kind auswählen] → App-Limits → ${minutesText} gewähren`,
     };
   }
 }
