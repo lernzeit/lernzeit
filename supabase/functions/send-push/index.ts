@@ -285,25 +285,74 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
 
   const results: unknown[] = [];
   for (const child of children ?? []) {
-    const { count } = await supabase
-      .from("learning_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", child.id)
-      .gte("session_date", `${today}T00:00:00.000Z`);
+    // Check both learning_sessions AND game_sessions for today
+    const [lsRes, gsRes] = await Promise.all([
+      supabase
+        .from("learning_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", child.id)
+        .gte("session_date", `${today}T00:00:00.000Z`),
+      supabase
+        .from("game_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", child.id)
+        .gte("session_date", `${today}T00:00:00.000Z`),
+    ]);
 
-    if ((count ?? 0) > 0) continue; // already learned today
+    if ((lsRes.count ?? 0) > 0 || (gsRes.count ?? 0) > 0) continue; // already learned/played today
+
+    // Compute current streak (consecutive days up to yesterday)
+    const streak = await computeStreak(child.id);
+
+    let title = "🎯 Zeit zum Lernen!";
+    let message = "Du hast heute noch nicht gelernt. Sammel jetzt Bildschirmzeit!";
+    if (streak >= 2) {
+      title = `🔥 ${streak}-Tage-Streak in Gefahr!`;
+      message = `Du lernst seit ${streak} Tagen in Folge. Lerne heute, um deinen Streak zu halten! 💪`;
+    } else if (streak === 1) {
+      title = "🔥 Halte deinen Streak!";
+      message = "Du hast gestern gelernt. Mach heute weiter und starte einen Streak! 🚀";
+    }
 
     results.push(
       await sendOneSignalPush({
         userIds: [child.id],
-        title: "🎯 Zeit zum Lernen!",
-        message: "Du hast heute noch nicht gelernt. Sammel jetzt Bildschirmzeit!",
-        data: { type: "child_learning_reminder" },
+        title,
+        message,
+        data: { type: "child_learning_reminder", streak },
         respectDailyToggle: true,
       }).catch((e) => ({ error: String(e) })),
     );
   }
   return { sent: results.length };
+}
+
+async function computeStreak(userId: string): Promise<number> {
+  const [ls, gs] = await Promise.all([
+    supabase.from("learning_sessions").select("session_date").eq("user_id", userId).order("session_date", { ascending: false }).limit(200),
+    supabase.from("game_sessions").select("session_date").eq("user_id", userId).order("session_date", { ascending: false }).limit(200),
+  ]);
+  const dates = new Set<string>();
+  for (const row of [...(ls.data ?? []), ...(gs.data ?? [])]) {
+    if (row.session_date) dates.add(new Date(row.session_date).toISOString().slice(0, 10));
+  }
+  if (!dates.size) return 0;
+  const sorted = Array.from(dates).sort((a, b) => b.localeCompare(a));
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (sorted[0] !== today && sorted[0] !== yesterday) return 0;
+  let streak = 0;
+  let cursor = new Date(sorted[0]);
+  for (const d of sorted) {
+    const expected = cursor.toISOString().slice(0, 10);
+    if (d === expected) {
+      streak++;
+      cursor = new Date(cursor.getTime() - 86400000);
+    } else {
+      break;
+    }
+  }
+  return streak;
 }
 
 Deno.serve(async (req) => {
