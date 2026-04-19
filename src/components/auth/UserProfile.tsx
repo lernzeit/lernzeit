@@ -25,6 +25,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useOneSignal } from '@/hooks/useOneSignal';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
@@ -73,6 +74,13 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   usePushNotifications({
     userId: user?.id,
     role: profile?.role as 'child' | 'parent',
+    enabled: profile?.role === 'child' || profile?.role === 'parent',
+  });
+
+  // Native push via OneSignal (Android/iOS) — works when app is closed
+  useOneSignal({
+    userId: user?.id,
+    appId: import.meta.env.VITE_ONESIGNAL_APP_ID || '',
     enabled: profile?.role === 'child' || profile?.role === 'parent',
   });
 
