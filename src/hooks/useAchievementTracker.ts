@@ -200,6 +200,23 @@ export function useAchievementTracker(userId?: string) {
           allNewAchievements.push(...streakAchievements);
         }
         trackedTypes.push('general:streak');
+
+        // 🎉 Streak milestone push notification (3, 7, 14, 30, 60, 100, 200, 300, 365 days)
+        const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 300, 365];
+        if (STREAK_MILESTONES.includes(streakValue)) {
+          const milestoneKey = `streak_milestone_${userId}_${streakValue}`;
+          if (!localStorage.getItem(milestoneKey)) {
+            localStorage.setItem(milestoneKey, new Date().toISOString());
+            console.log(`🎉 Streak milestone reached: ${streakValue} days`);
+            try {
+              await supabase.functions.invoke('send-push', {
+                body: { event: 'streak_milestone', child_id: userId, streak: streakValue },
+              });
+            } catch (e) {
+              console.warn('streak_milestone push failed:', e);
+            }
+          }
+        }
       }
 
       // 4. Track perfect_sessions (100% correct)

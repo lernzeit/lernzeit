@@ -195,6 +195,41 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
     case "child_learning_reminder": {
       return sendChildLearningReminders(getBerlinHour(), true);
     }
+    case "streak_milestone": {
+      const streak = Number(body.streak) || 0;
+      const childId = body.child_id as string;
+      if (!childId || !streak) {
+        return { skipped: true, reason: "missing_streak_or_child" };
+      }
+      const titles: Record<number, string> = {
+        3: "🔥 3 Tage in Folge!",
+        7: "🌟 Eine Woche Streak!",
+        14: "💪 2 Wochen am Stück!",
+        30: "🏆 30-Tage-Streak!",
+        60: "🚀 60 Tage Lern-Power!",
+        100: "💎 100 Tage – Legende!",
+        200: "👑 200 Tage – Wahnsinn!",
+        300: "🌈 300 Tage – Unfassbar!",
+        365: "🎊 1 Jahr Streak – Champion!",
+      };
+      const messages: Record<number, string> = {
+        3: "Du hast 3 Tage in Folge gelernt. Super gemacht – weiter so!",
+        7: "Eine ganze Woche jeden Tag gelernt! Du bist auf einem tollen Weg.",
+        14: "14 Tage am Stück – das ist echte Disziplin. Stark!",
+        30: "30 Tage durchgehalten! Du bist ein wahres Lern-Vorbild.",
+        60: "60 Tage in Folge – deine Ausdauer ist beeindruckend!",
+        100: "100 Tage Streak! Das schaffen nur die Allerbesten.",
+        200: "200 Tage – du bist unaufhaltsam!",
+        300: "300 Tage am Stück lernen. Wow, einfach nur wow!",
+        365: "Ein ganzes Jahr jeden Tag gelernt! Du bist ein absoluter Champion! 🏅",
+      };
+      return sendOneSignalPush({
+        userIds: [childId],
+        title: titles[streak] || `🔥 ${streak}-Tage-Streak!`,
+        message: messages[streak] || `Du lernst seit ${streak} Tagen in Folge. Mach weiter so!`,
+        data: { type: "streak_milestone", streak },
+      });
+    }
     default:
       throw new Error(`Unknown event: ${event}`);
   }
