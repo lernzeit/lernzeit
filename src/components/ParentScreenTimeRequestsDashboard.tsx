@@ -103,7 +103,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   };
 
   const handleDeny = async (requestId: string, response?: string) => {
-    setIsResponding(true);
+    setRespondingId(requestId);
     try {
       const result = await respondToRequest(requestId, 'denied', response);
       
@@ -124,7 +124,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
         variant: "destructive",
       });
     } finally {
-      setIsResponding(false);
+      setRespondingId(null);
     }
   };
 
@@ -233,7 +233,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleApproveClick(request)}
-                    disabled={isResponding}
+                    disabled={respondingId === request.id}
                     className="flex-1 bg-green-500 hover:bg-green-600"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -273,7 +273,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                         <div className="flex gap-2">
                           <Button
                             onClick={() => handleDeny(request.id, responseMessage || undefined)}
-                            disabled={isResponding}
+                            disabled={respondingId === request.id}
                             variant="destructive"
                             className="flex-1"
                           >
@@ -362,7 +362,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                   <div className="flex flex-col gap-2">
                     <Button
                       onClick={() => handleApproveAndOpen(true)}
-                      disabled={isResponding}
+                      disabled={respondingId === pendingApprovalRequest?.id}
                       className="bg-green-500 hover:bg-green-600"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
@@ -371,7 +371,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                     
                     <Button
                       onClick={() => handleApproveAndOpen(false)}
-                      disabled={isResponding}
+                      disabled={respondingId === pendingApprovalRequest?.id}
                       variant="outline"
                     >
                       Nur genehmigen (später freigeben)
@@ -398,7 +398,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                   
                   <Button
                     onClick={() => handleApproveAndOpen(false)}
-                    disabled={isResponding}
+                    disabled={respondingId === pendingApprovalRequest?.id}
                     className="w-full bg-green-500 hover:bg-green-600"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -408,7 +408,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
               )}
               
               <DialogClose asChild>
-                <Button variant="ghost" className="w-full" disabled={isResponding}>
+                <Button variant="ghost" className="w-full" disabled={respondingId === pendingApprovalRequest?.id}>
                   Abbrechen
                 </Button>
               </DialogClose>
