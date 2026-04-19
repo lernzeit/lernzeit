@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "173704764193",
+    "project_id": "lernzeit-36eb9",
+    "storage_bucket": "lernzeit-36eb9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:173704764193:android:1b5ce0f17f000709ef7c60",
+        "android_client_info": {
+          "package_name": "de.lernzeit.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPgaeMidhGnJBgWthoGSd1Ef5sHzw2hPc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
