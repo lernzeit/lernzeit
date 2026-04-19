@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { useChildDaySummary } from '@/hooks/useChildDaySummary';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +25,7 @@ import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 interface ParentDashboardProps {
   userId: string;
