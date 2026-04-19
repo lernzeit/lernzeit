@@ -132,6 +132,35 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         data: { type: "screen_time_denied", request_id: body.request_id },
       });
     }
+    case "learning_plan_created": {
+      const subject = (body.subject as string) || "deinem Fach";
+      const topic = (body.topic as string) || "";
+      const message = topic
+        ? `Deine Eltern haben einen Lernplan für ${subject} (${topic}) erstellt.`
+        : `Deine Eltern haben einen Lernplan für ${subject} erstellt.`;
+      return sendOneSignalPush({
+        userIds: [body.child_id as string],
+        title: "📚 Neuer Lernplan für dich!",
+        message,
+        data: {
+          type: "learning_plan_created",
+          plan_id: body.plan_id,
+          subject: body.subject,
+        },
+      });
+    }
+    case "subject_priority_set": {
+      const subject = (body.subject as string) || "ein Fach";
+      return sendOneSignalPush({
+        userIds: [body.child_id as string],
+        title: "⭐ Neues Schwerpunkt-Fach",
+        message: `Deine Eltern haben ${subject} als Schwerpunkt-Fach festgelegt.`,
+        data: {
+          type: "subject_priority_set",
+          subject: body.subject,
+        },
+      });
+    }
     case "hourly_dispatch": {
       // Cron runs hourly. Each user picks their own preferred hour
       // (Europe/Berlin local time) for the daily summary / reminder.
