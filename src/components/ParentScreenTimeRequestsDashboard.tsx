@@ -18,7 +18,7 @@ interface ParentScreenTimeRequestsDashboardProps {
 export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRequestsDashboardProps) {
   const [responseMessage, setResponseMessage] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [isResponding, setIsResponding] = useState(false);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
