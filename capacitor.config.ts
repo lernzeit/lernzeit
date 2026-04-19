@@ -31,6 +31,9 @@ const config: CapacitorConfig = {
     Keyboard: {
       resize: 'body',
       resizeOnFullScreen: true
+    },
+    OneSignal: {
+      appId: '84cb5453-b878-47ca-aa31-1ec1405bdd5d'
     }
   },
   android: {
