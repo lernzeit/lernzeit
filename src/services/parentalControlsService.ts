@@ -210,6 +210,10 @@ class ParentalControlsService {
     const launcher = await getAppLauncher();
 
     if (launcher) {
+      // Diagnostic probe
+      await this.probeUrl(launcher, 'app-settings:', 'iOS app-settings:');
+      await this.probeUrl(launcher, 'App-Prefs:root=SCREEN_TIME', 'iOS App-Prefs ScreenTime');
+
       // Try opening the Settings app at root (this is reliable on all iOS versions)
       try {
         await launcher.openUrl({ url: 'app-settings:' });
