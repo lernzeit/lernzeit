@@ -17,7 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -29,6 +29,7 @@ import { NotificationSettings } from '@/components/NotificationSettings';
 
 interface ParentDashboardProps {
   userId: string;
+  onSignOut?: () => void;
 }
 
 interface LinkedChild {
@@ -38,7 +39,7 @@ interface LinkedChild {
   username?: string | null;
 }
 
-export function ParentDashboard({ userId }: ParentDashboardProps) {
+export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>('requests');
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
@@ -222,13 +223,19 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
-            <Settings className="h-4 w-4 mr-2" />
+            <Settings className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Konto</span>
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Aktualisieren</span>
           </Button>
+          {onSignOut && (
+            <Button variant="outline" size="sm" onClick={onSignOut} aria-label="Abmelden">
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Abmelden</span>
+            </Button>
+          )}
         </div>
       </div>
 
