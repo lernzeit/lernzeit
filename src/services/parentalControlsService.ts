@@ -147,7 +147,7 @@ class ParentalControlsService {
 
       // 2) Play Store deep link (market://)
       try {
-        await launcher.openUrl({ url: `market://details?id=${packageName}` });
+        await launcher.openUrl({ url: marketUrl });
         console.log('[ParentalControls] ✅ Opened Play Store (market://)');
         return {
           success: true,
