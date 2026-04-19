@@ -569,20 +569,23 @@ function generateDeepLinks(minutes: number) {
 
 /**
  * Send email notification to parent when child creates a screen time request.
- * Uses Resend HTTP API for reliable delivery.
+ * Uses OneSignal Email API. Only sent when push notifications are NOT
+ * available for this parent (no registered device or daily_push_enabled=false),
+ * to avoid duplicate notifications.
  */
 async function sendParentNotification(
-  supabase: any, 
-  parentId: string, 
-  childName: string, 
+  supabase: any,
+  parentId: string,
+  childName: string,
   requestedMinutes: number,
   message: string,
   requestId: string
 ) {
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) {
-      console.error('RESEND_API_KEY not configured – skipping parent email');
+    const ONESIGNAL_APP_ID = Deno.env.get('ONESIGNAL_APP_ID');
+    const ONESIGNAL_REST_API_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY');
+    if (!ONESIGNAL_APP_ID || !ONESIGNAL_REST_API_KEY) {
+      console.error('OneSignal credentials not configured – skipping parent email');
       return;
     }
 
@@ -622,7 +625,7 @@ async function sendParentNotification(
 
     // Get parent's email from auth.users table
     const { data: parentUser, error: userError } = await supabase.auth.admin.getUserById(parentId);
-    
+
     if (userError || !parentUser?.user?.email) {
       console.log('Could not get parent email:', userError?.message || 'No email found');
       return;
@@ -642,16 +645,16 @@ async function sendParentNotification(
 </head>
 <body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 0;">
   <div style="max-width: 480px; margin: 0 auto; padding: 0;">
-    <div style="background-color: hsl(217, 91%, 60%); padding: 24px 25px; border-radius: 12px 12px 0 0;">
+    <div style="background-color: hsl(187, 85%, 53%); padding: 24px 25px; border-radius: 12px 12px 0 0;">
       <p style="color: #ffffff; font-size: 22px; font-weight: bold; margin: 0; letter-spacing: -0.5px;">📖 LernZeit</p>
     </div>
     <h1 style="font-size: 22px; font-weight: bold; color: hsl(240, 10%, 15%); margin: 24px 25px 12px; padding: 0;">Bildschirmzeit-Anfrage</h1>
     <p style="font-size: 15px; color: hsl(240, 5%, 45%); line-height: 1.6; margin: 0 25px 20px;">
       <strong>${childName}</strong> hat fleißig gelernt und möchte Bildschirmzeit einlösen:
     </p>
-    <div style="background-color: #dbeafe; border-radius: 12px; padding: 20px; text-align: center; margin: 0 25px 20px;">
-      <div style="font-size: 48px; font-weight: bold; color: #1d4ed8;">${requestedMinutes}</div>
-      <div style="color: #1e40af; font-size: 14px;">Minuten angefragt</div>
+    <div style="background-color: #cffafe; border-radius: 12px; padding: 20px; text-align: center; margin: 0 25px 20px;">
+      <div style="font-size: 48px; font-weight: bold; color: #0e7490;">${requestedMinutes}</div>
+      <div style="color: #155e75; font-size: 14px;">Minuten angefragt</div>
     </div>
     ${message ? `
     <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px; margin: 0 25px 20px;">
@@ -659,7 +662,7 @@ async function sendParentNotification(
       <div style="font-size: 14px; color: #374151;">"${message}"</div>
     </div>` : ''}
     <div style="text-align: center; margin: 8px 25px 24px;">
-      <a href="${approvalLink}" style="background-color: hsl(217, 91%, 60%); color: #ffffff; font-size: 15px; font-weight: 600; border-radius: 10px; padding: 14px 28px; text-decoration: none; display: inline-block;">
+      <a href="${approvalLink}" style="background-color: hsl(187, 85%, 53%); color: #ffffff; font-size: 15px; font-weight: 600; border-radius: 10px; padding: 14px 28px; text-decoration: none; display: inline-block;">
         In der App antworten
       </a>
     </div>
@@ -667,36 +670,35 @@ async function sendParentNotification(
       Öffne die LernZeit App, um die Anfrage zu genehmigen oder abzulehnen.
     </p>
     <div style="font-size: 12px; color: hsl(240, 5%, 65%); margin: 0; padding: 16px 25px; border-top: 1px solid hsl(240, 20%, 92%); text-align: center;">
-      <span style="font-weight: bold; color: hsl(217, 91%, 60%);">LernZeit</span> – Dein persönlicher Lern-Assistent
+      <span style="font-weight: bold; color: hsl(187, 85%, 53%);">LernZeit</span> – Dein persönlicher Lern-Assistent
     </div>
   </div>
 </body>
 </html>`.trim();
 
-    const plainText = `${childName} möchte ${requestedMinutes} Minuten Bildschirmzeit.\n${message ? `Nachricht: "${message}"\n` : ''}Öffne die LernZeit App, um zu antworten: ${approvalLink}`;
-
-    const resendResponse = await fetch('https://api.resend.com/emails', {
+    const oneSignalResponse = await fetch('https://api.onesignal.com/notifications', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Key ${ONESIGNAL_REST_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'LernZeit <info@lernzeit.app>',
-        to: [parentEmail],
-        reply_to: 'info@lernzeit.app',
-        subject: emailSubject,
-        html: emailHtml,
-        text: plainText,
+        app_id: ONESIGNAL_APP_ID,
+        target_channel: 'email',
+        include_email_tokens: [parentEmail],
+        email_subject: emailSubject,
+        email_body: emailHtml,
+        email_from_name: 'LernZeit',
+        email_from_address: 'mail@lernzeit.app',
+        email_reply_to_address: 'mail@lernzeit.app',
       }),
     });
 
-    if (!resendResponse.ok) {
-      const errBody = await resendResponse.text();
-      console.error(`Resend API error [${resendResponse.status}]: ${errBody}`);
+    const responseBody = await oneSignalResponse.text();
+    if (!oneSignalResponse.ok) {
+      console.error(`OneSignal Email API error [${oneSignalResponse.status}]: ${responseBody}`);
     } else {
-      const result = await resendResponse.json();
-      console.log(`📧 Parent notification email sent via Resend: ${result.id} → ${parentEmail}`);
+      console.log(`📧 Parent notification email sent via OneSignal → ${parentEmail}: ${responseBody}`);
     }
   } catch (error) {
     // Don't fail the request if email fails
