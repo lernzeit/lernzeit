@@ -62,19 +62,19 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   // Step 2: Actually approve and optionally open parental control app
   const handleApproveAndOpen = async (openApp: boolean) => {
     if (!pendingApprovalRequest) return;
-    
-    setIsResponding(true);
+    const reqId = pendingApprovalRequest.id;
+    const reqMinutes = pendingApprovalRequest.requested_minutes;
+
+    setRespondingId(reqId);
     try {
       // First, approve in our system
-      const result = await respondToRequest(pendingApprovalRequest.id, 'approved');
-      
+      const result = await respondToRequest(reqId, 'approved');
+
       if (result.success) {
         // Then try to open the parental control app
         if (openApp && isNative) {
-          const openResult = await parentalControlsService.openParentalControlApp(
-            pendingApprovalRequest.requested_minutes
-          );
-          
+          const openResult = await parentalControlsService.openParentalControlApp(reqMinutes);
+
           toast({
             title: "Anfrage genehmigt! ✅",
             description: openResult.message,
@@ -82,10 +82,10 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
         } else {
           toast({
             title: "Anfrage genehmigt! ✅",
-            description: `Bitte vergeben Sie ${pendingApprovalRequest.requested_minutes} Minuten Bildschirmzeit in ${appName}.`,
+            description: `Bitte vergeben Sie ${reqMinutes} Minuten Bildschirmzeit in ${appName}.`,
           });
         }
-        
+
         setShowApprovalDialog(false);
         setPendingApprovalRequest(null);
       } else {
@@ -98,7 +98,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
         variant: "destructive",
       });
     } finally {
-      setIsResponding(false);
+      setRespondingId(null);
     }
   };
 
