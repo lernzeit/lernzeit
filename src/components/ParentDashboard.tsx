@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { useChildDaySummary } from '@/hooks/useChildDaySummary';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +25,7 @@ import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 interface ParentDashboardProps {
   userId: string;
@@ -37,7 +39,8 @@ interface LinkedChild {
 }
 
 export function ParentDashboard({ userId }: ParentDashboardProps) {
-  const [activeTab, setActiveTab] = useState<string>('children');
+  const [activeTab, setActiveTab] = useState<string>('requests');
+  const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -212,15 +215,21 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Eltern-Dashboard</h1>
           <p className="text-muted-foreground text-sm">Familie und Lernzeit verwalten</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Aktualisieren
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Konto</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Aktualisieren</span>
+          </Button>
+        </div>
       </div>
 
       {totalPendingRequests > 0 && (
@@ -301,9 +310,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </Card>
       )}
 
-      {/* Main Tabs - reduced to 4 */}
+      {/* Main Tabs - reduced to 3 (Konto in header) */}
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
@@ -320,10 +329,6 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           <TabsTrigger value="subscription" className="flex items-center gap-1.5">
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
-          </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-1.5">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Konto</span>
           </TabsTrigger>
         </TabsList>
 
@@ -637,64 +642,76 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           </Card>
         </TabsContent>
 
-        {/* Tab: Konto (Profile + Password + Codes) */}
-        <TabsContent value="account" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Profil
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="profile-name">Ihr Name</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="profile-name"
-                    type="text"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="Ihr Name"
-                    className="flex-1"
-                  />
-                  <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
-                    {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Speichern"}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                Passwort ändern
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">Neues Passwort</Label>
-                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-                <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
-              </div>
-              <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
-                {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <AccountDeleteSection
-            isPremium={isPremium}
-            onDeleted={() => window.location.href = '/'}
-          />
-
-        </TabsContent>
       </Tabs>
+
+      {/* Konto-Dialog (vom Header geöffnet) */}
+      <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Konto-Einstellungen
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Profil
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-name">Ihr Name</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="profile-name"
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      placeholder="Ihr Name"
+                      className="flex-1"
+                    />
+                    <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
+                      {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Speichern"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <NotificationSettings userId={userId} role="parent" />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  Passwort ändern
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Neues Passwort</Label>
+                  <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+                  <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
+                </div>
+                <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
+                  {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <AccountDeleteSection
+              isPremium={isPremium}
+              onDeleted={() => window.location.href = '/'}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

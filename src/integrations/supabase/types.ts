@@ -492,6 +492,7 @@ export type Database = {
           avatar_color: string | null
           avatar_id: string | null
           created_at: string | null
+          daily_push_enabled: boolean
           grade: number | null
           id: string
           name: string | null
@@ -503,6 +504,7 @@ export type Database = {
           avatar_color?: string | null
           avatar_id?: string | null
           created_at?: string | null
+          daily_push_enabled?: boolean
           grade?: number | null
           id: string
           name?: string | null
@@ -514,6 +516,7 @@ export type Database = {
           avatar_color?: string | null
           avatar_id?: string | null
           created_at?: string | null
+          daily_push_enabled?: boolean
           grade?: number | null
           id?: string
           name?: string | null

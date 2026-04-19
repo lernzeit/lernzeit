@@ -16,7 +16,8 @@ import {
   Check,
   X,
   AlertCircle,
-  Loader2
+  Loader2,
+  Bell
 } from 'lucide-react';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
@@ -27,6 +28,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 interface ChildSettingsMenuProps {
   user: any;
@@ -214,6 +216,14 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
       icon: Users,
       color: 'text-orange-600',
       gradient: 'from-orange-500 to-red-600'
+    },
+    {
+      id: 'notifications',
+      title: 'Benachrichtigungen',
+      description: 'Tägliche Lern-Erinnerungen ein-/ausschalten',
+      icon: Bell,
+      color: 'text-pink-600',
+      gradient: 'from-pink-500 to-rose-600'
     },
     {
       id: 'achievements',
@@ -430,6 +440,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
           
           {activeSection === 'achievements' && (
             <AchievementDisplay userId={user.id} variant="full" />
+          )}
+
+          {activeSection === 'notifications' && (
+            <NotificationSettings userId={user.id} role="child" />
           )}
         </div>
       </div>
