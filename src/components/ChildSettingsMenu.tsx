@@ -441,6 +441,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
           {activeSection === 'achievements' && (
             <AchievementDisplay userId={user.id} variant="full" />
           )}
+
+          {activeSection === 'notifications' && (
+            <NotificationSettings userId={user.id} role="child" />
+          )}
         </div>
       </div>
     );
