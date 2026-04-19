@@ -94,6 +94,23 @@ async function sendOneSignalPush(payload: PushPayload): Promise<unknown> {
   return JSON.parse(text);
 }
 
+function toGermanSubject(subject: unknown): string {
+  const key = String(subject ?? "").trim().toLowerCase();
+  const map: Record<string, string> = {
+    math: "Mathematik",
+    german: "Deutsch",
+    english: "Englisch",
+    science: "Sachkunde",
+    geography: "Geographie",
+    history: "Geschichte",
+    physics: "Physik",
+    biology: "Biologie",
+    chemistry: "Chemie",
+    latin: "Latein",
+  };
+  return map[key] || (subject ? String(subject) : "");
+}
+
 async function getChildName(childId: string): Promise<string> {
   const { data } = await supabase
     .from("profiles")
