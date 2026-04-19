@@ -218,6 +218,7 @@ async function sendChildLearningReminders() {
         title: "🎯 Zeit zum Lernen!",
         message: "Du hast heute noch nicht gelernt. Sammel jetzt Bildschirmzeit!",
         data: { type: "child_learning_reminder" },
+        respectDailyToggle: true,
       }).catch((e) => ({ error: String(e) })),
     );
   }
