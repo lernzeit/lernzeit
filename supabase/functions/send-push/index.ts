@@ -94,6 +94,23 @@ async function sendOneSignalPush(payload: PushPayload): Promise<unknown> {
   return JSON.parse(text);
 }
 
+function toGermanSubject(subject: unknown): string {
+  const key = String(subject ?? "").trim().toLowerCase();
+  const map: Record<string, string> = {
+    math: "Mathematik",
+    german: "Deutsch",
+    english: "Englisch",
+    science: "Sachkunde",
+    geography: "Geographie",
+    history: "Geschichte",
+    physics: "Physik",
+    biology: "Biologie",
+    chemistry: "Chemie",
+    latin: "Latein",
+  };
+  return map[key] || (subject ? String(subject) : "");
+}
+
 async function getChildName(childId: string): Promise<string> {
   const { data } = await supabase
     .from("profiles")
@@ -133,7 +150,7 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       });
     }
     case "learning_plan_created": {
-      const subject = (body.subject as string) || "deinem Fach";
+      const subject = toGermanSubject(body.subject) || "deinem Fach";
       const topic = (body.topic as string) || "";
       const message = topic
         ? `Deine Eltern haben einen Lernplan für ${subject} (${topic}) erstellt.`
@@ -150,7 +167,7 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       });
     }
     case "subject_priority_set": {
-      const subject = (body.subject as string) || "ein Fach";
+      const subject = toGermanSubject(body.subject) || "ein Fach";
       return sendOneSignalPush({
         userIds: [body.child_id as string],
         title: "⭐ Neues Schwerpunkt-Fach",
