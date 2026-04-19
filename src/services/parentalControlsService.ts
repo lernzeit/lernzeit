@@ -89,6 +89,22 @@ class ParentalControlsService {
   }
 
   /**
+   * Diagnostic helper: probes if a URL can be opened by any installed app.
+   * Logs result for Logcat inspection. Never throws.
+   */
+  private async probeUrl(launcher: any, url: string, label: string): Promise<boolean> {
+    try {
+      const result = await launcher.canOpenUrl({ url });
+      const canOpen = !!result?.value;
+      console.log(`[ParentalControls] 🔎 canOpenUrl(${label}) → ${canOpen}`, { url, result });
+      return canOpen;
+    } catch (e) {
+      console.warn(`[ParentalControls] ⚠️ canOpenUrl(${label}) threw:`, e);
+      return false;
+    }
+  }
+
+  /**
    * Try to open Family Link on Android.
    * Order of attempts:
    * 1. Official Family Link web URL (Android App Links → opens app if installed)
@@ -98,6 +114,7 @@ class ParentalControlsService {
     const packageName = 'com.google.android.apps.kids.familylink';
     const familyLinkWebUrl = 'https://families.google.com/familylink/';
     const playStoreWeb = `https://play.google.com/store/apps/details?id=${packageName}`;
+    const marketUrl = `market://details?id=${packageName}`;
     const minutesMsg = minutes
       ? `Bitte ${minutes} Minuten zusätzliche Bildschirmzeit für Ihr Kind freigeben.`
       : '';
@@ -105,6 +122,13 @@ class ParentalControlsService {
     const launcher = await getAppLauncher();
 
     if (launcher) {
+      // Diagnostic probes (non-blocking)
+      console.log('[ParentalControls] 🩺 Starting diagnostic probes...');
+      await this.probeUrl(launcher, familyLinkWebUrl, 'FamilyLink AppLink');
+      await this.probeUrl(launcher, marketUrl, 'Play Store (market://)');
+      await this.probeUrl(launcher, playStoreWeb, 'Play Store (web)');
+      await this.probeUrl(launcher, 'familylink://', 'familylink:// scheme');
+
       // 1) Official Family Link App Link (most reliable, opens app if installed)
       try {
         await launcher.openUrl({ url: familyLinkWebUrl });
@@ -123,7 +147,7 @@ class ParentalControlsService {
 
       // 2) Play Store deep link (market://)
       try {
-        await launcher.openUrl({ url: `market://details?id=${packageName}` });
+        await launcher.openUrl({ url: marketUrl });
         console.log('[ParentalControls] ✅ Opened Play Store (market://)');
         return {
           success: true,
@@ -186,6 +210,10 @@ class ParentalControlsService {
     const launcher = await getAppLauncher();
 
     if (launcher) {
+      // Diagnostic probe
+      await this.probeUrl(launcher, 'app-settings:', 'iOS app-settings:');
+      await this.probeUrl(launcher, 'App-Prefs:root=SCREEN_TIME', 'iOS App-Prefs ScreenTime');
+
       // Try opening the Settings app at root (this is reliable on all iOS versions)
       try {
         await launcher.openUrl({ url: 'app-settings:' });
