@@ -68,9 +68,11 @@ async function getFunctionErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+// Two requests are considered the same logical request (broadcast to multiple parents)
+// if they share the same child, requested minutes and message, and were created within 5s.
+// Status is intentionally NOT compared so we can merge across parents who responded differently.
 function shouldMergeChildRequests(a: ScreenTimeRequest, b: ScreenTimeRequest) {
   if (a.child_id !== b.child_id) return false;
-  if (a.status !== b.status) return false;
   if (a.requested_minutes !== b.requested_minutes) return false;
   if ((a.request_message || '') !== (b.request_message || '')) return false;
 
@@ -81,31 +83,49 @@ function shouldMergeChildRequests(a: ScreenTimeRequest, b: ScreenTimeRequest) {
   return createdDiff <= 5000;
 }
 
+// When the same request was sent to multiple parents, the merged status is:
+//  - 'approved' if ANY parent approved (one yes is enough)
+//  - 'denied'   if ALL parents denied
+//  - 'pending'  otherwise
+function mergeStatus(statuses: ScreenTimeRequest['status'][]): ScreenTimeRequest['status'] {
+  if (statuses.some((s) => s === 'approved')) return 'approved';
+  if (statuses.length > 0 && statuses.every((s) => s === 'denied')) return 'denied';
+  return 'pending';
+}
+
 function normalizeRequests(requests: ScreenTimeRequest[], role: 'child' | 'parent') {
   if (role !== 'child') {
     return requests;
   }
 
-  const normalized: ScreenTimeRequest[] = [];
-
+  // Group requests by logical identity, then collapse using mergeStatus
+  const groups: ScreenTimeRequest[][] = [];
   for (const request of requests) {
-    const existing = normalized.find((item) => shouldMergeChildRequests(item, request));
-
-    if (existing) {
-      existing.parent_count = (existing.parent_count ?? 1) + 1;
-      if (new Date(request.created_at).getTime() > new Date(existing.created_at).getTime()) {
-        existing.created_at = request.created_at;
-      }
-      continue;
+    const group = groups.find((g) => shouldMergeChildRequests(g[0], request));
+    if (group) {
+      group.push(request);
+    } else {
+      groups.push([request]);
     }
-
-    normalized.push({
-      ...request,
-      parent_count: 1,
-    });
   }
 
-  return normalized;
+  return groups.map((group) => {
+    // Prefer the approved one (so we keep its parent_response/responded_at)
+    const approved = group.find((r) => r.status === 'approved');
+    const base = approved ?? group[0];
+    const mergedStatus = mergeStatus(group.map((r) => r.status));
+    const latestCreated = group.reduce(
+      (max, r) => (new Date(r.created_at).getTime() > new Date(max).getTime() ? r.created_at : max),
+      base.created_at,
+    );
+
+    return {
+      ...base,
+      status: mergedStatus,
+      created_at: latestCreated,
+      parent_count: group.length,
+    };
+  });
 }
 
 export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRequestsResult {
