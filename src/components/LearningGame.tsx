@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,10 @@ import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
+import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 import { useReviewQueue } from '@/hooks/useReviewQueue';
+import { useStreak } from '@/hooks/useStreak';
 
 interface LearningGameProps {
   grade: number;
@@ -123,7 +125,20 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = useSubscription();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
+  const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  const [newStreakValue, setNewStreakValue] = useState(0);
+  const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
+  const streakBeforeSession = useRef<number | null>(null);
+
+  // Track streak before session starts
+  const { streak: currentStreak } = useStreak(user?.id);
+  useEffect(() => {
+    if (streakBeforeSession.current === null && currentStreak !== undefined) {
+      streakBeforeSession.current = currentStreak;
+    }
+  }, [currentStreak]);
 
   // Save emoji feedback to question_feedback table
   const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
@@ -230,7 +245,39 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setIsCorrect(false);
     setShowExplanation(false);
     setSelectedFeedback(null);
+    setSpellingHint(null);
     clearExplanation();
+  };
+
+  const extractMultipleChoiceOptions = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return Array.from(
+        new Set(
+          value
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+        )
+      );
+    }
+
+    if (typeof value !== 'string') return [];
+
+    return Array.from(
+      new Set(
+        value
+          .replace(/\r/g, '\n')
+          .split(/[\n,;|]+/)
+          .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
+          .filter(Boolean)
+      )
+    );
+  };
+
+  const getMultipleChoiceOptions = (q: PreloadedQuestion): string[] => {
+    const directOptions = extractMultipleChoiceOptions(q.options);
+    if (directOptions.length >= 2) return directOptions;
+
+    return extractMultipleChoiceOptions(q.task);
   };
 
   // Resolve MULTIPLE_CHOICE correctAnswer which can be:
@@ -238,22 +285,39 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // - an object { value: "text" } (legacy)
   // - a string directly
   const resolveCorrectAnswerText = (q: PreloadedQuestion): string => {
+    const options = getMultipleChoiceOptions(q);
     const ca = q.correctAnswer;
     if (ca == null) return '';
     // If it's a number (index into options)
     if (typeof ca === 'number') {
-      return q.options?.[ca] ?? String(ca);
+      return options[ca] ?? String(ca);
     }
     // If it's an object with .value
     if (typeof ca === 'object' && ca.value != null) {
-      if (typeof ca.value === 'number' && q.options) {
-        return q.options[ca.value] ?? String(ca.value);
+      if (typeof ca.value === 'number') {
+        return options[ca.value] ?? String(ca.value);
       }
       return String(ca.value);
+    }
+    if (typeof ca === 'string') {
+      const trimmed = ca.trim();
+      const index = Number(trimmed);
+      if (Number.isInteger(index) && options[index] !== undefined) {
+        return options[index];
+      }
+      return trimmed;
     }
     // If it's a plain string
     return String(ca);
   };
+
+  const multipleChoiceOptions = useMemo(
+    () => (question ? getMultipleChoiceOptions(question) : []),
+    [question]
+  );
+
+  const shouldUseTextFallbackForMultipleChoice =
+    question?.questionType === 'MULTIPLE_CHOICE' && multipleChoiceOptions.length < 2;
 
   const checkAnswer = async () => {
     if (!question) return;
@@ -263,7 +327,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
         const resolvedCorrect = resolveCorrectAnswerText(question);
-        correct = selectedOption === resolvedCorrect;
+        correct = shouldUseTextFallbackForMultipleChoice
+          ? userTextAnswer.toLowerCase().trim() === resolvedCorrect.toLowerCase().trim()
+          : selectedOption === resolvedCorrect;
         break;
 
       case 'FREETEXT':
@@ -297,6 +363,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             if (!error && data?.accepted) {
               console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.reason})`);
               correct = true;
+              // Show spelling hint when AI accepted despite typo
+              setSpellingHint(freeTextCorrect);
             }
           } catch (e) {
             console.warn('AI recheck failed, using local result:', e);
@@ -463,7 +531,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
-        return selectedOption || '';
+        return selectedOption || userTextAnswer;
       case 'FREETEXT':
         return userTextAnswer;
       case 'SORT':
@@ -542,10 +610,44 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               timeSpentSeconds,
             });
             if (challengeCompleted) {
-              toast.success('🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!', { duration: 4000 });
+              setDailyChallengeCompleted(true);
             }
           } catch (error) {
             console.error('❌ Error checking daily challenge:', error);
+          }
+
+          // Check if streak increased
+          try {
+            // Calculate fresh streak from DB
+            const [lsRes, gsRes] = await Promise.all([
+              supabase.from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
+              supabase.from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
+            ]);
+            const allDates = new Set<string>();
+            lsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
+            gsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
+            const sorted = Array.from(allDates).sort((a, b) => b.localeCompare(a));
+            let freshStreak = 0;
+            if (sorted.length > 0) {
+              const today = new Date().toISOString().split('T')[0];
+              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+              if (sorted[0] === today || sorted[0] === yesterday) {
+                let checkDate = new Date();
+                if (sorted[0] === yesterday) checkDate = new Date(Date.now() - 86400000);
+                for (let i = 0; i < sorted.length; i++) {
+                  const expected = new Date(checkDate.getTime() - i * 86400000).toISOString().split('T')[0];
+                  if (sorted[i] === expected) freshStreak++;
+                  else break;
+                }
+              }
+            }
+            const previousStreak = streakBeforeSession.current ?? 0;
+            if (freshStreak > previousStreak) {
+              setNewStreakValue(freshStreak);
+              setShowStreakAnimation(true);
+            }
+          } catch (error) {
+            console.error('❌ Error checking streak:', error);
           }
         } else {
           console.error('❌ Failed to save session:', result.error);
@@ -577,11 +679,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     });
   };
 
-  // Move sort item
+  // Move/swap sort items
   const moveSortItem = (fromIndex: number, toIndex: number) => {
     const newOrder = [...sortOrder];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, removed);
+    // Swap the two items
+    [newOrder[fromIndex], newOrder[toIndex]] = [newOrder[toIndex], newOrder[fromIndex]];
     setSortOrder(newOrder);
   };
 
@@ -593,7 +695,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       triggerRainbow();
     }
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-bg flex flex-col items-center justify-center p-4 pt-safe-top pb-safe-bottom">
         <GameCompletionScreen
           score={score}
           totalQuestions={totalQuestions}
@@ -601,6 +703,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           timePerTask={secondsPerTask}
           achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
+          grade={grade}
           onContinue={handleCompletionContinue}
         />
         
@@ -610,6 +713,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             achievements={newAchievements}
             onClose={() => setShowAchievementPopup(false)}
           />
+        )}
+
+        {/* Streak Animation */}
+        {showStreakAnimation && (
+          <StreakAnimation
+            newStreak={newStreakValue}
+            onClose={() => setShowStreakAnimation(false)}
+          />
+        )}
+
+        {/* Daily Challenge Banner */}
+        {dailyChallengeCompleted && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold text-sm shadow-2xl animate-scale-in-bounce pointer-events-none">
+            🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!
+          </div>
         )}
       </div>
     );
@@ -622,10 +740,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <Card className="w-full max-w-2xl">
           <CardContent className="p-12 text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Deine Fragen werden vorbereitet...</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Das dauert nur einen Moment ✨
+            <p className="mt-4 text-lg text-muted-foreground">
+              {grade <= 4 ? 'Gleich geht\'s los! 🚀' : 'Deine Fragen werden vorbereitet...'}
             </p>
+            {grade > 4 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Das dauert nur einen Moment ✨
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -643,11 +765,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Zurück
+                {grade <= 4 ? 'Zurück' : 'Zurück'}
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Nochmal versuchen
+                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
               </Button>
             </div>
           </CardContent>
@@ -681,7 +803,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Nochmal versuchen
+                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
               </Button>
             </div>
           </CardContent>
@@ -700,38 +822,45 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           onComplete={() => setGameAnimation(null)}
         />
       )}
-      <div className="page-container">
+      <div className="page-container space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Zurück
+            {grade <= 4 ? '' : 'Zurück'}
           </Button>
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary">{getSubjectEmoji(subject)} {getSubjectName(subject)}</Badge>
-            <Badge variant="outline">Klasse {grade}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className={grade <= 4 ? 'text-base px-3 py-1' : ''}>
+              {getSubjectEmoji(subject)} {grade <= 4 ? '' : getSubjectName(subject)}
+            </Badge>
+            {grade > 4 && <Badge variant="outline">Klasse {grade}</Badge>}
           </div>
         </div>
 
         {/* Progress with Active Timer */}
-        <div className="mb-6">
-          {/* Timer Display */}
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
-            <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
-            <span className={cn(
-              "font-mono text-lg transition-colors",
-              isRunning ? "text-foreground" : "text-muted-foreground/70"
-            )}>
-              {formattedTime}
-            </span>
-            {!isRunning && hasAnswered && (
-              <span className="text-xs text-muted-foreground">(pausiert)</span>
-            )}
-          </div>
+        <div>
+          {/* Timer Display - hidden for young */}
+          {grade > 4 && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
+              <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
+              <span className={cn(
+                "font-mono text-lg transition-colors",
+                isRunning ? "text-foreground" : "text-muted-foreground/70"
+              )}>
+                {formattedTime}
+              </span>
+              {!isRunning && hasAnswered && (
+                <span className="text-xs text-muted-foreground">(pausiert)</span>
+              )}
+            </div>
+          )}
           
           <div className="flex justify-between text-sm text-muted-foreground mb-2">
             <span className="flex items-center gap-2">
-              Frage {currentIndex + 1} von {totalQuestions}
+              {grade <= 4 
+                ? `${currentIndex + 1} von ${totalQuestions}`
+                : <>Frage {currentIndex + 1} von {totalQuestions}</>
+              }
               {loadingProgress < totalQuestions && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -740,21 +869,27 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               )}
             </span>
             <span className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-primary" />
-              {score} richtig
+              {grade <= 4 ? (
+                <span className="text-lg">⭐ {score}</span>
+              ) : (
+                <>
+                  <Trophy className="w-4 h-4 text-primary" />
+                  {score} richtig
+                </>
+              )}
             </span>
           </div>
-          <Progress value={(currentIndex / totalQuestions) * 100} className="h-2" />
+          <Progress value={(currentIndex / totalQuestions) * 100} className={grade <= 4 ? "h-4" : "h-2"} />
         </div>
 
         {/* Question Card */}
         {question && (
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
                 {question.questionType !== 'FILL_BLANK' && (
-                  <CardTitle className="text-xl leading-relaxed">{question.questionText}</CardTitle>
+                  <CardTitle className={grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed"}>{question.questionText}</CardTitle>
                 )}
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
               </div>
@@ -764,9 +899,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Question Type Renderers */}
-              {question.questionType === 'MULTIPLE_CHOICE' && (
+              {question.questionType === 'MULTIPLE_CHOICE' && !shouldUseTextFallbackForMultipleChoice && (
                 <MultipleChoiceRenderer
-                  options={Array.isArray(question.options) ? question.options : []}
+                  options={multipleChoiceOptions}
                   selectedOption={selectedOption}
                   correctAnswer={resolveCorrectAnswerText(question)}
                   hasAnswered={hasAnswered}
@@ -774,13 +909,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 />
               )}
 
-              {question.questionType === 'FREETEXT' && (
+              {(question.questionType === 'FREETEXT' || shouldUseTextFallbackForMultipleChoice) && (
                 <FreetextRenderer
                   value={userTextAnswer}
                   onChange={setUserTextAnswer}
                   hasAnswered={hasAnswered}
                   isCorrect={isCorrect}
-                  correctAnswer={question.correctAnswer?.value}
+                  correctAnswer={getCorrectAnswerText()}
                 />
               )}
 
@@ -798,9 +933,30 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   leftItems={question.options?.leftItems || []}
                   rightItems={question.options?.rightItems || []}
                   matches={matches}
-                  correctPairs={question.correctAnswer?.pairs || []}
+                  correctPairs={
+                    question.correctAnswer?.pairs && Array.isArray(question.correctAnswer.pairs)
+                      ? question.correctAnswer.pairs
+                      : question.correctAnswer && typeof question.correctAnswer === 'object' && !Array.isArray(question.correctAnswer)
+                        ? Object.entries(question.correctAnswer).map(([l, r]) => [l, String(r)] as [string, string])
+                        : []
+                  }
                   hasAnswered={hasAnswered}
-                  onMatch={(left, right) => setMatches(prev => ({ ...prev, [left]: right }))}
+                  onMatch={(left, right) => {
+                    setMatches(prev => {
+                      if (!right) {
+                        const nextMatches = { ...prev };
+                        delete nextMatches[left];
+                        return nextMatches;
+                      }
+
+                      const nextMatches = Object.fromEntries(
+                        Object.entries(prev).filter(([, existingRight]) => existingRight !== right)
+                      );
+
+                      nextMatches[left] = right;
+                      return nextMatches;
+                    });
+                  }}
                 />
               )}
 
@@ -843,6 +999,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 />
               )}
 
+              {/* Fallback: unbekannter oder fehlender questionType → Freitext-Eingabe */}
+              {(!question.questionType || !['MULTIPLE_CHOICE', 'FREETEXT', 'SORT', 'MATCH', 'FILL_BLANK', 'DRAG_DROP'].includes(question.questionType)) && (
+                <FreetextRenderer
+                  value={userTextAnswer}
+                  onChange={setUserTextAnswer}
+                  hasAnswered={hasAnswered}
+                  isCorrect={isCorrect}
+                  correctAnswer={question.correctAnswer?.value || String(question.correctAnswer || '')}
+                />
+              )}
+
               {/* Answer Feedback */}
               {hasAnswered && (
                 <div className={cn(
@@ -854,23 +1021,40 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   <div className="flex items-center gap-2 mb-2">
                     {isCorrect ? (
                       <>
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <span className="font-semibold text-green-700 dark:text-green-400">Richtig!</span>
+                        {grade <= 4 ? (
+                          <span className="text-2xl">✅</span>
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        )}
+                        <span className="font-semibold text-green-700 dark:text-green-400">
+                          {grade <= 4 ? 'Super!' : 'Richtig!'}
+                        </span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="w-5 h-5 text-red-600" />
-                        <span className="font-semibold text-red-700 dark:text-red-400">Nicht ganz richtig</span>
+                        {grade <= 4 ? (
+                          <span className="text-2xl">❌</span>
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-600" />
+                        )}
+                        <span className="font-semibold text-red-700 dark:text-red-400">
+                          {grade <= 4 ? 'Nicht ganz' : 'Nicht ganz richtig'}
+                        </span>
                       </>
                     )}
                   </div>
+                  {isCorrect && spellingHint && (
+                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                      ✏️ Richtige Schreibweise: <strong>{spellingHint}</strong>
+                    </p>
+                  )}
                   {!isCorrect && (
                     <p className="text-sm text-muted-foreground">
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
-                  {/* Report Button for incorrect answers */}
-                  {!isCorrect && question && (
+                  {/* Report Button - only for teen */}
+                  {grade > 4 && !isCorrect && question && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -881,8 +1065,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Frage melden (Antwort falsch?)
                     </Button>
                   )}
-                  {/* KI-Tutor Premium Hint */}
-                  {!isCorrect && question && (
+                  {/* KI-Tutor - only for teen */}
+                  {grade > 4 && !isCorrect && question && (
                     <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
                       {isPremium ? (
                         <Button
@@ -906,16 +1090,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       )}
                     </div>
                   )}
-                  {/* Emoji Feedback Buttons — feed adaptive difficulty system */}
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
-                    <div className="flex gap-1.5 justify-center">
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                  {/* Emoji Feedback Buttons - only for teen */}
+                  {grade > 4 && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs text-center mb-2 text-muted-foreground">Wie fandest du die Frage?</p>
+                      <div className="flex gap-1.5 justify-center">
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_up'); applyAdaptiveFeedback('thumbs_up'); saveEmojiFeedback('thumbs_up'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_up' ? 'bg-green-200 border-green-400 ring-2 ring-green-300' : 'hover:bg-green-100 hover:border-green-300'}`} title="Gut">👍</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('thumbs_down'); applyAdaptiveFeedback('thumbs_down'); setShowReportDialog(true); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'thumbs_down' ? 'bg-red-200 border-red-400 ring-2 ring-red-300' : 'hover:bg-red-100 hover:border-red-300'}`} title="Schlecht">👎</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_hard'); applyAdaptiveFeedback('too_hard'); saveEmojiFeedback('too_hard'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_hard' ? 'bg-orange-200 border-orange-400 ring-2 ring-orange-300' : 'hover:bg-orange-100 hover:border-orange-300'}`} title="Zu schwer">😰</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedFeedback('too_easy'); applyAdaptiveFeedback('too_easy'); saveEmojiFeedback('too_easy'); }} className={`text-xl px-3 transition-colors ${selectedFeedback === 'too_easy' ? 'bg-blue-200 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100 hover:border-blue-300'}`} title="Zu leicht">😴</Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -963,9 +1149,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       disabled={!canSubmitAnswer() || isValidatingAnswer}
                     >
                       {isValidatingAnswer ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Antwort wird geprüft...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{grade <= 4 ? 'Wird geprüft...' : 'Antwort wird geprüft...'}</>
                       ) : (
-                        'Antwort prüfen'
+                        grade <= 4 ? 'Prüfen ✓' : 'Antwort prüfen'
                       )}
                     </Button>
                     <Button 
@@ -975,7 +1161,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <Lightbulb className="w-4 h-4 mr-2" />
-                      Antwort anzeigen
+                      {grade <= 4 ? '💡 Hilfe' : 'Antwort anzeigen'}
                     </Button>
                   </>
                 ) : (
@@ -994,13 +1180,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       {currentIndex + 1 >= totalQuestions ? (
                         <>
                           <Trophy className="w-4 h-4 mr-2" />
-                          Ergebnis anzeigen
+                          {grade <= 4 ? '🏆 Fertig!' : 'Ergebnis anzeigen'}
                         </>
                       ) : (
-                        <>
-                          Nächste Frage
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </>
+                        grade <= 4 ? 'Weiter ➡️' : <>Nächste Frage <ArrowRight className="w-4 h-4 ml-2" /></>
                       )}
                     </Button>
                   </>
@@ -1050,7 +1233,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
-        return selectedOption !== null;
+        return shouldUseTextFallbackForMultipleChoice
+          ? userTextAnswer.trim() !== ''
+          : selectedOption !== null;
       case 'FREETEXT':
         return userTextAnswer.trim() !== '';
       case 'SORT':
@@ -1064,7 +1249,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         const placedItems = Object.values(dragDropPlacements).flat();
         return placedItems.length === allItems.length;
       default:
-        return false;
+        // Fallback for unknown types treated as FREETEXT
+        return userTextAnswer.trim() !== '';
     }
   }
 };
@@ -1085,8 +1271,8 @@ const MultipleChoiceRenderer: React.FC<{
         variant={selectedOption === option ? 'default' : 'outline'}
         className={cn(
           "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
-          hasAnswered && option === correctAnswer && "border-green-500 bg-green-50 dark:bg-green-950",
-          hasAnswered && selectedOption === option && option !== correctAnswer && "border-red-500 bg-red-50 dark:bg-red-950"
+          hasAnswered && option === correctAnswer && "border-primary bg-primary/10",
+          hasAnswered && selectedOption === option && option !== correctAnswer && "border-destructive bg-destructive/10"
         )}
         onClick={() => !hasAnswered && onSelect(option)}
         disabled={hasAnswered}
@@ -1112,8 +1298,8 @@ const FreetextRenderer: React.FC<{
     disabled={hasAnswered}
     className={cn(
       "text-lg h-14",
-      hasAnswered && isCorrect && "border-green-500",
-      hasAnswered && !isCorrect && "border-red-500"
+      hasAnswered && isCorrect && "border-primary bg-primary/10",
+      hasAnswered && !isCorrect && "border-destructive bg-destructive/10"
     )}
     autoComplete="off"
   />
@@ -1124,47 +1310,63 @@ const SortRenderer: React.FC<{
   correctOrder: string[];
   hasAnswered: boolean;
   onMove: (fromIndex: number, toIndex: number) => void;
-}> = ({ items, correctOrder, hasAnswered, onMove }) => (
-  <div className="space-y-2">
-    <p className="text-sm text-muted-foreground mb-3">Klicke auf ↑↓ um die Reihenfolge zu ändern:</p>
-    {items.map((item, index) => {
-      const isCorrectPosition = hasAnswered && item === correctOrder[index];
-      return (
-        <div 
-          key={index}
-          className={cn(
-            "flex items-center gap-2 p-3 border rounded-lg",
-            hasAnswered && isCorrectPosition && "bg-green-50 border-green-300",
-            hasAnswered && !isCorrectPosition && "bg-red-50 border-red-300"
-          )}
-        >
-          <div className="flex flex-col gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0"
-              onClick={() => index > 0 && onMove(index, index - 1)}
-              disabled={hasAnswered || index === 0}
-            >
-              ↑
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0"
-              onClick={() => index < items.length - 1 && onMove(index, index + 1)}
-              disabled={hasAnswered || index === items.length - 1}
-            >
-              ↓
-            </Button>
-          </div>
-          <span className="flex-1">{item}</span>
-          <span className="text-muted-foreground text-sm">{index + 1}</span>
-        </div>
-      );
-    })}
-  </div>
-);
+}> = ({ items, correctOrder, hasAnswered, onMove }) => {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const handleTap = (index: number) => {
+    if (hasAnswered) return;
+    if (selectedIndex === null) {
+      setSelectedIndex(index);
+    } else if (selectedIndex === index) {
+      setSelectedIndex(null);
+    } else {
+      onMove(selectedIndex, index);
+      setSelectedIndex(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-muted-foreground mb-3">
+        Tippe auf zwei Elemente, um ihre Position zu tauschen:
+      </p>
+      {items.map((item, index) => {
+        const isCorrectPosition = hasAnswered && item === correctOrder[index];
+        const isSelected = selectedIndex === index;
+        return (
+          <button
+            key={index}
+            onClick={() => handleTap(index)}
+            disabled={hasAnswered}
+            className={cn(
+              "flex items-center gap-3 p-4 w-full border-2 rounded-xl transition-all text-left",
+              "active:scale-[0.98] touch-manipulation",
+              isSelected && "ring-2 ring-primary ring-offset-2 border-primary bg-primary/10 scale-[1.02]",
+              !isSelected && !hasAnswered && "border-border hover:border-primary/50 hover:bg-muted/50",
+              hasAnswered && isCorrectPosition && "bg-primary/10 border-primary",
+              hasAnswered && !isCorrectPosition && "bg-destructive/10 border-destructive"
+            )}
+          >
+            <span className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold flex-shrink-0",
+              isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            )}>
+              {index + 1}
+            </span>
+            <span className="flex-1 font-medium">{item}</span>
+            {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
+            {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-destructive flex-shrink-0" />}
+          </button>
+        );
+      })}
+      {selectedIndex !== null && (
+        <p className="text-xs text-primary text-center mt-2 animate-pulse">
+          Tippe jetzt auf das Element, mit dem du tauschen möchtest
+        </p>
+      )}
+    </div>
+  );
+};
 
 // Collapsible hint component
 const HintToggle: React.FC<{ hint: string }> = ({ hint }) => {
@@ -1203,104 +1405,120 @@ const MatchRenderer: React.FC<{
     return correctPairs.some(([l, r]) => l === left && r === right);
   };
 
-  // Get unmatched items for cleaner UI
-  const unmatchedLeftItems = leftItems.filter(item => !matches[item]);
   const usedRightItems = Object.values(matches);
-  const availableRightItems = rightItems.filter(item => !usedRightItems.includes(item));
+  const visibleLeftItems = leftItems;
+  const visibleRightItems = rightItems;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Wähle links, dann rechts um zuzuordnen:</p>
-      
-      {/* Stacked layout for better mobile UX */}
-      <div className="space-y-6">
-        {/* Left items - terms to match */}
+      <p className="text-sm text-muted-foreground">Tippe links auf einen Begriff und dann rechts auf die passende Zuordnung.</p>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Begriffe</div>
-          <div className="flex flex-wrap gap-2">
-            {unmatchedLeftItems.map((item) => (
-              <Button
-                key={item}
-                variant={selectedLeft === item ? 'default' : 'outline'}
-                size="sm"
-                className={cn(
-                  "h-auto py-2 px-3 text-sm whitespace-normal text-left",
-                  selectedLeft === item && "ring-2 ring-primary ring-offset-2"
-                )}
-                onClick={() => !hasAnswered && setSelectedLeft(selectedLeft === item ? null : item)}
-                disabled={hasAnswered}
-              >
-                {item}
-              </Button>
-            ))}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {visibleLeftItems.map((item) => {
+              const isMatched = Boolean(matches[item]);
+              return (
+                <Button
+                  key={item}
+                  variant={selectedLeft === item ? 'default' : 'outline'}
+                  size="sm"
+                  className={cn(
+                    "h-auto min-h-11 justify-start py-3 px-3 text-sm whitespace-normal text-left",
+                    isMatched && "border-primary/40 bg-primary/10",
+                    selectedLeft === item && "ring-2 ring-primary ring-offset-2"
+                  )}
+                  onClick={() => {
+                    if (hasAnswered) return;
+                    setSelectedLeft(selectedLeft === item ? null : item);
+                  }}
+                  disabled={hasAnswered}
+                >
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span>{item}</span>
+                    {matches[item] && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
+                  </div>
+                </Button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right items - targets to match to */}
-        {selectedLeft && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Ordne „{selectedLeft}" zu:
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {availableRightItems.map((item) => (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Zuordnungen</div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {visibleRightItems.map((item) => {
+              const isUsed = usedRightItems.includes(item);
+              const isActiveTarget = Boolean(selectedLeft) && matches[selectedLeft] !== item;
+
+              return (
                 <Button
                   key={item}
                   variant="outline"
                   size="sm"
-                  className="h-auto py-2 px-3 text-sm whitespace-normal text-left hover:bg-primary/10 hover:border-primary"
+                  className={cn(
+                    "h-auto min-h-11 justify-start py-3 px-3 text-sm whitespace-normal text-left",
+                    isUsed && "border-primary/40 bg-primary/10",
+                    isActiveTarget && "hover:border-primary hover:bg-primary/10"
+                  )}
                   onClick={() => {
+                    if (hasAnswered || !selectedLeft) return;
                     onMatch(selectedLeft, item);
                     setSelectedLeft(null);
                   }}
+                  disabled={hasAnswered || !selectedLeft}
                 >
-                  {item}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Already matched pairs */}
-        {Object.keys(matches).length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Zugeordnet ({Object.keys(matches).length})
-            </div>
-            <div className="space-y-2">
-              {Object.entries(matches).map(([left, right]) => {
-                const isCorrect = hasAnswered && isCorrectMatch(left, right);
-                const isWrong = hasAnswered && !isCorrectMatch(left, right);
-                return (
-                  <div 
-                    key={left}
-                    className={cn(
-                      "flex items-start gap-2 p-2 rounded-lg border text-sm",
-                      isCorrect && "bg-green-50 border-green-300 dark:bg-green-950",
-                      isWrong && "bg-red-50 border-red-300 dark:bg-red-950",
-                      !hasAnswered && "bg-muted/50"
-                    )}
-                  >
-                    <span className="font-medium flex-shrink-0">{left}</span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="flex-1">{right}</span>
-                    {!hasAnswered && (
-                      <button 
-                        onClick={() => onMatch(left, '')} 
-                        className="text-muted-foreground hover:text-destructive ml-auto"
-                      >
-                        ✕
-                      </button>
-                    )}
-                    {isCorrect && <Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
-                    {isWrong && <X className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                  <div className="flex w-full items-center justify-between gap-2">
+                    <span>{item}</span>
+                    {isUsed && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
                   </div>
-                );
-              })}
-            </div>
+                </Button>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
+
+      {Object.keys(matches).length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Zugeordnet ({Object.keys(matches).length})
+          </div>
+          <div className="space-y-2">
+            {Object.entries(matches).map(([left, right]) => {
+              const isCorrect = hasAnswered && isCorrectMatch(left, right);
+              const isWrong = hasAnswered && !isCorrectMatch(left, right);
+
+              return (
+                <div
+                  key={left}
+                  className={cn(
+                    "flex items-start gap-2 rounded-lg border p-2 text-sm",
+                    isCorrect && "bg-primary/10 border-primary",
+                    isWrong && "bg-destructive/10 border-destructive",
+                    !hasAnswered && "bg-muted/50"
+                  )}
+                >
+                  <span className="font-medium flex-shrink-0">{left}</span>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="flex-1">{right}</span>
+                  {!hasAnswered && (
+                    <button
+                      onClick={() => onMatch(left, '')}
+                      className="ml-auto text-muted-foreground hover:text-destructive"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  {isCorrect && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                  {isWrong && <X className="w-4 h-4 text-destructive flex-shrink-0" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1378,8 +1596,8 @@ const FillBlankRenderer: React.FC<{
           disabled={hasAnswered}
           className={cn(
             "inline-block w-32 mx-1 h-8 text-center",
-            isCorrect && "border-green-500 bg-green-50 dark:bg-green-950",
-            isWrong && "border-red-500 bg-red-50 dark:bg-red-950"
+            isCorrect && "border-primary bg-primary/10",
+            isWrong && "border-destructive bg-destructive/10"
           )}
           placeholder="..."
         />
@@ -1398,8 +1616,8 @@ const FillBlankRenderer: React.FC<{
           !value && !isActive && "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
           !value && isActive && "border-primary bg-primary/10 text-primary animate-pulse",
           value && !hasAnswered && "border-primary bg-primary/20 text-foreground cursor-pointer hover:bg-primary/30",
-          isCorrect && "border-green-500 bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300",
-          isWrong && "border-red-500 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300",
+          isCorrect && "border-primary bg-primary/20 text-primary",
+          isWrong && "border-destructive bg-destructive/20 text-destructive",
           hasAnswered && "cursor-default"
         )}
       >

@@ -18,7 +18,7 @@ interface ParentScreenTimeRequestsDashboardProps {
 export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRequestsDashboardProps) {
   const [responseMessage, setResponseMessage] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [isResponding, setIsResponding] = useState(false);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
@@ -62,19 +62,19 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   // Step 2: Actually approve and optionally open parental control app
   const handleApproveAndOpen = async (openApp: boolean) => {
     if (!pendingApprovalRequest) return;
-    
-    setIsResponding(true);
+    const reqId = pendingApprovalRequest.id;
+    const reqMinutes = pendingApprovalRequest.requested_minutes;
+
+    setRespondingId(reqId);
     try {
       // First, approve in our system
-      const result = await respondToRequest(pendingApprovalRequest.id, 'approved');
-      
+      const result = await respondToRequest(reqId, 'approved');
+
       if (result.success) {
         // Then try to open the parental control app
         if (openApp && isNative) {
-          const openResult = await parentalControlsService.openParentalControlApp(
-            pendingApprovalRequest.requested_minutes
-          );
-          
+          const openResult = await parentalControlsService.openParentalControlApp(reqMinutes);
+
           toast({
             title: "Anfrage genehmigt! ✅",
             description: openResult.message,
@@ -82,10 +82,10 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
         } else {
           toast({
             title: "Anfrage genehmigt! ✅",
-            description: `Bitte vergeben Sie ${pendingApprovalRequest.requested_minutes} Minuten Bildschirmzeit in ${appName}.`,
+            description: `Bitte vergeben Sie ${reqMinutes} Minuten Bildschirmzeit in ${appName}.`,
           });
         }
-        
+
         setShowApprovalDialog(false);
         setPendingApprovalRequest(null);
       } else {
@@ -98,12 +98,12 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
         variant: "destructive",
       });
     } finally {
-      setIsResponding(false);
+      setRespondingId(null);
     }
   };
 
   const handleDeny = async (requestId: string, response?: string) => {
-    setIsResponding(true);
+    setRespondingId(requestId);
     try {
       const result = await respondToRequest(requestId, 'denied', response);
       
@@ -124,7 +124,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
         variant: "destructive",
       });
     } finally {
-      setIsResponding(false);
+      setRespondingId(null);
     }
   };
 
@@ -225,7 +225,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                     <span className="text-sm font-medium text-blue-800">Verdiente Zeit</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    {getChildName(request.child_id)} hat durch Lernen <strong>{request.earned_minutes} Minuten</strong> verdient 
+                    {getChildName(request.child_id)} hat durch Lernen <strong>{Math.min(request.earned_minutes, request.requested_minutes)} Minuten</strong> verdient
                     und möchte diese als Bildschirmzeit nutzen.
                   </p>
                 </div>
@@ -233,7 +233,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleApproveClick(request)}
-                    disabled={isResponding}
+                    disabled={respondingId === request.id}
                     className="flex-1 bg-green-500 hover:bg-green-600"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -273,7 +273,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                         <div className="flex gap-2">
                           <Button
                             onClick={() => handleDeny(request.id, responseMessage || undefined)}
-                            disabled={isResponding}
+                            disabled={respondingId === request.id}
                             variant="destructive"
                             className="flex-1"
                           >
@@ -362,7 +362,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                   <div className="flex flex-col gap-2">
                     <Button
                       onClick={() => handleApproveAndOpen(true)}
-                      disabled={isResponding}
+                      disabled={respondingId === pendingApprovalRequest?.id}
                       className="bg-green-500 hover:bg-green-600"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
@@ -371,7 +371,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                     
                     <Button
                       onClick={() => handleApproveAndOpen(false)}
-                      disabled={isResponding}
+                      disabled={respondingId === pendingApprovalRequest?.id}
                       variant="outline"
                     >
                       Nur genehmigen (später freigeben)
@@ -398,7 +398,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
                   
                   <Button
                     onClick={() => handleApproveAndOpen(false)}
-                    disabled={isResponding}
+                    disabled={respondingId === pendingApprovalRequest?.id}
                     className="w-full bg-green-500 hover:bg-green-600"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -408,7 +408,7 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
               )}
               
               <DialogClose asChild>
-                <Button variant="ghost" className="w-full" disabled={isResponding}>
+                <Button variant="ghost" className="w-full" disabled={respondingId === pendingApprovalRequest?.id}>
                   Abbrechen
                 </Button>
               </DialogClose>

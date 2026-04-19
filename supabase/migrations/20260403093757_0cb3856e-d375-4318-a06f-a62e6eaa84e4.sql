@@ -1,0 +1,1 @@
+UPDATE public.profiles SET role = 'parent', grade = NULL WHERE id = '839e65b6-40cc-48ab-8a48-63bed4438845';

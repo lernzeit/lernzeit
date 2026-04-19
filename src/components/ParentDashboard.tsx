@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { useChildDaySummary } from '@/hooks/useChildDaySummary';
 import { supabase } from '@/lib/supabase';
@@ -16,25 +17,32 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Shield
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
+import { ChildPasswordReset } from '@/components/ChildPasswordReset';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 interface ParentDashboardProps {
   userId: string;
+  onSignOut?: () => void;
 }
 
 interface LinkedChild {
   id: string;
   name: string | null;
   grade: number;
+  username?: string | null;
 }
 
-export function ParentDashboard({ userId }: ParentDashboardProps) {
+export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
+  const [activeTab, setActiveTab] = useState<string>('requests');
+  const [accountOpen, setAccountOpen] = useState(false);
+  const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -194,20 +202,95 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   };
 
   const activeCodes = invitationCodes.filter(code => !code.is_used && new Date(code.expires_at) > new Date());
+  const pendingChildren = linkedChildren.filter((child) => (summaries.get(child.id)?.pendingRequests || 0) > 0);
+  const totalPendingRequests = pendingChildren.reduce(
+    (sum, child) => sum + (summaries.get(child.id)?.pendingRequests || 0),
+    0,
+  );
+  useEffect(() => {
+    if (totalPendingRequests > 0) {
+      setActiveTab('requests');
+    }
+  }, [totalPendingRequests]);
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Eltern-Dashboard</h1>
+      {/* Welcome Header */}
+      <Card className="shadow-card">
+        <CardContent className="p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold truncate">
+                Willkommen{profileName ? `, ${profileName}` : ''}!
+              </h1>
+              <Badge className="mt-1 bg-success text-success-foreground hover:bg-success">Elternteil</Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setAccountOpen(true)} aria-label="Konto-Einstellungen">
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Konto</span>
+            </Button>
+            {onSignOut && (
+              <Button variant="outline" size="sm" onClick={onSignOut} aria-label="Abmelden">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section Header */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-bold">Eltern-Dashboard</h2>
           <p className="text-muted-foreground text-sm">Familie und Lernzeit verwalten</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Aktualisieren
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Aktualisieren</span>
+          </Button>
+        </div>
       </div>
+
+      {totalPendingRequests > 0 && (
+        <Card className="border-destructive bg-destructive/10 shadow-lg animate-pulse-subtle">
+          <CardContent className="py-5 px-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-base text-destructive">
+                  {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'}!
+                </p>
+                <p className="text-sm text-foreground mt-1">
+                  {pendingChildren.map((child) => child.name || 'Kind').join(', ')} {pendingChildren.length === 1 ? 'wartet' : 'warten'} auf deine Antwort.
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  className="mt-3"
+                  onClick={() => {
+                    setActiveTab('requests');
+                    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                  }}
+                >
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Jetzt antworten
+                </Button>
+              </div>
+              <Badge variant="destructive" className="shrink-0 text-sm px-3 py-1">
+                {totalPendingRequests}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trial Banner */}
       {trialDaysLeft !== null && trialDaysLeft > 0 && !isPremium && (
@@ -252,12 +335,17 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </Card>
       )}
 
-      {/* Main Tabs - reduced to 4 */}
-      <Tabs defaultValue="children" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      {/* Main Tabs - reduced to 3 (Konto in header) */}
+      <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
+            {totalPendingRequests > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 text-[10px]">
+                {totalPendingRequests}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="children" className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />
@@ -266,10 +354,6 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           <TabsTrigger value="subscription" className="flex items-center gap-1.5">
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
-          </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-1.5">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Konto</span>
           </TabsTrigger>
         </TabsList>
 
@@ -393,6 +477,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
                               childGrade={child.grade}
                             />
                           </div>
+                          {child.username && (
+                            <ChildPasswordReset childId={child.id} childName={child.name || 'Kind'} />
+                          )}
                           <div className="pt-2 border-t">
                             <Button
                               variant="ghost"
@@ -580,64 +667,76 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           </Card>
         </TabsContent>
 
-        {/* Tab: Konto (Profile + Password + Codes) */}
-        <TabsContent value="account" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Profil
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="profile-name">Ihr Name</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="profile-name"
-                    type="text"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="Ihr Name"
-                    className="flex-1"
-                  />
-                  <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
-                    {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Speichern"}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                Passwort ändern
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">Neues Passwort</Label>
-                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-                <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
-              </div>
-              <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
-                {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <AccountDeleteSection
-            isPremium={isPremium}
-            onDeleted={() => window.location.href = '/'}
-          />
-
-        </TabsContent>
       </Tabs>
+
+      {/* Konto-Dialog (vom Header geöffnet) */}
+      <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Konto-Einstellungen
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Profil
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-name">Ihr Name</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="profile-name"
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      placeholder="Ihr Name"
+                      className="flex-1"
+                    />
+                    <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
+                      {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Speichern"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <NotificationSettings userId={userId} role="parent" />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  Passwort ändern
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Neues Passwort</Label>
+                  <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+                  <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
+                </div>
+                <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
+                  {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <AccountDeleteSection
+              isPremium={isPremium}
+              onDeleted={() => window.location.href = '/'}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -166,8 +167,9 @@ serve(async (req) => {
     console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY is not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      console.error('Neither LOVABLE_API_KEY nor GEMINI_API_KEY is configured');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Konfigurationsfehler. Bitte kontaktiere den Support.' 
@@ -179,7 +181,7 @@ serve(async (req) => {
 
     const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint);
 
-    // Load active prompt rules from DB
+    // Load active prompt rules from DB (max 5, most relevant first)
     let rulesBlock = '';
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -192,11 +194,13 @@ serve(async (req) => {
         .eq('is_active', true)
         .or(`subject.is.null,subject.eq.${subject}`)
         .or(`grade_min.is.null,grade_min.lte.${grade}`)
-        .or(`grade_max.is.null,grade_max.gte.${grade}`);
+        .or(`grade_max.is.null,grade_max.gte.${grade}`)
+        .order('source_feedback_count', { ascending: false })
+        .limit(5);
 
       if (rules && rules.length > 0) {
-        rulesBlock = '\n\nZUSÄTZLICHE QUALITÄTSREGELN (aus Nutzer-Feedback):\n' +
-          rules.map((r: { rule_text: string }) => `- ${r.rule_text}`).join('\n');
+        rulesBlock = '\n\nQUALITÄTSREGELN:\n' +
+          rules.map((r: { rule_text: string }) => `- ${r.rule_text.substring(0, 100)}`).join('\n');
         console.log(`📏 Injecting ${rules.length} prompt rules`);
       }
     } catch (rulesErr) {
@@ -205,90 +209,233 @@ serve(async (req) => {
 
     const systemPrompt = getSystemPrompt() + rulesBlock;
 
-    const models = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'];
-    let content: string | null = null;
+    let question: any = null;
+    let rawType: string | undefined;
+    let rawCorrectAnswer: any;
+    let rawOptions: any;
+    let rawQuestionText: string | undefined;
+    let lastError = '';
 
-    for (const model of models) {
-      try {
-        console.log(`🤖 Trying model: ${model}`);
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
+    // Tool definition for structured output
+    const questionTool = {
+      type: "function" as const,
+      function: {
+        name: "submit_question",
+        description: "Submit a generated educational question with all required fields",
+        parameters: {
+          type: "object",
+          properties: {
+            question_text: { type: "string", description: "The question text in German" },
+            question_type: { type: "string", enum: ["MULTIPLE_CHOICE", "FREETEXT", "SORT", "MATCH", "DRAG_DROP", "FILL_BLANK"] },
+            correct_answer: { description: "The correct answer: number (MC index 0-3), string (FREETEXT), array (SORT/DRAG_DROP), or object (MATCH pairs)" },
+            options: { description: "Array of 4 options for MULTIPLE_CHOICE, shuffled items for SORT, or null" },
+            hint: { type: "string", description: "Optional hint for the student" },
+            task: { type: "string", description: "Task instruction for FILL_BLANK/DRAG_DROP, or null" }
           },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: prompt }
-            ],
-            temperature: 0.9,
-          }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 429) {
-            return new Response(JSON.stringify({ 
-              success: false, 
-              error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
-            }), {
-              status: 429,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          if (response.status === 402) {
-            return new Response(JSON.stringify({ 
-              success: false, 
-              error: 'API-Kontingent erschöpft. Bitte kontaktiere den Support.' 
-            }), {
-              status: 402,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          const errorText = await response.text();
-          console.error(`AI Gateway error with ${model}: ${response.status} - ${errorText}`);
-          continue; // Try next model
+          required: ["question_text", "question_type", "correct_answer"]
         }
-
-        const result = await response.json();
-        content = result.choices?.[0]?.message?.content || null;
-
-        if (content) {
-          console.log(`✅ Got response from ${model}`);
-          break;
-        } else {
-          console.warn(`⚠️ Empty content from ${model}, trying next...`);
-        }
-      } catch (modelError) {
-        console.error(`Error with model ${model}:`, modelError);
-        continue;
       }
-    }
+    };
 
-    if (!content) {
-      console.error('All models failed to generate content');
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('🤖 AI Response received');
-
-    // Parse JSON from response
-    let question: any;
+    // ── SINGLE AI attempt (callAI handles Lovable→Gemini fallback internally) ──
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      console.log('🤖 Generating question via callAI (single attempt)');
+      const { response, provider } = await callAI({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.9,
+        tools: [questionTool],
+        tool_choice: { type: "function", function: { name: "submit_question" } },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Got response (provider: ${provider})`);
+        
+        const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+        const content = result.choices?.[0]?.message?.content;
+        
+        if (toolCall?.function?.arguments) {
+          try {
+            question = typeof toolCall.function.arguments === 'string' 
+              ? JSON.parse(toolCall.function.arguments) 
+              : toolCall.function.arguments;
+            console.log('🔧 Parsed from tool_call arguments');
+          } catch (e) {
+            console.warn('⚠️ Failed to parse tool_call arguments:', e);
+          }
+        } else if (content) {
+          try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              question = JSON.parse(jsonMatch[0]);
+              console.log('📝 Parsed from content fallback');
+            }
+          } catch (e) {
+            console.warn('⚠️ Failed to parse content:', e);
+          }
+        }
+      } else if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } else {
+        const errorText = await response.text();
+        lastError = `AI error: ${response.status}`;
+        console.error(`AI error: ${response.status} - ${errorText}`);
       }
-      question = JSON.parse(jsonMatch[0]);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
+    } catch (aiError) {
+      lastError = `AI call failed: ${(aiError as Error).message}`;
+      console.error(lastError);
+    }
+
+    // ── Validate & normalize the AI response ──
+    if (question) {
+      rawType = question.question_type ?? question.questionType;
+      rawCorrectAnswer = tryParseStructuredValue(question.correct_answer ?? question.correctAnswer);
+      rawOptions = tryParseStructuredValue(question.options ?? null);
+      rawQuestionText = question.question_text ?? question.questionText;
+      const rawTask = typeof question.task === 'string' ? question.task : null;
+
+      if (rawType === 'MULTIPLE_CHOICE') {
+        const directOptions = extractChoiceOptions(rawOptions);
+        const taskOptions = extractChoiceOptions(rawTask);
+        const normalizedOptions = directOptions.length >= 2 ? directOptions : taskOptions;
+        rawOptions = normalizedOptions.length > 0 ? normalizedOptions : null;
+
+        if (typeof rawCorrectAnswer === 'string') {
+          const trimmed = rawCorrectAnswer.trim();
+          const index = Number(trimmed);
+          if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
+            rawCorrectAnswer = index;
+          }
+        }
+
+        if (typeof rawCorrectAnswer === 'object' && rawCorrectAnswer && 'value' in rawCorrectAnswer) {
+          const nestedValue = (rawCorrectAnswer as { value?: unknown }).value;
+          if (typeof nestedValue === 'string') {
+            const index = Number(nestedValue.trim());
+            if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
+              rawCorrectAnswer = index;
+            }
+          }
+        }
+      }
+
+      if (rawType === 'SORT') {
+        const normalizedOrder = Array.isArray(rawCorrectAnswer)
+          ? sanitizeStringArray(rawCorrectAnswer)
+          : sanitizeStringArray((rawCorrectAnswer as { order?: unknown } | null)?.order);
+        rawCorrectAnswer = { order: normalizedOrder };
+        rawOptions = shuffleArray(normalizedOrder);
+      }
+
+      if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
+        const metaKeys = ['pairs', 'value', 'order', 'blanks', 'alternatives', 'placements'];
+        const pairEntries = Object.entries(rawCorrectAnswer).filter(([key, value]) => !metaKeys.includes(key) && String(value).trim());
+        if (pairEntries.length > 0) {
+          rawCorrectAnswer = Object.fromEntries(pairEntries);
+          rawOptions = {
+            leftItems: pairEntries.map(([left]) => left),
+            rightItems: shuffleArray(pairEntries.map(([, right]) => String(right)))
+          };
+        }
+      }
+
+      if (rawType === 'FILL_BLANK') {
+        const blanks = extractFillBlankAnswers(rawCorrectAnswer);
+        rawCorrectAnswer = { blanks };
+      }
+
+      if (!isRenderableQuestionPayload(rawType, rawCorrectAnswer, rawOptions, rawQuestionText, rawTask)) {
+        lastError = `invalid ${String(rawType).toLowerCase()} payload`;
+        console.warn(`⚠️ Unrenderable: ${lastError}`);
+        question = null;
+      }
+
+      const isEmptyAnswer = rawCorrectAnswer === null || 
+        rawCorrectAnswer === undefined || 
+        rawCorrectAnswer === '' || 
+        (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
+        (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
+      
+      if (question && isEmptyAnswer) {
+        lastError = 'empty correct_answer';
+        console.warn('⚠️ Empty correct_answer');
+        question = null;
+      }
+
+      if (question && (!rawQuestionText || rawQuestionText.trim() === '')) {
+        lastError = 'empty question_text';
+        console.warn('⚠️ Empty question_text');
+        question = null;
+      }
+    }
+
+    // If AI failed, try serving from cache
+    if (!question || !rawQuestionText) {
+      console.warn(`⚠️ AI generation failed (${lastError}). Trying cache fallback...`);
+      
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const cacheClient = createClient(supabaseUrl, serviceRoleKey);
+        
+        let cacheQuery = cacheClient
+          .from('ai_question_cache')
+          .select('*')
+          .eq('grade', grade)
+          .eq('subject', subject)
+          .eq('difficulty', difficulty)
+          .order('times_served', { ascending: true })
+          .limit(5);
+
+        const { data: cachedQuestions } = await cacheQuery;
+        
+        if (cachedQuestions && cachedQuestions.length > 0) {
+          // Pick a random one from least-served
+          const picked = cachedQuestions[Math.floor(Math.random() * cachedQuestions.length)];
+          console.log(`✅ Cache fallback: serving cached question ${picked.id}`);
+          
+          // Update times_served
+          EdgeRuntime.waitUntil(
+            cacheClient.from('ai_question_cache')
+              .update({ times_served: picked.times_served + 1, last_served_at: new Date().toISOString() })
+              .eq('id', picked.id)
+              .then(() => {})
+          );
+          
+          return new Response(JSON.stringify({
+            success: true,
+            question: {
+              id: crypto.randomUUID(),
+              grade: picked.grade,
+              subject: picked.subject,
+              difficulty: picked.difficulty,
+              questionText: picked.question_text,
+              questionType: picked.question_type,
+              correctAnswer: tryParseStructuredValue(picked.correct_answer),
+              options: tryParseStructuredValue(picked.options),
+              hint: picked.hint,
+              task: picked.task,
+              createdAt: new Date().toISOString()
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (cacheErr) {
+        console.error('Cache fallback failed:', cacheErr);
+      }
+      
+      console.error('❌ AI generation and cache fallback failed.');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Fehler bei der Fragengenerierung. Bitte versuche es erneut.' 
@@ -298,18 +445,21 @@ serve(async (req) => {
       });
     }
 
-    // Validate and enhance question structure
+    if (rawType === 'MATCH' && rawOptions && typeof rawOptions === 'object' && !Array.isArray(rawOptions)) {
+      console.log(`🔀 MATCH question prepared with ${(rawOptions as { leftItems?: unknown[] }).leftItems?.length || 0} pairs`);
+    }
+
     const enhancedQuestion = {
       id: crypto.randomUUID(),
       grade,
       subject,
       difficulty,
-      questionText: question.question_text || question.questionText,
-      questionType: question.question_type || question.questionType,
-      correctAnswer: question.correct_answer || question.correctAnswer,
-      options: question.options || null,
+      questionText: rawQuestionText,
+      questionType: rawType,
+      correctAnswer: rawCorrectAnswer,
+      options: rawOptions,
       hint: question.hint || null,
-      task: question.task || null,
+      task: typeof question.task === 'string' ? question.task : null,
       createdAt: new Date().toISOString()
     };
 
@@ -366,29 +516,181 @@ serve(async (req) => {
   }
 });
 
+function tryParseStructuredValue(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return value;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function sanitizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function extractChoiceOptions(value: unknown): string[] {
+  const parsed = tryParseStructuredValue(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (typeof parsed !== 'string') return [];
+
+  return Array.from(
+    new Set(
+      parsed
+        .replace(/\r/g, '\n')
+        .split(/[\n,;|]+/)
+        .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function extractFillBlankAnswers(value: unknown): string[] {
+  const parsed = tryParseStructuredValue(value);
+
+  if (Array.isArray(parsed)) {
+    return sanitizeStringArray(parsed);
+  }
+
+  if (parsed && typeof parsed === 'object' && 'blanks' in parsed) {
+    return sanitizeStringArray((parsed as { blanks?: unknown }).blanks);
+  }
+
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  return [];
+}
+
+function hasNonEmptyTextAnswer(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+
+  if (value && typeof value === 'object' && 'value' in value) {
+    const nested = (value as { value?: unknown }).value;
+    return typeof nested === 'string'
+      ? nested.trim().length > 0
+      : typeof nested === 'number';
+  }
+
+  return typeof value === 'number';
+}
+
+function isRenderableQuestionPayload(
+  questionType: unknown,
+  correctAnswer: unknown,
+  options: unknown,
+  questionText: unknown,
+  task: unknown
+): boolean {
+  if (typeof questionText !== 'string' || questionText.trim().length === 0) return false;
+
+  switch (questionType) {
+    case 'MULTIPLE_CHOICE': {
+      const choiceOptions = extractChoiceOptions(options);
+      if (choiceOptions.length < 2) return false;
+
+      if (typeof correctAnswer === 'number') {
+        return correctAnswer >= 0 && correctAnswer < choiceOptions.length;
+      }
+
+      if (typeof correctAnswer === 'string') {
+        const trimmed = correctAnswer.trim();
+        if (!trimmed) return false;
+        const index = Number(trimmed);
+        return Number.isInteger(index)
+          ? index >= 0 && index < choiceOptions.length
+          : choiceOptions.includes(trimmed);
+      }
+
+      if (correctAnswer && typeof correctAnswer === 'object' && 'value' in correctAnswer) {
+        const nested = (correctAnswer as { value?: unknown }).value;
+        if (typeof nested === 'number') {
+          return nested >= 0 && nested < choiceOptions.length;
+        }
+        if (typeof nested === 'string') {
+          const trimmed = nested.trim();
+          return trimmed.length > 0;
+        }
+      }
+
+      return false;
+    }
+
+    case 'FREETEXT':
+      return hasNonEmptyTextAnswer(correctAnswer);
+
+    case 'SORT': {
+      const order = sanitizeStringArray((correctAnswer as { order?: unknown } | null)?.order);
+      return order.length >= 3 && order.length <= 6;
+    }
+
+    case 'MATCH': {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
+      const leftItems = sanitizeStringArray((options as { leftItems?: unknown }).leftItems);
+      const rightItems = sanitizeStringArray((options as { rightItems?: unknown }).rightItems);
+      return leftItems.length >= 2 && leftItems.length <= 5 && rightItems.length >= 2 && leftItems.length === rightItems.length;
+    }
+
+    case 'FILL_BLANK': {
+      const blanks = extractFillBlankAnswers(correctAnswer);
+      if (blanks.length === 0 || blanks.length > 2) return false;
+      const blankText = typeof questionText === 'string' && questionText.includes('___');
+      const blankTask = typeof task === 'string' && task.includes('___');
+      return blankText || blankTask || typeof task === 'string';
+    }
+
+    case 'DRAG_DROP': {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) return false;
+      const items = sanitizeStringArray((options as { items?: unknown }).items);
+      const categories = sanitizeStringArray((options as { categories?: unknown }).categories);
+      const placements = (correctAnswer as { placements?: unknown } | null)?.placements;
+      return items.length >= 2 && items.length <= 8 && categories.length >= 2 && categories.length <= 3 && placements && typeof placements === 'object' && !Array.isArray(placements);
+    }
+
+    default:
+      return false;
+  }
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 function getSystemPrompt(): string {
-  return `Du bist ein erfahrener Grundschul- und Sekundarschulpädagoge aus Deutschland. 
-Deine Aufgabe ist es, qualitativ hochwertige, altersgerechte Lernfragen auf Deutsch zu erstellen.
+  return `Du bist ein erfahrener deutscher Pädagoge. Erstelle altersgerechte Lernfragen auf Deutsch.
 
 REGELN:
-- Alle Fragen und Antworten auf Deutsch
-- Altersgerecht und lehrplankonform für die angegebene Klassenstufe
-- Klar formuliert, eindeutig und pädagogisch wertvoll
-- Antworte NUR mit gültigem JSON, ohne Markdown oder Erklärungen
-
-KRITISCHE REGEL FÜR MATHEMATIK:
-- Bei Mathematik-Fragen ist die Antwort IMMER NUR eine Zahl (z.B. "10", nicht "10 Murmeln", nicht "10 Brötchen").
-- Keine Einheiten, keine Wörter in der Antwort – NUR die reine Zahl.
-- Bei Multiple-Choice: Auch die Optionen enthalten NUR Zahlen, keine Einheiten.
-- PRÜFE JEDE BERECHNUNG DOPPELT: Rechne die Aufgabe selbst Schritt für Schritt durch und stelle sicher, dass die korrekte Antwort mathematisch stimmt.
-- Beispiel: "Ein Bäcker hat 25 Brötchen und verkauft 10. Wie viele hat er übrig?" → correct_answer: "15", NICHT "15 Brötchen"
-
-VERBOTENE FRAGENTYPEN (STRIKT EINHALTEN):
-1. KEINE offenen Erläuterungsfragen als FREETEXT: Fragen wie "Erkläre den Unterschied zwischen Klima und Wetter" oder "Beschreibe..." erfordern lange Antworten und sind NUR als MULTIPLE_CHOICE erlaubt. FREETEXT-Antworten müssen IMMER kurz sein: maximal 1-3 Wörter oder eine Zahl. Wenn die korrekte Antwort mehr als 3 Wörter hätte, mache eine MULTIPLE_CHOICE-Frage daraus.
-2. KEINE Vergleichsfragen ohne konkrete Daten: Fragen wie "Was ist länger: ein Bleistift oder ein Lineal?" sind VERBOTEN, weil sie ohne konkrete Maße nicht eindeutig beantwortbar sind. Vergleichsfragen NUR mit konkreten Zahlen stellen (z.B. "Was ist länger: 15 cm oder 2 dm?").
-3. KEINE Tautologien: Fragen, deren Antwort bereits in der Frage steht, sind VERBOTEN (z.B. "Wie lang ist ein Bleistift, wenn er 15 cm lang ist?" → Antwort: 15).
-4. KEINE Emoji-Vergleiche: Emojis haben keine physische Größe. Fragen wie "Was ist größer: 🐘 oder 🐁?" sind VERBOTEN. Verwende stattdessen Textnamen oder konkrete Maße.
-5. KEINE mehrdeutigen Antworten: Jede Frage muss genau EINE eindeutige korrekte Antwort haben. Wenn mehrere Antworten plausibel wären, formuliere die Frage präziser oder verwende MULTIPLE_CHOICE.`;
+- Altersgerecht, lehrplankonform, eindeutig, pädagogisch wertvoll
+- Mathematik-Antworten: NUR Zahlen, keine Einheiten (z.B. "15", nicht "15 Brötchen")
+- Mathematik: Rechne jede Aufgabe Schritt für Schritt durch und prüfe das Ergebnis
+- FREETEXT: Antwort max 1-3 Wörter oder eine Zahl. Längere Antworten → MULTIPLE_CHOICE
+- Vergleichsfragen NUR mit konkreten Zahlen/Daten (keine vagen Vergleiche)
+- Keine Tautologien (Antwort darf nicht in der Frage stehen)
+- Keine Emoji-Vergleiche für physische Eigenschaften
+- Jede Frage hat genau EINE eindeutige korrekte Antwort`;
 }
 
 function buildQuestionPrompt(
@@ -415,6 +717,11 @@ function buildQuestionPrompt(
     topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
   }
 
+  let youngLanguageNote = '';
+  if (grade <= 2) {
+    youngLanguageNote = `\n\nKLASSE ${grade} SPRACHE: Max ${grade === 1 ? '10' : '12'} Wörter, nur Alltagswörter, keine Fachbegriffe, keine Nebensätze. Beispiel: "Was ist 3 + 5?"`;
+  }
+
   const subjectScope = getSubjectContentScope(subject, grade);
 
   return `Erstelle eine ${difficultyGuide.label} Lernfrage für Klasse ${grade} im Fach ${subjectGerman}.
@@ -426,7 +733,7 @@ ${subjectScope}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
-FRAGETYP: ${questionType}${exclusionNote}${topicNote}
+FRAGETYP: ${questionType}${exclusionNote}${topicNote}${youngLanguageNote}
 
 ${typeInstructions}
 
@@ -458,11 +765,12 @@ function getSubjectGerman(subject: string): string {
 }
 
 function getGradeGuidelines(grade: number): string {
-  if (grade <= 2) return 'Grundschule Klasse 1-2: Einfache Konzepte, kurze Sätze, Zahlen bis 100, Buchstaben';
-  if (grade <= 4) return 'Grundschule Klasse 3-4: Grundrechenarten, einfache Texte, Sachkunde';
-  if (grade <= 6) return 'Sekundarstufe I Klasse 5-6: Brüche, Dezimalzahlen, Grammatik, Geschichte';
-  if (grade <= 8) return 'Sekundarstufe I Klasse 7-8: Algebra, Gleichungen, Literatur, Wissenschaften';
-  return 'Sekundarstufe I Klasse 9-10: Erweiterte Algebra, Trigonometrie, komplexe Analysen';
+  if (grade === 1) return 'Klasse 1: ZR bis 20, max 10 Wörter, einfache Alltagssprache';
+  if (grade === 2) return 'Klasse 2: ZR bis 100, max 12 Wörter, einfache Sprache';
+  if (grade <= 4) return `Klasse ${grade}: Grundrechenarten, einfache Texte, Sachkunde`;
+  if (grade <= 6) return `Klasse ${grade}: Brüche, Dezimalzahlen, Grammatik, Geschichte`;
+  if (grade <= 8) return `Klasse ${grade}: Algebra, Gleichungen, Literatur, Wissenschaften`;
+  return `Klasse ${grade}: Erweiterte Algebra, Trigonometrie, komplexe Analysen`;
 }
 
 function getDifficultyGuidelines(difficulty: string, grade: number): { label: string; description: string } {
@@ -484,73 +792,84 @@ function getDifficultyGuidelines(difficulty: string, grade: number): { label: st
 }
 
 function selectQuestionType(subject: string, grade: number): string {
-  // Vary question types for diversity
+  // Vary question types for diversity — all types should appear regularly
   const rand = Math.random();
   
   if (subject === 'math') {
-    if (grade <= 4) return rand < 0.5 ? 'FREETEXT' : 'MULTIPLE_CHOICE';
-    return rand < 0.4 ? 'FREETEXT' : rand < 0.7 ? 'MULTIPLE_CHOICE' : 'FILL_BLANK';
+    if (grade <= 4) {
+      // Grundschule Mathe: MC, Freitext, Sortieren, Zuordnung
+      if (rand < 0.35) return 'MULTIPLE_CHOICE';
+      if (rand < 0.65) return 'FREETEXT';
+      if (rand < 0.80) return 'SORT';
+      return 'MATCH';
+    }
+    // Ab Klasse 5: volle Vielfalt
+    if (rand < 0.30) return 'FREETEXT';
+    if (rand < 0.55) return 'MULTIPLE_CHOICE';
+    if (rand < 0.70) return 'FILL_BLANK';
+    if (rand < 0.82) return 'SORT';
+    return 'MATCH';
   }
 
   if (subject === 'science') {
-    // Sachkunde (Klasse 1-4): mostly MC and simple matching
-    if (rand < 0.5) return 'MULTIPLE_CHOICE';
-    if (rand < 0.75) return 'MATCH';
+    // Sachkunde (Klasse 1-4): MC, MATCH, SORT
+    if (rand < 0.40) return 'MULTIPLE_CHOICE';
+    if (rand < 0.65) return 'MATCH';
+    if (rand < 0.85) return 'SORT';
     return 'FREETEXT';
   }
   
   if (subject === 'german') {
-    if (rand < 0.35) return 'MULTIPLE_CHOICE';
-    if (rand < 0.65) return 'FREETEXT';
-    if (rand < 0.80) return 'SORT';
-    return 'FILL_BLANK';
+    if (rand < 0.25) return 'MULTIPLE_CHOICE';
+    if (rand < 0.45) return 'FREETEXT';
+    if (rand < 0.60) return 'FILL_BLANK';
+    if (rand < 0.75) return 'SORT';
+    return 'MATCH';
   }
   
-  // Default: mix of types
-  if (rand < 0.5) return 'MULTIPLE_CHOICE';
-  if (rand < 0.75) return 'FREETEXT';
-  return 'SORT';
+  // Default (english, geography, history, etc.): alle Typen
+  if (rand < 0.30) return 'MULTIPLE_CHOICE';
+  if (rand < 0.50) return 'FREETEXT';
+  if (rand < 0.65) return 'MATCH';
+  if (rand < 0.80) return 'SORT';
+  return 'FILL_BLANK';
 }
 
 function getTypeSpecificInstructions(questionType: string): string {
   const instructions: Record<string, string> = {
-    'MULTIPLE_CHOICE': `Erstelle eine Multiple-Choice-Frage mit genau 4 Antwortoptionen.
-- correct_answer: Index der korrekten Antwort (0-3)
-- options: Array mit genau 4 Strings ["Option A", "Option B", "Option C", "Option D"]
-- Bei Mathematik: Optionen sind NUR Zahlen (z.B. ["10", "15", "20", "25"]), KEINE Einheiten!
-- Eine klar korrekte Antwort, plausible Distraktoren
-- WICHTIG: Rechne die Aufgabe selbst durch und prüfe, dass correct_answer auf die tatsächlich richtige Option zeigt!`,
+    'MULTIPLE_CHOICE': `MULTIPLE_CHOICE:
+- correct_answer: Index 0-3 der korrekten Option
+- options: Array mit genau 4 Strings. Mathe-Optionen: NUR Zahlen, keine Einheiten
+- Plausible Distraktoren, eine eindeutig korrekte Antwort
+- Prüfe: correct_answer zeigt auf die richtige Option!`,
     
-    'FREETEXT': `Erstelle eine offene Frage mit einer klar definierten korrekten Antwort.
-- correct_answer: String mit der erwarteten Antwort
-- Bei Mathematik: correct_answer ist NUR eine Zahl (z.B. "15"), KEINE Einheiten!
+    'FREETEXT': `FREETEXT:
+- correct_answer: Kurze Antwort (max 1-3 Wörter oder Zahl). Mathe: NUR Zahl
 - options: null
-- Die Frage sollte eine eindeutige kurze Antwort haben
-- WICHTIG: Rechne die Aufgabe selbst durch und stelle sicher, dass correct_answer mathematisch korrekt ist!`,
+- Prüfe Berechnung doppelt!`,
     
-    'SORT': `Erstelle eine Sortieraufgabe.
-- correct_answer: Array von Strings in der richtigen Reihenfolge
-- options: Das gleiche Array, gemischt (für die Anzeige)
-- Beispiel: Ereignisse chronologisch sortieren, Zahlen der Größe nach`,
+    'SORT': `SORT – Elemente sortieren:
+- correct_answer: Array von Strings in richtiger Reihenfolge
+- options: null (wird automatisch gemischt)
+- GENAU 4-6 Elemente. NIEMALS mehr als 6, NIEMALS weniger als 4!`,
     
-    'MATCH': `Erstelle eine Zuordnungsaufgabe.
-- correct_answer: Object mit Schlüssel-Wert-Paaren {"Begriff1": "Definition1", "Begriff2": "Definition2"}
+    'MATCH': `MATCH – Zuordnung:
+- correct_answer: Object {"Begriff": "Zuordnung"} mit Paaren
 - options: null
-- Minimum 3, Maximum 5 Zuordnungspaare`,
+- GENAU 3-5 Paare. NIEMALS mehr als 5!`,
     
-    'DRAG_DROP': `Erstelle eine Lückentextaufgabe zum Einsetzen.
-- correct_answer: Array der einzusetzenden Wörter in richtiger Reihenfolge
-- task: Der Satz mit ___ für die Lücken
-- options: Array der verfügbaren Wörter (inklusive 1-2 Distraktoren)`,
+    'DRAG_DROP': `DRAG_DROP – Kategorisierung:
+- options: {"items": [...], "categories": [...]}
+- correct_answer: {"placements": {"Kategorie": ["Element1"]}}
+- task: Kurze Anweisung
+- 2-3 Kategorien, 4-6 Elemente total. NIEMALS mehr als 6 Elemente oder 3 Kategorien!`,
     
-    'FILL_BLANK': `Erstelle eine Lückentextaufgabe.
-- question_text: Der Satz mit ___ für die Lücke(n). WICHTIG: question_text MUSS mindestens ein ___ (drei Unterstriche) enthalten!
-- task: Kurze Anweisung (z.B. "Setze das passende Tunwort (Verb) in die Lücke ein.")
-- correct_answer: String oder Array mit den fehlenden Wörtern
-- options: null
-- GROSS-/KLEINSCHREIBUNG: Die korrekte Antwort muss die deutsche Rechtschreibung korrekt wiedergeben. Wenn das Wort mitten im Satz steht, gilt: Nomen groß, Verben/Adjektive klein. Beispiel: "Die Katze ___ auf dem Dach." → correct_answer: "saß" (klein, weil Verb mitten im Satz).
-- GRUNDFORM-HINWEIS (WICHTIG für Deutsch-Fragen): Wenn ein Verb oder Adjektiv in konjugierter/flektierter Form eingesetzt werden muss, schreibe die Grundform (Infinitiv) in Klammern direkt hinter die Lücke im question_text. Beispiel: "Der Vogel ___ (singen) im Garten." → correct_answer: "singt". So weiß das Kind, welches Wort gemeint ist, und muss nur die richtige Form finden.
-- Für Nomen (Substantive) ist kein Grundform-Hinweis nötig, da sie eindeutig sind.`
+    'FILL_BLANK': `FILL_BLANK – Lückentext:
+- question_text MUSS ___ (drei Unterstriche) enthalten
+- task: Kurze Anweisung
+- correct_answer: String oder Array der fehlenden Wörter
+- Maximal 2 Lücken! Rechtschreibung beachten (Nomen groß, Verben klein)
+- Bei Verben: Grundform in Klammern hinter die Lücke (z.B. "___ (singen)")`
   };
   
   return instructions[questionType] || instructions['MULTIPLE_CHOICE'];

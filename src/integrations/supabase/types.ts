@@ -492,31 +492,43 @@ export type Database = {
           avatar_color: string | null
           avatar_id: string | null
           created_at: string | null
+          daily_push_enabled: boolean
+          daily_summary_hour: number
           grade: number | null
           id: string
+          learning_reminder_hour: number
           name: string | null
           role: string | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           avatar_color?: string | null
           avatar_id?: string | null
           created_at?: string | null
+          daily_push_enabled?: boolean
+          daily_summary_hour?: number
           grade?: number | null
           id: string
+          learning_reminder_hour?: number
           name?: string | null
           role?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           avatar_color?: string | null
           avatar_id?: string | null
           created_at?: string | null
+          daily_push_enabled?: boolean
+          daily_summary_hour?: number
           grade?: number | null
           id?: string
+          learning_reminder_hour?: number
           name?: string | null
           role?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }
@@ -556,6 +568,33 @@ export type Database = {
           source_feedback_count?: number
           source_feedback_ids?: string[]
           subject?: string | null
+        }
+        Relationships: []
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          player_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          player_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          player_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -909,6 +948,7 @@ export type Database = {
           total_questions: number
         }[]
       }
+      get_email_by_username: { Args: { p_username: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

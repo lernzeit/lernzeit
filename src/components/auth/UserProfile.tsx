@@ -25,8 +25,10 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useOneSignal } from '@/hooks/useOneSignal';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
+import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 
 interface UserProfileProps {
   user: any;
@@ -45,6 +47,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   const [hasParentLink, setHasParentLink] = useState(false);
   const [checkingParentLink, setCheckingParentLink] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
@@ -71,6 +74,13 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   usePushNotifications({
     userId: user?.id,
     role: profile?.role as 'child' | 'parent',
+    enabled: profile?.role === 'child' || profile?.role === 'parent',
+  });
+
+  // Native push via OneSignal (Android/iOS) — works when app is closed
+  useOneSignal({
+    userId: user?.id,
+    appId: import.meta.env.VITE_ONESIGNAL_APP_ID || '',
     enabled: profile?.role === 'child' || profile?.role === 'parent',
   });
 
@@ -136,6 +146,57 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
         // Profile is old → mark as seen so we never check again
         localStorage.setItem(key, 'true');
       }
+    }
+  }, [profile, user?.id]);
+
+  // Detect Google OAuth users who haven't confirmed their role yet
+  useEffect(() => {
+    if (!profile || !user?.id) return;
+
+    const roleConfirmed = localStorage.getItem(`lernzeit_role_confirmed_${user.id}`);
+    if (roleConfirmed) return;
+
+    // Check if user signed in via Google
+    const providers = user.app_metadata?.providers || [];
+    const isGoogleUser = providers.includes('google') || user.app_metadata?.provider === 'google';
+    const hasExplicitRole = user.user_metadata?.role;
+
+    if (!isGoogleUser || hasExplicitRole) {
+      localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
+      return;
+    }
+
+    // Check if we have a pending role from pre-OAuth selection
+    const pendingRole = localStorage.getItem('lernzeit_pending_google_role');
+    if (pendingRole && (pendingRole === 'parent' || pendingRole === 'child')) {
+      const pendingGrade = pendingRole === 'child'
+        ? parseInt(localStorage.getItem('lernzeit_pending_google_grade') || '1', 10)
+        : null;
+
+      // Auto-apply the pending role
+      (async () => {
+        try {
+          const updateData: any = {
+            role: pendingRole,
+            ...(pendingRole === 'child' ? { grade: pendingGrade } : { grade: null }),
+          };
+          await supabase.from('profiles').update(updateData).eq('id', user.id);
+          await supabase.auth.updateUser({
+            data: { role: pendingRole, ...(pendingRole === 'child' ? { grade: pendingGrade } : {}) },
+          });
+          localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
+          localStorage.removeItem('lernzeit_pending_google_role');
+          localStorage.removeItem('lernzeit_pending_google_grade');
+          // Reload profile with correct role
+          loadProfile();
+        } catch (err) {
+          console.error('Failed to auto-apply Google role:', err);
+          setNeedsRoleSelection(true);
+        }
+      })();
+    } else {
+      // No pending role → show role selection dialog
+      setNeedsRoleSelection(true);
     }
   }, [profile, user?.id]);
 
@@ -290,6 +351,21 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
     );
   }
 
+  // Show role selection for Google OAuth users who haven't chosen a role
+  if (needsRoleSelection) {
+    return (
+      <GoogleRoleSelection
+        userId={user.id}
+        onComplete={(selectedRole, selectedGrade) => {
+          setNeedsRoleSelection(false);
+          // Reload profile with new role
+          loadProfile();
+          loadStats();
+        }}
+      />
+    );
+  }
+
   const handleOnboardingComplete = () => {
     if (user?.id) {
       localStorage.setItem(`lernzeit_onboarding_${user.id}`, 'true');
@@ -386,10 +462,15 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
                     <CardTitle className="text-xl">
                       Hallo, {profile?.name || 'Nutzer'}! 👋
                     </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                         Klasse {profile?.grade}
                       </Badge>
+                      {profile?.username && (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-border font-mono text-xs">
+                          @{profile.username}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -407,6 +488,23 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
           {/* Daily Challenge */}
           <DailyChallenge userId={user.id} />
+
+          {/* Hint: Notifications managed by parents */}
+          {hasParentLink && (
+            <Card className="shadow-card border-pink-200 bg-gradient-to-r from-pink-500/5 to-rose-500/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-xl">🔔</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">Lern-Erinnerungen</p>
+                  <p className="text-xs text-muted-foreground">
+                    Deine Eltern legen fest, wann du erinnert wirst, falls du noch nicht gelernt hast.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Screen Time Status */}
           {isAtLimit ? (
@@ -445,13 +543,19 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               {/* Game Start Card - Now First */}
               <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
                 <CardContent className="p-6">
-                  <div className="text-center mb-4">
-                    <div className="text-4xl mb-3">🎮</div>
-                    <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
-                    <p className="text-green-700 text-sm">
-                      Löse Übungen und verdiene wertvolle Handyzeit!
-                    </p>
-                  </div>
+                  {(profile?.grade || 5) <= 4 ? (
+                    <div className="text-center mb-3">
+                      <div className="text-4xl mb-2">🎮</div>
+                    </div>
+                  ) : (
+                    <div className="text-center mb-4">
+                      <div className="text-4xl mb-3">🎮</div>
+                      <h3 className="text-xl font-bold text-green-800 mb-2">Bereit für neue Aufgaben?</h3>
+                      <p className="text-green-700 text-sm">
+                        Löse Übungen und verdiene wertvolle Handyzeit!
+                      </p>
+                    </div>
+                  )}
                   <Button 
                     onClick={() => onStartGame(profile?.grade || 1)} 
                     className="w-full h-14 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-lg"
@@ -471,68 +575,90 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           )}
 
           {/* Stats & Quick Actions */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-              <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
-                <div className="text-xs text-orange-600">Min. verdient ⏰</div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-              <CardContent className="p-4 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Trophy className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
-                <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
-              </CardContent>
-            </Card>
-            <AchievementQuickView 
-              userId={user.id} 
-              onClick={() => {
-                setSettingsInitialSection('achievements');
-                setShowSettingsMenu(true);
-              }} 
-            />
-            <Card className="shadow-card">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                    <Star className="w-6 h-6 text-white" />
+          {(profile?.grade || 5) <= 4 ? (
+            /* Young mode: 2 simple cards with labels */
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                <CardContent className="p-5 text-center">
+                  <div className="text-3xl mb-2">⏰</div>
+                  <div className="text-3xl font-bold text-orange-700">{totalTimeEarned}</div>
+                  <div className="text-sm text-orange-600 mt-1">Minuten</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <CardContent className="p-5 text-center">
+                  <div className="text-3xl mb-2">🏆</div>
+                  <div className="text-3xl font-bold text-green-700">{gamesPlayed}</div>
+                  <div className="text-sm text-green-600 mt-1">Spiele</div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            /* Teen mode: full 4 cards */
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Clock className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium">Streak</div>
-                    <div className="text-sm text-muted-foreground">
-                      {streakLoading ? 'Wird geladen...' : `${streak} Tage in Folge! 🔥`}
+                  <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
+                  <div className="text-xs text-orange-600">Min. verdient ⏰</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <CardContent className="p-4 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Trophy className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
+                  <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
+                </CardContent>
+              </Card>
+              <AchievementQuickView 
+                userId={user.id} 
+                onClick={() => {
+                  setSettingsInitialSection('achievements');
+                  setShowSettingsMenu(true);
+                }} 
+              />
+              <Card className="shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                      <Star className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">Streak</div>
+                      <div className="text-sm text-muted-foreground">
+                        {streakLoading ? 'Wird geladen...' : `${streak} Tage in Folge! 🔥`}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Parent Linking - only show if no parent link exists */}
           {!hasParentLink && !checkingParentLink && profile?.role === 'child' && (
             <ChildLinking 
               userId={user.id} 
               onLinked={() => {
-                // Reload profile and check parent link status
                 loadProfile();
                 checkParentLink();
               }} 
             />
           )}
 
-          {/* Fun Motivation */}
-          <div className="text-center py-2">
-            <div className="text-2xl mb-2">🌟</div>
-            <p className="text-sm text-muted-foreground">
-              Du schaffst das! Jeden Tag ein bisschen besser! 💪
-            </p>
-          </div>
+          {/* Fun Motivation - only for teen */}
+          {(profile?.grade || 5) > 4 && (
+            <div className="text-center py-2">
+              <div className="text-2xl mb-2">🌟</div>
+              <p className="text-sm text-muted-foreground">
+                Du schaffst das! Jeden Tag ein bisschen besser! 💪
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -606,32 +732,8 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               </CardContent>
             </Card>
           )}
-          <Card className="shadow-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">
-                      Willkommen, {profile?.name || 'Nutzer'}!
-                    </CardTitle>
-                    <Badge variant="secondary">Elternteil</Badge>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4" />
-                </Button>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Screen Time Widget */}
-        <ScreenTimeWidget />
-
-        {/* Parent Dashboard */}
-        <ParentDashboard userId={user.id} />
+          {/* Parent Dashboard */}
+        <ParentDashboard userId={user.id} onSignOut={handleSignOut} />
       </div>
     </div>
   );

@@ -304,7 +304,7 @@ function getTypeInstructions(questionType: string): string {
 // ── Gemini 2.5 Pro API Call ───────────────────────────────────────────────────
 
 async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
@@ -382,14 +382,15 @@ function parseAndValidate(
   if (qt === 'SORT') {
     const answer = parsed.correct_answer;
     const opts = parsed.options;
-    if (!Array.isArray(answer) || answer.length < 3) return null;
+    if (!Array.isArray(answer) || answer.length < 3 || answer.length > 6) return null;
     if (!Array.isArray(opts) || opts.length !== answer.length) return null;
   }
 
   if (qt === 'MATCH') {
     const answer = parsed.correct_answer;
     if (typeof answer !== 'object' || answer === null || Array.isArray(answer)) return null;
-    if (Object.keys(answer as object).length < 3) return null;
+    const matchCount = Object.keys(answer as object).length;
+    if (matchCount < 3 || matchCount > 5) return null;
   }
 
   if (qt === 'FILL_BLANK') {
@@ -534,8 +535,25 @@ serve(async (req) => {
     }
   }
 
+  // ── Step 2c: Load active prompt rules ─────────────────────────────────────
+  let rulesBlock = '';
+  try {
+    const { data: rules } = await adminClient
+      .from('prompt_rules')
+      .select('rule_text')
+      .eq('is_active', true);
+
+    if (rules && rules.length > 0) {
+      rulesBlock = '\n\nZUSÄTZLICHE QUALITÄTSREGELN (aus Nutzer-Feedback):\n' +
+        rules.map((r: { rule_text: string }) => `- ${r.rule_text}`).join('\n');
+      console.log(`📏 Injecting ${rules.length} prompt rules into cache-prefill`);
+    }
+  } catch (rulesErr) {
+    console.warn('Could not load prompt rules:', rulesErr);
+  }
+
   // ── Step 3: Generate questions with rate-limit-safe delays ───────────────
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt() + rulesBlock;
   let generated = 0;
   let failed = 0;
   const results: { grade: number; subject: string; type: string; status: string }[] = [];

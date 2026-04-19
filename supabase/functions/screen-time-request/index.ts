@@ -53,6 +53,20 @@ function getSafeErrorMessage(error: Error): string {
   return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
 
+function getUtcDayRange(referenceDate = new Date()) {
+  const start = new Date(referenceDate);
+  start.setUTCHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return {
+    start,
+    end,
+    dateKey: start.toISOString().split('T')[0],
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -145,7 +159,6 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   // Validate required fields
   const parentId = body.parentId;
   const requestedMinutes = body.requestedMinutes;
-  const earnedMinutes = body.earnedMinutes;
   const message = body.message;
 
   if (!isValidUUID(parentId as string)) {
@@ -162,13 +175,6 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     });
   }
 
-  if (!isValidNumber(earnedMinutes, 0, 9999)) {
-    return new Response(JSON.stringify({ error: 'Ungültige verdiente Minuten' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
   const sanitizedMessage = sanitizeString(message, 500);
 
   // Verify parent-child relationship
@@ -177,7 +183,7 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .select('*')
     .eq('child_id', childId)
     .eq('parent_id', parentId)
-    .single();
+    .maybeSingle();
 
   if (!relationship) {
     return new Response(JSON.stringify({ error: 'Eltern-Kind-Beziehung nicht gefunden' }), {
@@ -191,27 +197,25 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .from('child_settings')
     .select('weekday_max_minutes, weekend_max_minutes')
     .eq('child_id', childId)
-    .single();
+    .maybeSingle();
 
-  // Determine daily limit based on current day
-  const today = new Date();
-  const isWeekend = today.getDay() === 0 || today.getDay() === 6;
-  const dailyLimit = childSettings ? 
-    (isWeekend ? childSettings.weekend_max_minutes : childSettings.weekday_max_minutes) : 
-    (isWeekend ? 60 : 30);
+  const { start: todayStart, end: todayEnd, dateKey: todayKey } = getUtcDayRange();
 
-  // Check existing requests for today - ONLY count today's requests
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
+  // Determine daily limit based on UTC day to match frontend + backend consistently
+  const isWeekend = todayStart.getUTCDay() === 0 || todayStart.getUTCDay() === 6;
+  const dailyLimit = childSettings
+    ? (isWeekend ? childSettings.weekend_max_minutes : childSettings.weekday_max_minutes)
+    : (isWeekend ? 60 : 30);
+
+  const todayStartIso = todayStart.toISOString();
+  const todayEndIso = todayEnd.toISOString();
 
   const { data: todayRequests } = await supabase
     .from('screen_time_requests')
     .select('requested_minutes, status')
     .eq('child_id', childId)
-    .gte('created_at', todayStart.toISOString())
-    .lte('created_at', todayEnd.toISOString());
+    .gte('created_at', todayStartIso)
+    .lt('created_at', todayEndIso);
 
   // Calculate total minutes already requested (pending + approved) today
   // Note: We now allow MULTIPLE parallel requests per day
@@ -220,49 +224,40 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
   const approvedMinutesToday = todayRequests?.filter((req: any) => req.status === 'approved')
     .reduce((sum: number, req: any) => sum + req.requested_minutes, 0) || 0;
   const totalClaimedToday = pendingMinutesToday + approvedMinutesToday;
+  const remainingDailyLimit = Math.max(0, dailyLimit - totalClaimedToday);
 
-  // Validate request doesn't exceed daily limit (only count today's pending + approved)
-  if (totalClaimedToday + (requestedMinutes as number) > dailyLimit) {
-    return new Response(JSON.stringify({ 
-      error: `Die Anfrage würde das Tageslimit von ${dailyLimit} Minuten überschreiten. Bereits heute beantragt: ${totalClaimedToday} Minuten.` 
+  if (remainingDailyLimit < 1) {
+    return new Response(JSON.stringify({
+      error: `Dein Tageslimit von ${dailyLimit} Minuten ist für heute bereits ausgeschöpft.`
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
-  // Get total available earned minutes from user_earned_minutes table (legacy/optional)
-  const { data: earnedMinutesData } = await supabase
-    .from('user_earned_minutes')
-    .select('minutes_remaining')
-    .eq('user_id', childId)
-    .gt('minutes_remaining', 0);
-
-  const legacyAvailableMinutes = earnedMinutesData?.reduce((sum: number, record: any) =>
-    sum + (record.minutes_remaining || 0), 0) || 0;
-
-  // Canonical availability calculation (matches frontend):
-  // Sessions (seconds -> minutes, rounded up) + today's achievement bonus minutes - today's approved requests
+  // Canonical availability calculation:
+  // sum all today's session seconds, convert once to minutes, add today's achievement minutes,
+  // then subtract all today's pending + approved requests.
   const { data: gameSessionsForDay } = await supabase
     .from('game_sessions')
     .select('time_earned')
     .eq('user_id', childId)
-    .gte('session_date', todayStart.toISOString())
-    .lte('session_date', todayEnd.toISOString());
+    .gte('session_date', todayStartIso)
+    .lt('session_date', todayEndIso);
 
   const { data: learningSessionsForDay } = await supabase
     .from('learning_sessions')
     .select('time_earned')
     .eq('user_id', childId)
-    .gte('session_date', todayStart.toISOString())
-    .lte('session_date', todayEnd.toISOString());
+    .gte('session_date', todayStartIso)
+    .lt('session_date', todayEndIso);
 
-  // Sum all seconds first, then convert to minutes once (consistent rounding)
   const gameTotalSeconds = gameSessionsForDay?.reduce((sum: number, s: any) =>
     sum + (Number(s.time_earned) || 0), 0) || 0;
   const learningTotalSeconds = learningSessionsForDay?.reduce((sum: number, s: any) =>
     sum + (Number(s.time_earned) || 0), 0) || 0;
-  const sessionMinutes = Math.ceil(gameTotalSeconds / 60) + Math.ceil(learningTotalSeconds / 60);
+  const totalSessionSeconds = gameTotalSeconds + learningTotalSeconds;
+  const sessionMinutes = Math.ceil(totalSessionSeconds / 60);
 
   const { data: todayAchievements, error: achievementError } = await supabase
     .from('user_achievements')
@@ -274,51 +269,66 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     `)
     .eq('user_id', childId)
     .eq('is_completed', true)
-    .gte('earned_at', todayStart.toISOString())
-    .lte('earned_at', todayEnd.toISOString());
+    .gte('earned_at', todayStartIso)
+    .lt('earned_at', todayEndIso);
 
   const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) =>
     sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
 
-  // IMPORTANT: Subtract BOTH pending AND approved today - pending minutes are "reserved"
-  const claimedToday = todayRequests?.filter((r: any) => r.status === 'pending' || r.status === 'approved')
-    .reduce((sum: number, r: any) => sum + (r.requested_minutes || 0), 0) || 0;
-
-  const canonicalAvailableMinutes = Math.max(0, (sessionMinutes + achievementMinutes) - claimedToday);
-
-  // Use the canonical value for validation (prevents false negatives when legacy table is out of sync)
-  const totalAvailableMinutes = Math.max(legacyAvailableMinutes, canonicalAvailableMinutes);
-
-  console.log('Available minutes (validation):', {
-    legacyAvailableMinutes,
+  const rawEarnedMinutes = sessionMinutes + achievementMinutes;
+  const cappedEarnedMinutes = Math.min(rawEarnedMinutes, dailyLimit);
+  const canonicalAvailableMinutes = Math.max(0, cappedEarnedMinutes - totalClaimedToday);
+  const effectiveRequestedMinutes = Math.min(
+    requestedMinutes as number,
     canonicalAvailableMinutes,
-    gameMinutes,
-    learningMinutes,
+    remainingDailyLimit,
+  );
+  const serverEarnedMinutes = cappedEarnedMinutes;
+
+  console.log('Available minutes (canonical UTC validation):', {
+    gameTotalSeconds,
+    learningTotalSeconds,
     sessionMinutes,
     achievementMinutes,
+    rawEarnedMinutes,
+    cappedEarnedMinutes,
     achievementError,
-    claimedToday,
-    totalAvailableMinutes
+    pendingMinutesToday,
+    approvedMinutesToday,
+    totalClaimedToday,
+    remainingDailyLimit,
+    canonicalAvailableMinutes,
+    requestedMinutes,
+    effectiveRequestedMinutes,
   });
 
-  // Validate enough earned minutes available (canonical)
-  if ((requestedMinutes as number) > totalAvailableMinutes) {
+  if (effectiveRequestedMinutes < 1) {
     return new Response(JSON.stringify({
-      error: `Nicht genügend verdiente Minuten verfügbar. Du hast ${totalAvailableMinutes} Minuten verdient, aber ${requestedMinutes} Minuten beantragt.`
+      error: `Nicht genügend verdiente Minuten verfügbar. Aktuell sind ${canonicalAvailableMinutes} Minuten verfügbar.`
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
-  // Create the request
+  if (effectiveRequestedMinutes !== (requestedMinutes as number)) {
+    console.log('Adjusting requested minutes to current canonical availability', {
+      childId,
+      requestedMinutes,
+      effectiveRequestedMinutes,
+      canonicalAvailableMinutes,
+      remainingDailyLimit,
+    });
+  }
+
+  // Create the request using server-side calculated earned minutes only
   const { data: request, error } = await supabase
     .from('screen_time_requests')
     .insert({
       child_id: childId,
       parent_id: parentId,
-      requested_minutes: requestedMinutes,
-      earned_minutes: earnedMinutes,
+      requested_minutes: effectiveRequestedMinutes,
+      earned_minutes: serverEarnedMinutes,
       request_message: sanitizedMessage
     })
     .select()
@@ -337,15 +347,15 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .from('daily_request_summary')
     .upsert({
       user_id: childId,
-      request_date: todayStart.toISOString().split('T')[0],
-      total_minutes_requested: totalClaimedToday + (requestedMinutes as number),
+      request_date: todayKey,
+      total_minutes_requested: totalClaimedToday + effectiveRequestedMinutes,
       total_minutes_approved: approvedMinutesToday
     }, {
       onConflict: 'user_id,request_date'
     });
 
-  // Reserve the requested minutes (mark as requested but not yet consumed)
-  let remainingToReserve = requestedMinutes as number;
+  // Keep legacy reservation table in sync for older flows, but do not use it for validation.
+  let remainingToReserve = effectiveRequestedMinutes;
   const { data: availableEarnedMinutes } = await supabase
     .from('user_earned_minutes')
     .select('*')
@@ -355,17 +365,26 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
 
   for (const earnedRecord of availableEarnedMinutes || []) {
     if (remainingToReserve <= 0) break;
-    
+
     const minutesToReserve = Math.min(remainingToReserve, earnedRecord.minutes_remaining);
-    
+
     await supabase
       .from('user_earned_minutes')
       .update({
         minutes_requested: earnedRecord.minutes_requested + minutesToReserve
       })
       .eq('id', earnedRecord.id);
-    
+
     remainingToReserve -= minutesToReserve;
+  }
+
+  if (remainingToReserve > 0) {
+    console.warn('Legacy earned-minutes reservation out of sync with canonical calculation', {
+      childId,
+      requestedMinutes: effectiveRequestedMinutes,
+      remainingToReserve,
+      canonicalAvailableMinutes,
+    });
   }
 
   // Get child profile for notification
@@ -373,22 +392,23 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .from('profiles')
     .select('name')
     .eq('id', childId)
-    .single();
+    .maybeSingle();
 
-  console.log(`Screen time request from ${childProfile?.name}: ${requestedMinutes} minutes (Daily limit: ${dailyLimit}, Available: ${totalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
+  console.log(`Screen time request from ${childProfile?.name}: ${effectiveRequestedMinutes} minutes (Daily limit: ${dailyLimit}, Canonical available: ${canonicalAvailableMinutes}, Claimed today: ${totalClaimedToday})`);
 
   // Send email notification to parent
-  await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', requestedMinutes as number, sanitizedMessage, request.id);
+  await sendParentNotification(supabase, parentId as string, childProfile?.name || 'Ihr Kind', effectiveRequestedMinutes, sanitizedMessage, request.id);
 
   return new Response(JSON.stringify({ 
     success: true, 
     request,
     validation: {
       dailyLimit,
-      totalClaimedToday: totalClaimedToday + (requestedMinutes as number),
-      availableMinutes: totalAvailableMinutes - (requestedMinutes as number)
+      totalClaimedToday: totalClaimedToday + effectiveRequestedMinutes,
+      availableMinutes: Math.max(0, canonicalAvailableMinutes - effectiveRequestedMinutes),
+      requestedMinutesApplied: effectiveRequestedMinutes,
     },
-    deep_links: generateDeepLinks(requestedMinutes as number)
+    deep_links: generateDeepLinks(effectiveRequestedMinutes)
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
@@ -481,13 +501,13 @@ async function respondToRequest(supabase: any, parentId: string, body: Record<st
 
   // Update daily request summary
   if (status === 'approved') {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const { dateKey: todayKey } = getUtcDayRange();
+
     const { data: dailySummary } = await supabase
       .from('daily_request_summary')
       .select('*')
       .eq('user_id', request.child_id)
-      .eq('request_date', today)
+      .eq('request_date', todayKey)
       .single();
 
     if (dailySummary) {
@@ -548,7 +568,8 @@ function generateDeepLinks(minutes: number) {
 }
 
 /**
- * Send email notification to parent when child creates a screen time request
+ * Send email notification to parent when child creates a screen time request.
+ * Uses Resend HTTP API for reliable delivery.
  */
 async function sendParentNotification(
   supabase: any, 
@@ -559,6 +580,12 @@ async function sendParentNotification(
   requestId: string
 ) {
   try {
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured – skipping parent email');
+      return;
+    }
+
     // Get parent's email from auth.users table
     const { data: parentUser, error: userError } = await supabase.auth.admin.getUserById(parentId);
     
@@ -568,121 +595,77 @@ async function sendParentNotification(
     }
 
     const parentEmail = parentUser.user.email;
-    
-    // Get the app URL for deep linking
-    const appUrl = Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://lernzeit.lovable.app';
-    
-    // Create approval link that opens the app
+    const appUrl = 'https://lernzeit.lovable.app';
     const approvalLink = `${appUrl}?action=approve_request&request_id=${requestId}`;
-    
-    // Format the email content
+
     const emailSubject = `📱 ${childName} möchte Bildschirmzeit`;
     const emailHtml = `
 <!DOCTYPE html>
-<html>
+<html lang="de" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bildschirmzeit-Anfrage</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px;">
-  <div style="max-width: 480px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-    
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 24px; text-align: center;">
-      <h1 style="color: white; margin: 0; font-size: 24px;">📱 Bildschirmzeit-Anfrage</h1>
+<body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 0;">
+  <div style="max-width: 480px; margin: 0 auto; padding: 0;">
+    <div style="background-color: hsl(217, 91%, 60%); padding: 24px 25px; border-radius: 12px 12px 0 0;">
+      <p style="color: #ffffff; font-size: 22px; font-weight: bold; margin: 0; letter-spacing: -0.5px;">📖 LernZeit</p>
     </div>
-    
-    <!-- Content -->
-    <div style="padding: 24px;">
-      <p style="font-size: 16px; color: #374151; margin-bottom: 16px;">
-        <strong>${childName}</strong> hat heute fleißig gelernt und möchte nun Bildschirmzeit einlösen:
-      </p>
-      
-      <!-- Minutes Card -->
-      <div style="background-color: #dbeafe; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;">
-        <div style="font-size: 48px; font-weight: bold; color: #1d4ed8;">${requestedMinutes}</div>
-        <div style="color: #1e40af; font-size: 14px;">Minuten angefragt</div>
-      </div>
-      
-      ${message ? `
-      <!-- Child's Message -->
-      <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Nachricht von ${childName}:</div>
-        <div style="font-size: 14px; color: #374151;">"${message}"</div>
-      </div>
-      ` : ''}
-      
-      <!-- Action Button -->
-      <a href="${approvalLink}" style="display: block; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; text-decoration: none; padding: 16px 24px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 16px;">
-        ✓ In der App antworten
+    <h1 style="font-size: 22px; font-weight: bold; color: hsl(240, 10%, 15%); margin: 24px 25px 12px; padding: 0;">Bildschirmzeit-Anfrage</h1>
+    <p style="font-size: 15px; color: hsl(240, 5%, 45%); line-height: 1.6; margin: 0 25px 20px;">
+      <strong>${childName}</strong> hat fleißig gelernt und möchte Bildschirmzeit einlösen:
+    </p>
+    <div style="background-color: #dbeafe; border-radius: 12px; padding: 20px; text-align: center; margin: 0 25px 20px;">
+      <div style="font-size: 48px; font-weight: bold; color: #1d4ed8;">${requestedMinutes}</div>
+      <div style="color: #1e40af; font-size: 14px;">Minuten angefragt</div>
+    </div>
+    ${message ? `
+    <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px; margin: 0 25px 20px;">
+      <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Nachricht von ${childName}:</div>
+      <div style="font-size: 14px; color: #374151;">"${message}"</div>
+    </div>` : ''}
+    <div style="text-align: center; margin: 8px 25px 24px;">
+      <a href="${approvalLink}" style="background-color: hsl(217, 91%, 60%); color: #ffffff; font-size: 15px; font-weight: 600; border-radius: 10px; padding: 14px 28px; text-decoration: none; display: inline-block;">
+        In der App antworten
       </a>
-      
-      <!-- Instructions -->
-      <div style="background-color: #fef3c7; border-radius: 12px; padding: 16px; margin-top: 20px;">
-        <div style="font-size: 14px; font-weight: bold; color: #92400e; margin-bottom: 8px;">So funktioniert's:</div>
-        <ol style="margin: 0; padding-left: 20px; color: #78350f; font-size: 13px;">
-          <li style="margin-bottom: 4px;">Öffnen Sie die LernZeit App</li>
-          <li style="margin-bottom: 4px;">Genehmigen oder lehnen Sie die Anfrage ab</li>
-          <li>Geben Sie die Zeit in Family Link / Bildschirmzeit frei</li>
-        </ol>
-      </div>
     </div>
-    
-    <!-- Footer -->
-    <div style="background-color: #f4f4f5; padding: 16px; text-align: center;">
-      <p style="margin: 0; font-size: 12px; color: #6b7280;">
-        LernZeit - Lernen wird belohnt 📚
-      </p>
+    <p style="font-size: 13px; color: hsl(240, 5%, 65%); margin: 0 25px 24px; line-height: 1.5;">
+      Öffne die LernZeit App, um die Anfrage zu genehmigen oder abzulehnen.
+    </p>
+    <div style="font-size: 12px; color: hsl(240, 5%, 65%); margin: 0; padding: 16px 25px; border-top: 1px solid hsl(240, 20%, 92%); text-align: center;">
+      <span style="font-weight: bold; color: hsl(217, 91%, 60%);">LernZeit</span> – Dein persönlicher Lern-Assistent
     </div>
   </div>
 </body>
-</html>
-    `.trim();
+</html>`.trim();
 
-    // Use Supabase's auth.admin API to send email
-    // Note: This uses the built-in Supabase email functionality
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    
-    if (RESEND_API_KEY) {
-      // Use Resend if available for better deliverability
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'LernZeit <noreply@lernzeit.app>',
-          to: [parentEmail],
-          subject: emailSubject,
-          html: emailHtml,
-        }),
-      });
+    const plainText = `${childName} möchte ${requestedMinutes} Minuten Bildschirmzeit.\n${message ? `Nachricht: "${message}"\n` : ''}Öffne die LernZeit App, um zu antworten: ${approvalLink}`;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Resend email error:', errorText);
-      } else {
-        console.log(`📧 Email notification sent to parent: ${parentEmail}`);
-      }
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'LernZeit <info@lernzeit.app>',
+        to: [parentEmail],
+        reply_to: 'info@lernzeit.app',
+        subject: emailSubject,
+        html: emailHtml,
+        text: plainText,
+      }),
+    });
+
+    if (!resendResponse.ok) {
+      const errBody = await resendResponse.text();
+      console.error(`Resend API error [${resendResponse.status}]: ${errBody}`);
     } else {
-      // Fallback: Log that email would be sent (can integrate with Supabase Edge Functions email later)
-      console.log(`📧 Email notification would be sent to: ${parentEmail}`);
-      console.log(`Subject: ${emailSubject}`);
-      console.log(`Request: ${childName} requests ${requestedMinutes} minutes`);
-      
-      // Store notification in database for in-app display
-      await supabase
-        .from('screen_time_requests')
-        .update({
-          // Mark that parent should be notified in-app
-          request_message: message || `${childName} möchte ${requestedMinutes} Minuten Bildschirmzeit.`
-        })
-        .eq('id', requestId);
+      const result = await resendResponse.json();
+      console.log(`📧 Parent notification email sent via Resend: ${result.id} → ${parentEmail}`);
     }
   } catch (error) {
-    // Don't fail the request if email fails - just log it
+    // Don't fail the request if email fails
     console.error('Failed to send parent notification:', error);
   }
 }

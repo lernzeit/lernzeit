@@ -22,12 +22,18 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { requests, loading, createRequest } = useScreenTimeRequests('child');
+  const { requests, loading, createRequest, refreshRequests } = useScreenTimeRequests('child');
   const { toast } = useToast();
 
   // Minutes available today (reuse shared tracker)
   const { getAvailableMinutes } = useEarnedMinutesTracker();
   const [availableMinutes, setAvailableMinutes] = useState(0);
+
+  const refreshAvailableMinutes = async () => {
+    const mins = await getAvailableMinutes(userId);
+    setAvailableMinutes(mins);
+    return mins;
+  };
 
   // Load available minutes on mount and when requests change
   useEffect(() => {
@@ -52,26 +58,26 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
       return;
     }
 
-    if (availableMinutes < 5) {
-      toast({
-        title: "Nicht genügend verdiente Zeit",
-        description: "Du musst mindestens 5 Minuten durch Lernen verdienen, um Bildschirmzeit zu beantragen.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Get parent ID from relationship
-      const { data: relationship } = await supabase
+      const freshAvailableMinutes = await refreshAvailableMinutes();
+
+      if (freshAvailableMinutes < 5) {
+        toast({
+          title: "Nicht genügend verdiente Zeit",
+          description: "Aktuell sind weniger als 5 Minuten verfügbar. Bitte aktualisiere kurz und versuche es erneut.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: relationships } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
-        .eq('child_id', userId)
-        .single();
+        .eq('child_id', userId);
 
-      if (!relationship) {
+      if (!relationships || relationships.length === 0) {
         toast({
           title: "Fehler",
           description: "Eltern-Kind Beziehung nicht gefunden.",
@@ -80,34 +86,41 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
         return;
       }
 
-      const result = await createRequest(
-        relationship.parent_id,
-        availableMinutes, // Request all available earned minutes (today-based)
-        availableMinutes,
-        message.trim() || undefined
+      // Send a request to EACH linked parent
+      const results = await Promise.all(
+        relationships.map(rel =>
+          createRequest(
+            rel.parent_id,
+            freshAvailableMinutes,
+            freshAvailableMinutes,
+            message.trim() || undefined
+          )
+        )
       );
 
-      if (result.success) {
+      const anySuccess = results.some(r => r.success);
+      if (anySuccess) {
+        const grantedMinutes = results.find(r => r.success)?.request?.requested_minutes ?? freshAvailableMinutes;
+        await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${availableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. ${relationships.length > 1 ? 'Beide Elternteile' : 'Deine Eltern'} wurden benachrichtigt.`,
         });
-        
-        if (result.validation) {
-          console.log('Request validation:', result.validation);
-        }
         
         setMessage('');
         setIsDialogOpen(false);
       } else {
+        await refreshAvailableMinutes();
+        const firstError = results.find(r => r.error)?.error;
         toast({
           title: "Fehler beim Senden",
-          description: result.error || "Die Anfrage konnte nicht gesendet werden.",
+          description: firstError || "Die Anfrage konnte nicht gesendet werden.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error creating request:', error);
+      await refreshAvailableMinutes();
       toast({
         title: "Fehler",
         description: "Es ist ein unerwarteter Fehler aufgetreten.",

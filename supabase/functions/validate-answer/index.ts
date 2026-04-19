@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,48 +21,33 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ accepted: false, reason: 'Config error' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Build the prompt for AI validation
+    const prompt = `Du bist ein Lehrer für Klasse ${grade || '?'} im Fach ${subject || 'unbekannt'}.
+Prüfe, ob die Schülerantwort inhaltlich korrekt ist, auch wenn sie Tippfehler, Abkürzungen oder Synonyme enthält.
 
-    const prompt = `Du bist ein Lehrer, der die Antwort eines Schülers (Klasse ${grade}, Fach: ${subject}) prüft.
+Frage: ${question}
+Korrekte Antwort: ${correctAnswer}
+Schülerantwort: ${userAnswer}
 
-Frage: "${question}"
-Korrekte Antwort: "${correctAnswer}"
-Antwort des Schülers: "${userAnswer}"
+REGELN:
+- Akzeptiere die Antwort, wenn sie inhaltlich korrekt ist (z.B. "Atlantik" vs "Altlantik" = akzeptieren wegen Tippfehler)
+- Akzeptiere Synonyme und alternative korrekte Schreibweisen
+- Bei Mathematik: Akzeptiere äquivalente Zahlendarstellungen (z.B. "0,5" vs "1/2")
+- Lehne ab, wenn die Antwort inhaltlich falsch ist
+- Bei Tippfehlern, die akzeptiert werden: Weise in "reason" auf die korrekte Schreibweise hin (z.B. "Richtig gemeint! Die korrekte Schreibweise ist: Atlantik")
 
-Prüfe, ob die Antwort des Schülers inhaltlich korrekt ist. Berücksichtige:
-- Tippfehler (z.B. "Altlantik" statt "Atlantik")
-- Synonyme (z.B. "Atlantik" statt "Atlantischer Ozean")
-- Abkürzungen (z.B. "BRD" statt "Bundesrepublik Deutschland")
-- Umgangssprachliche Varianten (z.B. "Mathe" statt "Mathematik")
-- Groß-/Kleinschreibung ignorieren
-
-WICHTIG: Sei großzügig bei kleinen Tippfehlern, aber die Antwort muss inhaltlich stimmen.
-Antworte NUR mit gültigem JSON:
-{"accepted": true/false, "reason": "kurze Begründung"}`;
+Antworte NUR mit JSON:
+{"accepted": true/false, "reason": "Kurze Begründung. Bei akzeptierten Tippfehlern: Hinweis auf korrekte Schreibweise."}`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-        }),
-        signal: controller.signal,
-      });
+      const { response } = await callAI({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+      }, controller.signal);
 
       clearTimeout(timeout);
 

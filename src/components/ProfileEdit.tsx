@@ -143,6 +143,24 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
           </CardContent>
         </Card>
 
+        {/* Username Display (read-only) */}
+        {profile?.username && (
+          <Card className="shadow-card">
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Dein Benutzername</Label>
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-mono font-medium">{profile.username}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Merke dir deinen Benutzernamen für die Anmeldung
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Name Edit */}
         <Card className="shadow-card">
           <CardContent className="p-6">

@@ -98,13 +98,15 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         .from('parent_child_relationships')
         .select('parent_id')
         .eq('child_id', user.id)
-        .maybeSingle();
+        .limit(1);
 
-      if (relationships?.parent_id) {
+      const relationship = relationships?.[0] || null;
+
+      if (relationship?.parent_id) {
         const { data: visibilitySettings } = await supabase
           .from('child_subject_visibility')
           .select('subject, is_visible, is_priority')
-          .eq('parent_id', relationships.parent_id)
+          .eq('parent_id', relationship.parent_id)
           .eq('child_id', user.id);
 
         if (visibilitySettings && visibilitySettings.length > 0) {
@@ -171,20 +173,18 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           </h1>
         </div>
 
-        {/* Motivation */}
-        <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
-          <CardContent className={`${isYoung ? 'p-5' : 'p-4'} text-center`}>
-            <div className={isYoung ? 'text-4xl mb-2' : 'text-3xl mb-2'}>🏆</div>
-            <h3 className={`font-bold text-green-800 ${isYoung ? 'text-lg' : 'text-base'} mb-1`}>
-              {isYoung ? 'Lerne und verdiene Handyzeit!' : 'Verdiene Handyzeit!'}
-            </h3>
-            {!isYoung && (
+        {/* Motivation - only for teen */}
+        {!isYoung && (
+          <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl mb-2">🏆</div>
+              <h3 className="font-bold text-green-800 text-base mb-1">Verdiene Handyzeit!</h3>
               <p className="text-sm text-green-700">
                 Löse Aufgaben und verdiene wertvolle Bildschirmzeit
               </p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Learning Plan Card */}
         {activePlan && (() => {
@@ -234,7 +234,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         })()}
 
         {/* Categories */}
-        <div className={`grid ${age.gridCols} gap-${isYoung ? '4' : '3'}`}>
+        <div className={`grid ${age.gridCols} ${isYoung ? 'gap-4' : 'gap-3'}`}>
           {sortedCategories.map((category) => {
             const seconds = getSecondsForCategory(category.id);
             const isPriority = prioritySubjects.has(category.id);
@@ -247,19 +247,16 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
                   className={`rounded-2xl border-2 shadow-lg hover:scale-105 cursor-pointer transition-all duration-300 ${isPriority ? 'ring-2 ring-primary border-primary' : ''}`}
                   onClick={() => onCategorySelect(category.id)}
                 >
-                  <CardContent className="p-5 text-center">
-                    <div className={`w-16 h-16 mx-auto ${category.color} rounded-full flex items-center justify-center text-3xl mb-3`}>
+                  <CardContent className="p-4 sm:p-5 text-center">
+                    <div className={`w-14 h-14 sm:w-16 sm:h-16 mx-auto ${category.color} rounded-full flex items-center justify-center text-2xl sm:text-3xl mb-2 sm:mb-3`}>
                       {category.emoji}
                     </div>
-                    <h3 className="text-lg font-bold">{category.shortName}</h3>
+                    <h3 className="text-base sm:text-lg font-bold">{category.shortName}</h3>
                     {isPriority && (
                       <Badge variant="default" className="mt-2 text-xs gap-1">
                         <Star className="w-3 h-3" /> Wichtig
                       </Badge>
                     )}
-                    <div className="flex items-center justify-center gap-1 mt-2">
-                      <span className="text-xs text-green-600 font-medium">+{seconds}s ⏱️</span>
-                    </div>
                   </CardContent>
                 </Card>
               );

@@ -120,6 +120,10 @@ export default {
 					'50%': { transform: 'scale(1.05) rotate(-5deg)' },
 					'75%': { transform: 'scale(1.1) rotate(3deg)' },
 					'100%': { transform: 'scale(1) rotate(0deg)' }
+				},
+				'pulse-subtle': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.85' }
 				}
 			},
 			animation: {
@@ -127,7 +131,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'bounce-gentle': 'bounce-gentle 1s infinite',
 				'scale-in': 'scale-in 0.2s ease-out',
-				'celebrate': 'celebrate 0.6s ease-in-out'
+				'celebrate': 'celebrate 0.6s ease-in-out',
+				'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite'
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',

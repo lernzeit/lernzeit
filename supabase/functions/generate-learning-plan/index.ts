@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +15,8 @@ serve(async (req) => {
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) throw new Error("No AI API key configured");
 
     // Auth check
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -114,32 +116,19 @@ ${extraInfo}
 
 Erstelle den Plan als JSON-Array mit 5 Tagen.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-      }),
+    const { response: aiResponse } = await callAI({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
     });
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Zu viele Anfragen, bitte versuche es später erneut." }), {
           status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "AI-Guthaben aufgebraucht." }), {
-          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

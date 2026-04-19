@@ -17,7 +17,7 @@ interface ScreenTimeRequestWidgetProps {
 }
 
 export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidgetProps) {
-  const { requests, loading, createRequest, respondToRequest } = useScreenTimeRequests(role);
+  const { requests, loading, createRequest, respondToRequest, refreshRequests } = useScreenTimeRequests(role);
   const { 
     getAvailableMinutes, 
     getTodayRequestedMinutes, 
@@ -55,43 +55,43 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   const pendingRequest = requests.find(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 3);
 
-  // Load available minutes when component mounts
+  const loadMinutesData = async () => {
+    const [available, requested, breakdown] = await Promise.all([
+      getAvailableMinutes(userId),
+      getTodayRequestedMinutes(userId),
+      getAvailableMinutesBreakdown(userId)
+    ]);
+    setAvailableMinutes(available);
+    setTodayRequestedMinutes(requested);
+    setMinutesBreakdown(breakdown);
+    return { available, requested, breakdown };
+  };
+
   useEffect(() => {
-    const loadMinutesData = async () => {
-      const [available, requested, breakdown] = await Promise.all([
-        getAvailableMinutes(userId),
-        getTodayRequestedMinutes(userId),
-        getAvailableMinutesBreakdown(userId)
-      ]);
-      setAvailableMinutes(available);
-      setTodayRequestedMinutes(requested);
-      setMinutesBreakdown(breakdown);
-    };
-    
     loadMinutesData();
-  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]); // Refresh when requests change
+  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]);
 
   const handleRequestScreenTime = async () => {
-    if (availableMinutes < 5) {
-      toast({
-        title: "Nicht genügend verdiente Zeit",
-        description: "Du musst mindestens 5 Minuten durch Lernen verdienen, um Bildschirmzeit zu beantragen.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Get parent-child relationships to find parent ID
-      const { data: relationship } = await supabase
+      const { available: freshAvailableMinutes } = await loadMinutesData();
+
+      if (freshAvailableMinutes < 5) {
+        toast({
+          title: "Nicht genügend verdiente Zeit",
+          description: "Aktuell sind weniger als 5 Minuten verfügbar. Bitte aktualisiere kurz und versuche es erneut.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: relationships } = await supabase
         .from('parent_child_relationships')
         .select('parent_id')
-        .eq('child_id', userId)
-        .single();
+        .eq('child_id', userId);
 
-      if (!relationship) {
+      if (!relationships || relationships.length === 0) {
         toast({
           title: "Kein Eltern-Link",
           description: "Du musst zuerst mit deinen Eltern verknüpft sein, um Bildschirmzeit zu beantragen.",
@@ -100,58 +100,41 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
         return;
       }
 
-      const result = await createRequest(
-        relationship.parent_id,
-        availableMinutes, // Request all available earned minutes
-        availableMinutes,
-        message.trim() || undefined
+      // Send a request to EACH linked parent
+      const results = await Promise.all(
+        relationships.map(rel =>
+          createRequest(
+            rel.parent_id,
+            freshAvailableMinutes,
+            freshAvailableMinutes,
+            message.trim() || undefined
+          )
+        )
       );
 
-      if (result.success) {
+      const anySuccess = results.some(r => r.success);
+      if (anySuccess) {
+        const grantedMinutes = results.find(r => r.success)?.request?.requested_minutes ?? freshAvailableMinutes;
         toast({
           title: "Anfrage gesendet! 🎉",
-          description: `Du hast ${availableMinutes} Minuten Bildschirmzeit beantragt. Deine Eltern wurden benachrichtigt.`,
+          description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. ${relationships.length > 1 ? 'Beide Elternteile' : 'Deine Eltern'} wurden benachrichtigt.`,
         });
-        
-        if (result.validation) {
-          console.log('Request validation:', result.validation);
-        }
         
         setMessage('');
         setShowDialog(false);
-        
-        // Refresh minutes data
-        const [available, requested] = await Promise.all([
-          getAvailableMinutes(userId),
-          getTodayRequestedMinutes(userId)
-        ]);
-        setAvailableMinutes(available);
-        setTodayRequestedMinutes(requested);
-        
+        await Promise.all([loadMinutesData(), refreshRequests()]);
       } else {
-        // Handle specific validation errors
-        let errorMessage = result.error || "Die Anfrage konnte nicht gesendet werden.";
-        
-        if (result.validation) {
-          if (!result.validation.has_parent_link) {
-            errorMessage = "Du musst zuerst mit deinen Eltern verknüpft sein.";
-          } else if (!result.validation.within_daily_limit) {
-            errorMessage = `Du kannst heute nur noch ${result.validation.remaining_daily_minutes || 0} Minuten anfragen.`;
-          } else if (!result.validation.sufficient_earned_minutes) {
-            errorMessage = `Du hast nur ${result.validation.available_minutes || 0} Minuten verfügbar.`;
-          } else if (!result.validation.no_duplicate_request) {
-            errorMessage = "Du hast bereits eine ausstehende Anfrage.";
-          }
-        }
-        
+        await loadMinutesData();
+        const firstError = results.find(r => r.error)?.error;
         toast({
           title: "Fehler beim Senden",
-          description: errorMessage,
+          description: firstError || "Die Anfrage konnte nicht gesendet werden.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error creating request:', error);
+      await loadMinutesData();
       toast({
         title: "Fehler",
         description: "Es ist ein unerwarteter Fehler aufgetreten.",
