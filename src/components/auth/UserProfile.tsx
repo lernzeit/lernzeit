@@ -559,20 +559,31 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
 
           {/* Stats & Quick Actions */}
           {(profile?.grade || 5) <= 4 ? (
-            /* Young mode: 2 simple cards with labels */
-            <div className="grid grid-cols-2 gap-4">
+            /* Young mode: 3 simple cards with labels (Minuten, Spiele, Streak) */
+            <div className="grid grid-cols-3 gap-3">
               <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-                <CardContent className="p-5 text-center">
+                <CardContent className="p-4 text-center">
                   <div className="text-3xl mb-2">⏰</div>
-                  <div className="text-3xl font-bold text-orange-700">{totalTimeEarned}</div>
-                  <div className="text-sm text-orange-600 mt-1">Minuten</div>
+                  <div className="text-2xl font-bold text-orange-700">{totalTimeEarned}</div>
+                  <div className="text-xs text-orange-600 mt-1">Minuten</div>
                 </CardContent>
               </Card>
               <Card className="shadow-card bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-                <CardContent className="p-5 text-center">
+                <CardContent className="p-4 text-center">
                   <div className="text-3xl mb-2">🏆</div>
-                  <div className="text-3xl font-bold text-green-700">{gamesPlayed}</div>
-                  <div className="text-sm text-green-600 mt-1">Spiele</div>
+                  <div className="text-2xl font-bold text-green-700">{gamesPlayed}</div>
+                  <div className="text-xs text-green-600 mt-1">Spiele</div>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+                <CardContent className="p-4 text-center">
+                  <div className="text-3xl mb-2">🔥</div>
+                  <div className="text-2xl font-bold text-red-700">
+                    {streakLoading ? '…' : streak}
+                  </div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {streak === 1 ? 'Tag' : 'Tage'} in Folge
+                  </div>
                 </CardContent>
               </Card>
             </div>
