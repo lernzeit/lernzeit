@@ -586,6 +586,40 @@ async function sendParentNotification(
       return;
     }
 
+    // Fallback-Logik: E-Mail nur senden, wenn KEIN Push möglich ist.
+    // Push ist möglich, wenn (a) der Parent mind. 1 Device in push_tokens hat
+    // UND (b) profiles.daily_push_enabled !== false.
+    // So vermeiden wir doppelte Benachrichtigungen (Push + E-Mail).
+    try {
+      const [{ data: profile }, { data: tokens }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('daily_push_enabled')
+          .eq('id', parentId)
+          .maybeSingle(),
+        supabase
+          .from('push_tokens')
+          .select('id')
+          .eq('user_id', parentId)
+          .limit(1),
+      ]);
+
+      const pushEnabled = profile?.daily_push_enabled !== false;
+      const hasDevice = Array.isArray(tokens) && tokens.length > 0;
+
+      if (pushEnabled && hasDevice) {
+        console.log(`📵 Skipping email for parent ${parentId} – push notification will be delivered instead`);
+        return;
+      }
+
+      console.log(
+        `📧 Sending email fallback for parent ${parentId} (pushEnabled=${pushEnabled}, hasDevice=${hasDevice})`,
+      );
+    } catch (checkErr) {
+      // Bei Fehler im Push-Check sicherheitshalber E-Mail senden
+      console.warn('Push capability check failed, sending email anyway:', checkErr);
+    }
+
     // Get parent's email from auth.users table
     const { data: parentUser, error: userError } = await supabase.auth.admin.getUserById(parentId);
     
