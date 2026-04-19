@@ -218,14 +218,6 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
       gradient: 'from-orange-500 to-red-600'
     },
     {
-      id: 'notifications',
-      title: 'Benachrichtigungen',
-      description: 'Tägliche Lern-Erinnerungen ein-/ausschalten',
-      icon: Bell,
-      color: 'text-pink-600',
-      gradient: 'from-pink-500 to-rose-600'
-    },
-    {
       id: 'achievements',
       title: 'Erfolge',
       description: 'Deine Lernfortschritte',
@@ -442,9 +434,6 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
             <AchievementDisplay userId={user.id} variant="full" />
           )}
 
-          {activeSection === 'notifications' && (
-            <NotificationSettings userId={user.id} role="child" />
-          )}
         </div>
       </div>
     );
