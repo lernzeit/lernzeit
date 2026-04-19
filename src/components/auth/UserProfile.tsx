@@ -489,23 +489,6 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
           {/* Daily Challenge */}
           <DailyChallenge userId={user.id} />
 
-          {/* Hint: Notifications managed by parents */}
-          {hasParentLink && (
-            <Card className="shadow-card border-pink-200 bg-gradient-to-r from-pink-500/5 to-rose-500/5">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">Lern-Erinnerungen</p>
-                  <p className="text-xs text-muted-foreground">
-                    Deine Eltern legen fest, wann du erinnert wirst, falls du noch nicht gelernt hast.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Screen Time Status */}
           {isAtLimit ? (
             <>
