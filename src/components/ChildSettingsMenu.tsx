@@ -16,7 +16,8 @@ import {
   Check,
   X,
   AlertCircle,
-  Loader2
+  Loader2,
+  Bell
 } from 'lucide-react';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
@@ -27,6 +28,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 interface ChildSettingsMenuProps {
   user: any;
