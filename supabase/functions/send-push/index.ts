@@ -186,6 +186,7 @@ async function sendDailyParentSummaries() {
         title: `📊 Tagesbericht: ${childName}`,
         message: `${totalQuestions} Aufgaben gelöst (${accuracy}% richtig), ${timeEarned} Min. verdient.`,
         data: { type: "parent_daily_summary", child_id: rel.child_id },
+        respectDailyToggle: true,
       }).catch((e) => ({ error: String(e) })),
     );
   }
