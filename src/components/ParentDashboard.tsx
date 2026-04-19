@@ -215,15 +215,21 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Eltern-Dashboard</h1>
           <p className="text-muted-foreground text-sm">Familie und Lernzeit verwalten</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Aktualisieren
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Konto</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Aktualisieren</span>
+          </Button>
+        </div>
       </div>
 
       {totalPendingRequests > 0 && (
