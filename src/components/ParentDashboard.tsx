@@ -310,9 +310,9 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
         </Card>
       )}
 
-      {/* Main Tabs - reduced to 4 */}
+      {/* Main Tabs - reduced to 3 (Konto in header) */}
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
@@ -329,10 +329,6 @@ export function ParentDashboard({ userId }: ParentDashboardProps) {
           <TabsTrigger value="subscription" className="flex items-center gap-1.5">
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
-          </TabsTrigger>
-          <TabsTrigger value="account" className="flex items-center gap-1.5">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Konto</span>
           </TabsTrigger>
         </TabsList>
 
