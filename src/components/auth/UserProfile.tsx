@@ -715,10 +715,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               </CardContent>
             </Card>
           )}
-          {/* Screen Time Widget */}
-        <ScreenTimeWidget />
-
-        {/* Parent Dashboard */}
+          {/* Parent Dashboard */}
         <ParentDashboard userId={user.id} onSignOut={handleSignOut} />
       </div>
     </div>
