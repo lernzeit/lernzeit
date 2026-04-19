@@ -265,39 +265,48 @@ export function useScreenTimeRequests(role: 'child' | 'parent'): UseScreenTimeRe
   useEffect(() => {
     loadRequests();
 
-    if (role === 'child') {
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (!user) return;
+    let cleanup: (() => void) | undefined;
 
-        const channel = supabase
-          .channel('screen-time-updates')
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'screen_time_requests',
-              filter: `child_id=eq.${user.id}`
-            },
-            async () => {
-              const { data } = await supabase.functions.invoke('screen-time-request', {
-                body: { action: 'get_requests', role: 'child' }
-              });
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
 
-              if (data?.requests) {
-                const normalizedRequests = normalizeRequests(data.requests, 'child');
+      const filter =
+        role === 'child' ? `child_id=eq.${user.id}` : `parent_id=eq.${user.id}`;
+
+      const channel = supabase
+        .channel(`screen-time-updates-${role}-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'screen_time_requests',
+            filter,
+          },
+          async () => {
+            const { data } = await supabase.functions.invoke('screen-time-request', {
+              body: { action: 'get_requests', role },
+            });
+
+            if (data?.requests) {
+              const normalizedRequests = normalizeRequests(data.requests, role);
+              if (role === 'child') {
                 checkForApprovals(normalizedRequests);
-                setRequests(normalizedRequests);
               }
+              setRequests(normalizedRequests);
             }
-          )
-          .subscribe();
+          },
+        )
+        .subscribe();
 
-        return () => {
-          supabase.removeChannel(channel);
-        };
-      });
-    }
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
+    });
+
+    return () => {
+      cleanup?.();
+    };
   }, [role, loadRequests, checkForApprovals]);
 
   return {
