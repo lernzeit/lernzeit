@@ -132,21 +132,53 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         data: { type: "screen_time_denied", request_id: body.request_id },
       });
     }
+    case "hourly_dispatch": {
+      // Cron runs hourly. Each user picks their own preferred hour
+      // (Europe/Berlin local time) for the daily summary / reminder.
+      const berlinHour = getBerlinHour();
+      const [parents, children] = await Promise.all([
+        sendDailyParentSummaries(berlinHour),
+        sendChildLearningReminders(berlinHour),
+      ]);
+      return { berlinHour, parents, children };
+    }
     case "parent_daily_summary": {
-      // Cron job: 18:00 send summary to all parents about each linked child's day
-      return sendDailyParentSummaries();
+      // Manual trigger: send to all parents whose preferred hour matches now (or all if forced)
+      return sendDailyParentSummaries(getBerlinHour(), true);
     }
     case "child_learning_reminder": {
-      // Cron job: 16:00 remind children who haven't learned today
-      return sendChildLearningReminders();
+      return sendChildLearningReminders(getBerlinHour(), true);
     }
     default:
       throw new Error(`Unknown event: ${event}`);
   }
 }
 
-async function sendDailyParentSummaries() {
+function getBerlinHour(): number {
+  // Returns the current hour (0-23) in Europe/Berlin, respecting DST.
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Berlin",
+    hour: "2-digit",
+    hour12: false,
+  });
+  return parseInt(fmt.format(new Date()), 10);
+}
+
+async function sendDailyParentSummaries(berlinHour: number, force = false) {
   const today = new Date().toISOString().slice(0, 10);
+
+  // Find parents whose preferred hour matches now
+  const { data: matchingParents } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "parent")
+    .eq("daily_summary_hour", berlinHour);
+
+  const parentIds = new Set((matchingParents ?? []).map((p) => p.id));
+  if (!force && parentIds.size === 0) {
+    return { skipped: true, reason: "no_parents_at_this_hour", berlinHour };
+  }
+
   const { data: relations } = await supabase
     .from("parent_child_relationships")
     .select("parent_id, child_id");
@@ -154,6 +186,7 @@ async function sendDailyParentSummaries() {
   const results: unknown[] = [];
   for (const rel of relations ?? []) {
     if (!rel.parent_id || !rel.child_id) continue;
+    if (!force && !parentIds.has(rel.parent_id)) continue;
 
     const { data: sessions } = await supabase
       .from("learning_sessions")
@@ -193,14 +226,16 @@ async function sendDailyParentSummaries() {
   return { sent: results.length };
 }
 
-async function sendChildLearningReminders() {
+async function sendChildLearningReminders(berlinHour: number, force = false) {
   const today = new Date().toISOString().slice(0, 10);
 
-  // All children
-  const { data: children } = await supabase
+  // All children whose preferred reminder hour matches now
+  let query = supabase
     .from("profiles")
-    .select("id, name")
+    .select("id, name, learning_reminder_hour")
     .eq("role", "child");
+  if (!force) query = query.eq("learning_reminder_hour", berlinHour);
+  const { data: children } = await query;
 
   const results: unknown[] = [];
   for (const child of children ?? []) {
