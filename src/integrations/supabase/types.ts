@@ -493,8 +493,10 @@ export type Database = {
           avatar_id: string | null
           created_at: string | null
           daily_push_enabled: boolean
+          daily_summary_hour: number
           grade: number | null
           id: string
+          learning_reminder_hour: number
           name: string | null
           role: string | null
           updated_at: string | null
@@ -505,8 +507,10 @@ export type Database = {
           avatar_id?: string | null
           created_at?: string | null
           daily_push_enabled?: boolean
+          daily_summary_hour?: number
           grade?: number | null
           id: string
+          learning_reminder_hour?: number
           name?: string | null
           role?: string | null
           updated_at?: string | null
@@ -517,8 +521,10 @@ export type Database = {
           avatar_id?: string | null
           created_at?: string | null
           daily_push_enabled?: boolean
+          daily_summary_hour?: number
           grade?: number | null
           id?: string
+          learning_reminder_hour?: number
           name?: string | null
           role?: string | null
           updated_at?: string | null

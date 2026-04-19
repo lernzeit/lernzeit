@@ -715,32 +715,11 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
               </CardContent>
             </Card>
           )}
-          <Card className="shadow-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">
-                      Willkommen, {profile?.name || 'Nutzer'}!
-                    </CardTitle>
-                    <Badge variant="secondary">Elternteil</Badge>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4" />
-                </Button>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Screen Time Widget */}
+          {/* Screen Time Widget */}
         <ScreenTimeWidget />
 
         {/* Parent Dashboard */}
-        <ParentDashboard userId={user.id} />
+        <ParentDashboard userId={user.id} onSignOut={handleSignOut} />
       </div>
     </div>
   );
