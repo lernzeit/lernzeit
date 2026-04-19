@@ -20,6 +20,8 @@ interface PushPayload {
   title: string;
   message: string;
   data?: Record<string, unknown>;
+  /** When true, only send to users with profiles.daily_push_enabled = true */
+  respectDailyToggle?: boolean;
 }
 
 async function sendOneSignalPush(payload: PushPayload): Promise<unknown> {
@@ -28,11 +30,29 @@ async function sendOneSignalPush(payload: PushPayload): Promise<unknown> {
     return { skipped: true };
   }
 
+  let recipientIds = payload.userIds;
+
+  // For daily/optional pushes, filter out users who disabled them
+  if (payload.respectDailyToggle) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, daily_push_enabled")
+      .in("id", recipientIds);
+    const allowed = new Set(
+      (profs ?? []).filter((p) => p.daily_push_enabled !== false).map((p) => p.id),
+    );
+    recipientIds = recipientIds.filter((id) => allowed.has(id));
+    if (!recipientIds.length) {
+      console.log("All recipients have daily push disabled, skipping");
+      return { skipped: true, reason: "daily_push_disabled" };
+    }
+  }
+
   // Look up player_ids for the given user_ids
   const { data: tokens, error } = await supabase
     .from("push_tokens")
     .select("player_id")
-    .in("user_id", payload.userIds);
+    .in("user_id", recipientIds);
 
   if (error) {
     console.error("Error fetching push tokens:", error);
