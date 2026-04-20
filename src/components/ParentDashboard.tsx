@@ -28,6 +28,26 @@ import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
 
+// Drachen-Icon (Kite) – ähnlich dem Google Family Link Logo
+const KiteIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 2 L20 10 L12 18 L4 10 Z" />
+    <path d="M12 2 L12 18" />
+    <path d="M4 10 L20 10" />
+    <path d="M12 18 L9 22" />
+    <path d="M12 18 L15 22" />
+  </svg>
+);
+
 interface ParentDashboardProps {
   userId: string;
   onSignOut?: () => void;
