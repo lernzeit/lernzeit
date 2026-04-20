@@ -51,6 +51,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [profileSaving, setProfileSaving] = useState(false);
   const [newCodeLoading, setNewCodeLoading] = useState(false);
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
+  const [requestsRefreshTrigger, setRequestsRefreshTrigger] = useState(0);
   
   const { toast } = useToast();
   const isNativeAndroid =
@@ -304,6 +305,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   className="mt-3"
                   onClick={() => {
                     setActiveTab('requests');
+                    setRequestsRefreshTrigger((n) => n + 1);
                     setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                   }}
                 >
@@ -386,7 +388,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
         {/* Tab: Anfragen */}
         <TabsContent value="requests" className="space-y-4">
-          <ParentScreenTimeRequestsDashboard userId={userId} />
+          <ParentScreenTimeRequestsDashboard userId={userId} refreshTrigger={requestsRefreshTrigger} />
         </TabsContent>
 
         {/* Tab: Kinder - kind-zentrisch mit Collapsibles */}
