@@ -1,30 +1,34 @@
 import { Capacitor } from '@capacitor/core';
 
-let AppLauncher: any = null;
-let Browser: any = null;
+let appLauncherPromise: Promise<any> | null = null;
+let browserPromise: Promise<any> | null = null;
 
-async function getAppLauncher() {
-  if (!AppLauncher && Capacitor.isNativePlatform()) {
-    try {
-      const mod = await import('@capacitor/app-launcher');
-      AppLauncher = mod.AppLauncher;
-    } catch (e) {
-      console.warn('[ParentalControls] AppLauncher not available:', e);
-    }
+async function getAppLauncher(): Promise<any> {
+  if (!Capacitor.isNativePlatform()) return null;
+  if (!appLauncherPromise) {
+    appLauncherPromise = import('@capacitor/app-launcher')
+      .then((mod) => mod.AppLauncher)
+      .catch((e) => {
+        console.warn('[ParentalControls] AppLauncher not available:', e);
+        appLauncherPromise = null;
+        return null;
+      });
   }
-  return AppLauncher;
+  return appLauncherPromise;
 }
 
-async function getBrowser() {
-  if (!Browser && Capacitor.isNativePlatform()) {
-    try {
-      const mod = await import('@capacitor/browser');
-      Browser = mod.Browser;
-    } catch (e) {
-      console.warn('[ParentalControls] Browser not available:', e);
-    }
+async function getBrowser(): Promise<any> {
+  if (!Capacitor.isNativePlatform()) return null;
+  if (!browserPromise) {
+    browserPromise = import('@capacitor/browser')
+      .then((mod) => mod.Browser)
+      .catch((e) => {
+        console.warn('[ParentalControls] Browser not available:', e);
+        browserPromise = null;
+        return null;
+      });
   }
-  return Browser;
+  return browserPromise;
 }
 
 export type Platform = 'android' | 'ios' | 'web';
