@@ -281,7 +281,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         <CardContent className="p-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Shield className="h-6 w-6 text-primary" />
+              <KiteIcon className="h-6 w-6 text-primary" />
             </div>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-bold truncate">
@@ -296,9 +296,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleOpenFamilyLink}
-                aria-label="Family Link öffnen"
+                aria-label="Google Family Link öffnen"
               >
-                <Shield className="h-4 w-4 sm:mr-2" />
+                <KiteIcon className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Family Link</span>
               </Button>
             )}
