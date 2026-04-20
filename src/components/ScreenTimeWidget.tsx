@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, ExternalLink, Smartphone, Info } from 'lucide-react';
+import { Shield, ExternalLink, Smartphone, Info, AlertTriangle, Download } from 'lucide-react';
 import { parentalControlsService } from '@/services/parentalControlsService';
 import { useToast } from '@/hooks/use-toast';
+
+const PLAY_STORE_FAMILY_LINK = 'https://play.google.com/store/apps/details?id=com.google.android.apps.kids.familylink';
 
 export function ScreenTimeWidget() {
   const { toast } = useToast();
   const [opening, setOpening] = useState(false);
+  const [notInstalled, setNotInstalled] = useState(false);
   
   const isNative = parentalControlsService.isNativePlatform();
   const platform = parentalControlsService.getPlatform();
@@ -17,6 +20,7 @@ export function ScreenTimeWidget() {
     setOpening(true);
     try {
       const result = await parentalControlsService.openParentalControlApp();
+      setNotInstalled(!!result.notInstalled);
       if (!result.success) {
         toast({
           title: 'Hinweis',
@@ -34,6 +38,13 @@ export function ScreenTimeWidget() {
     }
   };
 
+  const handleInstallFamilyLink = async () => {
+    const result = await parentalControlsService.openParentalControlApp();
+    if (!result.success) {
+      window.open(PLAY_STORE_FAMILY_LINK, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -46,6 +57,28 @@ export function ScreenTimeWidget() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isNative && platform === 'android' && notInstalled && (
+          <div className="flex items-start gap-3 p-3 rounded-lg border border-destructive/40 bg-destructive/10">
+            <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Family Link nicht installiert</p>
+                <p className="text-xs text-muted-foreground">
+                  Um die Bildschirmzeit deines Kindes zu verwalten, installiere zuerst die Google Family Link App.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleInstallFamilyLink}
+                className="w-full sm:w-auto"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Im Play Store installieren
+              </Button>
+            </div>
+          </div>
+        )}
+
         {isNative ? (
           <Button onClick={handleOpenControls} disabled={opening} className="w-full">
             <ExternalLink className="mr-2 h-4 w-4" />

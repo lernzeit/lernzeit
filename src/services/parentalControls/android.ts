@@ -51,6 +51,7 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
           appName: 'Family Link',
           message: `Family Link ist nicht installiert. Play Store wurde geöffnet. ${minutesMsg}`.trim(),
           fallbackUrl: PLAY_STORE_WEB,
+          notInstalled: true,
         };
       }
     } catch (e) {
@@ -67,6 +68,7 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
         appName: 'Family Link',
         message: `Family Link ist nicht installiert. Bitte aus dem Play Store installieren. ${minutesMsg}`.trim(),
         fallbackUrl: PLAY_STORE_WEB,
+        notInstalled: true,
       };
     } catch (e) {
       console.warn('[ParentalControls] Play Store web failed:', e);
@@ -85,6 +87,7 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
         appName: 'Family Link',
         message: `Family Link wurde im Browser geöffnet. ${minutesMsg}`.trim(),
         fallbackUrl: FAMILY_LINK_WEB,
+        notInstalled: true,
       };
     } catch (e) {
       console.warn('[ParentalControls] Browser fallback failed:', e);
@@ -98,5 +101,6 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
     appName: 'Family Link',
     message: 'Family Link konnte nicht geöffnet werden. Bitte manuell öffnen oder aus dem Play Store installieren.',
     fallbackUrl: PLAY_STORE_WEB,
+    notInstalled: true,
   };
 }
