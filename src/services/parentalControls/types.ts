@@ -7,4 +7,6 @@ export interface OpenParentalControlsResult {
   appName: string;
   message: string;
   fallbackUrl?: string;
+  /** True if the parental control app (e.g. Family Link) is not installed on the device. */
+  notInstalled?: boolean;
 }
