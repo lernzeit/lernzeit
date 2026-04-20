@@ -28,23 +28,31 @@ import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
 
-// Drachen-Icon (Kite) – ähnlich dem Google Family Link Logo
+// Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
+// Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
 const KiteIcon = ({ className }: { className?: string }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    stroke="none"
     aria-hidden="true"
   >
-    <path d="M12 2 L20 10 L12 18 L4 10 Z" />
-    <path d="M12 2 L12 18" />
-    <path d="M4 10 L20 10" />
-    <path d="M12 18 L9 22" />
-    <path d="M12 18 L15 22" />
+    {/* oben: rot */}
+    <path d="M12 2 L20 10 L12 10 Z" fill="#EA4335" />
+    {/* rechts: gelb */}
+    <path d="M20 10 L12 18 L12 10 Z" fill="#FBBC04" />
+    {/* unten: grün */}
+    <path d="M12 18 L4 10 L12 10 Z" fill="#34A853" />
+    {/* links: blau */}
+    <path d="M4 10 L12 2 L12 10 Z" fill="#4285F4" />
+    {/* Schnur */}
+    <path
+      d="M12 18 L10 22 M12 18 L14 22"
+      stroke="#1F1F1F"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
@@ -278,36 +286,49 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Welcome Header */}
       <Card className="shadow-card">
-        <CardContent className="p-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <KiteIcon className="h-6 w-6 text-primary" />
+        <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold truncate">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base sm:text-xl font-bold truncate">
                 Willkommen{profileName ? `, ${profileName}` : ''}!
               </h1>
-              <Badge className="mt-1 bg-success text-success-foreground hover:bg-success">Elternteil</Badge>
+              <Badge className="mt-0.5 sm:mt-1 bg-success text-success-foreground hover:bg-success text-xs">Elternteil</Badge>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {isNativeAndroid && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleOpenFamilyLink}
                 aria-label="Google Family Link öffnen"
+                className="px-2 sm:px-3"
               >
                 <KiteIcon className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Family Link</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setAccountOpen(true)} aria-label="Konto-Einstellungen">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccountOpen(true)}
+              aria-label="Konto-Einstellungen"
+              className="px-2 sm:px-3"
+            >
               <Settings className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Konto</span>
             </Button>
             {onSignOut && (
-              <Button variant="outline" size="sm" onClick={onSignOut} aria-label="Abmelden">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSignOut}
+                aria-label="Abmelden"
+                className="px-2 sm:px-3"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             )}
