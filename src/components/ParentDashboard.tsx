@@ -816,8 +816,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Family Link installieren
+              <KiteIcon className="h-5 w-5 text-primary" />
+              Google Family Link installieren
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
