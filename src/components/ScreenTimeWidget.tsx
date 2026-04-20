@@ -1,20 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, ExternalLink, Smartphone, Info, AlertTriangle, Download } from 'lucide-react';
+import { Shield, ExternalLink, Smartphone, Info, Download } from 'lucide-react';
 import { parentalControlsService } from '@/services/parentalControlsService';
 import { useToast } from '@/hooks/use-toast';
-
-const PLAY_STORE_FAMILY_LINK = 'https://play.google.com/store/apps/details?id=com.google.android.apps.kids.familylink';
 
 export function ScreenTimeWidget() {
   const { toast } = useToast();
   const [opening, setOpening] = useState(false);
   const [notInstalled, setNotInstalled] = useState(false);
+  const [checking, setChecking] = useState(true);
   
   const isNative = parentalControlsService.isNativePlatform();
   const platform = parentalControlsService.getPlatform();
   const appName = parentalControlsService.getParentalControlAppName();
+
+  // Check on mount whether Family Link is installed (Android only)
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      if (!isNative || platform !== 'android') {
+        setChecking(false);
+        return;
+      }
+      try {
+        const installed = await parentalControlsService.isParentalControlAppInstalled();
+        if (!cancelled) setNotInstalled(!installed);
+      } catch {
+        if (!cancelled) setNotInstalled(false);
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    }
+    check();
+    return () => { cancelled = true; };
+  }, [isNative, platform]);
 
   const handleOpenControls = async () => {
     setOpening(true);
@@ -39,9 +59,14 @@ export function ScreenTimeWidget() {
   };
 
   const handleInstallFamilyLink = async () => {
-    const result = await parentalControlsService.openParentalControlApp();
-    if (!result.success) {
-      window.open(PLAY_STORE_FAMILY_LINK, '_blank', 'noopener,noreferrer');
+    try {
+      await parentalControlsService.openInstallParentalControlApp();
+    } catch {
+      toast({
+        title: 'Fehler',
+        description: 'Play Store konnte nicht geöffnet werden.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -57,30 +82,31 @@ export function ScreenTimeWidget() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isNative && platform === 'android' && notInstalled && (
-          <div className="flex items-start gap-3 p-3 rounded-lg border border-destructive/40 bg-destructive/10">
-            <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Family Link nicht installiert</p>
-                <p className="text-xs text-muted-foreground">
-                  Um die Bildschirmzeit deines Kindes zu verwalten, installiere zuerst die Google Family Link App.
+        {isNative && platform === 'android' && notInstalled ? (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                <Download className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <p className="text-sm font-semibold text-foreground">
+                  Google Family Link installieren
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Für die Steuerung der Bildschirmzeit deines Kindes auf dem Smartphone benötigst du die kostenlose Google Family Link App. Damit kannst du Tageslimits setzen, Apps freigeben und die genehmigten Bonusminuten aus Lernzeit aktivieren.
                 </p>
               </div>
-              <Button
-                size="sm"
-                onClick={handleInstallFamilyLink}
-                className="w-full sm:w-auto"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Im Play Store installieren
-              </Button>
             </div>
+            <Button
+              onClick={handleInstallFamilyLink}
+              className="w-full"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Im Play Store installieren
+            </Button>
           </div>
-        )}
-
-        {isNative ? (
-          <Button onClick={handleOpenControls} disabled={opening} className="w-full">
+        ) : isNative ? (
+          <Button onClick={handleOpenControls} disabled={opening || checking} className="w-full">
             <ExternalLink className="mr-2 h-4 w-4" />
             {appName} öffnen
           </Button>
