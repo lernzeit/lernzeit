@@ -7,6 +7,47 @@ const PLAY_STORE_WEB = `https://play.google.com/store/apps/details?id=${PACKAGE_
 const FAMILY_LINK_WEB = 'https://families.google.com/familylink/';
 
 /**
+ * Check if Family Link is installed without launching it.
+ */
+export async function isFamilyLinkInstalled(): Promise<boolean> {
+  const launcher = await getAppLauncher();
+  if (!launcher) return false;
+  try {
+    return await probeUrl(launcher, PACKAGE_NAME, 'FamilyLink package (check)');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Open Play Store directly to install Family Link.
+ */
+export async function openFamilyLinkInstall(): Promise<void> {
+  const launcher = await getAppLauncher();
+  if (launcher) {
+    try {
+      const canMarket = await probeUrl(launcher, MARKET_URL, 'Play Store (market://)');
+      if (canMarket) {
+        await launcher.openUrl({ url: MARKET_URL });
+        return;
+      }
+      await launcher.openUrl({ url: PLAY_STORE_WEB });
+      return;
+    } catch (e) {
+      console.warn('[ParentalControls] openFamilyLinkInstall failed:', e);
+    }
+  }
+  const browser = await getBrowser();
+  if (browser) {
+    try {
+      await browser.open({ url: PLAY_STORE_WEB });
+    } catch (e) {
+      console.warn('[ParentalControls] Browser fallback failed:', e);
+    }
+  }
+}
+
+/**
  * Open Family Link on Android.
  * Strategy:
  * 1. Check & launch via package name (Capacitor AppLauncher uses package names on Android).
