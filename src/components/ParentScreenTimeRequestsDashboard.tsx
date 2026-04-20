@@ -13,9 +13,10 @@ import { supabase } from '@/lib/supabase';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
+  refreshTrigger?: number;
 }
 
-export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRequestsDashboardProps) {
+export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: ParentScreenTimeRequestsDashboardProps) {
   const [responseMessage, setResponseMessage] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
@@ -23,8 +24,15 @@ export function ParentScreenTimeRequestsDashboard({ userId }: ParentScreenTimeRe
   const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
   
-  const { requests, loading, respondToRequest } = useScreenTimeRequests('parent');
+  const { requests, loading, respondToRequest, refreshRequests } = useScreenTimeRequests('parent');
   const { toast } = useToast();
+
+  // Refresh requests when parent component signals (e.g. user clicked "Jetzt antworten")
+  useEffect(() => {
+    if (refreshTrigger !== undefined) {
+      refreshRequests();
+    }
+  }, [refreshTrigger, refreshRequests]);
 
   const platform = parentalControlsService.getPlatform();
   const isNative = parentalControlsService.isNativePlatform();
