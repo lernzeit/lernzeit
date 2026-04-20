@@ -28,23 +28,31 @@ import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
 
-// Drachen-Icon (Kite) – ähnlich dem Google Family Link Logo
+// Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
+// Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
 const KiteIcon = ({ className }: { className?: string }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    stroke="none"
     aria-hidden="true"
   >
-    <path d="M12 2 L20 10 L12 18 L4 10 Z" />
-    <path d="M12 2 L12 18" />
-    <path d="M4 10 L20 10" />
-    <path d="M12 18 L9 22" />
-    <path d="M12 18 L15 22" />
+    {/* oben: rot */}
+    <path d="M12 2 L20 10 L12 10 Z" fill="#EA4335" />
+    {/* rechts: gelb */}
+    <path d="M20 10 L12 18 L12 10 Z" fill="#FBBC04" />
+    {/* unten: grün */}
+    <path d="M12 18 L4 10 L12 10 Z" fill="#34A853" />
+    {/* links: blau */}
+    <path d="M4 10 L12 2 L12 10 Z" fill="#4285F4" />
+    {/* Schnur */}
+    <path
+      d="M12 18 L10 22 M12 18 L14 22"
+      stroke="#1F1F1F"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
