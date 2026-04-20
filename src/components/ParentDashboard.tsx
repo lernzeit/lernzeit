@@ -26,6 +26,7 @@ import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { parentalControlsService } from '@/services/parentalControlsService';
 
 interface ParentDashboardProps {
   userId: string;
@@ -52,6 +53,21 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
+  const isNativeAndroid =
+    parentalControlsService.isNativePlatform() &&
+    parentalControlsService.getPlatform() === 'android';
+
+  const handleOpenFamilyLink = async () => {
+    const result = await parentalControlsService.openParentalControlApp();
+    if (!result.success) {
+      toast({
+        title: 'Family Link konnte nicht geöffnet werden',
+        description: result.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const { isPremium, isTrialing, trialJustExpired, trialDaysLeft, status, currentPeriodEnd } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -230,6 +246,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {isNativeAndroid && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenFamilyLink}
+                aria-label="Family Link öffnen"
+              >
+                <Shield className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Family Link</span>
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setAccountOpen(true)} aria-label="Konto-Einstellungen">
               <Settings className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Konto</span>
