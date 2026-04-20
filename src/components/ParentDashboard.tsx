@@ -790,6 +790,44 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Family Link not installed dialog */}
+      <Dialog open={familyLinkInstallOpen} onOpenChange={setFamilyLinkInstallOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Family Link installieren
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                  <Download className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <p className="text-sm font-semibold text-foreground">
+                    Google Family Link wird benötigt
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Für die Steuerung der Bildschirmzeit deines Kindes auf dem Smartphone benötigst du die kostenlose Google Family Link App. Damit kannst du Tageslimits setzen, Apps freigeben und die in Lernzeit verdienten Bonusminuten aktivieren.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+              <Button variant="outline" onClick={() => setFamilyLinkInstallOpen(false)}>
+                Abbrechen
+              </Button>
+              <Button onClick={handleInstallFamilyLink}>
+                <Download className="mr-2 h-4 w-4" />
+                Im Play Store installieren
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
