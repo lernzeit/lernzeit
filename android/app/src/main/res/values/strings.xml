@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LernZeit</string>
+    <string name="title_activity_main">LernZeit</string>
+    <string name="package_name">de.lernzeit.app</string>
+    <string name="custom_url_scheme">de.lernzeit.app</string>
+</resources>
