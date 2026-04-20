@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { openFamilyLink } from './parentalControls/android';
+import { openFamilyLink, isFamilyLinkInstalled, openFamilyLinkInstall } from './parentalControls/android';
 import { openScreenTimeSettings } from './parentalControls/ios';
 import { getWebInstructions } from './parentalControls/web';
 import type { OpenParentalControlsResult, Platform } from './parentalControls/types';
@@ -42,6 +42,19 @@ class ParentalControlsService {
       case 'android': return openFamilyLink(minutes);
       case 'ios': return openScreenTimeSettings(minutes);
       default: return getWebInstructions(minutes);
+    }
+  }
+
+  /** Android only: check if Family Link app is installed (without launching it). */
+  async isParentalControlAppInstalled(): Promise<boolean> {
+    if (this.getPlatform() !== 'android') return true;
+    return isFamilyLinkInstalled();
+  }
+
+  /** Android only: open Play Store to install Family Link. */
+  async openInstallParentalControlApp(): Promise<void> {
+    if (this.getPlatform() === 'android') {
+      await openFamilyLinkInstall();
     }
   }
 
