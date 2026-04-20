@@ -17,7 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Shield, Download
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -27,6 +27,26 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
+
+// Drachen-Icon (Kite) – ähnlich dem Google Family Link Logo
+const KiteIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 2 L20 10 L12 18 L4 10 Z" />
+    <path d="M12 2 L12 18" />
+    <path d="M4 10 L20 10" />
+    <path d="M12 18 L9 22" />
+    <path d="M12 18 L15 22" />
+  </svg>
+);
 
 interface ParentDashboardProps {
   userId: string;
@@ -73,7 +93,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         return;
       }
       toast({
-        title: 'Family Link konnte nicht geöffnet werden',
+       title: 'Google Family Link konnte nicht geöffnet werden',
         description: result.message,
         variant: 'destructive',
       });
@@ -261,7 +281,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         <CardContent className="p-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Shield className="h-6 w-6 text-primary" />
+              <KiteIcon className="h-6 w-6 text-primary" />
             </div>
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-bold truncate">
@@ -276,9 +296,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleOpenFamilyLink}
-                aria-label="Family Link öffnen"
+                aria-label="Google Family Link öffnen"
               >
-                <Shield className="h-4 w-4 sm:mr-2" />
+                <KiteIcon className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Family Link</span>
               </Button>
             )}
@@ -796,8 +816,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Family Link installieren
+              <KiteIcon className="h-5 w-5 text-primary" />
+              Google Family Link installieren
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
