@@ -17,7 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Shield
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Shield, Download
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -52,6 +52,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [newCodeLoading, setNewCodeLoading] = useState(false);
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
   const [requestsRefreshTrigger, setRequestsRefreshTrigger] = useState(0);
+  const [familyLinkInstallOpen, setFamilyLinkInstallOpen] = useState(false);
   
   const { toast } = useToast();
   const isNativeAndroid =
@@ -59,11 +60,34 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     parentalControlsService.getPlatform() === 'android';
 
   const handleOpenFamilyLink = async () => {
+    // Check installation first to avoid silently jumping to the Play Store.
+    const installed = await parentalControlsService.isParentalControlAppInstalled();
+    if (!installed) {
+      setFamilyLinkInstallOpen(true);
+      return;
+    }
     const result = await parentalControlsService.openParentalControlApp();
     if (!result.success) {
+      if (result.notInstalled) {
+        setFamilyLinkInstallOpen(true);
+        return;
+      }
       toast({
         title: 'Family Link konnte nicht geöffnet werden',
         description: result.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleInstallFamilyLink = async () => {
+    try {
+      await parentalControlsService.openInstallParentalControlApp();
+      setFamilyLinkInstallOpen(false);
+    } catch {
+      toast({
+        title: 'Fehler',
+        description: 'Play Store konnte nicht geöffnet werden.',
         variant: 'destructive',
       });
     }
