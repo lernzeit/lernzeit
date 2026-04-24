@@ -557,7 +557,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       // Calculate earned time based on child settings
       const timeSpentSeconds = Math.floor(elapsedTime / 1000);
       const secondsPerTask = getSecondsPerTask();
-      const earnedSeconds = score * secondsPerTask;
+      const earnedSeconds = isStreakRecovery ? 0 : score * secondsPerTask;
       const accuracyScore = Math.round((score / totalQuestions) * 100);
 
       // Perform adaptive difficulty adjustment at end of session → persists per subject
@@ -574,12 +574,20 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           totalQuestions,
           timeSpentSeconds,
           earnedSeconds,
-          questionSource: 'template-bank'
+          questionSource: isStreakRecovery ? 'streak-recovery' : 'template-bank',
+          suppressEarnedMinutes: isStreakRecovery
         });
         
         if (result.success) {
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
+          await (supabase as any).from('user_streak_states').upsert({
+            user_id: user.id,
+            streak_value: Math.max((streakBeforeSession.current ?? 0), 1),
+            status: 'active',
+            last_activity_date: new Date().toISOString().split('T')[0],
+            last_reactivated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
           
           // Track ALL achievements after session is saved
           try {
@@ -699,7 +707,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
     return (
       <div className="min-h-screen bg-gradient-bg flex flex-col items-center justify-center p-4 pt-safe-top pb-safe-bottom">
-        <GameCompletionScreen
+          <GameCompletionScreen
           score={score}
           totalQuestions={totalQuestions}
           sessionDuration={elapsedTime}
@@ -707,6 +715,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
           grade={grade}
+            isStreakRecovery={isStreakRecovery}
+            recoverySuccess={score >= 3}
           onContinue={handleCompletionContinue}
         />
         
