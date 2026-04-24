@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Flame, Sprout } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
