@@ -17,7 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -86,6 +86,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const isNativeAndroid =
     parentalControlsService.isNativePlatform() &&
     parentalControlsService.getPlatform() === 'android';
+  const isNativeIOS =
+    parentalControlsService.isNativePlatform() &&
+    parentalControlsService.getPlatform() === 'ios';
 
   const handleOpenFamilyLink = async () => {
     // Check installation first to avoid silently jumping to the Play Store.
@@ -116,6 +119,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       toast({
         title: 'Fehler',
         description: 'Play Store konnte nicht geöffnet werden.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleOpenScreenTime = async () => {
+    const result = await parentalControlsService.openParentalControlApp();
+    if (!result.success) {
+      toast({
+        title: 'Bildschirmzeit konnte nicht geöffnet werden',
+        description: result.message,
         variant: 'destructive',
       });
     }
