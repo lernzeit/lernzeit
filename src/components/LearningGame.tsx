@@ -36,6 +36,7 @@ interface LearningGameProps {
   onBack: () => void;
   totalQuestions?: number;
   topicHint?: string;
+  mode?: 'normal' | 'streak_recovery';
 }
 
 interface GameStats {
@@ -55,7 +56,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   onComplete,
   onBack,
   totalQuestions = 5,
-  topicHint
+  topicHint,
+  mode = 'normal'
 }) => {
   const { user } = useAuth();
   const { saveSession, isSaving } = useGameSessionSaver();
@@ -131,6 +133,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [newStreakValue, setNewStreakValue] = useState(0);
   const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
   const streakBeforeSession = useRef<number | null>(null);
+  const isStreakRecovery = mode === 'streak_recovery';
 
   // Track streak before session starts
   const { streak: currentStreak } = useStreak(user?.id);

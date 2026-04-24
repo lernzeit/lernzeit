@@ -29,14 +29,16 @@ import { useOneSignal } from '@/hooks/useOneSignal';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
+import { StreakFireCard } from '@/components/StreakFireCard';
 
 interface UserProfileProps {
   user: any;
   onSignOut: () => void;
   onStartGame: (grade: number) => void;
+  onStartStreakRecovery?: (grade: number) => void;
 }
 
-export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) {
+export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery }: UserProfileProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -64,7 +66,7 @@ export function UserProfile({ user, onSignOut, onStartGame }: UserProfileProps) 
   // Use the earned time from the useScreenTimeLimit hook (no duplicate logic needed)
 
   // Use streak hook for children
-  const { streak, loading: streakLoading } = useStreak(
+  const { streak, status: streakStatus, inactiveDays, loading: streakLoading } = useStreak(
     profile?.role === 'child' ? user?.id : undefined
   );
 
