@@ -325,6 +325,18 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 <span className="hidden sm:inline">Family Link</span>
               </Button>
             )}
+            {isNativeIOS && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenScreenTime}
+                aria-label="iOS Bildschirmzeit öffnen"
+                className="px-2 sm:px-3"
+              >
+                <Apple className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Bildschirmzeit</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
