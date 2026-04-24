@@ -136,7 +136,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const isStreakRecovery = mode === 'streak_recovery';
 
   // Track streak before session starts
-  const { streak: currentStreak } = useStreak(user?.id);
+  const { streak: currentStreak, inactiveDays: currentInactiveDays } = useStreak(user?.id);
   useEffect(() => {
     if (streakBeforeSession.current === null && currentStreak !== undefined) {
       streakBeforeSession.current = currentStreak;
@@ -581,13 +581,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         if (result.success) {
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
-          await (supabase as any).from('user_streak_states').upsert({
-            user_id: user.id,
-            streak_value: Math.max((streakBeforeSession.current ?? 0), 1),
-            status: 'active',
-            last_activity_date: new Date().toISOString().split('T')[0],
-            last_reactivated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
+          if (!isStreakRecovery || score >= 3) {
+            await (supabase as any).from('user_streak_states').upsert({
+              user_id: user.id,
+              streak_value: currentInactiveDays >= 3 ? 1 : Math.max((streakBeforeSession.current ?? 0), 1),
+              status: 'active',
+              last_activity_date: new Date().toISOString().split('T')[0],
+              last_reactivated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+          }
           
           // Track ALL achievements after session is saved
           try {
@@ -678,7 +680,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const handleCompletionContinue = () => {
     const timeSpentSeconds = Math.floor(elapsedTime / 1000);
     const secondsPerTask = getSecondsPerTask();
-    const earnedSeconds = score * secondsPerTask;
+    const earnedSeconds = isStreakRecovery ? 0 : score * secondsPerTask;
     const earnedMinutes = Math.ceil(earnedSeconds / 60);
     
     onComplete({

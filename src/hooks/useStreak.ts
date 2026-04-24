@@ -72,16 +72,17 @@ export function useStreak(userId?: string): StreakState {
       }
 
       const visibleStreak = inactive >= 3 ? 0 : Math.max(currentStreak, Number(storedStateRes.data?.streak_value) || 0);
+      const visibleStatus: StreakStatus = inactive >= 3 ? 'frozen' : nextStatus;
 
       setStreak(visibleStreak);
-      setStatus(inactive >= 3 ? 'active' : nextStatus);
+      setStatus(visibleStatus);
       setInactiveDays(inactive);
       setLastActivityDate(mostRecentDate);
 
       await (supabase as any).from('user_streak_states').upsert({
         user_id: userId,
         streak_value: visibleStreak,
-        status: inactive >= 3 ? 'active' : nextStatus,
+        status: visibleStatus,
         last_activity_date: mostRecentDate,
       }, { onConflict: 'user_id' });
     } catch (error) {

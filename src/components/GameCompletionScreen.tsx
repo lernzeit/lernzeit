@@ -30,8 +30,8 @@ export function GameCompletionScreen({
 }: GameCompletionScreenProps) {
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
-  const perfectSessionBonusSeconds = perfectSessionBonus * 60;
-  const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
+  const perfectSessionBonusSeconds = isStreakRecovery ? 0 : perfectSessionBonus * 60;
+  const netTimeSeconds = isStreakRecovery ? 0 : Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
   const efficiency = Math.round((score / totalQuestions) * 100);
   const earnedMinutes = Number((netTimeSeconds / 60).toFixed(1));
 
