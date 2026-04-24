@@ -50,6 +50,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const [checkingParentLink, setCheckingParentLink] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
+  const [streakReactivationTrigger, setStreakReactivationTrigger] = useState(0);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
@@ -215,6 +216,16 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
       loadStats();
     }
   }, [user, profile?.role]);
+
+  useEffect(() => {
+    if (profile?.role !== 'child' || streakStatus !== 'active') return;
+
+    const reactivated = sessionStorage.getItem('lernzeit_streak_reactivated');
+    if (reactivated !== user?.id) return;
+
+    sessionStorage.removeItem('lernzeit_streak_reactivated');
+    setStreakReactivationTrigger((value) => value + 1);
+  }, [profile?.role, streakStatus, user?.id]);
 
   // Listen for hash changes to reload stats after completing a game
   useEffect(() => {
@@ -582,6 +593,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                 status={streakStatus}
                 inactiveDays={inactiveDays}
                 loading={streakLoading}
+                reactivationTrigger={streakReactivationTrigger}
                 onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
               />
             </div>
@@ -618,6 +630,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                 status={streakStatus}
                 inactiveDays={inactiveDays}
                 loading={streakLoading}
+                reactivationTrigger={streakReactivationTrigger}
                 onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
               />
             </div>
