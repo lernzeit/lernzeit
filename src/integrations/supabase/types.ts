@@ -926,6 +926,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streak_states: {
+        Row: {
+          created_at: string
+          id: string
+          last_activity_date: string | null
+          last_push_sent_date: string | null
+          last_reactivated_at: string | null
+          status: string
+          streak_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_activity_date?: string | null
+          last_push_sent_date?: string | null
+          last_reactivated_at?: string | null
+          status?: string
+          streak_value?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_activity_date?: string | null
+          last_push_sent_date?: string | null
+          last_reactivated_at?: string | null
+          status?: string
+          streak_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

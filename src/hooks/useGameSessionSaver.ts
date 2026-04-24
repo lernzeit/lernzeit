@@ -10,6 +10,7 @@ interface SaveSessionParams {
   timeSpentSeconds: number;
   earnedSeconds: number;
   questionSource?: string;
+  suppressEarnedMinutes?: boolean;
 }
 
 interface SaveSessionResult {
@@ -36,7 +37,8 @@ export function useGameSessionSaver() {
     totalQuestions,
     timeSpentSeconds,
     earnedSeconds,
-    questionSource = 'template-bank'
+    questionSource = 'template-bank',
+    suppressEarnedMinutes = false
   }: SaveSessionParams): Promise<SaveSessionResult> => {
     if (!user) {
       console.warn('⚠️ Cannot save session: User not authenticated');
@@ -79,7 +81,7 @@ export function useGameSessionSaver() {
       // Convert earned seconds to minutes for screen time tracking
       const earnedMinutes = Math.ceil(earnedSeconds / 60);
       
-      if (earnedMinutes > 0) {
+      if (earnedMinutes > 0 && !suppressEarnedMinutes) {
         // Create entry in user_earned_minutes for screen time requests
         // Note: minutes_remaining is a generated column (minutes_earned - minutes_requested)
         const { error: earnedError } = await supabase

@@ -1,108 +1,112 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export function useStreak(userId?: string) {
+export type StreakStatus = 'active' | 'dim' | 'frozen';
+
+interface StreakState {
+  streak: number;
+  status: StreakStatus;
+  inactiveDays: number;
+  canRecover: boolean;
+  lastActivityDate: string | null;
+  loading: boolean;
+  reload: () => Promise<void>;
+}
+
+const dayKey = (date: Date) => date.toISOString().split('T')[0];
+const daysBetween = (from: string, to: string) => Math.max(0, Math.floor((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000));
+
+export function useStreak(userId?: string): StreakState {
   const [streak, setStreak] = useState(0);
+  const [status, setStatus] = useState<StreakStatus>('active');
+  const [inactiveDays, setInactiveDays] = useState(0);
+  const [lastActivityDate, setLastActivityDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (userId) {
-      calculateStreak();
+  const calculateStreak = useCallback(async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
     }
-  }, [userId]);
 
-  const calculateStreak = async () => {
-    if (!userId) return;
-    
     try {
       setLoading(true);
 
-      // Get unique dates from both learning_sessions and game_sessions
-      const [learningSessionsRes, gameSessionsRes] = await Promise.all([
-        supabase
-          .from('learning_sessions')
-          .select('session_date')
-          .eq('user_id', userId)
-          .order('session_date', { ascending: false }),
-        supabase
-          .from('game_sessions')
-          .select('session_date')
-          .eq('user_id', userId)
-          .order('session_date', { ascending: false })
+      const [learningSessionsRes, gameSessionsRes, storedStateRes] = await Promise.all([
+        supabase.from('learning_sessions').select('session_date').eq('user_id', userId).order('session_date', { ascending: false }).limit(400),
+        supabase.from('game_sessions').select('session_date').eq('user_id', userId).order('session_date', { ascending: false }).limit(400),
+        (supabase as any).from('user_streak_states').select('streak_value, last_activity_date, status').eq('user_id', userId).maybeSingle(),
       ]);
 
-      // Combine and get unique dates
       const allDates = new Set<string>();
-      
-      if (learningSessionsRes.data) {
-        learningSessionsRes.data.forEach(session => {
-          if (session.session_date) {
-            const date = new Date(session.session_date).toISOString().split('T')[0];
-            allDates.add(date);
-          }
-        });
-      }
+      learningSessionsRes.data?.forEach((session) => {
+        if (session.session_date) allDates.add(dayKey(new Date(session.session_date)));
+      });
+      gameSessionsRes.data?.forEach((session) => {
+        if (session.session_date) allDates.add(dayKey(new Date(session.session_date)));
+      });
 
-      if (gameSessionsRes.data) {
-        gameSessionsRes.data.forEach(session => {
-          if (session.session_date) {
-            const date = new Date(session.session_date).toISOString().split('T')[0];
-            allDates.add(date);
-          }
-        });
-      }
-
-      // Convert to sorted array (newest first)
       const sortedDates = Array.from(allDates).sort((a, b) => b.localeCompare(a));
-      
-      // Calculate streak
-      let currentStreak = 0;
-      const today = new Date().toISOString().split('T')[0];
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const today = dayKey(new Date());
 
       if (sortedDates.length === 0) {
         setStreak(0);
+        setStatus('active');
+        setInactiveDays(0);
+        setLastActivityDate(null);
         return;
       }
 
-      // Check if user played today or yesterday (to maintain streak)
       const mostRecentDate = sortedDates[0];
-      if (mostRecentDate !== today && mostRecentDate !== yesterday) {
-        setStreak(0);
-        return;
-      }
+      const inactive = daysBetween(mostRecentDate, today);
+      const nextStatus: StreakStatus = inactive === 0 ? 'active' : inactive === 1 ? 'dim' : 'frozen';
 
-      // Count consecutive days
-      let checkDate = new Date();
-      
-      // If the most recent activity was yesterday, start from yesterday
-      if (mostRecentDate === yesterday) {
-        checkDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      }
-
-      for (let i = 0; i < sortedDates.length; i++) {
-        const expectedDate = new Date(checkDate.getTime() - i * 24 * 60 * 60 * 1000)
-          .toISOString().split('T')[0];
-        
-        if (sortedDates[i] === expectedDate) {
-          currentStreak++;
-        } else {
-          break;
+      let currentStreak = 0;
+      if (inactive <= 2) {
+        let checkDate = new Date(`${mostRecentDate}T00:00:00`);
+        for (let i = 0; i < sortedDates.length; i++) {
+          const expectedDate = dayKey(new Date(checkDate.getTime() - i * 86400000));
+          if (sortedDates[i] === expectedDate) currentStreak++;
+          else break;
         }
       }
 
-      setStreak(currentStreak);
+      const visibleStreak = inactive >= 3 ? 0 : Math.max(currentStreak, Number(storedStateRes.data?.streak_value) || 0);
+      const visibleStatus: StreakStatus = inactive >= 3 ? 'frozen' : nextStatus;
+
+      setStreak(visibleStreak);
+      setStatus(visibleStatus);
+      setInactiveDays(inactive);
+      setLastActivityDate(mostRecentDate);
+
+      await (supabase as any).from('user_streak_states').upsert({
+        user_id: userId,
+        streak_value: visibleStreak,
+        status: visibleStatus,
+        last_activity_date: mostRecentDate,
+      }, { onConflict: 'user_id' });
     } catch (error) {
       console.error('Fehler beim Berechnen des Streaks:', error);
       setStreak(0);
+      setStatus('active');
+      setInactiveDays(0);
+      setLastActivityDate(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    calculateStreak();
+  }, [calculateStreak]);
 
   return {
     streak,
+    status,
+    inactiveDays,
+    canRecover: inactiveDays > 0 && inactiveDays <= 2 && streak > 0,
+    lastActivityDate,
     loading,
-    reload: calculateStreak
+    reload: calculateStreak,
   };
 }

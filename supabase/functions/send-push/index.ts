@@ -336,12 +336,21 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
 
     if ((lsRes.count ?? 0) > 0 || (gsRes.count ?? 0) > 0) continue; // already learned/played today
 
-    // Compute current streak (consecutive days up to yesterday)
-    const streak = await computeStreak(child.id);
+    const streakInfo = await computeStreakInfo(child.id);
+    const streak = streakInfo.streak;
 
     let title = "🎯 Zeit zum Lernen!";
     let message = "Du hast heute noch nicht gelernt. Sammel jetzt Bildschirmzeit!";
-    if (streak >= 2) {
+    let type = "child_learning_reminder";
+    if (streakInfo.inactiveDays === 1 && streak > 0) {
+      title = "🔥 Deine Flamme wird kleiner";
+      message = "Löse heute ein paar Aufgaben, damit dein Streak weiter brennt!";
+      type = "streak_dim";
+    } else if (streakInfo.inactiveDays === 2 && streak > 0) {
+      title = "🪵 Dein Lernfeuer ist aus";
+      message = "Entfache es wieder: Löse 3 Aufgaben richtig und rette deinen Streak!";
+      type = "streak_frozen";
+    } else if (streak >= 2) {
       title = `🔥 ${streak}-Tage-Streak in Gefahr!`;
       message = `Du lernst seit ${streak} Tagen in Folge. Lerne heute, um deinen Streak zu halten! 💪`;
     } else if (streak === 1) {
@@ -349,17 +358,58 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
       message = "Du hast gestern gelernt. Mach heute weiter und starte einen Streak! 🚀";
     }
 
+    if ((type === "streak_dim" || type === "streak_frozen") && streakInfo.lastPushSentDate === today) continue;
+
     results.push(
       await sendOneSignalPush({
         userIds: [child.id],
         title,
         message,
-        data: { type: "child_learning_reminder", streak },
+        data: { type, streak, inactiveDays: streakInfo.inactiveDays },
         respectDailyToggle: true,
+      }).then(async (result) => {
+        if (type === "streak_dim" || type === "streak_frozen") {
+          await supabase.from("user_streak_states").upsert({
+            user_id: child.id,
+            streak_value: streak,
+            status: type === "streak_dim" ? "dim" : "frozen",
+            last_activity_date: streakInfo.lastActivityDate,
+            last_push_sent_date: today,
+          }, { onConflict: "user_id" });
+        }
+        return result;
       }).catch((e) => ({ error: String(e) })),
     );
   }
   return { sent: results.length };
+}
+
+async function computeStreakInfo(userId: string): Promise<{ streak: number; inactiveDays: number; lastActivityDate: string | null; lastPushSentDate: string | null }> {
+  const [ls, gs, state] = await Promise.all([
+    supabase.from("learning_sessions").select("session_date").eq("user_id", userId).order("session_date", { ascending: false }).limit(200),
+    supabase.from("game_sessions").select("session_date").eq("user_id", userId).order("session_date", { ascending: false }).limit(200),
+    supabase.from("user_streak_states").select("streak_value, last_activity_date, last_push_sent_date").eq("user_id", userId).maybeSingle(),
+  ]);
+  const dates = new Set<string>();
+  for (const row of [...(ls.data ?? []), ...(gs.data ?? [])]) {
+    if (row.session_date) dates.add(new Date(row.session_date).toISOString().slice(0, 10));
+  }
+  if (!dates.size) return { streak: 0, inactiveDays: 0, lastActivityDate: null, lastPushSentDate: state.data?.last_push_sent_date ?? null };
+  const sorted = Array.from(dates).sort((a, b) => b.localeCompare(a));
+  const lastActivityDate = sorted[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const inactiveDays = Math.max(0, Math.floor((new Date(`${today}T00:00:00Z`).getTime() - new Date(`${lastActivityDate}T00:00:00Z`).getTime()) / 86400000));
+  if (inactiveDays >= 3) return { streak: 0, inactiveDays, lastActivityDate, lastPushSentDate: state.data?.last_push_sent_date ?? null };
+  let streak = 0;
+  let cursor = new Date(`${lastActivityDate}T00:00:00Z`);
+  for (const d of sorted) {
+    const expected = cursor.toISOString().slice(0, 10);
+    if (d === expected) {
+      streak++;
+      cursor = new Date(cursor.getTime() - 86400000);
+    } else break;
+  }
+  return { streak: Math.max(streak, Number(state.data?.streak_value) || 0), inactiveDays, lastActivityDate, lastPushSentDate: state.data?.last_push_sent_date ?? null };
 }
 
 async function computeStreak(userId: string): Promise<number> {

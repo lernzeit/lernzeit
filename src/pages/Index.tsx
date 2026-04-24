@@ -37,6 +37,7 @@ const Index = () => {
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery'>('normal');
   // Sessions always use 5 questions
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
@@ -74,6 +75,14 @@ const Index = () => {
   const handleStartGame = (grade: number) => {
     console.log('🎮 Starting game with grade:', grade);
     setSelectedGrade(grade);
+    setGameMode('normal');
+  };
+
+  const handleStartStreakRecovery = (grade: number) => {
+    setSelectedGrade(grade);
+    setSelectedCategory('math');
+    setLearningPlanTopic(null);
+    setGameMode('streak_recovery');
   };
 
   const handleAuthSuccess = () => {
@@ -95,9 +104,11 @@ const Index = () => {
       setSelectedGrade(null);
       setSelectedCategory(null);
       setLearningPlanTopic(null);
+      setGameMode('normal');
     } else {
       setSelectedCategory(null);
       setLearningPlanTopic(null);
+      setGameMode('normal');
     }
   };
 
@@ -195,7 +206,8 @@ const Index = () => {
         <UserProfile
           user={user}
           onSignOut={handleSignOut}
-          onStartGame={handleStartGame} />
+          onStartGame={handleStartGame}
+          onStartStreakRecovery={handleStartStreakRecovery} />
 
       </Suspense>);
 
@@ -213,7 +225,8 @@ const Index = () => {
             onComplete={handleGameComplete}
             onBack={() => setSelectedCategory(null)}
             totalQuestions={5}
-            topicHint={learningPlanTopic || undefined} />
+            topicHint={learningPlanTopic || undefined}
+            mode={gameMode} />
         </Suspense>
       </ErrorBoundary>);
   }
