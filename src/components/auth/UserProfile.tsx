@@ -577,17 +577,13 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   <div className="text-xs text-green-600 mt-1">Spiele</div>
                 </CardContent>
               </Card>
-              <Card className="shadow-card bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
-                <CardContent className="p-4 text-center">
-                  <div className="text-3xl mb-2">🔥</div>
-                  <div className="text-2xl font-bold text-red-700">
-                    {streakLoading ? '…' : streak}
-                  </div>
-                  <div className="text-xs text-red-600 mt-1">
-                    {streak === 1 ? 'Tag' : 'Tage'} in Folge
-                  </div>
-                </CardContent>
-              </Card>
+              <StreakFireCard
+                streak={streak}
+                status={streakStatus}
+                inactiveDays={inactiveDays}
+                loading={streakLoading}
+                onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
+              />
             </div>
           ) : (
             /* Teen mode: full 4 cards */
@@ -617,21 +613,13 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   setShowSettingsMenu(true);
                 }} 
               />
-              <Card className="shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                      <Star className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium">Streak</div>
-                      <div className="text-sm text-muted-foreground">
-                        {streakLoading ? 'Wird geladen...' : `${streak} Tage in Folge! 🔥`}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StreakFireCard
+                streak={streak}
+                status={streakStatus}
+                inactiveDays={inactiveDays}
+                loading={streakLoading}
+                onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
+              />
             </div>
           )}
 
