@@ -99,6 +99,10 @@ const Index = () => {
 
   const handleGameComplete = (stats: {correct: number;total: number;timeSpent: number;earnedMinutes: number;subject: string;}) => {
     // Show completion toast
+    if (user && gameMode === 'streak_recovery' && stats.correct >= 3) {
+      sessionStorage.setItem('lernzeit_streak_reactivated', user.id);
+    }
+
     // Go back to grade/category selection
     if (user) {
       setSelectedGrade(null);
