@@ -20,7 +20,7 @@ export function StreakFireCard({ streak, status, inactiveDays, loading, reactiva
   const isRecoverable = inactiveDays > 0 && inactiveDays <= 2 && streak > 0;
   const icon = status === 'frozen' ? '🪵' : status === 'dim' ? '🔥' : '🔥';
   const title = status === 'frozen' ? 'Feuer ist aus' : status === 'dim' ? 'Flamme wird kleiner' : 'Feuer brennt!';
-  const subtitle = loading ? 'Wird geladen...' : `${streak} ${streak === 1 ? 'Tag' : 'Tage'} gespeichert`;
+  const subtitle = loading ? 'Wird geladen...' : `Dein Feuer brennt seit ${streak} ${streak === 1 ? 'Tag' : 'Tagen'}`;
 
   useEffect(() => {
     if (reactivationTrigger <= 0) return;
