@@ -11,6 +11,8 @@ interface GameCompletionScreenProps {
   achievementBonusMinutes: number;
   perfectSessionBonus?: number;
   grade?: number;
+  isStreakRecovery?: boolean;
+  recoverySuccess?: boolean;
   onContinue: () => void;
 }
 
@@ -22,9 +24,11 @@ export function GameCompletionScreen({
   achievementBonusMinutes,
   perfectSessionBonus = 0,
   grade = 5,
+  isStreakRecovery = false,
+  recoverySuccess = false,
   onContinue
 }: GameCompletionScreenProps) {
-  const earnedSeconds = score * timePerTask;
+  const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
   const perfectSessionBonusSeconds = perfectSessionBonus * 60;
   const netTimeSeconds = Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
@@ -55,6 +59,7 @@ export function GameCompletionScreen({
       okay: 'Gut gemacht!'
     };
 
+    const title = isStreakRecovery ? (recoverySuccess ? 'Feuer gerettet!' : 'Versuch es nochmal!') : youngTitles[celebrationLevel];
     return (
       <div className="w-full max-w-xl mx-auto space-y-4 px-2 pb-safe-bottom">
         <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
@@ -66,7 +71,7 @@ export function GameCompletionScreen({
             
             {/* Simple title */}
             <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-3">
-              {youngTitles[celebrationLevel]}
+              {title}
             </h1>
 
             {/* Score as simple stars */}
@@ -84,7 +89,7 @@ export function GameCompletionScreen({
             {/* Big minutes display */}
             <div className="bg-primary/10 rounded-2xl p-4 sm:p-6 mb-4">
               <div className="text-4xl sm:text-5xl font-bold text-primary mb-1">{earnedMinutes}</div>
-              <div className="text-base sm:text-lg text-muted-foreground">Minuten gewonnen! 📱</div>
+              <div className="text-base sm:text-lg text-muted-foreground">{isStreakRecovery ? 'Minuten in der Streak-Session' : 'Minuten gewonnen! 📱'}</div>
             </div>
 
             {/* Simple continue button */}
@@ -93,7 +98,7 @@ export function GameCompletionScreen({
               size="lg" 
               className="w-full text-lg sm:text-xl py-5 sm:py-7 bg-primary hover:bg-primary/90"
             >
-              🎉 Weiter!
+              {recoverySuccess ? '🔥 Weiter!' : '🎉 Weiter!'}
             </Button>
           </CardContent>
         </Card>
@@ -129,10 +134,10 @@ export function GameCompletionScreen({
             {celebrationEmojis[celebrationLevel]}
           </div>
           <h1 className="text-3xl font-bold text-primary mb-2">
-            {celebrationTitles[celebrationLevel]}
+            {isStreakRecovery ? (recoverySuccess ? 'Lernfeuer entfacht!' : 'Noch nicht geschafft') : celebrationTitles[celebrationLevel]}
           </h1>
           <p className="text-muted-foreground">
-            {celebrationMessages[celebrationLevel]}
+            {isStreakRecovery ? (recoverySuccess ? 'Dein Streak ist wieder aktiv. Es wurden keine Minuten vergeben.' : 'Löse beim nächsten Versuch 3 Aufgaben richtig.') : celebrationMessages[celebrationLevel]}
           </p>
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mt-4">
             <Award className="w-4 h-4" />
@@ -153,7 +158,7 @@ export function GameCompletionScreen({
             <div className="text-center p-4 bg-accent/20 rounded-xl border border-accent/30">
               <Gift className="w-8 h-8 mx-auto mb-2 text-accent-foreground" />
               <div className="text-3xl font-bold text-accent-foreground">{earnedMinutes}</div>
-              <div className="text-sm text-muted-foreground">Min. gewonnen</div>
+              <div className="text-sm text-muted-foreground">{isStreakRecovery ? 'Min. vergeben' : 'Min. gewonnen'}</div>
             </div>
           </div>
 
@@ -181,6 +186,7 @@ export function GameCompletionScreen({
           )}
 
           <div className="text-center text-sm text-muted-foreground mb-6">
+            {isStreakRecovery ? 'Diese Session rettet nur dein Feuer – sie gibt keine Minuten.' : <>
             <Clock className="w-4 h-4 inline mr-1" />
             {score} richtige × {timePerTask}s = {earnedSeconds}s<br/>
             - {timeSpentSeconds}s verbraucht
@@ -190,6 +196,7 @@ export function GameCompletionScreen({
               </>
             )}
             <br/>= <span className="font-semibold text-primary">{netTimeSeconds}s ({earnedMinutes} Min.)</span>
+            </>}
           </div>
         </CardContent>
       </Card>
@@ -201,10 +208,10 @@ export function GameCompletionScreen({
           className="w-full text-lg py-6 bg-primary hover:bg-primary/90"
         >
           <Trophy className="w-5 h-5 mr-2" />
-          {earnedMinutes} Min. Bildschirmzeit erhalten!
+          {isStreakRecovery ? 'Zurück zum Dashboard' : `${earnedMinutes} Min. Bildschirmzeit erhalten!`}
         </Button>
         <div className="text-center text-sm text-muted-foreground">
-          Deine Zeit wurde hinzugefügt! 📱✨
+          {isStreakRecovery ? 'Dein Lernfeuer zählt wieder, wenn du 3 Aufgaben richtig hattest.' : 'Deine Zeit wurde hinzugefügt! 📱✨'}
         </div>
       </div>
     </div>
