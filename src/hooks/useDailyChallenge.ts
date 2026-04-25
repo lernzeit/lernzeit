@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { isSubjectAvailableForGrade } from '@/lib/category';
 
 export interface DailyChallenge {
   id?: string;
@@ -26,41 +25,32 @@ const SUBJECT_NAMES: Record<string, string> = {
 /**
  * Pick a subject for a "Fach-Challenge". Prefers subjects where the child
  * has the most learning need (low mastery / many wrong answers in the last 14 days),
- * restricted to subjects that are available for the grade and visible (not hidden by parent).
- * Falls back to any allowed subject; finally to "math".
+ * restricted ONLY to subjects that are visible for the child (parent visibility
+ * settings). Grade-based filtering is intentionally NOT applied here, because
+ * the parent decides which subjects the child practises.
+ * Falls back to any visible subject; finally to "math".
  */
 async function pickSubjectForChallenge(
   userId: string,
   dateStr: string,
   positiveHash: number
 ): Promise<string> {
-  // 1) Determine the child's grade
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('grade')
-    .eq('id', userId)
-    .maybeSingle();
-  const grade = profile?.grade ?? 1;
-
-  // 2) Subjects allowed by grade (school logic)
-  const gradeAllowed = SUBJECTS.filter((s) => isSubjectAvailableForGrade(s, grade));
-
-  // 3) Apply parent visibility (any linked parent's hidden flag wins)
-  let allowed = gradeAllowed;
+  // Allowed = subjects the parent has marked visible for this child.
+  // If no visibility rows exist, we cannot safely assume anything → fall back to 'math'.
+  let allowed: string[] = [];
   try {
     const { data: visibility } = await supabase
       .from('child_subject_visibility')
       .select('subject, is_visible')
       .eq('child_id', userId);
     if (visibility && visibility.length > 0) {
-      const hidden = new Set(
-        visibility.filter((v) => v.is_visible === false).map((v) => v.subject)
-      );
-      const filtered = gradeAllowed.filter((s) => !hidden.has(s));
-      if (filtered.length > 0) allowed = filtered;
+      allowed = visibility
+        .filter((v) => v.is_visible !== false)
+        .map((v) => v.subject)
+        .filter((s) => SUBJECTS.includes(s));
     }
   } catch {
-    // ignore visibility errors and keep grade-allowed list
+    // ignore visibility errors
   }
 
   if (allowed.length === 0) return 'math';
@@ -100,12 +90,9 @@ async function pickSubjectForChallenge(
   const scored = allowed.map((subject) => {
     const mastery = masteryBySubject[subject];
     const wrong = wrongBySubject[subject] || 0;
-    const total = totalBySubject[subject] || 0;
     const masteryNeed = mastery !== undefined ? Math.max(0, 1 - mastery) : 0.5;
     const errorNeed = wrong / (wrong + 5);
-    // Slight novelty boost for subjects that haven't been practised recently
-    const noveltyBoost = total === 0 ? 0.15 : 0;
-    return { subject, score: masteryNeed * 0.6 + errorNeed * 0.4 + noveltyBoost };
+    return { subject, score: masteryNeed * 0.6 + errorNeed * 0.4 };
   });
 
   // Pick deterministically among the top candidates using the daily hash.
@@ -198,23 +185,17 @@ export function useDailyChallenge(userId?: string) {
 
       if (existing) {
         // Heal: if today's stored "subject" challenge points at a subject the
-        // child can't actually practise (e.g. Geographie in Klasse 1), regenerate it.
+        // parent has hidden for this child, regenerate it.
         const params = existing.challenge_params as DailyChallenge['challenge_params'];
         let needsRegen = false;
         if (existing.challenge_type === 'subject' && !existing.is_completed && params?.subject) {
-          const { data: prof } = await supabase
-            .from('profiles').select('grade').eq('id', userId).maybeSingle();
-          const grade = prof?.grade ?? 1;
-          if (!isSubjectAvailableForGrade(params.subject, grade)) needsRegen = true;
-          if (!needsRegen) {
-            const { data: vis } = await supabase
-              .from('child_subject_visibility')
-              .select('subject, is_visible')
-              .eq('child_id', userId)
-              .eq('subject', params.subject)
-              .maybeSingle();
-            if (vis && vis.is_visible === false) needsRegen = true;
-          }
+          const { data: vis } = await supabase
+            .from('child_subject_visibility')
+            .select('subject, is_visible')
+            .eq('child_id', userId)
+            .eq('subject', params.subject)
+            .maybeSingle();
+          if (vis && vis.is_visible === false) needsRegen = true;
         }
 
         if (needsRegen) {
