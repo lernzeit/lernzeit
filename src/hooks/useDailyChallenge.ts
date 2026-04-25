@@ -197,14 +197,57 @@ export function useDailyChallenge(userId?: string) {
         .maybeSingle();
 
       if (existing) {
-        setChallenge({
-          id: existing.id,
-          challenge_type: existing.challenge_type as DailyChallenge['challenge_type'],
-          challenge_params: existing.challenge_params as DailyChallenge['challenge_params'],
-          reward_minutes: existing.reward_minutes,
-          is_completed: existing.is_completed,
-          completed_at: existing.completed_at,
-        });
+        // Heal: if today's stored "subject" challenge points at a subject the
+        // child can't actually practise (e.g. Geographie in Klasse 1), regenerate it.
+        const params = existing.challenge_params as DailyChallenge['challenge_params'];
+        let needsRegen = false;
+        if (existing.challenge_type === 'subject' && !existing.is_completed && params?.subject) {
+          const { data: prof } = await supabase
+            .from('profiles').select('grade').eq('id', userId).maybeSingle();
+          const grade = prof?.grade ?? 1;
+          if (!isSubjectAvailableForGrade(params.subject, grade)) needsRegen = true;
+          if (!needsRegen) {
+            const { data: vis } = await supabase
+              .from('child_subject_visibility')
+              .select('subject, is_visible')
+              .eq('child_id', userId)
+              .eq('subject', params.subject)
+              .maybeSingle();
+            if (vis && vis.is_visible === false) needsRegen = true;
+          }
+        }
+
+        if (needsRegen) {
+          const regen = await generateChallenge(userId, today);
+          const { data: updated } = await supabase
+            .from('daily_challenges')
+            .update({
+              challenge_type: regen.challenge_type,
+              challenge_params: regen.challenge_params as any,
+              reward_minutes: regen.reward_minutes,
+            })
+            .eq('id', existing.id)
+            .select()
+            .single();
+          const row = updated || existing;
+          setChallenge({
+            id: row.id,
+            challenge_type: row.challenge_type as DailyChallenge['challenge_type'],
+            challenge_params: row.challenge_params as DailyChallenge['challenge_params'],
+            reward_minutes: row.reward_minutes,
+            is_completed: row.is_completed,
+            completed_at: row.completed_at,
+          });
+        } else {
+          setChallenge({
+            id: existing.id,
+            challenge_type: existing.challenge_type as DailyChallenge['challenge_type'],
+            challenge_params: existing.challenge_params as DailyChallenge['challenge_params'],
+            reward_minutes: existing.reward_minutes,
+            is_completed: existing.is_completed,
+            completed_at: existing.completed_at,
+          });
+        }
       } else {
         // Generate deterministically and save
         const generated = await generateChallenge(userId, today);
