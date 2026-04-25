@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isSubjectAvailableForGrade } from '@/lib/category';
 
 export interface DailyChallenge {
   id?: string;
@@ -35,8 +36,10 @@ async function pickSubjectForChallenge(
   dateStr: string,
   positiveHash: number
 ): Promise<string> {
-  // Allowed = subjects the parent has marked visible for this child.
-  // If no visibility rows exist, we cannot safely assume anything → fall back to 'math'.
+  // Determine allowed subjects:
+  // 1) If the parent has set explicit visibility (Premium feature), respect it.
+  // 2) Otherwise (no Premium / no rows) fall back to the child's grade-based
+  //    subject canon (Subject_GRADE_CONSTANTS via isSubjectAvailableForGrade).
   let allowed: string[] = [];
   try {
     const { data: visibility } = await supabase
@@ -51,6 +54,24 @@ async function pickSubjectForChallenge(
     }
   } catch {
     // ignore visibility errors
+  }
+
+  if (allowed.length === 0) {
+    // No visibility config → use grade-based filter.
+    let grade: number | null = null;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('grade')
+        .eq('id', userId)
+        .maybeSingle();
+      grade = profile?.grade ?? null;
+    } catch {
+      // ignore
+    }
+    if (grade && grade > 0) {
+      allowed = SUBJECTS.filter((s) => isSubjectAvailableForGrade(s, grade!));
+    }
   }
 
   if (allowed.length === 0) return 'math';
@@ -184,18 +205,33 @@ export function useDailyChallenge(userId?: string) {
         .maybeSingle();
 
       if (existing) {
-        // Heal: if today's stored "subject" challenge points at a subject the
-        // parent has hidden for this child, regenerate it.
+        // Heal: if today's stored "subject" challenge points at a subject that
+        // is no longer valid for this child, regenerate it. A subject is
+        // invalid if either: (a) the parent has explicitly hidden it via
+        // child_subject_visibility, or (b) no visibility rows exist and the
+        // subject is outside the child's grade canon.
         const params = existing.challenge_params as DailyChallenge['challenge_params'];
         let needsRegen = false;
         if (existing.challenge_type === 'subject' && !existing.is_completed && params?.subject) {
-          const { data: vis } = await supabase
+          const { data: visAll } = await supabase
             .from('child_subject_visibility')
             .select('subject, is_visible')
-            .eq('child_id', userId)
-            .eq('subject', params.subject)
-            .maybeSingle();
-          if (vis && vis.is_visible === false) needsRegen = true;
+            .eq('child_id', userId);
+          if (visAll && visAll.length > 0) {
+            const match = visAll.find((v) => v.subject === params.subject);
+            if (match && match.is_visible === false) needsRegen = true;
+          } else {
+            // No visibility config → check grade canon.
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('grade')
+              .eq('id', userId)
+              .maybeSingle();
+            const grade = profile?.grade ?? null;
+            if (grade && grade > 0 && !isSubjectAvailableForGrade(params.subject, grade)) {
+              needsRegen = true;
+            }
+          }
         }
 
         if (needsRegen) {
