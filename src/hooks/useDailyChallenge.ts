@@ -186,23 +186,17 @@ export function useDailyChallenge(userId?: string) {
 
       if (existing) {
         // Heal: if today's stored "subject" challenge points at a subject the
-        // child can't actually practise (e.g. Geographie in Klasse 1), regenerate it.
+        // parent has hidden for this child, regenerate it.
         const params = existing.challenge_params as DailyChallenge['challenge_params'];
         let needsRegen = false;
         if (existing.challenge_type === 'subject' && !existing.is_completed && params?.subject) {
-          const { data: prof } = await supabase
-            .from('profiles').select('grade').eq('id', userId).maybeSingle();
-          const grade = prof?.grade ?? 1;
-          if (!isSubjectAvailableForGrade(params.subject, grade)) needsRegen = true;
-          if (!needsRegen) {
-            const { data: vis } = await supabase
-              .from('child_subject_visibility')
-              .select('subject, is_visible')
-              .eq('child_id', userId)
-              .eq('subject', params.subject)
-              .maybeSingle();
-            if (vis && vis.is_visible === false) needsRegen = true;
-          }
+          const { data: vis } = await supabase
+            .from('child_subject_visibility')
+            .select('subject, is_visible')
+            .eq('child_id', userId)
+            .eq('subject', params.subject)
+            .maybeSingle();
+          if (vis && vis.is_visible === false) needsRegen = true;
         }
 
         if (needsRegen) {
