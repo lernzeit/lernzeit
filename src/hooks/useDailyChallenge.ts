@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isSubjectAvailableForGrade } from '@/lib/category';
 
 export interface DailyChallenge {
   id?: string;
@@ -23,10 +24,106 @@ const SUBJECT_NAMES: Record<string, string> = {
 };
 
 /**
- * Deterministically generate today's challenge from date + userId.
- * No backend call needed.
+ * Pick a subject for a "Fach-Challenge". Prefers subjects where the child
+ * has the most learning need (low mastery / many wrong answers in the last 14 days),
+ * restricted to subjects that are available for the grade and visible (not hidden by parent).
+ * Falls back to any allowed subject; finally to "math".
  */
-function generateChallenge(userId: string, dateStr: string): Omit<DailyChallenge, 'id' | 'is_completed' | 'completed_at'> {
+async function pickSubjectForChallenge(
+  userId: string,
+  dateStr: string,
+  positiveHash: number
+): Promise<string> {
+  // 1) Determine the child's grade
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('grade')
+    .eq('id', userId)
+    .maybeSingle();
+  const grade = profile?.grade ?? 1;
+
+  // 2) Subjects allowed by grade (school logic)
+  const gradeAllowed = SUBJECTS.filter((s) => isSubjectAvailableForGrade(s, grade));
+
+  // 3) Apply parent visibility (any linked parent's hidden flag wins)
+  let allowed = gradeAllowed;
+  try {
+    const { data: visibility } = await supabase
+      .from('child_subject_visibility')
+      .select('subject, is_visible')
+      .eq('child_id', userId);
+    if (visibility && visibility.length > 0) {
+      const hidden = new Set(
+        visibility.filter((v) => v.is_visible === false).map((v) => v.subject)
+      );
+      const filtered = gradeAllowed.filter((s) => !hidden.has(s));
+      if (filtered.length > 0) allowed = filtered;
+    }
+  } catch {
+    // ignore visibility errors and keep grade-allowed list
+  }
+
+  if (allowed.length === 0) return 'math';
+
+  // 4) Score subjects by learning need (lower mastery + recent wrong answers = higher need)
+  const sinceIso = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const [diffRes, sessionRes] = await Promise.all([
+    supabase
+      .from('user_difficulty_profiles')
+      .select('category, mastery_score')
+      .eq('user_id', userId),
+    supabase
+      .from('game_sessions')
+      .select('category, correct_answers, total_questions')
+      .eq('user_id', userId)
+      .gte('session_date', sinceIso),
+  ]);
+
+  const masteryBySubject: Record<string, number> = {};
+  for (const row of diffRes.data || []) {
+    if (row.category) masteryBySubject[row.category] = Number(row.mastery_score) || 0;
+  }
+
+  const wrongBySubject: Record<string, number> = {};
+  const totalBySubject: Record<string, number> = {};
+  for (const row of sessionRes.data || []) {
+    const cat = row.category;
+    if (!cat) continue;
+    const total = row.total_questions || 0;
+    const correct = row.correct_answers || 0;
+    wrongBySubject[cat] = (wrongBySubject[cat] || 0) + Math.max(0, total - correct);
+    totalBySubject[cat] = (totalBySubject[cat] || 0) + total;
+  }
+
+  // Need score: higher = more need. Mastery contributes (1 - mastery) ∈ [0,1].
+  // Wrong answers contribute via (wrong / (wrong + 5)) ∈ [0,1).
+  const scored = allowed.map((subject) => {
+    const mastery = masteryBySubject[subject];
+    const wrong = wrongBySubject[subject] || 0;
+    const total = totalBySubject[subject] || 0;
+    const masteryNeed = mastery !== undefined ? Math.max(0, 1 - mastery) : 0.5;
+    const errorNeed = wrong / (wrong + 5);
+    // Slight novelty boost for subjects that haven't been practised recently
+    const noveltyBoost = total === 0 ? 0.15 : 0;
+    return { subject, score: masteryNeed * 0.6 + errorNeed * 0.4 + noveltyBoost };
+  });
+
+  // Pick deterministically among the top candidates using the daily hash.
+  scored.sort((a, b) => b.score - a.score);
+  const topN = Math.min(3, scored.length);
+  const top = scored.slice(0, topN);
+  return top[positiveHash % top.length].subject;
+}
+
+/**
+ * Deterministically generate today's challenge from date + userId.
+ * Subject for "subject" challenges is picked from allowed subjects,
+ * weighted toward areas with the most learning need.
+ */
+async function generateChallenge(
+  userId: string,
+  dateStr: string
+): Promise<Omit<DailyChallenge, 'id' | 'is_completed' | 'completed_at'>> {
   // Simple hash from date + userId
   let hash = 0;
   const seed = `${dateStr}-${userId}`;
@@ -40,7 +137,7 @@ function generateChallenge(userId: string, dateStr: string): Omit<DailyChallenge
 
   switch (type) {
     case 'subject': {
-      const subject = SUBJECTS[positiveHash % SUBJECTS.length];
+      const subject = await pickSubjectForChallenge(userId, dateStr, positiveHash);
       return {
         challenge_type: 'subject',
         challenge_params: {
@@ -100,17 +197,60 @@ export function useDailyChallenge(userId?: string) {
         .maybeSingle();
 
       if (existing) {
-        setChallenge({
-          id: existing.id,
-          challenge_type: existing.challenge_type as DailyChallenge['challenge_type'],
-          challenge_params: existing.challenge_params as DailyChallenge['challenge_params'],
-          reward_minutes: existing.reward_minutes,
-          is_completed: existing.is_completed,
-          completed_at: existing.completed_at,
-        });
+        // Heal: if today's stored "subject" challenge points at a subject the
+        // child can't actually practise (e.g. Geographie in Klasse 1), regenerate it.
+        const params = existing.challenge_params as DailyChallenge['challenge_params'];
+        let needsRegen = false;
+        if (existing.challenge_type === 'subject' && !existing.is_completed && params?.subject) {
+          const { data: prof } = await supabase
+            .from('profiles').select('grade').eq('id', userId).maybeSingle();
+          const grade = prof?.grade ?? 1;
+          if (!isSubjectAvailableForGrade(params.subject, grade)) needsRegen = true;
+          if (!needsRegen) {
+            const { data: vis } = await supabase
+              .from('child_subject_visibility')
+              .select('subject, is_visible')
+              .eq('child_id', userId)
+              .eq('subject', params.subject)
+              .maybeSingle();
+            if (vis && vis.is_visible === false) needsRegen = true;
+          }
+        }
+
+        if (needsRegen) {
+          const regen = await generateChallenge(userId, today);
+          const { data: updated } = await supabase
+            .from('daily_challenges')
+            .update({
+              challenge_type: regen.challenge_type,
+              challenge_params: regen.challenge_params as any,
+              reward_minutes: regen.reward_minutes,
+            })
+            .eq('id', existing.id)
+            .select()
+            .single();
+          const row = updated || existing;
+          setChallenge({
+            id: row.id,
+            challenge_type: row.challenge_type as DailyChallenge['challenge_type'],
+            challenge_params: row.challenge_params as DailyChallenge['challenge_params'],
+            reward_minutes: row.reward_minutes,
+            is_completed: row.is_completed,
+            completed_at: row.completed_at,
+          });
+        } else {
+          setChallenge({
+            id: existing.id,
+            challenge_type: existing.challenge_type as DailyChallenge['challenge_type'],
+            challenge_params: existing.challenge_params as DailyChallenge['challenge_params'],
+            reward_minutes: existing.reward_minutes,
+            is_completed: existing.is_completed,
+            completed_at: existing.completed_at,
+          });
+        }
       } else {
         // Generate deterministically and save
-        const generated = generateChallenge(userId, today);
+        const generated = await generateChallenge(userId, today);
         const { data: inserted, error } = await supabase
           .from('daily_challenges')
           .insert({
