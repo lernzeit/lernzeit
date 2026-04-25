@@ -405,7 +405,7 @@ serve(async (req) => {
           console.log(`✅ Cache fallback: serving cached question ${picked.id}`);
           
           // Update times_served
-          (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil(
+          (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: PromiseLike<unknown>) => void } }).EdgeRuntime?.waitUntil(
             cacheClient.from('ai_question_cache')
               .update({ times_served: picked.times_served + 1, last_served_at: new Date().toISOString() })
               .eq('id', picked.id)
@@ -493,7 +493,7 @@ serve(async (req) => {
       };
 
       // Non-blocking: run after response is sent
-      (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil(saveToCache());
+      (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: PromiseLike<unknown>) => void } }).EdgeRuntime?.waitUntil(saveToCache());
     }
     // ───────────────────────────────────────────────────────────────────
 
