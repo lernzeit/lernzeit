@@ -339,17 +339,22 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
     const streakInfo = await computeStreakInfo(child.id);
     const streak = streakInfo.streak;
 
+    // Determine which streak push (if any) is appropriate today.
+    // Plan-defined exact titles/texts for dim and frozen states.
     let title = "🎯 Zeit zum Lernen!";
     let message = "Du hast heute noch nicht gelernt. Sammel jetzt Bildschirmzeit!";
     let type = "child_learning_reminder";
+    let isStreakPush = false;
     if (streakInfo.inactiveDays === 1 && streak > 0) {
       title = "🔥 Deine Flamme wird kleiner";
       message = "Löse heute ein paar Aufgaben, damit dein Streak weiter brennt!";
       type = "streak_dim";
+      isStreakPush = true;
     } else if (streakInfo.inactiveDays === 2 && streak > 0) {
       title = "🪵 Dein Lernfeuer ist aus";
       message = "Entfache es wieder: Löse 3 Aufgaben richtig und rette deinen Streak!";
       type = "streak_frozen";
+      isStreakPush = true;
     } else if (streak >= 2) {
       title = `🔥 ${streak}-Tage-Streak in Gefahr!`;
       message = `Du lernst seit ${streak} Tagen in Folge. Lerne heute, um deinen Streak zu halten! 💪`;
@@ -358,7 +363,9 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
       message = "Du hast gestern gelernt. Mach heute weiter und starte einen Streak! 🚀";
     }
 
-    if ((type === "streak_dim" || type === "streak_frozen") && streakInfo.lastPushSentDate === today) continue;
+    // Hard dedupe: dim/frozen pushes are sent at most once per calendar day,
+    // regardless of how often this function is invoked.
+    if (isStreakPush && streakInfo.lastPushSentDate === today) continue;
 
     results.push(
       await sendOneSignalPush({
@@ -368,7 +375,9 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
         data: { type, streak, inactiveDays: streakInfo.inactiveDays },
         respectDailyToggle: true,
       }).then(async (result) => {
-        if (type === "streak_dim" || type === "streak_frozen") {
+        if (isStreakPush) {
+          // Only stamp the dedupe date + status; do NOT clobber streak_value or
+          // last_activity_date that the client maintains as source of truth.
           await supabase.from("user_streak_states").upsert({
             user_id: child.id,
             streak_value: streak,
