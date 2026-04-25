@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const results: Record<string, number | string> = {
+    const results: { duplicates_removed: number; reported_cleaned: number; match_fixed: number; match_removed: number; old_rotated: number; timestamp: string } = {
       duplicates_removed: 0,
       reported_cleaned: 0,
       match_fixed: 0,
