@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { isSubjectAvailableForGrade } from '@/lib/category';
 
 export interface DailyChallenge {
   id?: string;
