@@ -249,7 +249,7 @@ serve(async (req) => {
         temperature: 0.9,
         tools: [questionTool],
         tool_choice: { type: "function", function: { name: "submit_question" } },
-      });
+      }, undefined, 'question_generator');
 
       if (response.ok) {
         const result = await response.json();

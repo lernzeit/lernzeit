@@ -89,7 +89,7 @@ serve(async (req) => {
         }
       ],
       tool_choice: { type: "function", function: { name: "validate_question" } }
-    });
+    }, undefined, 'validate_question');
 
     if (!response.ok) {
       if (response.status === 429) {
