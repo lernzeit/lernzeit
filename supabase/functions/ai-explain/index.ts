@@ -55,7 +55,7 @@ serve(async (req) => {
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,
-    });
+    }, undefined, 'ai_explain');
 
     if (!response.ok) {
       if (response.status === 429) {

@@ -123,7 +123,7 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
-    });
+    }, undefined, 'learning_plan');
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {

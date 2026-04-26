@@ -468,7 +468,7 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
       model: 'google/gemini-2.5-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-    });
+    }, undefined, 'analyze_feedback');
 
     if (!response.ok) {
       console.error(`AI error: ${response.status}`);
@@ -534,7 +534,7 @@ Antworte NUR mit der kombinierten Regel, ohne Anführungszeichen, ohne Erklärun
       model: 'google/gemini-2.5-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
-    });
+    }, undefined, 'analyze_feedback');
     if (!response.ok) return null;
     const result = await response.json();
     const merged = result.choices?.[0]?.message?.content?.trim();

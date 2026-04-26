@@ -47,7 +47,7 @@ Antworte NUR mit JSON:
         model: 'google/gemini-2.5-flash-lite',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
-      }, controller.signal);
+      }, controller.signal, 'validate_answer');
 
       clearTimeout(timeout);
 

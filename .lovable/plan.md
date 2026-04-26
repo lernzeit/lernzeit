@@ -1,114 +1,122 @@
-# iOS-Ready-Plan für LernZeit
+# Plan: Flexible KI-Modell-Konfiguration über Admin-Dashboard
 
-Ziel: App auf den App Store bringen – ohne Mac, mit Cloud-Build (Codemagic). Sortiert nach „was geht jetzt schon ohne Apple Developer Account" → „was braucht den Account" → „Submission".
-
----
-
-## Phase 1 – Code & Konfiguration vorbereiten (ohne Apple-Account möglich)
-
-Diese Schritte kann ich vollständig in Lovable umsetzen, bevor du irgendetwas bei Apple bezahlst.
-
-### 1.1 Capacitor-Versionen angleichen
-- `@capacitor/ios` ist auf **v7.4.2**, alle anderen Capacitor-Pakete (`core`, `android`, `cli`) auf **v8**. Das führt beim `npx cap sync ios` mit hoher Wahrscheinlichkeit zu Build-Fehlern.
-- Aktion: `@capacitor/ios` auf `^8.2.0` heben.
-
-### 1.2 capacitor.config.ts iOS-Block härten
-Aktuell minimal. Ergänzen:
-- `ios.scheme: 'LernZeit'`
-- `ios.limitsNavigationsToAppBoundDomains: true` (App Store-empfohlen)
-- `ios.preferredContentMode: 'mobile'`
-- SplashScreen: `iosSpinnerStyle: 'small'` ergänzen für iOS-konforme Darstellung.
-- Sicherstellen, dass kein Dev-`server.url` aktiv ist (✅ bereits auskommentiert).
-
-### 1.3 OneSignal-iOS-Vorbereitung im Code
-Der Hook `useOneSignal` lädt das Cordova-Plugin generisch. Ergänzen:
-- iOS-spezifische APN-Permission-Anfrage (`OneSignal.Notifications.requestPermission(true)` ist vorhanden, aber iOS verlangt zusätzlich, dass der Aufruf erst nach erfolgtem Login geschieht – aktuell so umgesetzt ✅).
-- Doku-Notiz im Code, dass für iOS später ein **APNs Auth Key (.p8)** in OneSignal hochgeladen werden muss (Aufgabe für Phase 2).
-
-### 1.4 Codemagic-YAML für iOS finalisieren
-`codemagic.yaml` enthält bereits einen `ios-release`-Workflow. Anpassungen:
-- `APP_STORE_APP_ID: "YOUR_APP_STORE_APP_ID"` → als TODO-Kommentar markieren (kommt aus Phase 2).
-- `xcode-project use-profiles` Schritt vor dem Build ergänzen (sonst schlägt Code Signing in der Cloud fehl).
-- `cocoapods: default` ist gesetzt ✅.
-- Artifact-Pfade prüfen.
-
-### 1.5 Dokumentation: `IOS_RELEASE_CHECKLIST.md`
-Neue, schlanke Schritt-für-Schritt-Checkliste (ergänzend zu `IOS_CLOUD_BUILD_GUIDE.md`), nur für unsere konkrete Konfiguration:
-- Bundle-ID: `de.lernzeit.app`
-- App-Name: LernZeit
-- Mindest-iOS: 14.0 (Capacitor 8 Default)
-- Welche Secrets in Codemagic eingetragen werden müssen
-- Reihenfolge der Apple-Schritte aus Phase 2
-
-### 1.6 Lokale Vorbereitung des `ios/`-Folders dokumentieren
-Da Lovable kein iOS-Folder erzeugen kann (kein Xcode), beschreibt die Checkliste:
-- Repo nach GitHub exportieren
-- Auf einem beliebigen Rechner (auch Linux/Windows): `npm ci && npm run build && npx cap add ios && npx cap sync ios`
-- `ios/`-Ordner committen
-- Ab dann übernimmt Codemagic alles weitere – kein Mac nötig.
+## Ziel
+Pro Use-Case (Fragen-Generator, KI-Tutor, Erklärung, Antwort-Validierung, Lernplan, Feedback-Analyse) das Modell **und** die Provider-Reihenfolge im Admin-Dashboard wählen können. OpenRouter als gleichwertiger Provider (nicht nur Fallback). Live-Metriken (Latenz, Erfolgsrate, geschätzte Kosten) zur Entscheidungsunterstützung.
 
 ---
 
-## Phase 2 – Apple-Setup (sobald du den Developer-Account hast)
+## Phase 1 — Datenbank
 
-Diese Schritte musst du selbst bei Apple/Codemagic erledigen. Ich liefere die Anleitung in der Checkliste.
+### Tabelle `ai_model_config`
+Eine Zeile pro Use-Case mit Primär-Modell + Provider-Reihenfolge.
 
-### 2.1 Apple Developer Program
-- 99 USD/Jahr unter https://developer.apple.com/programs/
-- Verifizierung dauert 24–48 h (bei juristischen Personen länger; D-U-N-S-Nummer nötig).
+| Spalte | Typ | Zweck |
+|---|---|---|
+| `id` | uuid PK | |
+| `use_case` | text UNIQUE | `question_generator`, `ai_tutor`, `ai_explain`, `validate_answer`, `validate_question`, `learning_plan`, `analyze_feedback` |
+| `display_name` | text | UI-Label (z.B. „Fragen-Generator") |
+| `primary_model` | text | z.B. `google/gemini-2.5-flash`, `anthropic/claude-sonnet-4`, `openai/gpt-4o-mini` |
+| `fallback_models` | jsonb | Array `[{provider, model}]` für Notfall-Modellwechsel |
+| `provider_order` | jsonb | Reihenfolge, z.B. `["openrouter","gemini_direct","lovable"]` |
+| `temperature` | numeric | Optional override |
+| `is_active` | boolean default true | Use-Case ein/ausschalten |
+| `updated_at` | timestamptz | |
 
-### 2.2 App Store Connect
-- App anlegen mit Bundle-ID `de.lernzeit.app`
-- SKU: `lernzeit-ios-001`
-- Numerische **App ID** notieren → in `codemagic.yaml` als `APP_STORE_APP_ID` eintragen
-- Kategorie: Bildung, Altersfreigabe: 4+
-- Datenschutz-Manifest („App Privacy") basierend auf Supabase, OneSignal, Stripe ausfüllen.
+**RLS:** SELECT für authenticated, ALL nur für `has_role(auth.uid(),'admin')`. Service-Role darf alles.
 
-### 2.3 Code Signing über Codemagic
-- In Codemagic → App Settings → **App Store Connect Integration** anlegen (statt manuell mit .p12).
-- Codemagic erzeugt Certificate + Provisioning Profile automatisch über die ASC-API.
-- Nötig: API Key (.p8), Issuer ID, Key ID.
+### Tabelle `ai_model_metrics`
+Append-only Log jedes Calls.
 
-### 2.4 OneSignal iOS-Push aktivieren
-- In Apple Developer Portal: **APNs Auth Key (.p8)** erzeugen
-- In OneSignal Dashboard hochladen (App-ID `84cb5453-…` ist bereits konfiguriert)
-- Push Notifications & Background Modes Capability für die App-ID aktivieren.
+| Spalte | Typ |
+|---|---|
+| `id` | uuid PK |
+| `use_case` | text |
+| `provider` | text (`gemini_direct` / `openrouter` / `lovable`) |
+| `model` | text (echtes aufgerufenes Modell) |
+| `status_code` | int |
+| `success` | boolean |
+| `latency_ms` | int |
+| `prompt_tokens` / `completion_tokens` | int (sofern in Response) |
+| `estimated_cost_usd` | numeric (aus statischer Preistabelle) |
+| `error_type` | text nullable |
+| `created_at` | timestamptz default now() |
 
-### 2.5 Store-Assets erstellen
-Aus `APP_STORE_ASSETS_GUIDE.md` minimal nötig:
-- App-Icon 1024×1024 (vorhanden ✅)
-- Screenshots: mindestens 6.7" iPhone (1290×2796) und 6.5" iPhone, je 3 Stück
-- Beschreibung DE, Keywords, Support-URL (`https://lernzeit.app`), Datenschutz-URL (`/datenschutz` Seite existiert ✅)
+Index auf `(use_case, created_at desc)` und `(model, created_at desc)`.
 
----
+**RLS:** SELECT nur für Admins. INSERT nur Service-Role.
 
-## Phase 3 – Build & Submission (nach Phase 2)
-
-### 3.1 Erster TestFlight-Build über Codemagic
-- iOS-Workflow in Codemagic starten
-- Build wird automatisch zu TestFlight hochgeladen (`submit_to_testflight: true` ist gesetzt ✅)
-- Internes Testing aktivieren, App auf eigenem iPhone via TestFlight installieren.
-
-### 3.2 Review-Vorbereitung
-- Demo-Account für Apple Reviewer anlegen (z. B. Eltern + Kind), Zugangsdaten in App-Review-Notes hinterlegen
-- Hinweis: GDPR-K / Art. 8 DSGVO – „Parental Consent Flow" ist bereits implementiert ✅, in Review-Notes erklären.
-- Export Compliance: keine eigene Verschlüsselung → „No" wählen.
-
-### 3.3 Submission
-- Nach erfolgreichem TestFlight: in App Store Connect „Zur Prüfung einreichen"
-- Review-Dauer aktuell ca. 24–72 h.
+### Seed
+Migration legt für jeden bestehenden Use-Case eine Default-Zeile an, damit bei erstem Deploy nichts bricht (Werte aus aktuellem Code: `gemini-3-flash-preview` etc.).
 
 ---
 
-## Was ich jetzt sofort umsetzen würde (Phase 1)
+## Phase 2 — Modell-Katalog (im Code)
 
-Vorschlag – mit deinem OK starte ich der Reihe nach:
+Neue Datei `supabase/functions/_shared/model-catalog.ts`:
+- `RECOMMENDED_MODELS: ModelInfo[]` — kuratierte Liste mit `{id, label, provider_native, openrouter_id, gemini_id, input_price_per_1m, output_price_per_1m, supports_tools, recommended_for: string[]}`
+- Enthält: Gemini 2.5 Flash/Pro/Lite, Gemini 3 Flash Preview, Claude Sonnet 4 / Haiku, GPT-4o-mini / GPT-4o, Llama 3.3 70B, Gemma 3 12B/27B, DeepSeek V3, Mistral Large
+- Hilfsfunktionen: `getModelInfo(id)`, `estimateCost(model, promptTokens, completionTokens)`
 
-1. `@capacitor/ios` auf v8 anheben
-2. `capacitor.config.ts` iOS-Block ergänzen
-3. `codemagic.yaml` iOS-Workflow härten (use-profiles Step)
-4. `IOS_RELEASE_CHECKLIST.md` erzeugen mit allen Phase-2/3-Schritten in der richtigen Reihenfolge
+Frontend liest dieselbe Liste über eine kleine Edge Function `get-model-catalog` (oder als statisches TS-Modul, dupliziert, aber simpel).
 
-Punkte 1.3 (OneSignal-Hook) lasse ich unverändert, da bereits korrekt – nur Doku-Kommentar.
+---
 
-Nichts davon kostet Geld oder erfordert den Apple-Account. Sobald Phase 1 fertig ist, kannst du in Ruhe den Developer-Account beantragen und parallel die Screenshots erstellen.
+## Phase 3 — `ai-client.ts` umbauen
+
+### Änderungen
+1. **Neuer Parameter** `useCase: string` in `callAI(options, signal, useCase)`.
+2. Beim Aufruf:
+   - Lade Config aus DB (mit 60s In-Memory-Cache pro Edge-Function-Instance, um Latenz zu sparen).
+   - Bestimme `provider_order` aus Config (statt hardcodiert Gemini→OpenRouter→Lovable).
+   - Verwende `primary_model` aus Config statt `options.model` (Backward-Compat: wenn DB-Lookup fehlschlägt, nutze `options.model`).
+3. **OpenRouter-Branch generalisieren**: Statt fix `OPENROUTER_MODEL_MAP` zu verwenden, wird das Modell direkt aus der Config übernommen. Wenn das Primär-Modell ein Nicht-Google-Modell ist (z.B. `anthropic/claude-…`), überspringt der `gemini_direct`-Branch automatisch und geht zu OpenRouter.
+4. **Telemetrie**: Vor jedem Provider-Call `start = Date.now()`, nach Response `logMetric({ use_case, provider, model, status_code, success, latency_ms, tokens })`. Insert läuft fire-and-forget (kein `await`), damit User-Latenz nicht steigt.
+5. **Fallback-Models**: Wenn Primär-Modell innerhalb eines Providers 4xx/5xx liefert (außer 429), versuche optional ein konfiguriertes `fallback_models[i]`-Eintrag, bevor zum nächsten Provider gewechselt wird.
+
+### Migration der existierenden Edge Functions
+Alle 7 Aufrufer (`ai-tutor`, `ai-question-generator`, `ai-explain`, `validate-answer`, `validate-question`, `generate-learning-plan`, `analyze-feedback`) bekommen einen `useCase`-String:
+```ts
+await callAI({ messages, temperature, tools }, signal, 'question_generator');
+```
+Das hardcoded `model:` Feld kann entfallen (oder bleibt als Default, falls DB-Config fehlt).
+
+---
+
+## Phase 4 — Admin-Dashboard UI
+
+Neuer Tab **„KI-Modelle"** in `AdminDashboard.tsx` (neben „Übersicht", „Cache", „Regeln").
+
+### Komponente `AIModelConfigPanel.tsx`
+- Tabelle: eine Zeile pro Use-Case
+- Spalten: Use-Case, Primär-Modell (Dropdown aus Katalog **+ Freitext-Eingabe**), Provider-Reihenfolge (drag-and-drop oder 3 Selects), Temperature, Aktiv-Toggle, „Test"-Button
+- Speichern → Update via Supabase JS auf `ai_model_config`
+- „Test"-Button ruft Edge Function `test-ai-model` auf, die einen kurzen Prompt schickt und Latenz/Antwort zurückgibt
+
+### Komponente `AIModelMetricsPanel.tsx`
+- Filter: Zeitraum (24h / 7d / 30d), Use-Case, Modell
+- KPI-Cards: Calls gesamt, Erfolgsrate %, Ø Latenz, geschätzte Kosten
+- Recharts-Diagramm: Latenz pro Modell über Zeit + Erfolgsrate-Stacked-Bar
+- Tabelle „Top-Fehler" (gruppiert nach `error_type`)
+- Daten via Supabase RPC `get_model_metrics(use_case, since)` (server-aggregiert, sonst sprengt 1000-row-Limit)
+
+---
+
+## Phase 5 — Test & Rollout
+
+1. Migration ausführen, Default-Configs eintragen → bestehendes Verhalten unverändert.
+2. `ai-client.ts` deployen, eine Edge Function (z.B. `ai-explain`) als Erstes umstellen, Logs prüfen.
+3. Restliche 6 Edge Functions umstellen.
+4. Admin-UI freischalten, Modellwechsel live testen.
+5. Nach 1 Woche Telemetrie auswerten und ggf. Defaults anpassen.
+
+---
+
+## Offene Punkte / Annahmen
+- **Kosten-Schätzung** basiert auf statischer Preistabelle im Code (Stand heute). Aktualisierung manuell, falls Anbieter Preise ändern.
+- **Token-Zählung**: Kommt aus `usage`-Feld der API-Response (verfügbar bei OpenRouter, Gemini-OpenAI-Endpoint, Lovable). Falls nicht vorhanden → `null`.
+- **Caching der Config**: 60s In-Memory pro Edge-Function-Instance. Modellwechsel im Admin sind also nach max. 60s wirksam (für Sofort-Wirkung könnte ein „Reload"-Button die Config-Version inkrementieren — optional, würde Komplexität erhöhen).
+
+## Geänderte / neue Dateien
+- **DB-Migration**: `ai_model_config`, `ai_model_metrics` + RPC `get_model_metrics`
+- **Neu**: `supabase/functions/_shared/model-catalog.ts`, `supabase/functions/_shared/model-config.ts`, `supabase/functions/test-ai-model/index.ts`, `src/components/admin/AIModelConfigPanel.tsx`, `src/components/admin/AIModelMetricsPanel.tsx`, `src/lib/modelCatalog.ts`
+- **Geändert**: `supabase/functions/_shared/ai-client.ts`, alle 7 KI-Edge-Functions, `src/components/admin/AdminDashboard.tsx`

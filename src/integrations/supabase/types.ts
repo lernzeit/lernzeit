@@ -53,6 +53,96 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_model_config: {
+        Row: {
+          created_at: string
+          display_name: string
+          fallback_models: Json
+          id: string
+          is_active: boolean
+          notes: string | null
+          primary_model: string
+          provider_order: Json
+          temperature: number | null
+          updated_at: string
+          use_case: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          fallback_models?: Json
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          primary_model: string
+          provider_order?: Json
+          temperature?: number | null
+          updated_at?: string
+          use_case: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          fallback_models?: Json
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          primary_model?: string
+          provider_order?: Json
+          temperature?: number | null
+          updated_at?: string
+          use_case?: string
+        }
+        Relationships: []
+      }
+      ai_model_metrics: {
+        Row: {
+          completion_tokens: number | null
+          created_at: string
+          error_type: string | null
+          estimated_cost_usd: number | null
+          id: string
+          latency_ms: number | null
+          model: string
+          prompt_tokens: number | null
+          provider: string
+          status_code: number | null
+          success: boolean
+          total_tokens: number | null
+          use_case: string
+        }
+        Insert: {
+          completion_tokens?: number | null
+          created_at?: string
+          error_type?: string | null
+          estimated_cost_usd?: number | null
+          id?: string
+          latency_ms?: number | null
+          model: string
+          prompt_tokens?: number | null
+          provider: string
+          status_code?: number | null
+          success?: boolean
+          total_tokens?: number | null
+          use_case: string
+        }
+        Update: {
+          completion_tokens?: number | null
+          created_at?: string
+          error_type?: string | null
+          estimated_cost_usd?: number | null
+          id?: string
+          latency_ms?: number | null
+          model?: string
+          prompt_tokens?: number | null
+          provider?: string
+          status_code?: number | null
+          success?: boolean
+          total_tokens?: number | null
+          use_case?: string
+        }
+        Relationships: []
+      }
       ai_question_cache: {
         Row: {
           correct_answer: Json
@@ -974,6 +1064,23 @@ export type Database = {
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       generate_invitation_code: { Args: never; Returns: string }
+      get_ai_model_metrics_summary: {
+        Args: { p_since?: string; p_use_case?: string }
+        Returns: {
+          avg_latency_ms: number
+          error_calls: number
+          model: string
+          p95_latency_ms: number
+          provider: string
+          success_calls: number
+          success_rate: number
+          total_calls: number
+          total_completion_tokens: number
+          total_cost_usd: number
+          total_prompt_tokens: number
+          use_case: string
+        }[]
+      }
       get_cache_stats: {
         Args: never
         Returns: {
