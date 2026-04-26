@@ -54,7 +54,7 @@ serve(async (req) => {
         ...messages,
       ],
       stream: true,
-    });
+    }, undefined, 'ai_tutor');
 
     if (!response.ok) {
       if (response.status === 429) {
