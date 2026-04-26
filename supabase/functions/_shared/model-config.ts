@@ -80,11 +80,12 @@ export interface MetricEntry {
 export function logMetric(entry: MetricEntry): void {
   const client = getServiceClient();
   if (!client) return;
-  client
-    .from('ai_model_metrics')
-    .insert(entry)
-    .then(({ error }) => {
+  (async () => {
+    try {
+      const { error } = await client.from('ai_model_metrics').insert(entry);
       if (error) console.warn('logMetric insert failed:', error.message);
-    })
-    .catch((err) => console.warn('logMetric exception:', err));
+    } catch (err) {
+      console.warn('logMetric exception:', err);
+    }
+  })();
 }
