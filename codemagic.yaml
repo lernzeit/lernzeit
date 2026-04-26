@@ -66,6 +66,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
+        # TODO Phase 2: Aus App Store Connect übernehmen, sobald App angelegt ist
         APP_STORE_APP_ID: "YOUR_APP_STORE_APP_ID"
       node: 18
       xcode: latest
@@ -87,6 +88,10 @@ workflows:
         script: |
           cd ios/App
           pod install
+
+      - name: Fetch signing files
+        script: |
+          xcode-project use-profiles
       
       - name: Set iOS version
         script: |
