@@ -18,7 +18,8 @@ const config: CapacitorConfig = {
       spinnerColor: '#ffffff',
       androidScaleType: 'CENTER_CROP',
       splashFullScreen: true,
-      splashImmersive: true
+      splashImmersive: true,
+      iosSpinnerStyle: 'small'
     },
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
@@ -42,7 +43,10 @@ const config: CapacitorConfig = {
   },
   ios: {
     backgroundColor: '#3b82f6',
-    contentInset: 'automatic'
+    contentInset: 'automatic',
+    scheme: 'LernZeit',
+    limitsNavigationsToAppBoundDomains: true,
+    preferredContentMode: 'mobile'
   }
 };
 
