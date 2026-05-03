@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { RECOMMENDED_MODELS, PROVIDER_LABELS, type ProviderId } from '@/lib/modelCatalog';
-import { Loader2, ArrowUp, ArrowDown, Play, Save } from 'lucide-react';
+import { Loader2, ArrowUp, ArrowDown, Play, Save, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
 
 interface ConfigRow {
   id: string;
@@ -20,6 +20,24 @@ interface ConfigRow {
   is_active: boolean;
 }
 
+interface Attempt {
+  provider: ProviderId;
+  native_model: string;
+  status: number | null;
+  ok: boolean;
+  latency_ms: number;
+  error?: string;
+  response?: string;
+  skipped_reason?: string;
+}
+
+interface TestResult {
+  success: boolean;
+  mode: 'single' | 'chain';
+  attempts: Attempt[];
+  winner: Attempt | null;
+}
+
 const ALL_PROVIDERS: ProviderId[] = ['gemini_direct', 'openrouter', 'lovable'];
 
 export function AIModelConfigPanel() {
@@ -27,7 +45,7 @@ export function AIModelConfigPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<Record<string, string>>({});
+  const [testResults, setTestResults] = useState<Record<string, TestResult | { error: string }>>({});
   const { toast } = useToast();
 
   useEffect(() => { void load(); }, []);
@@ -77,22 +95,24 @@ export function AIModelConfigPanel() {
     else toast({ title: 'Gespeichert', description: row.display_name });
   }
 
-  async function runTest(row: ConfigRow) {
-    setTesting(row.id);
-    setTestResults((r) => ({ ...r, [row.id]: '' }));
+  async function runTest(row: ConfigRow, provider?: ProviderId) {
+    const key = provider ? `${row.id}:${provider}` : row.id;
+    setTesting(key);
+    setTestResults((r) => ({ ...r, [row.id]: undefined as unknown as TestResult }));
     const { data, error } = await supabase.functions.invoke('test-ai-model', {
-      body: { use_case: row.use_case, model: row.primary_model },
+      body: {
+        use_case: row.use_case,
+        model: row.primary_model,
+        provider, // undefined => chain mode using provider_order below
+        provider_order: row.provider_order,
+      },
     });
     setTesting(null);
     if (error) {
-      setTestResults((r) => ({ ...r, [row.id]: `Fehler: ${error.message}` }));
+      setTestResults((r) => ({ ...r, [row.id]: { error: error.message } }));
       return;
     }
-    if (data?.success) {
-      setTestResults((r) => ({ ...r, [row.id]: `✅ ${data.provider} · ${data.latency_ms}ms · "${data.response}"` }));
-    } else {
-      setTestResults((r) => ({ ...r, [row.id]: `❌ ${data?.error ?? 'Fehler'}` }));
-    }
+    setTestResults((r) => ({ ...r, [row.id]: data as TestResult }));
   }
 
   if (loading) {
@@ -101,113 +121,151 @@ export function AIModelConfigPanel() {
 
   return (
     <div className="space-y-4">
-      {rows.map((row) => (
-        <Card key={row.id}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="text-base flex items-center gap-2">
-                {row.display_name}
-                <Badge variant="outline" className="text-xs">{row.use_case}</Badge>
-                {!row.is_active && <Badge variant="secondary">Inaktiv</Badge>}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Aktiv</span>
-                <Switch checked={row.is_active} onCheckedChange={(v) => update(row.id, { is_active: v })} />
+      {rows.map((row) => {
+        const result = testResults[row.id];
+        const hasError = result && 'error' in result;
+        const hasResult = result && !hasError;
+        return (
+          <Card key={row.id}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {row.display_name}
+                  <Badge variant="outline" className="text-xs">{row.use_case}</Badge>
+                  {!row.is_active && <Badge variant="secondary">Inaktiv</Badge>}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Aktiv</span>
+                  <Switch checked={row.is_active} onCheckedChange={(v) => update(row.id, { is_active: v })} />
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Modell */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Primär-Modell</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <Select value={RECOMMENDED_MODELS.find((m) => m.id === row.primary_model)?.id ?? '__custom'} onValueChange={(v) => v !== '__custom' && update(row.id, { primary_model: v })}>
-                  <SelectTrigger><SelectValue placeholder="Aus Katalog wählen…" /></SelectTrigger>
-                  <SelectContent>
-                    {RECOMMENDED_MODELS.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.label} · ${m.input_price_per_1m}/${m.output_price_per_1m}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__custom">— Eigenes Modell (Freitext) —</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={row.primary_model}
-                  onChange={(e) => update(row.id, { primary_model: e.target.value })}
-                  placeholder="z.B. anthropic/claude-sonnet-4"
-                  className="font-mono text-xs"
-                />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Modell */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Primär-Modell</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Select value={RECOMMENDED_MODELS.find((m) => m.id === row.primary_model)?.id ?? '__custom'} onValueChange={(v) => v !== '__custom' && update(row.id, { primary_model: v })}>
+                    <SelectTrigger><SelectValue placeholder="Aus Katalog wählen…" /></SelectTrigger>
+                    <SelectContent>
+                      {RECOMMENDED_MODELS.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.label} · ${m.input_price_per_1m}/${m.output_price_per_1m}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__custom">— Eigenes Modell (Freitext) —</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={row.primary_model}
+                    onChange={(e) => update(row.id, { primary_model: e.target.value })}
+                    placeholder="z.B. anthropic/claude-sonnet-4"
+                    className="font-mono text-xs"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Provider-Reihenfolge */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Provider-Reihenfolge (oben = zuerst)</label>
-              <div className="space-y-1">
-                {row.provider_order.map((p, idx) => (
-                  <div key={p} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
-                    <span className="text-xs font-mono w-6 text-muted-foreground">{idx + 1}.</span>
-                    <span className="flex-1 text-sm">{PROVIDER_LABELS[p]}</span>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" disabled={idx === 0} onClick={() => moveProvider(row.id, idx, -1)}>
-                      <ArrowUp className="w-3 h-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" disabled={idx === row.provider_order.length - 1} onClick={() => moveProvider(row.id, idx, 1)}>
-                      <ArrowDown className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
-                {ALL_PROVIDERS.filter((p) => !row.provider_order.includes(p)).length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {ALL_PROVIDERS.filter((p) => !row.provider_order.includes(p)).map((p) => (
-                      <Button key={p} size="sm" variant="outline" onClick={() => update(row.id, { provider_order: [...row.provider_order, p] })}>
-                        + {PROVIDER_LABELS[p]}
+              {/* Provider-Reihenfolge mit Einzeltest */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Provider-Reihenfolge (oben = zuerst). Einzeltest pro Provider möglich.</label>
+                <div className="space-y-1">
+                  {row.provider_order.map((p, idx) => (
+                    <div key={p} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+                      <span className="text-xs font-mono w-6 text-muted-foreground">{idx + 1}.</span>
+                      <span className="flex-1 text-sm">{PROVIDER_LABELS[p]}</span>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" disabled={idx === 0} onClick={() => moveProvider(row.id, idx, -1)} title="Hoch">
+                        <ArrowUp className="w-3 h-3" />
                       </Button>
-                    ))}
-                  </div>
-                )}
-                {row.provider_order.length > 1 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {row.provider_order.map((p, idx) => (
-                      <Button key={`rm-${p}`} size="sm" variant="ghost" className="text-xs h-6 text-destructive" onClick={() => update(row.id, { provider_order: row.provider_order.filter((_, i) => i !== idx) })}>
-                        − {PROVIDER_LABELS[p]}
+                      <Button size="icon" variant="ghost" className="h-7 w-7" disabled={idx === row.provider_order.length - 1} onClick={() => moveProvider(row.id, idx, 1)} title="Runter">
+                        <ArrowDown className="w-3 h-3" />
                       </Button>
-                    ))}
-                  </div>
-                )}
+                      <Button size="sm" variant="outline" className="h-7" disabled={testing !== null} onClick={() => runTest(row, p)} title={`Nur ${PROVIDER_LABELS[p]} testen`}>
+                        {testing === `${row.id}:${p}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => update(row.id, { provider_order: row.provider_order.filter((_, i) => i !== idx) })} title="Entfernen">−</Button>
+                    </div>
+                  ))}
+                  {ALL_PROVIDERS.filter((p) => !row.provider_order.includes(p)).length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {ALL_PROVIDERS.filter((p) => !row.provider_order.includes(p)).map((p) => (
+                        <Button key={p} size="sm" variant="outline" onClick={() => update(row.id, { provider_order: [...row.provider_order, p] })}>
+                          + {PROVIDER_LABELS[p]}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Temperatur */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Temperatur (optional)</label>
-                <Input
-                  type="number" min="0" max="2" step="0.1"
-                  value={row.temperature ?? ''}
-                  onChange={(e) => update(row.id, { temperature: e.target.value === '' ? null : Number(e.target.value) })}
-                  placeholder="Default"
-                />
+              {/* Temperatur */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Temperatur (optional)</label>
+                  <Input
+                    type="number" min="0" max="2" step="0.1"
+                    value={row.temperature ?? ''}
+                    onChange={(e) => update(row.id, { temperature: e.target.value === '' ? null : Number(e.target.value) })}
+                    placeholder="Default"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t">
-              <Button onClick={() => save(row)} disabled={saving === row.id} size="sm">
-                {saving === row.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
-                Speichern
-              </Button>
-              <Button onClick={() => runTest(row)} disabled={testing === row.id} size="sm" variant="outline">
-                {testing === row.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-                Test
-              </Button>
-              {testResults[row.id] && (
-                <span className="text-xs text-muted-foreground self-center">{testResults[row.id]}</span>
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <Button onClick={() => save(row)} disabled={saving === row.id} size="sm">
+                  {saving === row.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+                  Speichern
+                </Button>
+                <Button onClick={() => runTest(row)} disabled={testing !== null} size="sm" variant="outline">
+                  {testing === row.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                  Kette testen
+                </Button>
+              </div>
+
+              {/* Test Result */}
+              {hasError && (
+                <div className="text-xs text-destructive border border-destructive/30 rounded p-2 bg-destructive/5">
+                  Fehler: {(result as { error: string }).error}
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              {hasResult && (
+                <div className="space-y-1 border rounded-md p-2 bg-muted/20">
+                  <div className="text-xs font-medium text-muted-foreground mb-1">
+                    Test-Ergebnis ({(result as TestResult).mode === 'single' ? 'Einzeltest' : 'Provider-Kette'})
+                  </div>
+                  {(result as TestResult).attempts.map((a, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs py-1 border-b last:border-0">
+                      <div className="mt-0.5">
+                        {a.skipped_reason ? <MinusCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                         : a.ok ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                         : <XCircle className="w-3.5 h-3.5 text-destructive" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{PROVIDER_LABELS[a.provider]}</span>
+                          <span className="font-mono text-muted-foreground text-[10px]">{a.native_model}</span>
+                          {a.status && <Badge variant={a.ok ? 'default' : 'destructive'} className="text-[10px] h-4 px-1">HTTP {a.status}</Badge>}
+                          {a.latency_ms > 0 && <span className="text-muted-foreground">{a.latency_ms}ms</span>}
+                        </div>
+                        {a.skipped_reason && <div className="text-muted-foreground italic">Übersprungen: {a.skipped_reason}</div>}
+                        {a.response && <div className="text-foreground/80 truncate">↳ "{a.response}"</div>}
+                        {a.error && (
+                          <div className="text-destructive break-all">
+                            {a.status === 402 ? '💳 Credits aufgebraucht: ' : ''}
+                            {a.status === 401 ? '🔑 Auth-Fehler: ' : ''}
+                            {a.status === 404 ? '❓ Modell nicht gefunden: ' : ''}
+                            {a.error.slice(0, 200)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
