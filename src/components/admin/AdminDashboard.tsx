@@ -14,11 +14,15 @@ import {
   TrendingUp,
   LogOut,
   KeyRound,
-  Loader2
+  Loader2,
+  Cpu,
+  Activity
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
 import { PromptRulesPanel } from './PromptRulesPanel';
+import { AIModelConfigPanel } from './AIModelConfigPanel';
+import { AIModelMetricsPanel } from './AIModelMetricsPanel';
 
 interface CacheStats {
   totalCached: number;
@@ -179,18 +183,26 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsList className="grid w-full grid-cols-5 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Übersicht
             </TabsTrigger>
             <TabsTrigger value="cache" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <Database className="w-3 h-3 sm:w-4 sm:h-4" />
-              Fragen-Cache
+              Cache
             </TabsTrigger>
             <TabsTrigger value="rules" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-              Prompt-Regeln
+              Regeln
+            </TabsTrigger>
+            <TabsTrigger value="ai-models" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Cpu className="w-3 h-3 sm:w-4 sm:h-4" />
+              KI-Modelle
+            </TabsTrigger>
+            <TabsTrigger value="ai-metrics" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
+              Metriken
             </TabsTrigger>
           </TabsList>
 
@@ -286,6 +298,12 @@ export function AdminDashboard() {
           {/* Prompt Rules Tab */}
           <TabsContent value="rules" className="space-y-4">
             <PromptRulesPanel />
+          </TabsContent>
+          <TabsContent value="ai-models" className="space-y-4">
+            <AIModelConfigPanel />
+          </TabsContent>
+          <TabsContent value="ai-metrics" className="space-y-4">
+            <AIModelMetricsPanel />
           </TabsContent>
         </Tabs>
       </div>
