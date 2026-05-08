@@ -24,6 +24,7 @@ import { CacheGroupItem } from './CacheGroupItem';
 import { PromptRulesPanel } from './PromptRulesPanel';
 import { AIModelConfigPanel } from './AIModelConfigPanel';
 import { AIModelMetricsPanel } from './AIModelMetricsPanel';
+import { AIModelPlayground } from './AIModelPlayground';
 
 interface CacheStats {
   totalCached: number;
@@ -305,6 +306,9 @@ export function AdminDashboard() {
           </TabsContent>
           <TabsContent value="ai-metrics" className="space-y-4">
             <AIModelMetricsPanel />
+          </TabsContent>
+          <TabsContent value="ai-playground" className="space-y-4">
+            <AIModelPlayground />
           </TabsContent>
         </Tabs>
       </div>
