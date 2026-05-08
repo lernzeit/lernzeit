@@ -143,6 +143,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_model_optimization_runs: {
+        Row: {
+          applied: boolean
+          id: string
+          new_model: string | null
+          previous_model: string | null
+          reason: string | null
+          results: Json
+          run_at: string
+          triggered_by: string
+          use_case: string
+          winner_cost_usd: number | null
+          winner_provider: string | null
+          winner_score: number | null
+        }
+        Insert: {
+          applied?: boolean
+          id?: string
+          new_model?: string | null
+          previous_model?: string | null
+          reason?: string | null
+          results?: Json
+          run_at?: string
+          triggered_by?: string
+          use_case: string
+          winner_cost_usd?: number | null
+          winner_provider?: string | null
+          winner_score?: number | null
+        }
+        Update: {
+          applied?: boolean
+          id?: string
+          new_model?: string | null
+          previous_model?: string | null
+          reason?: string | null
+          results?: Json
+          run_at?: string
+          triggered_by?: string
+          use_case?: string
+          winner_cost_usd?: number | null
+          winner_provider?: string | null
+          winner_score?: number | null
+        }
+        Relationships: []
+      }
       ai_question_cache: {
         Row: {
           correct_answer: Json
