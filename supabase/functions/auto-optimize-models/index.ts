@@ -203,8 +203,8 @@ function candidatesForUseCase(useCase: string): Array<{ model: string; provider:
     if (p) push(m.id, p);
   }
 
-  // Cap at 6 to keep latency/quota in check.
-  return list.slice(0, 6);
+  // Cap at 4 to keep latency/quota in check (edge function CPU-time limit).
+  return list.slice(0, 4);
 }
 
 serve(async (req) => {
@@ -232,55 +232,80 @@ serve(async (req) => {
   const targetUseCases = body.use_cases ?? Object.keys(USE_CASE_TESTS);
   const apply = body.apply !== false; // default true
 
-  const summary: Array<Record<string, unknown>> = [];
+  // Background worker: process use-cases sequentially, persist after each one.
+  // Edge functions have a wall-clock/CPU budget — running this synchronously
+  // (7 use-cases × up to 4 candidates + judge) reliably times out.
+  const work = async () => {
+    for (const useCase of targetUseCases) {
+      const test = USE_CASE_TESTS[useCase];
+      if (!test) continue;
+      try {
+        const candidates = candidatesForUseCase(useCase);
+        const results = await Promise.all(candidates.map((c) => runOne(c.model, c.provider, test.system, test.prompt)));
+        await judge(useCase, test.prompt, results);
+        const { winner, reason } = pickWinner(results);
 
-  for (const useCase of targetUseCases) {
-    const test = USE_CASE_TESTS[useCase];
-    if (!test) continue;
+        const { data: cfg } = await supabase.from('ai_model_config')
+          .select('id, primary_model, provider_order').eq('use_case', useCase).maybeSingle();
+        const previousModel = cfg?.primary_model ?? null;
 
-    const candidates = candidatesForUseCase(useCase);
-    const results = await Promise.all(candidates.map((c) => runOne(c.model, c.provider, test.system, test.prompt)));
-    await judge(useCase, test.prompt, results);
-    const { winner, reason } = pickWinner(results);
+        let applied = false;
+        if (apply && winner && cfg) {
+          const newOrder: ProviderId[] = winner.provider === 'openrouter'
+            ? ['openrouter', 'gemini_direct', 'lovable']
+            : winner.provider === 'gemini_direct'
+              ? ['gemini_direct', 'openrouter', 'lovable']
+              : ['lovable', 'openrouter', 'gemini_direct'];
+          const { error: upErr } = await supabase.from('ai_model_config').update({
+            primary_model: winner.model,
+            provider_order: newOrder,
+            updated_at: new Date().toISOString(),
+          }).eq('id', cfg.id);
+          if (!upErr) applied = true;
+        }
 
-    // Load current config
-    const { data: cfg } = await supabase.from('ai_model_config')
-      .select('id, primary_model, provider_order').eq('use_case', useCase).maybeSingle();
-    const previousModel = cfg?.primary_model ?? null;
-
-    let applied = false;
-    if (apply && winner && cfg) {
-      // OpenRouter is always present as a fallback because the user maintains credit there.
-      const newOrder: ProviderId[] = winner.provider === 'openrouter'
-        ? ['openrouter', 'gemini_direct', 'lovable']
-        : winner.provider === 'gemini_direct'
-          ? ['gemini_direct', 'openrouter', 'lovable']
-          : ['lovable', 'openrouter', 'gemini_direct'];
-      const { error: upErr } = await supabase.from('ai_model_config').update({
-        primary_model: winner.model,
-        provider_order: newOrder,
-        updated_at: new Date().toISOString(),
-      }).eq('id', cfg.id);
-      if (!upErr) applied = true;
+        await supabase.from('ai_model_optimization_runs').insert({
+          use_case: useCase,
+          previous_model: previousModel,
+          new_model: winner?.model ?? null,
+          applied,
+          winner_provider: winner?.provider ?? null,
+          winner_score: winner?.judge_score ?? null,
+          winner_cost_usd: winner?.estimated_cost_per_1k_calls_usd ?? null,
+          reason,
+          results,
+          triggered_by: triggeredBy,
+        });
+      } catch (err) {
+        await supabase.from('ai_model_optimization_runs').insert({
+          use_case: useCase,
+          previous_model: null,
+          new_model: null,
+          applied: false,
+          winner_provider: null,
+          winner_score: null,
+          winner_cost_usd: null,
+          reason: `Fehler: ${(err as Error).message}`.slice(0, 500),
+          results: [],
+          triggered_by: triggeredBy,
+        });
+      }
     }
+  };
 
-    await supabase.from('ai_model_optimization_runs').insert({
-      use_case: useCase,
-      previous_model: previousModel,
-      new_model: winner?.model ?? null,
-      applied,
-      winner_provider: winner?.provider ?? null,
-      winner_score: winner?.judge_score ?? null,
-      winner_cost_usd: winner?.estimated_cost_per_1k_calls_usd ?? null,
-      reason,
-      results,
-      triggered_by: triggeredBy,
-    });
-
-    summary.push({ use_case: useCase, previous_model: previousModel, new_model: winner?.model, applied, reason });
+  // Fire-and-forget background processing; respond immediately.
+  // @ts-ignore EdgeRuntime is available in Supabase Edge runtime
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(work());
+  } else {
+    // Local/dev fallback
+    work();
   }
 
-  return new Response(JSON.stringify({ success: true, summary }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return new Response(JSON.stringify({
+    success: true,
+    queued: targetUseCases.length,
+    message: 'Optimierung läuft im Hintergrund. Ergebnisse erscheinen nach und nach im Verlauf.',
+  }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });
