@@ -34,7 +34,8 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     input_price_per_1m: 0,
     output_price_per_1m: 0,
     supports_tools: false,
-    recommended_for: ['validate_answer', 'question_generator', 'ai_explain', 'ai_tutor', 'analyze_feedback'],
+    // Always-eligible candidate across every use-case (free).
+    recommended_for: ['validate_answer', 'question_generator', 'validate_question', 'ai_explain', 'ai_tutor', 'analyze_feedback', 'learning_plan'],
   },
   // ── Google Gemini ──────────────────────────────────────────
   {
