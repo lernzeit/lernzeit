@@ -13,6 +13,13 @@ import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
+
+// Lazy-load admin dashboard at module scope so it isn't recreated on every render
+// (recreating React.lazy inside the component caused AdminDashboard to fully
+// unmount/remount on any parent re-render — losing tab + benchmark results).
+const LazyAdminDashboard = React.lazy(() =>
+  import('@/components/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
 // ParentSettingsMenu removed - functionality now integrated into ParentDashboard
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AchievementQuickView } from '@/components/AchievementQuickView';
@@ -738,8 +745,6 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
   // Admin Dashboard
   if (profile?.role === 'admin') {
-    const AdminDashboard = React.lazy(() => import('@/components/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
-    
     return (
       <React.Suspense fallback={
         <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
@@ -751,7 +756,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           </Card>
         </div>
       }>
-        <AdminDashboard />
+        <LazyAdminDashboard />
       </React.Suspense>
     );
   }
