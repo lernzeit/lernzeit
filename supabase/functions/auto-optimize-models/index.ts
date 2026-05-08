@@ -166,19 +166,44 @@ function pickWinner(results: RunResult[]): { winner: RunResult | null; reason: s
 
 function candidatesForUseCase(useCase: string): Array<{ model: string; provider: ProviderId }> {
   const list: Array<{ model: string; provider: ProviderId }> = [];
+  const seen = new Set<string>();
+  const push = (model: string, provider: ProviderId) => {
+    const key = `${model}@${provider}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    list.push({ model, provider });
+  };
+  const pickProvider = (m: typeof RECOMMENDED_MODELS[number]): ProviderId | null => {
+    // Prefer OpenRouter (user's primary credit pool), then Gemini direct, then Lovable.
+    if (m.openrouter_id) return 'openrouter';
+    if (m.gemini_id) return 'gemini_direct';
+    if (m.lovable_id) return 'lovable';
+    return null;
+  };
+
+  // 1) Always include free OpenRouter (zero cost baseline).
+  push('openrouter/free', 'openrouter');
+
+  // 2) Models explicitly recommended for this use case.
   for (const m of RECOMMENDED_MODELS) {
-    // Always include free OpenRouter
-    if (m.id === 'openrouter/free') {
-      list.push({ model: m.id, provider: 'openrouter' });
-      continue;
-    }
-    // Recommended for this use case → include via cheapest available provider
+    if (m.id === 'openrouter/free') continue;
     if (!m.recommended_for.includes(useCase)) continue;
-    if (m.openrouter_id) list.push({ model: m.id, provider: 'openrouter' });
-    else if (m.gemini_id) list.push({ model: m.id, provider: 'gemini_direct' });
-    else if (m.lovable_id) list.push({ model: m.id, provider: 'lovable' });
+    const p = pickProvider(m);
+    if (p) push(m.id, p);
   }
-  // Cap at 6 candidates to keep latency/quota in check
+
+  // 3) Fill with the cheapest remaining models (avg of in/out price), regardless of provider.
+  const remaining = RECOMMENDED_MODELS
+    .filter((m) => m.id !== 'openrouter/free' && !list.some((c) => c.model === m.id))
+    .map((m) => ({ m, avg: (m.input_price_per_1m + m.output_price_per_1m) / 2 }))
+    .sort((a, b) => a.avg - b.avg);
+  for (const { m } of remaining) {
+    if (list.length >= 6) break;
+    const p = pickProvider(m);
+    if (p) push(m.id, p);
+  }
+
+  // Cap at 6 to keep latency/quota in check.
   return list.slice(0, 6);
 }
 
@@ -225,6 +250,7 @@ serve(async (req) => {
 
     let applied = false;
     if (apply && winner && cfg) {
+      // OpenRouter is always present as a fallback because the user maintains credit there.
       const newOrder: ProviderId[] = winner.provider === 'openrouter'
         ? ['openrouter', 'gemini_direct', 'lovable']
         : winner.provider === 'gemini_direct'
