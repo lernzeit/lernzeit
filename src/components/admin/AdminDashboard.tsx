@@ -16,7 +16,8 @@ import {
   KeyRound,
   Loader2,
   Cpu,
-  Activity
+  Activity,
+  FlaskConical
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
@@ -183,7 +184,7 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Übersicht
