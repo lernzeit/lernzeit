@@ -121,6 +121,15 @@ export function AIModelConfigPanel() {
 
   return (
     <div className="space-y-4">
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="pt-4 text-xs space-y-1.5">
+          <div className="font-semibold text-sm">So funktioniert die Konfiguration:</div>
+          <div>• <b>Primär-Modell</b> = das KI-Modell, das verwendet wird (z.B. <code className="text-[11px]">google/gemini-2.5-flash</code>).</div>
+          <div>• <b>Provider-Reihenfolge</b> = Über welche API das Modell aufgerufen wird. Plattform 1 wird zuerst probiert; bei Fehler (z.B. 402/Credits) fällt das System auf Plattform 2 zurück.</div>
+          <div>• Beispiel: Modell <code className="text-[11px]">google/gemini-2.5-flash</code> + Reihenfolge <i>OpenRouter → Gemini Direct</i> → Anfrage geht zuerst an OpenRouter; schlägt sie fehl, an Gemini Direct.</div>
+          <div className="text-muted-foreground pt-1">→ Zum Vergleich verschiedener Modelle für denselben Use-Case: Tab <b>Playground</b>.</div>
+        </CardContent>
+      </Card>
       {rows.map((row) => {
         const result = testResults[row.id];
         const hasError = result && 'error' in result;
