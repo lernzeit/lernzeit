@@ -44,11 +44,24 @@ export function AIModelOptimizationPanel() {
     try {
       const { data, error } = await supabase.functions.invoke('auto-optimize-models', { body: { apply: true } });
       if (error) throw error;
-      toast({ title: 'Optimierung abgeschlossen', description: `${data?.summary?.length ?? 0} Use-Cases geprüft.` });
-      await load();
+      const queued = (data as { queued?: number })?.queued ?? 0;
+      toast({
+        title: 'Optimierung gestartet',
+        description: `${queued} Use-Cases laufen im Hintergrund. Ergebnisse erscheinen nach und nach (~30–90 s).`,
+      });
+      // Poll the runs table every 5s for up to 3 minutes so the user sees progress live.
+      const startCount = runs.length;
+      let elapsed = 0;
+      const poll = setInterval(async () => {
+        elapsed += 5;
+        await load();
+        if (elapsed >= 180) {
+          clearInterval(poll);
+          setRunning(false);
+        }
+      }, 5000);
     } catch (err) {
       toast({ title: 'Fehler', description: (err as Error).message, variant: 'destructive' });
-    } finally {
       setRunning(false);
     }
   }
