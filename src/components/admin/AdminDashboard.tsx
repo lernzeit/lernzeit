@@ -206,6 +206,10 @@ export function AdminDashboard() {
               <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
               Metriken
             </TabsTrigger>
+            <TabsTrigger value="ai-playground" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4" />
+              Playground
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
