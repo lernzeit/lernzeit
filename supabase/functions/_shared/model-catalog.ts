@@ -23,6 +23,19 @@ export interface ModelInfo {
 }
 
 export const RECOMMENDED_MODELS: ModelInfo[] = [
+  // ── OpenRouter Auto-Free (routes to best available free model) ────
+  {
+    id: 'openrouter/free',
+    label: 'OpenRouter Free (Auto)',
+    family: 'other',
+    gemini_id: null,
+    openrouter_id: 'openrouter/auto',
+    lovable_id: null,
+    input_price_per_1m: 0,
+    output_price_per_1m: 0,
+    supports_tools: false,
+    recommended_for: ['validate_answer', 'question_generator', 'ai_explain', 'ai_tutor', 'analyze_feedback'],
+  },
   // ── Google Gemini ──────────────────────────────────────────
   {
     id: 'google/gemini-2.5-flash-lite',
