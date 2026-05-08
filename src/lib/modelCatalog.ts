@@ -22,6 +22,7 @@ export interface ModelInfo {
 }
 
 export const RECOMMENDED_MODELS: ModelInfo[] = [
+  { id: 'openrouter/free', label: 'OpenRouter Free (Auto)', family: 'other', input_price_per_1m: 0, output_price_per_1m: 0, available_on: ['openrouter'], recommended_for: ['validate_answer', 'question_generator', 'ai_explain', 'ai_tutor', 'analyze_feedback'] },
   { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', family: 'google', input_price_per_1m: 0.10, output_price_per_1m: 0.40, available_on: ['gemini_direct', 'openrouter', 'lovable'], recommended_for: ['validate_answer'] },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', family: 'google', input_price_per_1m: 0.30, output_price_per_1m: 2.50, available_on: ['gemini_direct', 'openrouter', 'lovable'], recommended_for: ['question_generator', 'ai_explain'] },
   { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash (Preview)', family: 'google', input_price_per_1m: 0.30, output_price_per_1m: 2.50, available_on: ['gemini_direct', 'openrouter', 'lovable'], recommended_for: ['question_generator', 'ai_tutor'] },
