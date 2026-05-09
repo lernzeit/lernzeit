@@ -98,6 +98,17 @@ serve(async (req) => {
 
     const body = requestBody as Record<string, unknown>;
 
+    // Health-check short-circuit: ApiStatusPanel sends { test: true } to verify
+    // the function/API key is reachable. Return immediately without invoking AI
+    // so the request doesn't run the full pipeline (which would hit the 150s idle limit).
+    if (body.test === true) {
+      const hasKey = !!(Deno.env.get('LOVABLE_API_KEY') || Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY'));
+      return new Response(JSON.stringify({ success: hasKey, test: true, ok: hasKey }), {
+        status: hasKey ? 200 : 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Validate grade
     if (!isValidGrade(body.grade)) {
       return new Response(JSON.stringify({ 
