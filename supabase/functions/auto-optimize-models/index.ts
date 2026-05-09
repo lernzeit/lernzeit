@@ -50,6 +50,14 @@ const USE_CASE_TESTS: Record<string, { system?: string; prompt: string }> = {
   learning_plan: {
     prompt: 'Erstelle einen 3-Tage-Lernplan für eine Mathearbeit Klasse 4 zum Thema "Schriftliche Division". Format JSON {"days":[{"day":1,"topic":"...","exercises":["..."]}]}.',
   },
+  complex_math_g10: {
+    system: 'Du bist Mathe-Lehrkraft für Klasse 10. Antworte kurz, korrekt und auf Deutsch. Kein Markdown.',
+    prompt: 'Aufgabe Klasse 10: Bestimme die Nullstellen und den Scheitelpunkt von f(x) = 2x² - 8x + 6. Zeige die Rechenschritte (pq- oder Mitternachtsformel) und gib das Ergebnis als JSON {"nullstellen":[...],"scheitel":[x,y],"rechenweg":"..."} zurück.',
+  },
+  complex_physics_g10: {
+    system: 'Du bist Physik-Lehrkraft für Klasse 10. Antworte kurz, korrekt, mit Einheiten und auf Deutsch. Kein Markdown.',
+    prompt: 'Aufgabe Klasse 10 (Mechanik): Ein Auto (m = 1200 kg) beschleunigt aus dem Stand in 8 s gleichmäßig auf 25 m/s. Berechne (a) Beschleunigung, (b) wirkende Kraft, (c) zurückgelegte Strecke, (d) verrichtete Arbeit. Antwort als JSON {"a":"...m/s²","F":"...N","s":"...m","W":"...J","rechenweg":"..."}.',
+  },
 };
 
 interface RunResult {
