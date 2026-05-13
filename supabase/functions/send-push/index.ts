@@ -307,6 +307,45 @@ async function sendDailyParentSummaries(berlinHour: number, force = false) {
   return { sent: results.length };
 }
 
+// Deterministic hash to pick a consistent message per child per day
+function hashSeed(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (h << 5) - h + seed.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+const GENERAL_REMINDERS = [
+  { title: "🎯 Zeit zum Lernen!", message: "Heute wartet neues Wissen auf dich. Los geht's!" },
+  { title: "🧠 Dein Gehirn freut sich!", message: "Nur ein paar Minuten Lernen machen einen großen Unterschied." },
+  { title: "🏆 Neue Herausforderung!", message: "Jede Aufgabe bringt dich ein Stückchen weiter. Probier's aus!" },
+  { title: "✨ Wissen ist Power!", message: "Deine heutige Belohnung: Bildschirmzeit fürs Lernen!" },
+  { title: "🚀 Bereit für heute?", message: "Du schaffst das! Starte jetzt deine Lernsitzung." },
+  { title: "🎮 Spielen & Lernen!", message: "Lernen fühlt sich an wie ein Spiel – und du sammelst sogar Bildschirmzeit!" },
+  { title: "💡 Kleiner Schritt, große Wirkung!", message: "5 Minuten Lernen heute = stolzes Gefühl morgen." },
+  { title: "🌟 Du bist dran!", message: "Zeig dir selbst, was du alles kannst. Jetzt lernen!" },
+];
+
+const STREAK_REMINDERS = [
+  { title: (s: number) => `🔥 ${s}-Tage-Streak in Gefahr!`, message: (s: number) => `Dein ${s}-Tage-Streak lebt! Nur noch heute und er wächst weiter!` },
+  { title: (s: number) => `🏅 Fast geschafft!`, message: (s: number) => `${s} Tage am Stück – du bist unaufhaltsam! Mach weiter!` },
+  { title: (s: number) => `💪 Streak-Power!`, message: (s: number) => `Du bist im Flow! ${s} Tage. Heute wird's ${s + 1}!` },
+  { title: (s: number) => `🦸 Lern-Held!`, message: (s: number) => `Mit ${s} Tagen Streak bist du ein echter Champion. Weiter so!` },
+  { title: (s: number) => `🔥 Nicht aufhören!`, message: (s: number) => `Der ${s}-Tage-Streak will weiter. Gib ihm heute Nahrung!` },
+  { title: (s: number) => `🎯 Rekordjagd!`, message: (s: number) => `Du jagst deinen eigenen Rekord: ${s} Tage. Heute macht's ${s + 1}!` },
+];
+
+const STREAK_START_REMINDERS = [
+  { title: "🔥 Streak gestartet!", message: "Tag 1 ist geschafft. Heute wird's Tag 2 – du hast den Dreh raus!" },
+  { title: "🌱 Keimt gerade!", message: "Dein Streak ist klein aber oho! Bewässere ihn mit Lernen." },
+  { title: "🚀 Start durch!", message: "Gestern war der erste Schritt. Heute der zweite. Leg los!" },
+  { title: "✨ Aufbau-Modus!", message: "Tag 1 war super. Tag 2 wird noch besser. Starte jetzt!" },
+  { title: "💪 Momentum!", message: "Du hast angefangen – jetzt nicht stoppen! Heute = Streak Tag 2!" },
+  { title: "🎯 Weiter geht's!", message: "Ein Tag allein ist gut, zwei sind besser. Los geht's!" },
+];
+
 async function sendChildLearningReminders(berlinHour: number, force = false) {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -356,11 +395,23 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
       type = "streak_frozen";
       isStreakPush = true;
     } else if (streak >= 2) {
-      title = `🔥 ${streak}-Tage-Streak in Gefahr!`;
-      message = `Du lernst seit ${streak} Tagen in Folge. Lerne heute, um deinen Streak zu halten! 💪`;
+      const seed = `${child.id}-${today}`;
+      const idx = hashSeed(seed) % STREAK_REMINDERS.length;
+      const variant = STREAK_REMINDERS[idx];
+      title = variant.title(streak);
+      message = variant.message(streak);
     } else if (streak === 1) {
-      title = "🔥 Halte deinen Streak!";
-      message = "Du hast gestern gelernt. Mach heute weiter und starte einen Streak! 🚀";
+      const seed = `${child.id}-${today}`;
+      const idx = hashSeed(seed) % STREAK_START_REMINDERS.length;
+      const variant = STREAK_START_REMINDERS[idx];
+      title = variant.title;
+      message = variant.message;
+    } else {
+      const seed = `${child.id}-${today}`;
+      const idx = hashSeed(seed) % GENERAL_REMINDERS.length;
+      const variant = GENERAL_REMINDERS[idx];
+      title = variant.title;
+      message = variant.message;
     }
 
     // Hard dedupe: dim/frozen pushes are sent at most once per calendar day,
