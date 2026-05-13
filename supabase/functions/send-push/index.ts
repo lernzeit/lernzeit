@@ -124,41 +124,70 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
   switch (event) {
     case "screen_time_request_new": {
       const childName = await getChildName(body.child_id as string);
+      const minutes = body.requested_minutes;
+      const variants = [
+        { title: "📱 Neue Bildschirmzeit-Anfrage", message: `${childName} möchte ${minutes} Minuten Bildschirmzeit.` },
+        { title: "🙋 Anfrage von deinem Kind", message: `${childName} fragt nach ${minutes} Minuten Bildschirmzeit – magst du antworten?` },
+        { title: "⏳ Wartet auf dich", message: `${childName} hat ${minutes} Minuten Bildschirmzeit angefragt.` },
+        { title: "📲 ${name} fragt nach", message: `${childName} hätte gern ${minutes} Minuten. Du entscheidest!` },
+        { title: "✋ Bitte um Freigabe", message: `${childName} möchte ${minutes} Minuten Bildschirmzeit nutzen.` },
+      ];
+      const v = pickVariant(variants, `${body.request_id}`);
       return sendOneSignalPush({
         userIds: [body.parent_id as string],
-        title: "📱 Neue Bildschirmzeit-Anfrage",
-        message: `${childName} möchte ${body.requested_minutes} Minuten Bildschirmzeit.`,
+        title: v.title,
+        message: v.message,
         data: { type: "screen_time_request_new", request_id: body.request_id },
       });
     }
     case "screen_time_approved": {
+      const minutes = body.requested_minutes;
+      const variants = [
+        { title: "🎉 Bildschirmzeit genehmigt!", message: `Deine Eltern haben ${minutes} Minuten freigegeben!` },
+        { title: "✅ Freigegeben!", message: `Yes! ${minutes} Minuten Bildschirmzeit warten auf dich.` },
+        { title: "🥳 Genehmigt!", message: `Deine Anfrage wurde bestätigt: ${minutes} Minuten freigeschaltet.` },
+        { title: "🚀 Los geht's!", message: `Du hast ${minutes} Minuten Bildschirmzeit bekommen. Viel Spaß!` },
+        { title: "💚 Daumen hoch!", message: `Deine Eltern sagen Ja – ${minutes} Minuten gehören dir.` },
+      ];
+      const v = pickVariant(variants, `${body.request_id}`);
       return sendOneSignalPush({
         userIds: [body.child_id as string],
-        title: "🎉 Bildschirmzeit genehmigt!",
-        message: `Deine Eltern haben ${body.requested_minutes} Minuten freigegeben!`,
+        title: v.title,
+        message: v.message,
         data: { type: "screen_time_approved", request_id: body.request_id },
       });
     }
     case "screen_time_denied": {
+      const fallback = [
+        { title: "Bildschirmzeit abgelehnt", message: "Deine Anfrage wurde leider abgelehnt." },
+        { title: "Heute leider nicht", message: "Deine Eltern haben die Anfrage diesmal abgelehnt." },
+        { title: "Anfrage nicht freigegeben", message: "Deine Bildschirmzeit-Anfrage wurde abgelehnt." },
+      ];
+      const v = pickVariant(fallback, `${body.request_id}`);
+      const parentMsg = (body.parent_response as string)?.trim();
       return sendOneSignalPush({
         userIds: [body.child_id as string],
-        title: "Bildschirmzeit abgelehnt",
-        message:
-          (body.parent_response as string) ||
-          "Deine Anfrage wurde leider abgelehnt.",
+        title: v.title,
+        message: parentMsg || v.message,
         data: { type: "screen_time_denied", request_id: body.request_id },
       });
     }
     case "learning_plan_created": {
       const subject = toGermanSubject(body.subject) || "deinem Fach";
       const topic = (body.topic as string) || "";
-      const message = topic
-        ? `Deine Eltern haben einen Lernplan für ${subject} (${topic}) erstellt.`
-        : `Deine Eltern haben einen Lernplan für ${subject} erstellt.`;
+      const suffix = topic ? `${subject} (${topic})` : subject;
+      const variants = [
+        { title: "📚 Neuer Lernplan für dich!", message: `Deine Eltern haben einen Lernplan für ${suffix} erstellt.` },
+        { title: "🎯 Lernplan ist da!", message: `Frischer Lernplan für ${suffix} – schau gleich rein!` },
+        { title: "🗺️ Dein Weg zum Ziel", message: `Ein neuer Lernplan für ${suffix} wartet auf dich.` },
+        { title: "✨ Bereit für ${suffix}?", message: `Deine Eltern haben einen Plan für ${suffix} vorbereitet.` },
+        { title: "🚀 Neuer Plan freigeschaltet", message: `Lernplan ${suffix} ist bereit – leg los!` },
+      ];
+      const v = pickVariant(variants, `${body.plan_id}`);
       return sendOneSignalPush({
         userIds: [body.child_id as string],
-        title: "📚 Neuer Lernplan für dich!",
-        message,
+        title: v.title,
+        message: v.message,
         data: {
           type: "learning_plan_created",
           plan_id: body.plan_id,
@@ -168,10 +197,17 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
     }
     case "subject_priority_set": {
       const subject = toGermanSubject(body.subject) || "ein Fach";
+      const variants = [
+        { title: "⭐ Neues Schwerpunkt-Fach", message: `Deine Eltern haben ${subject} als Schwerpunkt-Fach festgelegt.` },
+        { title: "🎯 Fokus auf ${subject}", message: `${subject} ist jetzt dein neues Schwerpunkt-Fach.` },
+        { title: "📌 ${subject} im Fokus", message: `Deine Eltern setzen den Schwerpunkt auf ${subject}.` },
+        { title: "🌟 Neuer Schwerpunkt", message: `Ab jetzt steht ${subject} besonders im Mittelpunkt.` },
+      ];
+      const v = pickVariant(variants, `${body.child_id}-${body.subject}`);
       return sendOneSignalPush({
         userIds: [body.child_id as string],
-        title: "⭐ Neues Schwerpunkt-Fach",
-        message: `Deine Eltern haben ${subject} als Schwerpunkt-Fach festgelegt.`,
+        title: v.title,
+        message: v.message,
         data: {
           type: "subject_priority_set",
           subject: body.subject,
