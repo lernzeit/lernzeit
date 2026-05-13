@@ -353,6 +353,13 @@ function hashSeed(seed: string): number {
   return Math.abs(h);
 }
 
+// Pick a variant deterministically based on a seed string, or randomly if seed missing.
+function pickVariant<T>(variants: T[], seed?: string): T {
+  if (!variants.length) throw new Error("no variants");
+  const idx = seed ? hashSeed(seed) % variants.length : Math.floor(Math.random() * variants.length);
+  return variants[idx];
+}
+
 const GENERAL_REMINDERS = [
   { title: "🎯 Zeit zum Lernen!", message: "Heute wartet neues Wissen auf dich. Los geht's!" },
   { title: "🧠 Dein Gehirn freut sich!", message: "Nur ein paar Minuten Lernen machen einen großen Unterschied." },
