@@ -129,7 +129,7 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         { title: "📱 Neue Bildschirmzeit-Anfrage", message: `${childName} möchte ${minutes} Minuten Bildschirmzeit.` },
         { title: "🙋 Anfrage von deinem Kind", message: `${childName} fragt nach ${minutes} Minuten Bildschirmzeit – magst du antworten?` },
         { title: "⏳ Wartet auf dich", message: `${childName} hat ${minutes} Minuten Bildschirmzeit angefragt.` },
-        { title: "📲 ${name} fragt nach", message: `${childName} hätte gern ${minutes} Minuten. Du entscheidest!` },
+        { title: `📲 ${childName} fragt nach`, message: `${childName} hätte gern ${minutes} Minuten. Du entscheidest!` },
         { title: "✋ Bitte um Freigabe", message: `${childName} möchte ${minutes} Minuten Bildschirmzeit nutzen.` },
       ];
       const v = pickVariant(variants, `${body.request_id}`);
@@ -180,7 +180,7 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         { title: "📚 Neuer Lernplan für dich!", message: `Deine Eltern haben einen Lernplan für ${suffix} erstellt.` },
         { title: "🎯 Lernplan ist da!", message: `Frischer Lernplan für ${suffix} – schau gleich rein!` },
         { title: "🗺️ Dein Weg zum Ziel", message: `Ein neuer Lernplan für ${suffix} wartet auf dich.` },
-        { title: "✨ Bereit für ${suffix}?", message: `Deine Eltern haben einen Plan für ${suffix} vorbereitet.` },
+        { title: `✨ Bereit für ${suffix}?`, message: `Deine Eltern haben einen Plan für ${suffix} vorbereitet.` },
         { title: "🚀 Neuer Plan freigeschaltet", message: `Lernplan ${suffix} ist bereit – leg los!` },
       ];
       const v = pickVariant(variants, `${body.plan_id}`);
@@ -199,8 +199,8 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       const subject = toGermanSubject(body.subject) || "ein Fach";
       const variants = [
         { title: "⭐ Neues Schwerpunkt-Fach", message: `Deine Eltern haben ${subject} als Schwerpunkt-Fach festgelegt.` },
-        { title: "🎯 Fokus auf ${subject}", message: `${subject} ist jetzt dein neues Schwerpunkt-Fach.` },
-        { title: "📌 ${subject} im Fokus", message: `Deine Eltern setzen den Schwerpunkt auf ${subject}.` },
+        { title: `🎯 Fokus auf ${subject}`, message: `${subject} ist jetzt dein neues Schwerpunkt-Fach.` },
+        { title: `📌 ${subject} im Fokus`, message: `Deine Eltern setzen den Schwerpunkt auf ${subject}.` },
         { title: "🌟 Neuer Schwerpunkt", message: `Ab jetzt steht ${subject} besonders im Mittelpunkt.` },
       ];
       const v = pickVariant(variants, `${body.child_id}-${body.subject}`);
