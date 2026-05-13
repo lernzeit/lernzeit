@@ -330,11 +330,20 @@ async function sendDailyParentSummaries(berlinHour: number, force = false) {
     const childName = await getChildName(rel.child_id);
     const accuracy = Math.round((correctAnswers / totalQuestions) * 100);
 
+    const summaryVariants = [
+      { title: `📊 Tagesbericht: ${childName}`, message: `${totalQuestions} Aufgaben gelöst (${accuracy}% richtig), ${timeEarned} Min. verdient.` },
+      { title: `🌟 ${childName} hat heute gelernt`, message: `${totalQuestions} Aufgaben, ${accuracy}% richtig – ${timeEarned} Min. Bildschirmzeit verdient.` },
+      { title: `📚 Lernbilanz von ${childName}`, message: `Heute: ${totalQuestions} Aufgaben (${accuracy}% Trefferquote) und ${timeEarned} Min. erspielt.` },
+      { title: `🎯 ${childName} war fleißig`, message: `${totalQuestions} Aufgaben geschafft, ${accuracy}% richtig. Belohnung: ${timeEarned} Min.` },
+      { title: `🏅 Tagesergebnis: ${childName}`, message: `${correctAnswers}/${totalQuestions} richtig (${accuracy}%) – ${timeEarned} Min. verdient.` },
+    ];
+    const v = pickVariant(summaryVariants, `${rel.child_id}-${today}`);
+
     results.push(
       await sendOneSignalPush({
         userIds: [rel.parent_id],
-        title: `📊 Tagesbericht: ${childName}`,
-        message: `${totalQuestions} Aufgaben gelöst (${accuracy}% richtig), ${timeEarned} Min. verdient.`,
+        title: v.title,
+        message: v.message,
         data: { type: "parent_daily_summary", child_id: rel.child_id },
         respectDailyToggle: true,
       }).catch((e) => ({ error: String(e) })),
