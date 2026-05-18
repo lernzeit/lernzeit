@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import LegalFooter from '@/components/layout/LegalFooter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import Seo from '@/components/Seo';
+import { Helmet } from 'react-helmet-async';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
@@ -250,6 +252,26 @@ const Index = () => {
 
   return (
     <main className="min-h-screen bg-gradient-bg p-4 relative overflow-hidden">
+      <Seo
+        title="LernZeit – Lernen belohnen, Handyzeit verdienen"
+        description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit – Eltern behalten die Kontrolle. Klasse 1–10."
+        path="/"
+      />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "LernZeit",
+          url: "https://lernzeit.lovable.app",
+          description: "Spielerische Lern-App: Kinder verdienen Bildschirmzeit durch das Lösen von Aufgaben."
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "LernZeit",
+          url: "https://lernzeit.lovable.app"
+        })}</script>
+      </Helmet>
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
