@@ -87,7 +87,7 @@ const HeroSection = () => {
                 </div>
                 <span className="text-sm sm:text-base font-semibold text-foreground">{step.label}</span>
               </div>
-              {i < 2 && <ArrowRight className="w-5 h-5 text-muted-foreground/40 mb-8" />}
+              {i < 2 && <ArrowRight className="w-5 h-5 text-muted-foreground mb-8" />}
             </div>
           ))}
         </div>
