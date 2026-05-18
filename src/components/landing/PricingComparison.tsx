@@ -55,9 +55,9 @@ const PricingComparison = () => {
                   {f.free ? (
                     <Check className="w-5 h-5 text-secondary shrink-0" />
                   ) : (
-                    <X className="w-5 h-5 text-muted-foreground/30 shrink-0" />
+                    <X className="w-5 h-5 text-muted-foreground shrink-0" />
                   )}
-                  <span className={f.free ? '' : 'text-muted-foreground/50'}>{f.name}</span>
+                  <span className={f.free ? '' : 'text-muted-foreground'}>{f.name}</span>
                 </li>
               ))}
             </ul>

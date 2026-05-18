@@ -58,7 +58,7 @@ const HowItWorks = () => {
               className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 group relative bg-card rounded-3xl p-10 border shadow-sm hover:shadow-xl hover:-translate-y-2`}
               style={{ transitionDelay: `${i * 150}ms` }}
             >
-              <span className="text-7xl font-black text-muted/50 absolute top-5 right-7">
+              <span className="text-7xl font-black text-muted absolute top-5 right-7">
                 {step.number}
               </span>
               <div className={`w-16 h-16 bg-gradient-to-br ${step.gradient} rounded-2xl flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
@@ -84,7 +84,7 @@ const HowItWorks = () => {
               <div className="min-w-0">
                 <div className="flex items-baseline gap-2">
                   <h3 className="font-bold text-base">{step.title}</h3>
-                  <span className="text-xs font-bold text-muted-foreground/40">{step.number}</span>
+                  <span className="text-xs font-bold text-muted-foreground">{step.number}</span>
                 </div>
                 <p className="text-muted-foreground text-sm leading-relaxed mt-0.5">{step.description}</p>
               </div>

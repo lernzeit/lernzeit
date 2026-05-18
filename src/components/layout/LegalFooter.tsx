@@ -39,7 +39,7 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
           Impressum
         </Link>
       </div>
-      <p className={`text-center text-xs mt-2 ${variant === 'dark' ? 'text-gray-500' : 'text-muted-foreground/60'}`}>
+      <p className={`text-center text-xs mt-2 ${variant === 'dark' ? 'text-gray-300' : 'text-muted-foreground'}`}>
         © {new Date().getFullYear()} LernZeit. Alle Rechte vorbehalten.
       </p>
     </footer>
