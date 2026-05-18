@@ -3,12 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Seo from '@/components/Seo';
 
 const Datenschutz = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-bg p-4">
+      <Seo
+        title="Datenschutz – LernZeit"
+        description="Datenschutzerklärung von LernZeit: So gehen wir mit den Daten von Eltern und Kindern um. Transparenz und Sicherheit nach DSGVO."
+        path="/datenschutz"
+      />
       <div className="max-w-4xl mx-auto">
         <Button 
           variant="ghost" 
