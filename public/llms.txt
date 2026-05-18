@@ -1,0 +1,12 @@
+# LernZeit
+
+> Spielerische Lern-App: Kinder lösen lehrplanorientierte Aufgaben (Klasse 1–10) und verdienen damit Bildschirmzeit. Eltern behalten die Kontrolle über Fächer, Limits und Belohnungen.
+
+LernZeit verbindet Lernen mit Bildschirmzeit-Belohnung. Pro richtig gelöster Aufgabe wird Handyzeit freigeschaltet – die Eltern definieren, wie viel. Inhalte decken Mathe, Deutsch, Englisch, Sachunterricht und weitere Fächer ab.
+
+## Pages
+
+- [Start](/start): Landingpage mit Funktionsübersicht, Zielgruppen, Preisen und Anmeldung.
+- [Datenschutz](/datenschutz): Datenschutzerklärung nach DSGVO.
+- [Nutzungsbedingungen](/nutzungsbedingungen): Nutzungsbedingungen der App.
+- [Impressum](/impressum): Anbieterkennzeichnung gemäß § 5 TMG.
