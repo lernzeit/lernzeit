@@ -3,12 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Seo from '@/components/Seo';
 
 const Nutzungsbedingungen = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-bg p-4">
+      <Seo
+        title="Nutzungsbedingungen – LernZeit"
+        description="Nutzungsbedingungen der LernZeit-App für Eltern und Kinder."
+        path="/nutzungsbedingungen"
+      />
       <div className="max-w-4xl mx-auto">
         <Button 
           variant="ghost" 

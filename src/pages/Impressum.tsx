@@ -4,12 +4,18 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Building2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import Seo from '@/components/Seo';
 
 const Impressum = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-bg p-4">
+      <Seo
+        title="Impressum – LernZeit"
+        description="Impressum und Anbieterkennzeichnung von LernZeit gemäß § 5 TMG."
+        path="/impressum"
+      />
       <div className="max-w-4xl mx-auto">
         <Button 
           variant="ghost" 

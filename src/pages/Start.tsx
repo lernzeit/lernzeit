@@ -7,12 +7,18 @@ import USPSection from '@/components/landing/USPSection';
 import TargetAudience from '@/components/landing/TargetAudience';
 import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
+import Seo from '@/components/Seo';
 
 const Start = () => {
   const navigate = useNavigate();
 
   return (
     <main className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
+      <Seo
+        title="LernZeit – Lernen belohnen. Handyzeit verdienen."
+        description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Lehrplanorientiert für Klasse 1–10. Jetzt kostenlos starten."
+        path="/start"
+      />
       <HeroSection />
       <TargetAudience />
       <HowItWorks />
