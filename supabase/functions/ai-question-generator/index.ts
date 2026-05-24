@@ -190,6 +190,86 @@ serve(async (req) => {
       });
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // CACHE-FIRST STRATEGIE
+    // Wenn kein topicHint (Lernplan-Modus) und genug Cache-Einträge vorhanden,
+    // serviere ~70% der Anfragen direkt aus dem Cache. Massive Latenz-Reduktion.
+    // ─────────────────────────────────────────────────────────────────
+    const CACHE_FIRST_PROBABILITY = 0.7;
+    const CACHE_MIN_POOL = 15;
+    const CACHE_REFILL_THRESHOLD = 30;
+
+    const SUPABASE_URL_EARLY = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SRK_EARLY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!topicHint && SUPABASE_URL_EARLY && SUPABASE_SRK_EARLY && Math.random() < CACHE_FIRST_PROBABILITY) {
+      try {
+        const cacheClient = createClient(SUPABASE_URL_EARLY, SUPABASE_SRK_EARLY);
+        const { data: cachedPool, count } = await cacheClient
+          .from('ai_question_cache')
+          .select('*', { count: 'exact' })
+          .eq('grade', grade)
+          .eq('subject', subject)
+          .eq('difficulty', difficulty)
+          .order('times_served', { ascending: true })
+          .limit(20);
+
+        const poolSize = count ?? cachedPool?.length ?? 0;
+
+        if (cachedPool && cachedPool.length > 0 && poolSize >= CACHE_MIN_POOL) {
+          // Client-seitig gegen excludeTexts filtern
+          const exclSet = new Set(excludeTexts.map((t) => t.trim()));
+          const candidates = cachedPool.filter((q: any) => !exclSet.has((q.question_text || '').trim()));
+          const pickFrom = candidates.length > 0 ? candidates : cachedPool;
+          // Aus den 10 wenigst-genutzten zufällig auswählen
+          const topLeastServed = pickFrom.slice(0, 10);
+          const picked = topLeastServed[Math.floor(Math.random() * topLeastServed.length)];
+
+          console.log(`⚡ CACHE-FIRST hit (pool=${poolSize}): serving ${picked.id} (times_served=${picked.times_served})`);
+
+          // Update times_served async + ggf. Cache-Refill anstoßen
+          const bgWork = async () => {
+            try {
+              await cacheClient
+                .from('ai_question_cache')
+                .update({
+                  times_served: (picked.times_served || 0) + 1,
+                  last_served_at: new Date().toISOString(),
+                })
+                .eq('id', picked.id);
+            } catch (e) {
+              console.warn('Cache times_served update failed:', e);
+            }
+          };
+          (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: PromiseLike<unknown>) => void } })
+            .EdgeRuntime?.waitUntil(bgWork());
+
+          return new Response(JSON.stringify({
+            success: true,
+            question: {
+              id: crypto.randomUUID(),
+              grade: picked.grade,
+              subject: picked.subject,
+              difficulty: picked.difficulty,
+              questionText: picked.question_text,
+              questionType: picked.question_type,
+              correctAnswer: tryParseStructuredValue(picked.correct_answer),
+              options: tryParseStructuredValue(picked.options),
+              hint: picked.hint,
+              task: picked.task,
+              createdAt: new Date().toISOString(),
+              source: 'cache'
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        console.log(`📉 Cache-first skipped (pool=${poolSize} < ${CACHE_MIN_POOL}), generating fresh`);
+      } catch (cacheErr) {
+        console.warn('Cache-first lookup failed, falling back to AI:', cacheErr);
+      }
+    }
+
     const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint);
 
     // Load active prompt rules from DB (max 5, most relevant first)
@@ -207,7 +287,7 @@ serve(async (req) => {
         .or(`grade_min.is.null,grade_min.lte.${grade}`)
         .or(`grade_max.is.null,grade_max.gte.${grade}`)
         .order('source_feedback_count', { ascending: false })
-        .limit(5);
+        .limit(3);
 
       if (rules && rules.length > 0) {
         rulesBlock = '\n\nQUALITÄTSREGELN:\n' +
@@ -720,7 +800,7 @@ function buildQuestionPrompt(
 
   let exclusionNote = '';
   if (excludeTexts && excludeTexts.length > 0) {
-    exclusionNote = `\n\nWICHTIG - Vermeide Fragen die diesen ähnlich sind:\n${excludeTexts.slice(0, 10).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nGeneriere eine völlig andere Frage!`;
+    exclusionNote = `\n\nWICHTIG - Vermeide diese Fragen:\n${excludeTexts.slice(0, 5).map(t => `- "${t.substring(0, 50)}"`).join('\n')}`;
   }
 
   let topicNote = '';
