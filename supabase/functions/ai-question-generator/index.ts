@@ -800,7 +800,7 @@ function buildQuestionPrompt(
 
   let exclusionNote = '';
   if (excludeTexts && excludeTexts.length > 0) {
-    exclusionNote = `\n\nWICHTIG - Vermeide Fragen die diesen ähnlich sind:\n${excludeTexts.slice(0, 10).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nGeneriere eine völlig andere Frage!`;
+    exclusionNote = `\n\nWICHTIG - Vermeide diese Fragen:\n${excludeTexts.slice(0, 5).map(t => `- "${t.substring(0, 50)}"`).join('\n')}`;
   }
 
   let topicNote = '';
