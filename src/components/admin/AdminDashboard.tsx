@@ -19,7 +19,8 @@ import {
   Activity,
   FlaskConical,
   Sparkles,
-  MessageSquareHeart
+  MessageSquareHeart,
+  Gift
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
@@ -29,6 +30,7 @@ import { AIModelMetricsPanel } from './AIModelMetricsPanel';
 import { AIModelPlayground } from './AIModelPlayground';
 import { AIModelOptimizationPanel } from './AIModelOptimizationPanel';
 import { FeedbackInbox } from './FeedbackInbox';
+import { ReferralsPanel } from './ReferralsPanel';
 
 interface CacheStats {
   totalCached: number;
@@ -189,7 +191,7 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-8 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-9 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Übersicht
@@ -221,6 +223,10 @@ export function AdminDashboard() {
             <TabsTrigger value="feedback" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <MessageSquareHeart className="w-3 h-3 sm:w-4 sm:h-4" />
               Feedback
+            </TabsTrigger>
+            <TabsTrigger value="referrals" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
+              Referrals
             </TabsTrigger>
           </TabsList>
 
@@ -331,6 +337,9 @@ export function AdminDashboard() {
           </TabsContent>
           <TabsContent value="feedback" className="space-y-4">
             <FeedbackInbox />
+          </TabsContent>
+          <TabsContent value="referrals" className="space-y-4">
+            <ReferralsPanel />
           </TabsContent>
         </Tabs>
       </div>
