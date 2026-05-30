@@ -22,6 +22,7 @@ interface FeedbackRow {
   status: Status;
   admin_note: string | null;
   created_at: string;
+  is_tester_feedback?: boolean | null;
 }
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -45,6 +46,7 @@ export function FeedbackInbox() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
+  const [testerOnly, setTesterOnly] = useState(false);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<FeedbackRow | null>(null);
 
@@ -58,6 +60,7 @@ export function FeedbackInbox() {
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
       if (statusFilter !== 'all') q = q.eq('status', statusFilter);
       if (categoryFilter !== 'all') q = q.eq('category', categoryFilter);
+      if (testerOnly) q = q.eq('is_tester_feedback', true);
       const { data, error } = await q;
       if (error) throw error;
       setRows((data ?? []) as FeedbackRow[]);
@@ -70,7 +73,7 @@ export function FeedbackInbox() {
 
   useEffect(() => {
     load();
-  }, [statusFilter, categoryFilter, page]);
+  }, [statusFilter, categoryFilter, testerOnly, page]);
 
   const updateStatus = async (id: string, status: Status) => {
     const { error } = await supabase.from('parent_feedback').update({ status }).eq('id', id);
@@ -117,6 +120,13 @@ export function FeedbackInbox() {
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={load}>Aktualisieren</Button>
+          <Button
+            variant={testerOnly ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => { setPage(0); setTesterOnly((v) => !v); }}
+          >
+            🚀 Nur LernZeit-Familie
+          </Button>
         </div>
 
         {loading ? (
@@ -135,6 +145,9 @@ export function FeedbackInbox() {
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <Badge variant="secondary">{CATEGORY_LABEL[r.category]}</Badge>
                     <Badge variant={r.status === 'open' ? 'default' : 'outline'}>{STATUS_LABEL[r.status]}</Badge>
+                    {r.is_tester_feedback && (
+                      <Badge style={{ backgroundColor: '#22d3ee', color: '#0b1220' }}>🚀 LernZeit-Familie</Badge>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {new Date(r.created_at).toLocaleString('de-DE')}
                     </span>
