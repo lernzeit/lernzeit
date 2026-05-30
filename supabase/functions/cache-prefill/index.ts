@@ -418,10 +418,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Simple security: require a secret header for cron/admin calls
-  const authHeader = req.headers.get('x-prefill-secret');
+  // Security: require either the prefill secret header OR the service-role bearer.
+  // Fail-closed when neither is configured.
+  const prefillSecret = req.headers.get('x-prefill-secret');
   const expectedSecret = Deno.env.get('CACHE_PREFILL_SECRET');
-  if (expectedSecret && authHeader !== expectedSecret) {
+  const bearer = req.headers.get('Authorization')?.replace('Bearer ', '');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const authorized =
+    (expectedSecret && prefillSecret === expectedSecret) ||
+    (serviceKey && bearer === serviceKey);
+  if (!authorized) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
