@@ -72,6 +72,24 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated user with cryptographic JWT verification.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Nicht autorisiert' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+      const sb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+      const { data, error: authErr } = await sb.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authErr || !data?.user) {
+        return new Response(JSON.stringify({ success: false, error: 'Nicht autorisiert' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Parse and validate request body
     let requestBody: unknown;
     try {
