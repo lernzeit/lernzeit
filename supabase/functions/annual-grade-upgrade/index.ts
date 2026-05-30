@@ -4,6 +4,16 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+    // Restrict to service-role bearer (cron only)
+    const bearer = req.headers.get('Authorization')?.replace('Bearer ', '')
+    if (!supabaseKey || bearer !== supabaseKey) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { headers: { 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     console.log('🎓 Jährlicher Klassenwechsel gestartet...')
@@ -72,8 +82,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true,
         message: `Klassenwechsel erfolgreich abgeschlossen`,
-        updated: updatedCount,
-        details: updates
+        updated: updatedCount
       }),
       { 
         headers: { 'Content-Type': 'application/json' },
@@ -87,7 +96,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: (error as Error).message 
+        error: 'Internal error'
       }),
       { 
         headers: { 'Content-Type': 'application/json' },
