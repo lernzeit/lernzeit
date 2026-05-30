@@ -558,6 +558,64 @@ async function computeStreak(userId: string): Promise<number> {
   return streak;
 }
 
+const REFERRAL_VARIANTS = [
+  {
+    title: "🎁 Empfehlen & 1 Monat Premium gratis",
+    message: "Lade Freunde zu Lernzeit ein. Pro aktivem Kind bekommst du einen Monat Premium geschenkt.",
+  },
+  {
+    title: "🤝 Teile Lernzeit – sichere dir Premium",
+    message: "Verschenke 14 Tage Premium an Freunde. Wenn sie aktiv werden, gibt's 1 Monat Premium für dich.",
+  },
+  {
+    title: "💡 Neu: Empfehlungs-Programm",
+    message: "Im Eltern-Dashboard findest du jetzt den Reiter „Verschenken". Lade Freunde ein und spare Monate.",
+  },
+  {
+    title: "🌟 Premium verschenken & verdienen",
+    message: "Schenke Freunden 14 Tage Lernzeit Premium. Für jedes aktive Kind bekommst du Premium geschenkt.",
+  },
+];
+
+async function sendReferralAnnouncements(berlinHour: number, ignoreHour = false, force = false) {
+  // Send a one-time referral announcement to parents.
+  // By default only fires for parents whose preferred daily_summary_hour matches now,
+  // and only if they have never received it (referral_announce_sent_at IS NULL).
+  let query = supabase
+    .from("profiles")
+    .select("id, daily_summary_hour, referral_announce_sent_at")
+    .eq("role", "parent");
+  if (!ignoreHour) query = query.eq("daily_summary_hour", berlinHour);
+  if (!force) query = query.is("referral_announce_sent_at", null);
+  const { data: parents, error } = await query;
+  if (error) {
+    console.error("referral announce: failed to load parents", error);
+    return { error: "load_failed" };
+  }
+  if (!parents || parents.length === 0) {
+    return { skipped: true, reason: "no_parents", berlinHour };
+  }
+
+  const results: unknown[] = [];
+  for (const p of parents) {
+    const v = pickVariant(REFERRAL_VARIANTS, p.id);
+    const res = await sendOneSignalPush({
+      userIds: [p.id],
+      title: v.title,
+      message: v.message,
+      data: { type: "referral_announce", tab: "referral" },
+      respectDailyToggle: true,
+    }).catch((e) => ({ error: String(e) }));
+    // Stamp regardless of skip/success so we don't retry endlessly.
+    await supabase
+      .from("profiles")
+      .update({ referral_announce_sent_at: new Date().toISOString() })
+      .eq("id", p.id);
+    results.push(res);
+  }
+  return { sent: results.length };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
