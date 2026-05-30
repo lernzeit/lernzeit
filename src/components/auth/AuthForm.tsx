@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   // Optional tester code (parents only)
   const [testerCode, setTesterCode] = useState('');
+  // Referral code (read from URL or localStorage)
+  const [referralCode, setReferralCode] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
@@ -53,6 +55,30 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     resetWidget: resetCaptcha,
     isEnabled: isCaptchaEnabled,
   } = useTurnstile('turnstile-container');
+
+  // Detect referral code from URL (?ref=XXXXXX) or localStorage
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const fromUrl = url.searchParams.get('ref');
+      if (fromUrl && /^[A-Z0-9]{4,12}$/i.test(fromUrl)) {
+        const code = fromUrl.toUpperCase();
+        const payload = JSON.stringify({ code, expires: Date.now() + 30 * 86400_000 });
+        localStorage.setItem('lernzeit_referral_code', payload);
+        setReferralCode(code);
+        return;
+      }
+      const stored = localStorage.getItem('lernzeit_referral_code');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.code && parsed?.expires > Date.now()) {
+          setReferralCode(parsed.code);
+        } else {
+          localStorage.removeItem('lernzeit_referral_code');
+        }
+      }
+    } catch { /* noop */ }
+  }, []);
 
   const getCaptchaErrorDescription = () => {
     if (captchaErrorCode === '110200') {
@@ -276,12 +302,18 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             tester_code: role === 'parent' && testerCode.trim()
               ? testerCode.trim().toUpperCase()
               : undefined,
+            referral_code: role === 'parent' && referralCode
+              ? referralCode
+              : undefined,
           },
           emailRedirectTo: `${window.location.origin}/`
         }
       });
 
       if (error) throw error;
+      if (role === 'parent' && referralCode) {
+        localStorage.removeItem('lernzeit_referral_code');
+      }
       navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       if (isCaptchaEnabled) resetCaptcha();
