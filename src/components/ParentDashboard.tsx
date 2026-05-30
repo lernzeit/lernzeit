@@ -27,6 +27,10 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
+import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
+import { useRatingPrompt } from '@/hooks/useRatingPrompt';
+import { MessageSquareHeart } from 'lucide-react';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
@@ -81,6 +85,19 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
   const [requestsRefreshTrigger, setRequestsRefreshTrigger] = useState(0);
   const [familyLinkInstallOpen, setFamilyLinkInstallOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const { shouldShow: ratingShouldShow, dismiss: ratingDismiss } = useRatingPrompt(userId, 'parent');
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setUserEmail(data.user?.email ?? undefined);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   
   const { toast } = useToast();
   const isNativeAndroid =
@@ -831,6 +848,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
+                  <MessageSquareHeart className="h-5 w-5" />
+                  Feedback
+                </CardTitle>
+                <CardDescription>
+                  Schreib uns, was gut läuft oder besser werden kann.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" onClick={() => setFeedbackOpen(true)}>
+                  <MessageSquareHeart className="mr-2 h-4 w-4" />
+                  Feedback senden
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Key className="h-5 w-5" />
                   Passwort ändern
                 </CardTitle>
@@ -895,6 +930,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ParentFeedbackDialog
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        defaultEmail={userEmail}
+      />
+
+      <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />
     </div>
   );
 }
