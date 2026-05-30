@@ -108,7 +108,7 @@ serve(async (req) => {
     const msg = err instanceof Error ? err.message : String(err);
     log("error", { msg });
     return new Response(
-      JSON.stringify({ ok: false, error: msg }),
+      JSON.stringify({ ok: false, error: "internal_error" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

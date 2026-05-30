@@ -82,8 +82,9 @@ Deno.serve(async (req) => {
     });
 
     if (updateError) {
+      console.error('reset-child-password update error:', updateError);
       return new Response(
-        JSON.stringify({ error: updateError.message }),
+        JSON.stringify({ error: "Passwort konnte nicht aktualisiert werden." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

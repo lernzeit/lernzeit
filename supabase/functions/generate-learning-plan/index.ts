@@ -63,6 +63,20 @@ serve(async (req) => {
       });
     }
 
+    // SECURITY: Verify caller is parent of this child
+    const { data: rel } = await supabase
+      .from("parent_child_relationships")
+      .select("id")
+      .eq("parent_id", userData.user.id)
+      .eq("child_id", childId)
+      .maybeSingle();
+    if (!rel) {
+      return new Response(JSON.stringify({ error: "Kind ist nicht mit Ihrem Konto verknüpft" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const subjectNames: Record<string, string> = {
       math: "Mathematik",
       german: "Deutsch",
@@ -182,7 +196,7 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
   } catch (e) {
     console.error("generate-learning-plan error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unbekannter Fehler" }),
+      JSON.stringify({ error: "Lernplan konnte nicht erstellt werden." }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
