@@ -709,6 +709,7 @@ export type Database = {
           learning_reminder_hour: number
           name: string | null
           rating_prompt_response: string | null
+          referral_announce_sent_at: string | null
           role: string | null
           updated_at: string | null
           username: string | null
@@ -727,6 +728,7 @@ export type Database = {
           learning_reminder_hour?: number
           name?: string | null
           rating_prompt_response?: string | null
+          referral_announce_sent_at?: string | null
           role?: string | null
           updated_at?: string | null
           username?: string | null
@@ -745,6 +747,7 @@ export type Database = {
           learning_reminder_hour?: number
           name?: string | null
           rating_prompt_response?: string | null
+          referral_announce_sent_at?: string | null
           role?: string | null
           updated_at?: string | null
           username?: string | null

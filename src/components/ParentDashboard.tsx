@@ -78,6 +78,20 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
+  const [referralBannerDismissed, setReferralBannerDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('referralBannerDismissed') === '1';
+  });
+
+  // Deep-link from push notification: ?tab=referral focuses the Verschenken tab.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'referral') {
+      setActiveTab('referral');
+      setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
+  }, []);
   const [isFoundingFamily, setIsFoundingFamily] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -490,6 +504,46 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       )}
 
       {/* Main Tabs - reduced to 3 (Konto in header) */}
+      {!referralBannerDismissed && activeTab !== 'referral' && (
+        <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5">
+          <CardContent className="flex items-center justify-between gap-3 py-3 px-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                <Gift className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">Empfehlen & Premium-Monate sichern</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  Lade Freunde ein – pro aktivem Kind 1 Monat Premium geschenkt.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setActiveTab('referral');
+                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                }}
+              >
+                Jetzt ansehen
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Hinweis ausblenden"
+                onClick={() => {
+                  setReferralBannerDismissed(true);
+                  try { window.localStorage.setItem('referralBannerDismissed', '1'); } catch {}
+                }}
+              >
+                ✕
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
