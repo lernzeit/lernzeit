@@ -218,11 +218,12 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       // Cron runs hourly. Each user picks their own preferred hour
       // (Europe/Berlin local time) for the daily summary / reminder.
       const berlinHour = getBerlinHour();
-      const [parents, children] = await Promise.all([
+      const [parents, children, referral] = await Promise.all([
         sendDailyParentSummaries(berlinHour),
         sendChildLearningReminders(berlinHour),
+        sendReferralAnnouncements(berlinHour),
       ]);
-      return { berlinHour, parents, children };
+      return { berlinHour, parents, children, referral };
     }
     case "parent_daily_summary": {
       // Manual trigger: send to all parents whose preferred hour matches now (or all if forced)
@@ -230,6 +231,11 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
     }
     case "child_learning_reminder": {
       return sendChildLearningReminders(getBerlinHour(), true);
+    }
+    case "referral_announce": {
+      // Manual/admin trigger: broadcast referral program announcement to parents
+      // who have not yet received it. Pass { force: true } to ignore the flag.
+      return sendReferralAnnouncements(getBerlinHour(), true, Boolean(body.force));
     }
     case "streak_milestone": {
       const streak = Number(body.streak) || 0;
