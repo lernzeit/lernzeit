@@ -630,6 +630,7 @@ export type Database = {
           contact_email: string | null
           created_at: string
           id: string
+          is_tester_feedback: boolean
           message: string
           platform: string | null
           status: string
@@ -643,6 +644,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          is_tester_feedback?: boolean
           message: string
           platform?: string | null
           status?: string
@@ -656,10 +658,38 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          is_tester_feedback?: boolean
           message?: string
           platform?: string | null
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      premium_grants: {
+        Row: {
+          created_at: string
+          id: string
+          months: number
+          reason: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          months: number
+          reason: string
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          months?: number
+          reason?: string
+          source_ref?: string | null
           user_id?: string
         }
         Relationships: []
@@ -671,8 +701,10 @@ export type Database = {
           created_at: string | null
           daily_push_enabled: boolean
           daily_summary_hour: number
+          founding_family_at: string | null
           grade: number | null
           id: string
+          is_founding_family: boolean
           last_rating_prompt_at: string | null
           learning_reminder_hour: number
           name: string | null
@@ -687,8 +719,10 @@ export type Database = {
           created_at?: string | null
           daily_push_enabled?: boolean
           daily_summary_hour?: number
+          founding_family_at?: string | null
           grade?: number | null
           id: string
+          is_founding_family?: boolean
           last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
@@ -703,8 +737,10 @@ export type Database = {
           created_at?: string | null
           daily_push_enabled?: boolean
           daily_summary_hour?: number
+          founding_family_at?: string | null
           grade?: number | null
           id?: string
+          is_founding_family?: boolean
           last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
@@ -972,6 +1008,30 @@ export type Database = {
           },
         ]
       }
+      tester_codes: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          max_uses: number
+          uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          max_uses?: number
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          max_uses?: number
+          uses?: number
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_id: string
@@ -1150,6 +1210,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_premium_grant: {
+        Args: {
+          p_months: number
+          p_reason: string
+          p_source_ref?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       claim_invitation_code: {
         Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json

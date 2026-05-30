@@ -77,6 +77,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
+  const [isFoundingFamily, setIsFoundingFamily] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChanging, setPasswordChanging] = useState(false);
@@ -211,8 +212,13 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const loadProfileName = async () => {
     try {
-      const { data } = await supabase.from('profiles').select('name').eq('id', userId).single();
+      const { data } = await supabase
+        .from('profiles')
+        .select('name, is_founding_family')
+        .eq('id', userId)
+        .single();
       if (data?.name) setProfileName(data.name);
+      setIsFoundingFamily(!!data?.is_founding_family);
     } catch {}
   };
 
@@ -326,7 +332,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <h1 className="text-base sm:text-xl font-bold truncate">
                 Willkommen{profileName ? `, ${profileName}` : ''}!
               </h1>
-              <Badge className="mt-0.5 sm:mt-1 bg-success text-success-foreground hover:bg-success text-xs">Elternteil</Badge>
+              <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-1">
+                <Badge className="bg-success text-success-foreground hover:bg-success text-xs">Elternteil</Badge>
+                {isFoundingFamily && (
+                  <Badge
+                    className="text-xs border-0"
+                    style={{ backgroundColor: '#22d3ee', color: '#0b1220' }}
+                  >
+                    LernZeit-Familie 🚀
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -935,6 +951,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         open={feedbackOpen}
         onOpenChange={setFeedbackOpen}
         defaultEmail={userEmail}
+        isFoundingFamily={isFoundingFamily}
       />
 
       <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />

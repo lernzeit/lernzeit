@@ -42,6 +42,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [invitationCode, setInvitationCode] = useState('');
   // Login identifier (email or username)
   const [loginIdentifier, setLoginIdentifier] = useState('');
+  // Optional tester code (parents only)
+  const [testerCode, setTesterCode] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
@@ -271,6 +273,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             name,
             role,
             grade: role === 'child' ? grade : null,
+            tester_code: role === 'parent' && testerCode.trim()
+              ? testerCode.trim().toUpperCase()
+              : undefined,
           },
           emailRedirectTo: `${window.location.origin}/`
         }
@@ -700,6 +705,28 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         </div>
                         <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
                       </div>
+
+                      {role === 'parent' && (
+                        <div className="space-y-2 animate-fade-in">
+                          <Label htmlFor="tester-code" className="text-sm font-medium">
+                            Tester-Code <span className="text-muted-foreground font-normal">(optional)</span>
+                          </Label>
+                          <div className="relative">
+                            <Sparkles className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              id="tester-code"
+                              type="text"
+                              value={testerCode}
+                              onChange={(e) => setTesterCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
+                              placeholder="z. B. LERNZEIT2026"
+                              className="pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Hast du einen Code als LernZeit-Familie erhalten? Trag ihn hier ein.
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                   
