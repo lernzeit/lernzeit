@@ -30,7 +30,7 @@ import { parentalControlsService } from '@/services/parentalControlsService';
 import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
 import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
 import { useRatingPrompt } from '@/hooks/useRatingPrompt';
-import { MessageSquareHeart, Star } from 'lucide-react';
+import { MessageSquareHeart } from 'lucide-react';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
