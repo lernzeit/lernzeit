@@ -859,6 +859,75 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_milestones: {
+        Row: {
+          milestone: number
+          reached_at: string
+          user_id: string
+        }
+        Insert: {
+          milestone: number
+          reached_at?: string
+          user_id: string
+        }
+        Update: {
+          milestone?: number
+          reached_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          activated_at: string | null
+          blocked_reason: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          referee_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referee_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referee_id?: string
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       review_queue: {
         Row: {
           correct_answer: Json
@@ -1219,6 +1288,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      cap_referral_grant: {
+        Args: { p_requested: number; p_user_id: string }
+        Returns: number
+      }
       claim_invitation_code: {
         Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json
@@ -1226,6 +1299,7 @@ export type Database = {
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       generate_invitation_code: { Args: never; Returns: string }
+      generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_ai_model_metrics_summary: {
         Args: { p_since?: string; p_use_case?: string }
         Returns: {
