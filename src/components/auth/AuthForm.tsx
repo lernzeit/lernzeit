@@ -42,6 +42,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [invitationCode, setInvitationCode] = useState('');
   // Login identifier (email or username)
   const [loginIdentifier, setLoginIdentifier] = useState('');
+  // Optional tester code (parents only)
+  const [testerCode, setTesterCode] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
@@ -271,6 +273,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             name,
             role,
             grade: role === 'child' ? grade : null,
+            tester_code: role === 'parent' && testerCode.trim()
+              ? testerCode.trim().toUpperCase()
+              : undefined,
           },
           emailRedirectTo: `${window.location.origin}/`
         }
