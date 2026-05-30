@@ -78,6 +78,20 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
+  const [referralBannerDismissed, setReferralBannerDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('referralBannerDismissed') === '1';
+  });
+
+  // Deep-link from push notification: ?tab=referral focuses the Verschenken tab.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'referral') {
+      setActiveTab('referral');
+      setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
+  }, []);
   const [isFoundingFamily, setIsFoundingFamily] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
