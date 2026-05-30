@@ -196,7 +196,7 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
   } catch (e) {
     console.error("generate-learning-plan error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unbekannter Fehler" }),
+      JSON.stringify({ error: "Lernplan konnte nicht erstellt werden." }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
