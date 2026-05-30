@@ -558,6 +558,15 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Only the service role (DB triggers, cron, internal functions) may call this.
+    const bearer = req.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!SUPABASE_SERVICE_ROLE_KEY || bearer !== SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const event = body.event as string;
 
@@ -575,7 +584,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("send-push error:", error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({ error: "Push notification failed" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
