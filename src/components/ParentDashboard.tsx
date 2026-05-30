@@ -951,6 +951,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         open={feedbackOpen}
         onOpenChange={setFeedbackOpen}
         defaultEmail={userEmail}
+        isFoundingFamily={isFoundingFamily}
       />
 
       <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />
