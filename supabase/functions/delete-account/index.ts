@@ -120,7 +120,7 @@ serve(async (req) => {
     if (deleteError) {
       logStep("Error deleting auth user", { error: deleteError.message });
       return new Response(
-        JSON.stringify({ error: "Fehler beim Löschen des Auth-Accounts: " + deleteError.message }),
+        JSON.stringify({ error: "Fehler beim Löschen des Auth-Accounts." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
