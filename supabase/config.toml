@@ -43,6 +43,8 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.delete-account]
     verify_jwt = false
+  [functions.check-referral-activation]
+    verify_jwt = false
 
 [inbucket]
   enabled = true

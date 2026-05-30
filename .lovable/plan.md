@@ -1,122 +1,84 @@
-## Phasenplan: Tester-Belohnung + Empfehlungsprogramm
+## Phase 2 — Empfehlungs-Basismechanik
 
-Umsetzung in 3 Phasen, Maximalkosten gedeckelt bei **6 Monaten Premium pro Werber** (≈ 9 €).
+Gedeckelt bei **max. 6 Monaten Premium pro Werber**. CI: Akzent `#22d3ee`, Du-Ansprache.
 
----
+### Belohnungslogik (final)
 
-### Phase 1 — Tester-Belohnung & „LernZeit-Familie"-Badge
+| Rolle | Belohnung | Trigger |
+|---|---|---|
+| Geworbener | +1 Monat extra (28 Tage Trial → +30 Tage Bonus = ~58 Tage) | Signup mit gültigem Code |
+| Werber (Aktivierung) | +1 Monat | Geworbener: 7 Tage aktiv ODER ≥20 korrekte Antworten |
+| Werber (Conversion) | +1 Monat | Geworbener wird zahlender Kunde |
+| Meilenstein 3 | +1 Monat Bonus | 3 aktivierte Empfehlungen (einmalig) |
+| Meilenstein 5 | +1 Monat Bonus | 5 aktivierte Empfehlungen (einmalig) |
 
-**Datenmodell**
+Max-Cap pro Werber: 6 Monate (5 Conversions × 2 + 2 Meilensteine = exakt 12, daher Hard-Cap in `apply_premium_grant` per `reason LIKE 'referral_%'`-Summe ≤ 6).
 
-- `profiles`: Spalten `is_founding_family boolean default false`, `founding_family_at timestamptz`.
-- `premium_grants` (neue Tabelle): `id, user_id, months int, reason text, created_at, source_ref uuid`. RLS: User SELECT own, service_role ALL. Grund-Werte: `signup_trial`, `tester_feedback`, `referral_referee`, `referral_active`, `referral_paying`, `milestone_3`, `milestone_5`.
-- `tester_codes` (neue Tabelle): `code text PK`, `is_active boolean`, `max_uses int`, `uses int`, `created_at`. Seed: `LERNZEIT2026`.
+### 1. Datenmodell (Migration)
 
-**Signup-Flow erweitern**
-
-- `AuthForm` Signup: optionales Feld „Tester-Code (optional)". Bei gültigem Code → `user_metadata.tester_code = 'LERNZEIT2026'`.
-- `handle_new_user` Trigger erweitern: Wenn Tester-Code im Metadata → setze `profiles.is_founding_family=true`, increment `tester_codes.uses`.
-
-**Feedback-Trigger für 3 Monate Premium**
-
-- Erweitere `parent_feedback`: Neue Spalte `is_tester_feedback boolean`. Nach Submit prüft Frontend `is_founding_family`; falls true und noch keine `tester_feedback`-Gutschrift existiert → Edge Function `grant-tester-reward` ruft auf:
-  - Insert in `premium_grants` (3 Monate, reason=`tester_feedback`)
-  - Verlängert `subscriptions.current_period_end` um 3 Monate (additiv, nie ersetzen).
-- Dialog: Nach erfolgreichem Tester-Feedback: „Danke, dass du LernZeit von Anfang an mitgestaltest! Du hast 3 Monate Premium und dein LernZeit-Familie-Abzeichen erhalten. 🚀"
-
-**UI**
-
-- Badge „LernZeit-Familie🚀" prominent im `ParentDashboard` (Header neben Name).
-- Im `FeedbackInbox` (Admin): Filter „Nur Gründungsfamilien".
-
----
-
-### Phase 2 — Empfehlungs-Basismechanik
-
-**Belohnungslogik (final, gedeckelt)**
-
-
-| Rolle                | Belohnung                           | Trigger                                           |
-| -------------------- | ----------------------------------- | ------------------------------------------------- |
-| Geworbener (neu)     | **+1 Monat extra** (2 Mon. statt 1) | Sofort bei Signup mit gültigem Code               |
-| Werber (Aktivierung) | **+1 Monat**                        | Geworbener: 7 Tage aktiv ODER ≥20 Aufgaben gelöst |
-| Werber (Conversion)  | **+1 Monat**                        | Geworbener wird zahlender Kunde                   |
-
-
-**Meilensteine (kumulativ, einmalig)**
-
-- 3 aktivierte Empfehlungen → **+1 Monat** Bonus (Gesamt-Cap pro Werber bei 5 erfolgreichen Conversions ≈ 6 Monate)
-- 5 aktivierte Empfehlungen → **+1 Monat** Bonus
-
-**Datenmodell**
-
-- `referral_codes`: `user_id PK, code text UNIQUE, created_at`. Code = 6 alphanumerische Zeichen.
-- `referrals`: `id, referrer_id, referee_id UNIQUE, status (invited|active|paying), created_at, activated_at, paid_at, blocked_reason text NULL`.
-- `referral_milestones`: `user_id, milestone int (3|5), reached_at` — Idempotenz.
-
-**Attribution-Flow**
-
-1. `?ref=ABC123` auf Landing → in `localStorage.referral_code` speichern (TTL 30 Tage).
-2. `AuthForm` Signup liest LocalStorage → `user_metadata.referral_code`.
-3. `handle_new_user`: Validiert Code, schreibt `referrals` (status=`invited`), verlängert Trial des Geworbenen um 30 Tage (28 → 58).
-4. Missbrauchsschutz im Trigger: Self-Referral (gleiche E-Mail-Domain bei `@lernzeit.internal` → blockieren), gleiche IP-Hash (optional), bereits existierende `referee_id` → ignorieren.
-
-**Aktivierungs-Tracker (Edge Function `check-referral-activation`)**
-
-- Wird via Cron täglich + nach jeder `learning_sessions`-Insert (DB-Trigger → http_post) ausgelöst für betroffenen User.
-- Prüft für jeden offenen `referrals.status='invited'` mit `referee_id=X`:
-  - 7+ Tage seit Signup mit ≥1 Session/Tag **ODER** ≥20 korrekte Antworten gesamt
-  - Wenn ja: status→`active`, insert `premium_grants` (1 Monat, reason=`referral_active`) für Werber, verlängert Sub, Push.
-- Conversion: bei `check-subscription`-Lauf vergleicht plan→paid: status→`paying`, +1 Monat für Werber.
-- Nach jedem Werber-Grant: Check Meilensteine 3/5.
-
-**UI — neuer Tab „Premium verschenken" im `ParentSettingsMenu**`
-
-- Card mit Code + Link `https://lernzeit.app/?ref=ABC123`
-- Share-Buttons: WhatsApp (`wa.me/?text=…`), Native Share API, Copy.
-- Status-Liste: Eingeladene Familien mit Badge `Eingeladen` / `Aktiv 🎉` / `Premium ⭐` (anonymisiert: nur Initialen + Datum, kein Name aus DSGVO-Gründen).
-- Fortschrittsbalken: „2 von 3 aktiven Familien bis zum nächsten Bonus".
-- CI: Akzent `#22d3ee`, Du-Ansprache.
-- Texte 1:1 aus Spec.
-
----
-
-### Phase 3 — Admin-Tracking
-
-- Neuer Tab „Empfehlungen" im `AdminDashboard`:
-  - KPIs: Empfehlungen total / aktiv / zahlend, Conversion-Rate, verschenkte Premium-Monate (Σ `premium_grants.months` Filter referral_*).
-  - Top-Werber-Liste (Anzahl `paying`-Referrals).
-- View `v_referral_stats` als SECURITY DEFINER Function (admin-only).
-
----
-
-### Technische Bausteine
-
-```text
-Tabellen (neu):       premium_grants, tester_codes, referral_codes,
-                      referrals, referral_milestones
-Profile-Spalten:      is_founding_family, founding_family_at
-Edge Functions (neu): grant-tester-reward, check-referral-activation,
-                      apply-premium-grant (zentrale Verlängerungs-Logik)
-Trigger-Erweiterung:  handle_new_user (Tester-Flag + Referral-Attribution
-                      + Trial-Verlängerung)
-RLS:                  User sieht eigene grants/referrals; service_role schreibt
-GRANTs:               SELECT für authenticated, ALL für service_role
+```sql
+referral_codes (user_id PK, code text UNIQUE, created_at)
+referrals (id, referrer_id, referee_id UNIQUE, status enum, 
+           created_at, activated_at, paid_at, blocked_reason)
+referral_milestones (user_id, milestone int CHECK 3|5, reached_at, PK(user_id,milestone))
 ```
 
-**Zentrale Funktion `apply_premium_grant(user_id, months, reason)**` (SECURITY DEFINER):
+- RLS: User SELECT own (als Werber UND als Geworbener), service_role ALL.
+- GRANTs: `authenticated` SELECT, `service_role` ALL.
+- Trigger `handle_new_user` erweitern:
+  - Liest `user_meta_data.referral_code`
+  - Validiert: existiert, nicht self-referral (gleicher `referrer_id` ≠ NEW.id), `referee_id` nicht bereits in `referrals`
+  - Insert `referrals` (status=`invited`)
+  - Verlängert Trial: `subscriptions.trial_end + 30 days`
+- Helper-Funktion `cap_referral_grants(user_id, months)` (SECURITY DEFINER): Prüft Summe aller `premium_grants` mit `reason LIKE 'referral_%' OR reason LIKE 'milestone_%'`, gibt zurück wieviele Monate noch im Cap (6) erlaubt sind. Wird in den Edge Functions vor `apply_premium_grant` aufgerufen.
+- RPC `generate_referral_code()`: 6-stelliger alphanumerischer Code, kollisionssicher per Retry. Wird lazy beim ersten Besuch des Tabs erstellt.
 
-- Insert in `premium_grants`
-- UPDATE `subscriptions`: `current_period_end = GREATEST(current_period_end, now()) + interval 'X months'`
-- Falls plan=`free` → plan=`premium`, status=`trialing`/`active`
-- Garantiert additiv, nie ersetzend.
+### 2. Attribution-Flow (Frontend)
 
----
+- **Landing-Page** (`Start.tsx` / `Index.tsx`): Parse `?ref=ABC123` → `localStorage.setItem('referral_code', code)` mit TTL 30 Tage (JSON {code, expires}).
+- **AuthForm.tsx**: Beim Parent-Signup `referral_code` aus localStorage in `user_metadata` mitgeben. Nach erfolgreichem Signup: localStorage cleanup.
+- Hinweis-Banner im AuthForm: „🎉 Du wurdest eingeladen — 2 Monate Premium statt 1!" wenn Code vorhanden.
 
-### Reihenfolge & Abnahme
+### 3. Edge Functions
 
-1. **Phase 1**: Migration + AuthForm-Feld + Badge + Feedback-Hook. Abnahme: Code-Signup setzt Flag, Feedback gibt 3 Monate.
-2. **Phase 2**: Migration + Edge Functions + Settings-Tab + Cron. Abnahme: E2E mit zwei Test-Accounts (Werber + Geworbener), Aktivierung nach 20 Antworten korrekt erkannt.
-3. **Phase 3**: Admin-Tab + Stats-View.
+**`check-referral-activation`** (NEU)
+- Trigger: (a) Cron täglich um 03:00 via pg_cron, (b) nach Insert in `learning_sessions` per DB-Trigger `notify_referral_check` (http_post mit child user_id).
+- Body: `{ user_id }` oder `{ all: true }` (Cron).
+- Logik pro offenem `referrals` (status='invited'):
+  - Aktivierungs-Kriterien prüfen (7+ Tage seit `created_at` mit ≥1 Session ODER `SUM(correct_answers) ≥ 20`)
+  - Wenn erfüllt: status→`active`, `activated_at=now()`, `apply_premium_grant(referrer_id, capped(1), 'referral_active', referrals.id)`
+  - Meilensteine prüfen: `COUNT(status IN ('active','paying'))` für referrer → bei 3 oder 5 und nicht in `referral_milestones`: Insert + `apply_premium_grant(referrer_id, capped(1), 'milestone_3'|'milestone_5')`
+  - Push an Werber via send-push.
 
-Soll ich mit **Phase 1** starten?
+**`check-subscription`** (BESTEHEND erweitern)
+- Nach Erkennung Plan=paid: Suche `referrals WHERE referee_id=user.id AND status='active'` → status→`paying`, `paid_at=now()`, `apply_premium_grant(referrer_id, capped(1), 'referral_paying', referrals.id)`.
+
+### 4. UI — Neue Komponente `ReferralCard.tsx`
+
+Integration: Neuer Tab/Section „Premium verschenken 🎁" im `ParentSettingsMenu.tsx`.
+
+Aufbau:
+- **Hero**: „Schenk Freunden 2 Monate Premium — und sichere dir bis zu 6 Monate für dich."
+- **Code-Card**: Großer Code (e.g. `LZ-AB12CD`), Copy-Button, Share-URL `https://lernzeit.app/?ref=AB12CD`.
+- **Share-Buttons**: WhatsApp (`wa.me/?text=...`), Native Share API (`navigator.share`), Copy-Link.
+- **Status-Liste**: Eingeladene Familien anonymisiert (Initialen + Datum + Badge):
+  - `Eingeladen` (grau) / `Aktiv 🎉` (cyan) / `Premium ⭐` (gold)
+- **Fortschritt**: Progress-Balken „2 von 3 aktiven Familien bis zum nächsten Bonus" + verbleibende Cap-Anzeige „Du hast 3 von 6 Bonus-Monaten freigeschaltet".
+- Hook `useReferral.ts`: Lädt/erstellt Code, fetched referrals + milestones.
+
+### 5. Admin (Phase 3 vorgezogen-Stub)
+
+Nur Daten-Erfassung jetzt; sichtbarer Admin-Tab folgt in Phase 3.
+
+### 6. Reihenfolge
+
+1. Migration (Tabellen, RLS, GRANTs, `handle_new_user` Erweiterung, `cap_referral_grants`, `generate_referral_code`, pg_cron Job).
+2. Edge Function `check-referral-activation` + DB-Trigger auf `learning_sessions`.
+3. `check-subscription` erweitern um Conversion-Logik.
+4. Frontend: Landing-Parser, AuthForm-Banner+Metadata, `ReferralCard` + Tab in `ParentSettingsMenu`.
+
+### Abnahme
+
+- E2E mit zwei Test-Accounts: Werber generiert Code → Geworbener registriert über Link → Trial = 58 Tage → nach 20 korrekten Antworten: Werber bekommt +1 Monat, Status `Aktiv 🎉`. Nach Stripe-Zahlung: Status `Premium ⭐`, Werber +1 Monat. Cap bei 6 greift.
+
+Soll ich so umsetzen?

@@ -1,6 +1,18 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 
+// Capture ?ref=CODE early and persist in localStorage (30 days)
+try {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if (ref && /^[A-Z0-9]{4,12}$/i.test(ref)) {
+    localStorage.setItem(
+      'lernzeit_referral_code',
+      JSON.stringify({ code: ref.toUpperCase(), expires: Date.now() + 30 * 86400000 })
+    );
+  }
+} catch { /* ignore */ }
+
 declare global {
   interface Window {
     __LERNZEIT_APP_MOUNTED__?: boolean;

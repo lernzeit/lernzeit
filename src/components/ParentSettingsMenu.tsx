@@ -14,7 +14,8 @@ import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { supabase } from '@/lib/supabase';
 import { GradeManagement } from '@/components/GradeManagement';
 import { ParentScreenTimeRequests } from '@/components/ParentScreenTimeRequests';
-import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3, User, Smartphone } from 'lucide-react';
+import { ReferralCard } from '@/components/parent/ReferralCard';
+import { Loader2, Save, Plus, Copy, Users, Key, Trash2, RefreshCw, Settings, Calendar, Clock, ArrowLeft, BookOpen, GraduationCap, Languages, Globe, FlaskConical, Atom, Leaf, Columns3, User, Smartphone, Gift } from 'lucide-react';
 
 interface ParentSettings {
   weekday_max_minutes: number;
@@ -386,11 +387,14 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
       </div>
 
       <Tabs defaultValue="family" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
           <TabsTrigger value="family">Familie</TabsTrigger>
           <TabsTrigger value="screen-time">Bildschirmzeit</TabsTrigger>
           <TabsTrigger value="account">Konto</TabsTrigger>
           <TabsTrigger value="codes">Codes</TabsTrigger>
+          <TabsTrigger value="referral" className="gap-1">
+            <Gift className="h-3 w-3" /> Verschenken
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="family" className="space-y-6">
@@ -613,6 +617,10 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="referral" className="space-y-6">
+          <ReferralCard userId={userId} />
         </TabsContent>
       </Tabs>
     </div>
