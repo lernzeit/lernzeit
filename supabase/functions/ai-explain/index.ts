@@ -28,18 +28,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const payloadBase64 = token.split('.')[1];
-      if (!payloadBase64) throw new Error('Invalid token');
-      const payload = JSON.parse(atob(payloadBase64));
-      if (!payload.sub) throw new Error('No user ID');
-      console.log('Explain: authenticated user', payload.sub);
-    } catch {
-      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+      const sb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+      const { data, error: authErr } = await sb.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authErr || !data?.user) {
+        return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     const { question, correctAnswer, userAnswer, grade, subject }: ExplanationRequest = await req.json();
