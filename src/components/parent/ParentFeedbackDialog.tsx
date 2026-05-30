@@ -34,9 +34,15 @@ interface ParentFeedbackDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultEmail?: string;
+  /**
+   * When true, the feedback is flagged as a founding-family submission.
+   * After successful submission, the grant-tester-reward edge function is called
+   * to credit 3 months Premium (idempotent server-side).
+   */
+  isFoundingFamily?: boolean;
 }
 
-export function ParentFeedbackDialog({ open, onOpenChange, defaultEmail }: ParentFeedbackDialogProps) {
+export function ParentFeedbackDialog({ open, onOpenChange, defaultEmail, isFoundingFamily }: ParentFeedbackDialogProps) {
   const { toast } = useToast();
   const [category, setCategory] = useState<'bug' | 'wish' | 'praise' | 'other'>('wish');
   const [message, setMessage] = useState('');
@@ -91,13 +97,38 @@ export function ParentFeedbackDialog({ open, onOpenChange, defaultEmail }: Paren
         contact_email: parsed.data.contact_email ? parsed.data.contact_email : null,
         platform,
         app_version: appVersion,
+        is_tester_feedback: !!isFoundingFamily,
       });
       if (error) throw error;
 
-      toast({
-        title: 'Danke für dein Feedback!',
-        description: 'Wir lesen jede Rückmeldung sorgfältig.',
-      });
+      // For founding families: trigger the 3-month Premium reward (idempotent).
+      if (isFoundingFamily) {
+        try {
+          const { data: grantData } = await supabase.functions.invoke('grant-tester-reward');
+          if (grantData?.ok && !grantData.already_granted) {
+            toast({
+              title: 'Danke, dass du LernZeit von Anfang an mitgestaltest! 🚀',
+              description:
+                'Du hast 3 Monate Premium und dein LernZeit-Familie-Abzeichen erhalten.',
+            });
+          } else {
+            toast({
+              title: 'Danke für dein Feedback!',
+              description: 'Wir lesen jede Rückmeldung sorgfältig.',
+            });
+          }
+        } catch {
+          toast({
+            title: 'Danke für dein Feedback!',
+            description: 'Wir lesen jede Rückmeldung sorgfältig.',
+          });
+        }
+      } else {
+        toast({
+          title: 'Danke für dein Feedback!',
+          description: 'Wir lesen jede Rückmeldung sorgfältig.',
+        });
+      }
       reset();
       onOpenChange(false);
     } catch (err: any) {
