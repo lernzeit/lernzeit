@@ -759,6 +759,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                           </p>
                         </div>
                       )}
+
+                      {role === 'parent' && referralCode && (
+                        <div className="rounded-lg border-2 border-[#22d3ee]/40 bg-[#22d3ee]/10 px-4 py-3 animate-fade-in">
+                          <p className="text-sm font-medium text-foreground">
+                            🎉 Du wurdest eingeladen!
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Code <span className="font-mono font-semibold text-[#22d3ee]">{referralCode}</span> erkannt — du startest mit <strong>2 Monaten Premium</strong> statt 1.
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                   
