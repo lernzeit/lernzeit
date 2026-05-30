@@ -27,6 +27,10 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
+import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
+import { useRatingPrompt } from '@/hooks/useRatingPrompt';
+import { MessageSquareHeart, Star } from 'lucide-react';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
@@ -81,6 +85,19 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
   const [requestsRefreshTrigger, setRequestsRefreshTrigger] = useState(0);
   const [familyLinkInstallOpen, setFamilyLinkInstallOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const { shouldShow: ratingShouldShow, dismiss: ratingDismiss } = useRatingPrompt(userId, 'parent');
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setUserEmail(data.user?.email ?? undefined);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   
   const { toast } = useToast();
   const isNativeAndroid =
