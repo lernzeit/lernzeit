@@ -12,8 +12,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Require service-role bearer to invoke (cron only)
+    const bearer = req.headers.get("Authorization")?.replace("Bearer ", "");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceKey || bearer !== serviceKey) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const results: { duplicates_removed: number; reported_cleaned: number; match_fixed: number; match_removed: number; old_rotated: number; timestamp: string } = {
