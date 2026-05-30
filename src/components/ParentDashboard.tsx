@@ -848,6 +848,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
+                  <MessageSquareHeart className="h-5 w-5" />
+                  Feedback
+                </CardTitle>
+                <CardDescription>
+                  Schreib uns, was gut läuft oder besser werden kann.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" onClick={() => setFeedbackOpen(true)}>
+                  <MessageSquareHeart className="mr-2 h-4 w-4" />
+                  Feedback senden
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Key className="h-5 w-5" />
                   Passwort ändern
                 </CardTitle>
