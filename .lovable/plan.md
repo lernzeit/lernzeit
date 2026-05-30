@@ -1,130 +1,122 @@
+## Phasenplan: Tester-Belohnung + Empfehlungsprogramm
 
-# Plan: Eltern-Feedback-System (validiert)
-
-Referral wird verschoben. Wir bauen ausschließlich das Feedback-Modul.
-
----
-
-## Teil A — Feedback-Formular (immer verfügbar)
-
-### Datenbank
-Neue Tabelle `parent_feedback`:
-- `id uuid pk default gen_random_uuid()`
-- `user_id uuid not null` (= `auth.uid()`)
-- `category text not null` — einer von `bug | wish | praise | other`
-- `message text not null` (1–1000 Zeichen, Validierungs-Trigger)
-- `contact_email text null` (max 255, Format-Check Trigger)
-- `app_version text null`
-- `platform text null` — `web | ios | android`
-- `status text not null default 'open'` — `open | read | done`
-- `admin_note text null`
-- `created_at timestamptz not null default now()`
-- `updated_at timestamptz not null default now()`
-
-Reihenfolge in der Migration (Pflicht):
-1. `CREATE TABLE public.parent_feedback (...)`
-2. GRANTs:
-   ```sql
-   GRANT SELECT, INSERT ON public.parent_feedback TO authenticated;
-   GRANT UPDATE (status, admin_note) ON public.parent_feedback TO authenticated;
-   GRANT ALL ON public.parent_feedback TO service_role;
-   ```
-3. `ENABLE ROW LEVEL SECURITY`
-4. Policies:
-   - INSERT: `auth.uid() = user_id`
-   - SELECT own: `auth.uid() = user_id`
-   - SELECT all (Admin): `has_role(auth.uid(), 'admin')`
-   - UPDATE (Admin only, nur status/admin_note): `has_role(auth.uid(), 'admin')`
-5. Validierungs-Trigger (statt CHECK, weil flexibler):
-   - `category IN ('bug','wish','praise','other')`
-   - `length(message) BETWEEN 1 AND 1000`
-   - `platform IN ('web','ios','android') OR platform IS NULL`
-6. `touch_updated_at`-Trigger (Funktion existiert bereits).
-7. Index: `(status, created_at desc)` für Admin-Ansicht.
-
-### Frontend
-
-**Neue Komponente:** `src/components/parent/ParentFeedbackDialog.tsx`
-- shadcn `Dialog` mit Zod-Schema:
-  ```ts
-  z.object({
-    category: z.enum(['bug','wish','praise','other']),
-    message: z.string().trim().min(1).max(1000),
-    contact_email: z.string().trim().email().max(255).optional().or(z.literal('')),
-  })
-  ```
-- Felder: RadioGroup Kategorie, Textarea (mit Live-Zähler `x/1000`), optionales E-Mail-Feld (vorausgefüllt aus `auth.user.email`).
-- Submit: insert mit `user_id = auth.uid()`, `app_version` aus `import.meta.env.VITE_APP_VERSION` (Fallback `'unknown'`), `platform` via Capacitor (`Capacitor.getPlatform()` → web/ios/android).
-- Erfolg: Toast „Danke für dein Feedback!" (top-center, gemäß Memory), Dialog schließt.
-
-**Integration:** in `ParentSettingsMenu` neuer Eintrag „Feedback senden" (Icon `MessageSquareHeart`) im Tab „Konto" oder eigenem kleinen Block am Ende der Liste.
+Umsetzung in 3 Phasen, Maximalkosten gedeckelt bei **6 Monaten Premium pro Werber** (≈ 9 €).
 
 ---
 
-## Teil B — App-Store-Rating-Prompt (gelegentlich)
+### Phase 1 — Tester-Belohnung & „LernZeit-Familie"-Badge
 
-### Trigger-Logik
-Hook `useRatingPrompt()` (läuft beim Mount der Eltern-Hauptansicht):
-- Zeigen wenn ALLE wahr:
-  1. Profil-Rolle = `parent`
-  2. `profile.created_at` ≥ 14 Tage alt
-  3. Mind. 5 Kind-Lernsessions (`learning_sessions` joined über `parent_child_relationships`, count >= 5) — gecached in `localStorage` mit 24h-TTL, damit kein Query bei jedem Mount
-  4. `localStorage.rating_prompt_cooldown_until` < now()
-  5. `profile.last_rating_prompt_at` älter als 90 Tage (oder null)
+**Datenmodell**
 
-### Speicherung des Status
-Neue Spalte in `profiles`:
-- `last_rating_prompt_at timestamptz null`
-- `rating_prompt_response text null` — `rated | later | dismissed`
+- `profiles`: Spalten `is_founding_family boolean default false`, `founding_family_at timestamptz`.
+- `premium_grants` (neue Tabelle): `id, user_id, months int, reason text, created_at, source_ref uuid`. RLS: User SELECT own, service_role ALL. Grund-Werte: `signup_trial`, `tester_feedback`, `referral_referee`, `referral_active`, `referral_paying`, `milestone_3`, `milestone_5`.
+- `tester_codes` (neue Tabelle): `code text PK`, `is_active boolean`, `max_uses int`, `uses int`, `created_at`. Seed: `LERNZEIT2026`.
 
-(Profiles-Tabelle existiert bereits, Migration nur ALTER.)
+**Signup-Flow erweitern**
 
-### Komponente
-`src/components/parent/RatingPromptDialog.tsx` — Dialog mit Text „Magst du LernZeit? Eine Bewertung hilft uns sehr."
-Drei Buttons:
-- **„Jetzt bewerten"**: Capacitor-Plattform-Check
-  - iOS: `https://apps.apple.com/app/idXXXXXXX?action=write-review` (App-Store-ID muss konfiguriert werden — Platzhalter `VITE_APPSTORE_ID`, Web-Fallback öffnet App-Store-Web-URL)
-  - Android: `market://details?id=app.lernzeit` → Fallback `https://play.google.com/store/apps/details?id=app.lernzeit`
-  - Web: Play Store Web-Link (oder beide nebeneinander)
-  - Setzt `response='rated'`, kein weiterer Prompt (Cooldown 365 Tage).
-- **„Später"**: 14 Tage Cooldown, `response='later'`.
-- **„Nein danke"**: 365 Tage Cooldown, `response='dismissed'`.
+- `AuthForm` Signup: optionales Feld „Tester-Code (optional)". Bei gültigem Code → `user_metadata.tester_code = 'LERNZEIT2026'`.
+- `handle_new_user` Trigger erweitern: Wenn Tester-Code im Metadata → setze `profiles.is_founding_family=true`, increment `tester_codes.uses`.
 
-Update sowohl `localStorage` (sofort) als auch `profiles.last_rating_prompt_at` (async, kein Block).
+**Feedback-Trigger für 3 Monate Premium**
+
+- Erweitere `parent_feedback`: Neue Spalte `is_tester_feedback boolean`. Nach Submit prüft Frontend `is_founding_family`; falls true und noch keine `tester_feedback`-Gutschrift existiert → Edge Function `grant-tester-reward` ruft auf:
+  - Insert in `premium_grants` (3 Monate, reason=`tester_feedback`)
+  - Verlängert `subscriptions.current_period_end` um 3 Monate (additiv, nie ersetzen).
+- Dialog: Nach erfolgreichem Tester-Feedback: „Danke, dass du LernZeit von Anfang an mitgestaltest! Du hast 3 Monate Premium und dein LernZeit-Familie-Abzeichen erhalten. 🚀"
+
+**UI**
+
+- Badge „LernZeit-Familie🚀" prominent im `ParentDashboard` (Header neben Name).
+- Im `FeedbackInbox` (Admin): Filter „Nur Gründungsfamilien".
 
 ---
 
-## Teil C — Admin-Sichtung
+### Phase 2 — Empfehlungs-Basismechanik
 
-Neuer Tab `„Feedback"` in `AdminDashboard`:
-- Komponente `src/components/admin/FeedbackInbox.tsx`
-- Liste sortiert nach `created_at desc`, Filter Kategorie + Status
-- Pro Zeile: Kategorie-Badge, Datum, gekürzte Message, Status-Dropdown (open/read/done), Detail-Sheet mit voller Message, contact_email, platform, app_version, user_id (mit Copy-Button)
-- Pagination 50/Seite
+**Belohnungslogik (final, gedeckelt)**
+
+
+| Rolle                | Belohnung                           | Trigger                                           |
+| -------------------- | ----------------------------------- | ------------------------------------------------- |
+| Geworbener (neu)     | **+1 Monat extra** (2 Mon. statt 1) | Sofort bei Signup mit gültigem Code               |
+| Werber (Aktivierung) | **+1 Monat**                        | Geworbener: 7 Tage aktiv ODER ≥20 Aufgaben gelöst |
+| Werber (Conversion)  | **+1 Monat**                        | Geworbener wird zahlender Kunde                   |
+
+
+**Meilensteine (kumulativ, einmalig)**
+
+- 3 aktivierte Empfehlungen → **+1 Monat** Bonus (Gesamt-Cap pro Werber bei 5 erfolgreichen Conversions ≈ 6 Monate)
+- 5 aktivierte Empfehlungen → **+1 Monat** Bonus
+
+**Datenmodell**
+
+- `referral_codes`: `user_id PK, code text UNIQUE, created_at`. Code = 6 alphanumerische Zeichen.
+- `referrals`: `id, referrer_id, referee_id UNIQUE, status (invited|active|paying), created_at, activated_at, paid_at, blocked_reason text NULL`.
+- `referral_milestones`: `user_id, milestone int (3|5), reached_at` — Idempotenz.
+
+**Attribution-Flow**
+
+1. `?ref=ABC123` auf Landing → in `localStorage.referral_code` speichern (TTL 30 Tage).
+2. `AuthForm` Signup liest LocalStorage → `user_metadata.referral_code`.
+3. `handle_new_user`: Validiert Code, schreibt `referrals` (status=`invited`), verlängert Trial des Geworbenen um 30 Tage (28 → 58).
+4. Missbrauchsschutz im Trigger: Self-Referral (gleiche E-Mail-Domain bei `@lernzeit.internal` → blockieren), gleiche IP-Hash (optional), bereits existierende `referee_id` → ignorieren.
+
+**Aktivierungs-Tracker (Edge Function `check-referral-activation`)**
+
+- Wird via Cron täglich + nach jeder `learning_sessions`-Insert (DB-Trigger → http_post) ausgelöst für betroffenen User.
+- Prüft für jeden offenen `referrals.status='invited'` mit `referee_id=X`:
+  - 7+ Tage seit Signup mit ≥1 Session/Tag **ODER** ≥20 korrekte Antworten gesamt
+  - Wenn ja: status→`active`, insert `premium_grants` (1 Monat, reason=`referral_active`) für Werber, verlängert Sub, Push.
+- Conversion: bei `check-subscription`-Lauf vergleicht plan→paid: status→`paying`, +1 Monat für Werber.
+- Nach jedem Werber-Grant: Check Meilensteine 3/5.
+
+**UI — neuer Tab „Premium verschenken" im `ParentSettingsMenu**`
+
+- Card mit Code + Link `https://lernzeit.app/?ref=ABC123`
+- Share-Buttons: WhatsApp (`wa.me/?text=…`), Native Share API, Copy.
+- Status-Liste: Eingeladene Familien mit Badge `Eingeladen` / `Aktiv 🎉` / `Premium ⭐` (anonymisiert: nur Initialen + Datum, kein Name aus DSGVO-Gründen).
+- Fortschrittsbalken: „2 von 3 aktiven Familien bis zum nächsten Bonus".
+- CI: Akzent `#22d3ee`, Du-Ansprache.
+- Texte 1:1 aus Spec.
 
 ---
 
-## Validierungs-Check ✔
+### Phase 3 — Admin-Tracking
 
-| Punkt | Status |
-|---|---|
-| Migration enthält CREATE → GRANT → RLS → POLICY in dieser Reihenfolge | ✔ |
-| Keine CHECK-Constraints für mutable Logik, sondern Validierungs-Trigger | ✔ |
-| RLS deckt INSERT (own), SELECT (own + admin), UPDATE (admin only) ab | ✔ |
-| Admin-Rolle via existierender `has_role()` SECURITY DEFINER Funktion — keine Rolle in `profiles` | ✔ |
-| Frontend-Validierung mit Zod (trim, max, email) | ✔ |
-| Keine Secrets/PII im Code, `contact_email` ist optional | ✔ |
-| Toast top-center (Memory-konform) | ✔ |
-| Capacitor-Plattformerkennung für Store-Link, Web-Fallback vorhanden | ✔ |
-| `last_rating_prompt_at` als ALTER auf existierender `profiles`-Tabelle — keine neuen Policies nötig (bestehende erlauben `auth.uid()=id` Update) | ✔ |
-| 90/14/365-Tage-Cooldowns getrennt von Sessions-Schwelle | ✔ |
+- Neuer Tab „Empfehlungen" im `AdminDashboard`:
+  - KPIs: Empfehlungen total / aktiv / zahlend, Conversion-Rate, verschenkte Premium-Monate (Σ `premium_grants.months` Filter referral_*).
+  - Top-Werber-Liste (Anzahl `paying`-Referrals).
+- View `v_referral_stats` als SECURITY DEFINER Function (admin-only).
 
-## Reihenfolge der Umsetzung
-1. Migration `parent_feedback` + Trigger + Index + ALTER `profiles`
-2. `ParentFeedbackDialog` + Integration in `ParentSettingsMenu`
-3. `useRatingPrompt` Hook + `RatingPromptDialog` + Einbindung in Eltern-Layout
-4. `FeedbackInbox` + neuer Tab in `AdminDashboard`
+---
 
-## Offene Konfig-Werte (nach Build vom Nutzer zu setzen)
-- `VITE_APPSTORE_ID` (Apple App-Store ID, sobald App live)
-- Play-Store Package-Name (vermutlich `app.lernzeit` — bitte bestätigen, falls anders)
+### Technische Bausteine
+
+```text
+Tabellen (neu):       premium_grants, tester_codes, referral_codes,
+                      referrals, referral_milestones
+Profile-Spalten:      is_founding_family, founding_family_at
+Edge Functions (neu): grant-tester-reward, check-referral-activation,
+                      apply-premium-grant (zentrale Verlängerungs-Logik)
+Trigger-Erweiterung:  handle_new_user (Tester-Flag + Referral-Attribution
+                      + Trial-Verlängerung)
+RLS:                  User sieht eigene grants/referrals; service_role schreibt
+GRANTs:               SELECT für authenticated, ALL für service_role
+```
+
+**Zentrale Funktion `apply_premium_grant(user_id, months, reason)**` (SECURITY DEFINER):
+
+- Insert in `premium_grants`
+- UPDATE `subscriptions`: `current_period_end = GREATEST(current_period_end, now()) + interval 'X months'`
+- Falls plan=`free` → plan=`premium`, status=`trialing`/`active`
+- Garantiert additiv, nie ersetzend.
+
+---
+
+### Reihenfolge & Abnahme
+
+1. **Phase 1**: Migration + AuthForm-Feld + Badge + Feedback-Hook. Abnahme: Code-Signup setzt Flag, Feedback gibt 3 Monate.
+2. **Phase 2**: Migration + Edge Functions + Settings-Tab + Cron. Abnahme: E2E mit zwei Test-Accounts (Werber + Geworbener), Aktivierung nach 20 Antworten korrekt erkannt.
+3. **Phase 3**: Admin-Tab + Stats-View.
+
+Soll ich mit **Phase 1** starten?
