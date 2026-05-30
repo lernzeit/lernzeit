@@ -17,7 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple, Gift
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -29,6 +29,7 @@ import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
 import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
 import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
+import { ReferralCard } from '@/components/parent/ReferralCard';
 import { useRatingPrompt } from '@/hooks/useRatingPrompt';
 import { MessageSquareHeart } from 'lucide-react';
 
@@ -490,7 +491,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
       {/* Main Tabs - reduced to 3 (Konto in header) */}
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
@@ -507,6 +508,10 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           <TabsTrigger value="subscription" className="flex items-center gap-1.5">
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
+          </TabsTrigger>
+          <TabsTrigger value="referral" className="flex items-center gap-1.5">
+            <Gift className="h-4 w-4" />
+            <span className="hidden sm:inline">Verschenken</span>
           </TabsTrigger>
         </TabsList>
 
