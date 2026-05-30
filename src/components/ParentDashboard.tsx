@@ -930,6 +930,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ParentFeedbackDialog
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        defaultEmail={userEmail}
+      />
+
+      <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />
     </div>
   );
 }
