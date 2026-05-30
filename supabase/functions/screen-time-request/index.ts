@@ -87,21 +87,17 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    // Decode the JWT to get user info - Supabase gateway already verified the token
     let user: { id: string; email?: string };
-    try {
-      const payloadBase64 = token.split('.')[1];
-      const payload = JSON.parse(atob(payloadBase64));
-      if (!payload.sub) throw new Error('No sub in token');
-      user = { id: payload.sub, email: payload.email };
-      console.log('User authenticated:', user.id);
-    } catch (e) {
-      console.error('Token decode error:', e);
-      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    {
+      const verifyClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+      const { data, error: authErr } = await verifyClient.auth.getUser(token);
+      if (authErr || !data?.user) {
+        return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      user = { id: data.user.id, email: data.user.email };
     }
 
     // Parse and validate request body
