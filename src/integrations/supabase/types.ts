@@ -622,6 +622,48 @@ export type Database = {
           },
         ]
       }
+      parent_feedback: {
+        Row: {
+          admin_note: string | null
+          app_version: string | null
+          category: string
+          contact_email: string | null
+          created_at: string
+          id: string
+          message: string
+          platform: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          app_version?: string | null
+          category: string
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          platform?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          app_version?: string | null
+          category?: string
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          platform?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_color: string | null
@@ -631,8 +673,10 @@ export type Database = {
           daily_summary_hour: number
           grade: number | null
           id: string
+          last_rating_prompt_at: string | null
           learning_reminder_hour: number
           name: string | null
+          rating_prompt_response: string | null
           role: string | null
           updated_at: string | null
           username: string | null
@@ -645,8 +689,10 @@ export type Database = {
           daily_summary_hour?: number
           grade?: number | null
           id: string
+          last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
+          rating_prompt_response?: string | null
           role?: string | null
           updated_at?: string | null
           username?: string | null
@@ -659,8 +705,10 @@ export type Database = {
           daily_summary_hour?: number
           grade?: number | null
           id?: string
+          last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
+          rating_prompt_response?: string | null
           role?: string | null
           updated_at?: string | null
           username?: string | null

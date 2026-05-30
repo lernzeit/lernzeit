@@ -1,84 +1,130 @@
 
-# Plan: Schnellere & günstigere Fragen-Generierung (Fokus Deutsch)
+# Plan: Eltern-Feedback-System (validiert)
 
-## Beobachtungen (aus Code & DB)
-
-- **Modell**: `question_generator` läuft auf `openrouter/free` (Auto-Router). Avg-Latenz in `ai_model_metrics` ist zwar ~1,2 s, aber Free-Modelle haben sehr hohe P95/P99 (Warteschlange, gelegentlich 30–60 s+) — das erklärt die gemeldeten Hänger.
-- **Sequentieller Preload**: `PARALLEL_BATCH_SIZE = 1` in `useQuestionPreloader.ts` — alle 5 Fragen werden nacheinander generiert.
-- **Cache wird nur als Fallback genutzt**, nicht als Erstquelle. Es liegen bereits 508 Deutsch-Fragen, 740 Mathe-Fragen etc. im `ai_question_cache`.
-- **Großer Prompt**: System-Prompt + Regel-Block (5 Rules aus DB) + `excludeTexts` (bis zu 10×80 Zeichen) + Typ-Instruktionen + Scope. Pro Call viele Input-Tokens.
-- **Deutsch hat häufiger FILL_BLANK/MATCH/SORT** (siehe `selectQuestionType`) — diese haben strengere Validierung in `isRenderableQuestionPayload`. Bei Fehlern → Cache-Fallback, also extra DB-Roundtrip.
-- **Tool-Calls**: `tool_choice` mit Funktions-Schema ist auf Free-Modellen langsamer als reines JSON-Mode-Output.
-
-## Ziel
-
-P95 < 2 s pro Frage, Kosten ↓, inhaltlich korrekt, Regeln eingehalten.
+Referral wird verschoben. Wir bauen ausschließlich das Feedback-Modul.
 
 ---
 
-## Phase 1 — Cache-First Strategie (größter Hebel, sofort wirksam)
+## Teil A — Feedback-Formular (immer verfügbar)
 
-In `supabase/functions/ai-question-generator/index.ts`:
+### Datenbank
+Neue Tabelle `parent_feedback`:
+- `id uuid pk default gen_random_uuid()`
+- `user_id uuid not null` (= `auth.uid()`)
+- `category text not null` — einer von `bug | wish | praise | other`
+- `message text not null` (1–1000 Zeichen, Validierungs-Trigger)
+- `contact_email text null` (max 255, Format-Check Trigger)
+- `app_version text null`
+- `platform text null` — `web | ios | android`
+- `status text not null default 'open'` — `open | read | done`
+- `admin_note text null`
+- `created_at timestamptz not null default now()`
+- `updated_at timestamptz not null default now()`
 
-1. **Cache zuerst abfragen** (statt erst nach AI-Failure).
-2. Strategie pro Request:
-   - 70 % Wahrscheinlichkeit → least-served Cache-Eintrag servieren (wenn ≥ 15 Einträge für `grade/subject/difficulty` vorhanden).
-   - 30 % → frische Generierung via AI.
-   - Wenn Cache < 15 Einträge → immer AI generieren (Cache füllen).
-3. **Dedupe gegen `excludeTexts`** beim Cache-Pick: SQL `not in` oder client-seitig filtern.
-4. **`times_served` & `last_served_at`** asynchron via `EdgeRuntime.waitUntil` aktualisieren — kein Wartezeit-Impact.
-5. Bei `topicHint` (Lernplan) → **immer AI**, da Cache nicht themenspezifisch.
+Reihenfolge in der Migration (Pflicht):
+1. `CREATE TABLE public.parent_feedback (...)`
+2. GRANTs:
+   ```sql
+   GRANT SELECT, INSERT ON public.parent_feedback TO authenticated;
+   GRANT UPDATE (status, admin_note) ON public.parent_feedback TO authenticated;
+   GRANT ALL ON public.parent_feedback TO service_role;
+   ```
+3. `ENABLE ROW LEVEL SECURITY`
+4. Policies:
+   - INSERT: `auth.uid() = user_id`
+   - SELECT own: `auth.uid() = user_id`
+   - SELECT all (Admin): `has_role(auth.uid(), 'admin')`
+   - UPDATE (Admin only, nur status/admin_note): `has_role(auth.uid(), 'admin')`
+5. Validierungs-Trigger (statt CHECK, weil flexibler):
+   - `category IN ('bug','wish','praise','other')`
+   - `length(message) BETWEEN 1 AND 1000`
+   - `platform IN ('web','ios','android') OR platform IS NULL`
+6. `touch_updated_at`-Trigger (Funktion existiert bereits).
+7. Index: `(status, created_at desc)` für Admin-Ansicht.
 
-Erwarteter Effekt für Deutsch: 70 % der Anfragen antworten in < 200 ms (DB-Pick) statt 1–30 s (AI).
+### Frontend
 
-## Phase 2 — Modellwechsel für `question_generator`
+**Neue Komponente:** `src/components/parent/ParentFeedbackDialog.tsx`
+- shadcn `Dialog` mit Zod-Schema:
+  ```ts
+  z.object({
+    category: z.enum(['bug','wish','praise','other']),
+    message: z.string().trim().min(1).max(1000),
+    contact_email: z.string().trim().email().max(255).optional().or(z.literal('')),
+  })
+  ```
+- Felder: RadioGroup Kategorie, Textarea (mit Live-Zähler `x/1000`), optionales E-Mail-Feld (vorausgefüllt aus `auth.user.email`).
+- Submit: insert mit `user_id = auth.uid()`, `app_version` aus `import.meta.env.VITE_APP_VERSION` (Fallback `'unknown'`), `platform` via Capacitor (`Capacitor.getPlatform()` → web/ios/android).
+- Erfolg: Toast „Danke für dein Feedback!" (top-center, gemäß Memory), Dialog schließt.
 
-In `ai_model_config` per Migration:
-- `primary_model`: `google/gemini-2.5-flash-lite` (schnell, billig, ausreichend für Schul-Fragen)
-- `provider_order`: `["gemini_direct", "openrouter", "lovable"]` — Gemini Direct hat niedrigste TTFB.
-- `temperature`: 0.8 (etwas konservativer als aktuell 0.9 → weniger Validierungs-Failures).
+**Integration:** in `ParentSettingsMenu` neuer Eintrag „Feedback senden" (Icon `MessageSquareHeart`) im Tab „Konto" oder eigenem kleinen Block am Ende der Liste.
 
-Free-Modell bleibt als Notfall im Fallback der Edge Function (über Provider-Chain abgedeckt).
+---
 
-## Phase 3 — Paralleler Preload im Frontend
+## Teil B — App-Store-Rating-Prompt (gelegentlich)
 
-`src/hooks/useQuestionPreloader.ts`:
-- `PARALLEL_BATCH_SIZE` von **1 → 3** erhöhen.
-- Begründung: nach Cache-First sind die meisten Calls DB-Reads → kein WORKER_LIMIT-Risiko mehr.
-- Q1 weiter sequentiell (blockiert UI), Q2–Q5 in einem Batch parallel.
+### Trigger-Logik
+Hook `useRatingPrompt()` (läuft beim Mount der Eltern-Hauptansicht):
+- Zeigen wenn ALLE wahr:
+  1. Profil-Rolle = `parent`
+  2. `profile.created_at` ≥ 14 Tage alt
+  3. Mind. 5 Kind-Lernsessions (`learning_sessions` joined über `parent_child_relationships`, count >= 5) — gecached in `localStorage` mit 24h-TTL, damit kein Query bei jedem Mount
+  4. `localStorage.rating_prompt_cooldown_until` < now()
+  5. `profile.last_rating_prompt_at` älter als 90 Tage (oder null)
 
-Erwarteter Effekt: Gesamt-Preload-Zeit für 5 Fragen von 5–15 s → 1–4 s.
+### Speicherung des Status
+Neue Spalte in `profiles`:
+- `last_rating_prompt_at timestamptz null`
+- `rating_prompt_response text null` — `rated | later | dismissed`
 
-## Phase 4 — Prompt-Schlankheit
+(Profiles-Tabelle existiert bereits, Migration nur ALTER.)
 
-In `buildQuestionPrompt`:
-- `excludeTexts` von max 10 → **max 5** Einträge, jeweils auf 50 Zeichen kürzen.
-- Regel-Block (`prompt_rules`) von 5 → **3** Regeln laden (sind ohnehin nach Relevanz sortiert).
-- `subjectScope` redundant zu `gradeGuidelines` an mehreren Stellen → einmal zusammenfassen.
-- Erwartung: −30 % Prompt-Tokens, schnellere TTFB.
+### Komponente
+`src/components/parent/RatingPromptDialog.tsx` — Dialog mit Text „Magst du LernZeit? Eine Bewertung hilft uns sehr."
+Drei Buttons:
+- **„Jetzt bewerten"**: Capacitor-Plattform-Check
+  - iOS: `https://apps.apple.com/app/idXXXXXXX?action=write-review` (App-Store-ID muss konfiguriert werden — Platzhalter `VITE_APPSTORE_ID`, Web-Fallback öffnet App-Store-Web-URL)
+  - Android: `market://details?id=app.lernzeit` → Fallback `https://play.google.com/store/apps/details?id=app.lernzeit`
+  - Web: Play Store Web-Link (oder beide nebeneinander)
+  - Setzt `response='rated'`, kein weiterer Prompt (Cooldown 365 Tage).
+- **„Später"**: 14 Tage Cooldown, `response='later'`.
+- **„Nein danke"**: 365 Tage Cooldown, `response='dismissed'`.
 
-## Phase 5 — Hintergrund-Refill des Caches
+Update sowohl `localStorage` (sofort) als auch `profiles.last_rating_prompt_at` (async, kein Block).
 
-Wenn Cache-First greift und `times_served` für gewählten Eintrag jetzt > 5 ist UND Cache-Größe für `grade/subject/difficulty` < 30:
-- Via `EdgeRuntime.waitUntil` einen Generierungs-Call anstoßen (nicht blockierend für User-Response).
-- So wächst der Cache organisch dort, wo er gebraucht wird.
+---
 
-## Technische Details
+## Teil C — Admin-Sichtung
 
-**Geänderte Dateien**
-- `supabase/functions/ai-question-generator/index.ts` (Cache-First-Logik, Refill)
-- `src/hooks/useQuestionPreloader.ts` (PARALLEL_BATCH_SIZE=3, excludeTexts kürzen)
-- Neue DB-Migration: Update `ai_model_config` für `question_generator`
-- (Optional) Index `ai_question_cache (grade, subject, difficulty, times_served)` falls noch nicht vorhanden
+Neuer Tab `„Feedback"` in `AdminDashboard`:
+- Komponente `src/components/admin/FeedbackInbox.tsx`
+- Liste sortiert nach `created_at desc`, Filter Kategorie + Status
+- Pro Zeile: Kategorie-Badge, Datum, gekürzte Message, Status-Dropdown (open/read/done), Detail-Sheet mit voller Message, contact_email, platform, app_version, user_id (mit Copy-Button)
+- Pagination 50/Seite
 
-**Risiken / Mitigationen**
-- Cache-Fragen können sich wiederholen → `excludeTexts` + `seenTextsRef` im Client + `order by times_served asc` + zufällige Auswahl aus den 10 wenigst-genutzten.
-- Qualität: bestehende Cache-Fragen wurden früher mit voller Validierung erzeugt → unverändert valide.
-- Lernplan-Modus (`topicHint`) bleibt 100 % AI → kein Qualitätsverlust dort.
+---
 
-## Rollout
+## Validierungs-Check ✔
 
-1. Migration (Modell-Config) + Code-Änderung Edge Function deployen.
-2. Frontend Preloader-Batch-Size hochsetzen.
-3. 24 h `ai_model_metrics` beobachten (Latenz, Erfolgsrate); Cache-Hit-Rate via neues Log-Feld messen.
-4. Bei Erfolg: 70/30-Verhältnis nachjustieren (z. B. 80/20 für hohe Volumen-Klassen).
+| Punkt | Status |
+|---|---|
+| Migration enthält CREATE → GRANT → RLS → POLICY in dieser Reihenfolge | ✔ |
+| Keine CHECK-Constraints für mutable Logik, sondern Validierungs-Trigger | ✔ |
+| RLS deckt INSERT (own), SELECT (own + admin), UPDATE (admin only) ab | ✔ |
+| Admin-Rolle via existierender `has_role()` SECURITY DEFINER Funktion — keine Rolle in `profiles` | ✔ |
+| Frontend-Validierung mit Zod (trim, max, email) | ✔ |
+| Keine Secrets/PII im Code, `contact_email` ist optional | ✔ |
+| Toast top-center (Memory-konform) | ✔ |
+| Capacitor-Plattformerkennung für Store-Link, Web-Fallback vorhanden | ✔ |
+| `last_rating_prompt_at` als ALTER auf existierender `profiles`-Tabelle — keine neuen Policies nötig (bestehende erlauben `auth.uid()=id` Update) | ✔ |
+| 90/14/365-Tage-Cooldowns getrennt von Sessions-Schwelle | ✔ |
+
+## Reihenfolge der Umsetzung
+1. Migration `parent_feedback` + Trigger + Index + ALTER `profiles`
+2. `ParentFeedbackDialog` + Integration in `ParentSettingsMenu`
+3. `useRatingPrompt` Hook + `RatingPromptDialog` + Einbindung in Eltern-Layout
+4. `FeedbackInbox` + neuer Tab in `AdminDashboard`
+
+## Offene Konfig-Werte (nach Build vom Nutzer zu setzen)
+- `VITE_APPSTORE_ID` (Apple App-Store ID, sobald App live)
+- Play-Store Package-Name (vermutlich `app.lernzeit` — bitte bestätigen, falls anders)
