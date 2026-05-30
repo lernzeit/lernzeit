@@ -805,24 +805,31 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-muted bg-card">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Crown className="h-4 w-4 text-primary" />
+          {!isPremium && (
+            <Card className="border-muted bg-card">
+              <CardContent className="py-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Crown className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm text-foreground">Kostenlos testen</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
+                    </p>
+                    <p className="text-xs text-muted-foreground/80 font-medium">
+                      ✓ Monatlich kündbar · Keine Mindestlaufzeit
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="font-semibold text-sm text-foreground">Kostenlos testen</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
-                  </p>
-                  <p className="text-xs text-muted-foreground/80 font-medium">
-                    ✓ Monatlich kündbar · Keine Mindestlaufzeit
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Tab: Verschenken */}
+        <TabsContent value="referral" className="space-y-4">
+          <ReferralCard userId={userId} />
         </TabsContent>
 
       </Tabs>
