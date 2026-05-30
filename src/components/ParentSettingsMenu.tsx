@@ -618,6 +618,10 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="referral" className="space-y-6">
+          <ReferralCard userId={userId} />
+        </TabsContent>
       </Tabs>
     </div>
   );
