@@ -72,6 +72,23 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated user (JWT). Manual signature check via gateway would
+    // also work but we deploy with verify_jwt=false here.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Nicht autorisiert' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    try {
+      const payload = JSON.parse(atob(authHeader.replace('Bearer ', '').split('.')[1] ?? ''));
+      if (!payload.sub || (payload.exp && payload.exp * 1000 < Date.now())) throw new Error('bad');
+    } catch {
+      return new Response(JSON.stringify({ success: false, error: 'Nicht autorisiert' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Parse and validate request body
     let requestBody: unknown;
     try {
