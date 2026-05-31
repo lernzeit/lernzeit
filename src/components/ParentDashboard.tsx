@@ -913,10 +913,12 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           )}
         </TabsContent>
 
-        {/* Tab: Verschenken */}
-        <TabsContent value="referral" className="space-y-4">
-          <ReferralCard userId={userId} />
-        </TabsContent>
+        {/* Tab: Verschenken – nur für zahlende Premium-Mitglieder */}
+        {isPaidPremium && (
+          <TabsContent value="referral" className="space-y-4">
+            <ReferralCard userId={userId} />
+          </TabsContent>
+        )}
 
       </Tabs>
 
