@@ -172,6 +172,33 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
 
+  // Echtes (bezahltes) Premium – Trial zählt nicht.
+  const isPaidPremium = isPremium && !isTrialing;
+
+  const [referralInfoOpen, setReferralInfoOpen] = useState(false);
+  const [referralIntroOpen, setReferralIntroOpen] = useState(false);
+  const introStorageKey = React.useMemo(
+    () => `premiumReferralIntroShown:${userId}`,
+    [userId]
+  );
+
+  // Einmalig nach Abschluss der Premium-Mitgliedschaft das Intro-Pop-up zeigen.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isPaidPremium) return;
+    try {
+      if (window.localStorage.getItem(introStorageKey) === '1') return;
+      setReferralIntroOpen(true);
+    } catch {
+      setReferralIntroOpen(true);
+    }
+  }, [isPaidPremium, introStorageKey]);
+
+  const dismissReferralIntro = () => {
+    setReferralIntroOpen(false);
+    try { window.localStorage.setItem(introStorageKey, '1'); } catch {}
+  };
+
   const {
     loading,
     linkedChildren,
