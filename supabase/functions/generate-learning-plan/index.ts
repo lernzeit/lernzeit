@@ -63,6 +63,15 @@ serve(async (req) => {
       });
     }
 
+    // Input validation: cap user-supplied strings to prevent abuse / prompt injection cost
+    const clip = (s: unknown, n: number) => (typeof s === 'string' ? s.slice(0, n) : '');
+    const safeChildName = clip(childName, 50);
+    const safeTopic = clip(topic, 200);
+    const safeAdditionalInfo = clip(additionalInfo, 1000);
+    const safeSubject = clip(subject, 50);
+    const safeGrade = Number.isFinite(grade) ? Math.min(Math.max(Number(grade), 1), 13) : 1;
+    const safeTestDate = typeof testDate === 'string' ? testDate.slice(0, 30) : null;
+
     // SECURITY: Verify caller is parent of this child
     const { data: rel } = await supabase
       .from("parent_child_relationships")
@@ -90,9 +99,9 @@ serve(async (req) => {
       latin: "Latein",
     };
 
-    const subjectDE = subjectNames[subject] || subject;
-    const testDateStr = testDate ? `Der Test findet am ${testDate} statt.` : "Kein konkretes Testdatum angegeben.";
-    const extraInfo = additionalInfo ? `Zusätzliche Infos vom Elternteil: "${additionalInfo}"` : "";
+    const subjectDE = subjectNames[safeSubject] || safeSubject;
+    const testDateStr = safeTestDate ? `Der Test findet am ${safeTestDate} statt.` : "Kein konkretes Testdatum angegeben.";
+    const extraInfo = safeAdditionalInfo ? `Zusätzliche Infos vom Elternteil: "${safeAdditionalInfo}"` : "";
 
     const systemPrompt = `Du bist ein erfahrener Nachhilfelehrer und Lernplan-Experte für deutsche Schulen.
 Du erstellst strukturierte 5-Tage-Lernpläne für Schüler.
@@ -121,10 +130,10 @@ Jedes Element hat diese Struktur:
 
     const userPrompt = `Erstelle einen 5-Tage-Lernplan für folgende Situation:
 
-Kind: ${childName || "Schüler/in"}
-Klassenstufe: ${grade}
+Kind: ${safeChildName || "Schüler/in"}
+Klassenstufe: ${safeGrade}
 Fach: ${subjectDE}
-Thema/Prüfung: ${topic}
+Thema/Prüfung: ${safeTopic}
 ${testDateStr}
 ${extraInfo}
 
@@ -175,11 +184,11 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
       .insert({
         parent_id: userData.user.id,
         child_id: childId,
-        child_name: childName || "Kind",
-        grade,
-        subject,
-        topic,
-        test_date: testDate || null,
+        child_name: safeChildName || "Kind",
+        grade: safeGrade,
+        subject: safeSubject,
+        topic: safeTopic,
+        test_date: safeTestDate || null,
         plan_data: planData,
       })
       .select()

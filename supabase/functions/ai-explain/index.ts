@@ -41,15 +41,22 @@ serve(async (req) => {
     }
 
     const { question, correctAnswer, userAnswer, grade, subject }: ExplanationRequest = await req.json();
-    
-    console.log(`📚 Generating explanation for Grade ${grade} ${subject}`);
 
-    const prompt = buildExplanationPrompt(question, correctAnswer, userAnswer, grade, subject);
+    const clip = (s: unknown, n: number) => (typeof s === 'string' ? s.slice(0, n) : '');
+    const safeQuestion = clip(question, 500);
+    const safeCorrect = clip(correctAnswer, 500);
+    const safeUser = userAnswer ? clip(userAnswer, 500) : undefined;
+    const safeGrade = Number.isFinite(grade) ? Math.min(Math.max(Number(grade), 1), 10) : 1;
+    const safeSubject = clip(subject, 50);
+
+    console.log(`📚 Generating explanation for Grade ${safeGrade} ${safeSubject}`);
+
+    const prompt = buildExplanationPrompt(safeQuestion, safeCorrect, safeUser, safeGrade, safeSubject);
 
     const { response } = await callAI({
       model: 'google/gemini-3-flash-preview',
       messages: [
-        { role: 'system', content: getSystemPrompt(grade) },
+        { role: 'system', content: getSystemPrompt(safeGrade) },
         { role: 'user', content: prompt }
       ],
       temperature: 0.3,

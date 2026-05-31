@@ -43,13 +43,27 @@ serve(async (req) => {
 
     const { messages, question, correctAnswer, userAnswer, grade, subject }: TutorRequest = await req.json();
 
-    const systemPrompt = buildSystemPrompt(grade, subject, question, correctAnswer, userAnswer);
+    // Input validation: cap lengths to prevent abuse / prompt injection cost amplification
+    const clip = (s: unknown, n: number) => (typeof s === 'string' ? s.slice(0, n) : '');
+    const safeQuestion = clip(question, 500);
+    const safeCorrect = clip(correctAnswer, 500);
+    const safeUser = userAnswer ? clip(userAnswer, 500) : undefined;
+    const safeGrade = Number.isFinite(grade) ? Math.min(Math.max(Number(grade), 1), 10) : 1;
+    const safeSubject = clip(subject, 50);
+    const safeMessages = Array.isArray(messages)
+      ? messages.slice(-20).map((m) => ({
+          role: m?.role === 'assistant' ? 'assistant' : 'user',
+          content: clip(m?.content, 1000),
+        }))
+      : [];
+
+    const systemPrompt = buildSystemPrompt(safeGrade, safeSubject, safeQuestion, safeCorrect, safeUser);
 
     const { response } = await callAI({
       model: 'google/gemini-3-flash-preview',
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages,
+        ...safeMessages,
       ],
       stream: true,
     }, undefined, 'ai_tutor');
