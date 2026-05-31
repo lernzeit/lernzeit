@@ -199,6 +199,13 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     try { window.localStorage.setItem(introStorageKey, '1'); } catch {}
   };
 
+  // Falls Tab 'referral' aktiv ist, aber kein Paid-Premium besteht → zurück auf Abo.
+  useEffect(() => {
+    if (activeTab === 'referral' && !isPaidPremium) {
+      setActiveTab('subscription');
+    }
+  }, [activeTab, isPaidPremium]);
+
   const {
     loading,
     linkedChildren,
