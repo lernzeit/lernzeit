@@ -530,49 +530,52 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         </Card>
       )}
 
-      {/* Main Tabs - reduced to 3 (Konto in header) */}
+      {/* Empfehlungs-Hinweis im Dashboard. Für Premium-Mitglieder verlinkt der Hinweis
+          direkt zum Verschenken-Tab. Für alle anderen öffnet er eine Info-Kachel. */}
       {!referralBannerDismissed && activeTab !== 'referral' && (
         <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5">
           <CardContent className="flex items-center justify-between gap-3 py-3 px-4">
-            <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              className="flex items-center gap-3 min-w-0 text-left flex-1"
+              onClick={() => {
+                if (isPaidPremium) {
+                  setActiveTab('referral');
+                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                } else {
+                  setReferralInfoOpen(true);
+                }
+              }}
+            >
               <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
                 <Gift className="h-4 w-4 text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-sm truncate">Empfehlen & Premium-Monate sichern</p>
+                <p className="font-semibold text-sm truncate">Empfehlungsprogramm</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Lade Freunde ein – pro aktivem Kind 1 Monat Premium geschenkt.
+                  {isPaidPremium
+                    ? 'Lade Freunde ein – pro aktivem Kind 1 Monat Premium geschenkt.'
+                    : 'Exklusiv für Premium-Mitglieder. Mehr erfahren.'}
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                size="sm"
-                onClick={() => {
-                  setActiveTab('referral');
-                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                }}
-              >
-                Jetzt ansehen
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label="Hinweis ausblenden"
-                onClick={() => {
-                  setReferralBannerDismissed(true);
-                  try { window.localStorage.setItem('referralBannerDismissed', '1'); } catch {}
-                }}
-              >
-                ✕
-              </Button>
-            </div>
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Hinweis ausblenden"
+              onClick={() => {
+                setReferralBannerDismissed(true);
+                try { window.localStorage.setItem('referralBannerDismissed', '1'); } catch {}
+              }}
+            >
+              ✕
+            </Button>
           </CardContent>
         </Card>
       )}
 
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
@@ -590,10 +593,12 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
           </TabsTrigger>
-          <TabsTrigger value="referral" className="flex items-center gap-1.5">
-            <Gift className="h-4 w-4" />
-            <span className="hidden sm:inline">Verschenken</span>
-          </TabsTrigger>
+          {isPaidPremium && (
+            <TabsTrigger value="referral" className="flex items-center gap-1.5">
+              <Gift className="h-4 w-4" />
+              <span className="hidden sm:inline">Verschenken</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Tab: Anfragen */}
