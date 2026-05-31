@@ -27,9 +27,11 @@ const Nutzungsbedingungen = () => {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-6 h-6 text-primary" />
-              Nutzungsbedingungen (AGB)
+            <CardTitle asChild>
+              <h1 className="flex items-center gap-2 text-2xl font-bold">
+                <FileText className="w-6 h-6 text-primary" />
+                Nutzungsbedingungen (AGB)
+              </h1>
             </CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none">
