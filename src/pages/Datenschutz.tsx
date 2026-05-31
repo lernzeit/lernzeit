@@ -27,10 +27,10 @@ const Datenschutz = () => {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <Shield className="w-6 h-6 text-primary" />
               Datenschutzerklärung
-            </CardTitle>
+            </h1>
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none">
             <p className="text-muted-foreground mb-6">

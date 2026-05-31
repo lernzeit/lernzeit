@@ -287,7 +287,7 @@ const Index = () => {
           </div>
           
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-6">
-            LernZeit
+            LernZeit – Lernen belohnen, Handyzeit verdienen
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl mx-auto leading-relaxed">
