@@ -711,6 +711,7 @@ export type Database = {
           rating_prompt_response: string | null
           referral_announce_sent_at: string | null
           role: string | null
+          role_locked: boolean
           updated_at: string | null
           username: string | null
         }
@@ -730,6 +731,7 @@ export type Database = {
           rating_prompt_response?: string | null
           referral_announce_sent_at?: string | null
           role?: string | null
+          role_locked?: boolean
           updated_at?: string | null
           username?: string | null
         }
@@ -749,6 +751,7 @@ export type Database = {
           rating_prompt_response?: string | null
           referral_announce_sent_at?: string | null
           role?: string | null
+          role_locked?: boolean
           updated_at?: string | null
           username?: string | null
         }
