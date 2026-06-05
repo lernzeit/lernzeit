@@ -9,7 +9,7 @@ const Nutzungsbedingungen = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
+    <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="Nutzungsbedingungen – LernZeit"
         description="Nutzungsbedingungen der LernZeit-App für Eltern und Kinder."

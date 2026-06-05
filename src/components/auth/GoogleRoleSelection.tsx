@@ -52,7 +52,7 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
       <Card className="w-full max-w-md shadow-card">
         <CardContent className="p-6 space-y-6">
           <div className="text-center space-y-2">

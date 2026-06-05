@@ -10,7 +10,7 @@ const Impressum = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
+    <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="Impressum – LernZeit"
         description="Impressum und Anbieterkennzeichnung von LernZeit gemäß § 5 TMG."

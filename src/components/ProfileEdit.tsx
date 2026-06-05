@@ -97,7 +97,7 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg py-4">
+    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom px-safe">
       <div className="page-container space-y-6">
         {/* Header */}
         <Card className="shadow-card">

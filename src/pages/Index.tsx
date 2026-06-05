@@ -20,7 +20,7 @@ const UserProfile = lazy(() => import('@/components/auth/UserProfile').then((m) 
 
 // Loading fallback component
 const LoadingFallback = () =>
-<div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+<div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
     <Card className="w-full max-w-md shadow-card">
       <CardContent className="p-8 text-center">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
@@ -180,7 +180,7 @@ const Index = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
         <Card className="w-full max-w-md shadow-card">
           <CardContent className="p-8 text-center">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
@@ -251,7 +251,7 @@ const Index = () => {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-bg p-4 relative overflow-hidden">
+    <main className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe relative overflow-hidden">
       <Seo
         title="LernZeit – Lernen belohnen, Handyzeit verdienen"
         description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit – Eltern behalten die Kontrolle. Klasse 1–10."

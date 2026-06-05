@@ -23,7 +23,7 @@ export function SessionLengthSelector({ subject, secondsPerTask, grade, onSelect
   const isYoung = age.group === 'young';
 
   return (
-    <div className="min-h-screen bg-gradient-bg py-4">
+    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom px-safe">
       <div className="page-container max-w-lg mx-auto">
         <Button variant="ghost" onClick={onBack} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
