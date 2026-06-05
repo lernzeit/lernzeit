@@ -1342,6 +1342,7 @@ export type Database = {
         Returns: boolean
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
+      link_referral: { Args: { p_code: string }; Returns: Json }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {
