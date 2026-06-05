@@ -9,7 +9,7 @@ const Datenschutz = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
+    <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="Datenschutz – LernZeit"
         description="Datenschutzerklärung von LernZeit: So gehen wir mit den Daten von Eltern und Kindern um. Transparenz und Sicherheit nach DSGVO."

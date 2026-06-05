@@ -37,7 +37,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
           <Card className="w-full max-w-md">
             <CardContent className="p-8 text-center">
               <AlertTriangle className="w-12 h-12 text-warning mx-auto mb-4" />
