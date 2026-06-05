@@ -1,0 +1,89 @@
+/**
+ * Zentrale Safe-Area-Utility
+ * --------------------------------------------------------------
+ * Eine einzige Quelle der Wahrheit für iOS Notch / Dynamic Island,
+ * Home-Indicator und Android-Edge-to-Edge-Insets.
+ *
+ * CSS-Variablen (vermeiden überall env() aufzurufen):
+ *   --lz-safe-top    -> env(safe-area-inset-top)
+ *   --lz-safe-bottom -> env(safe-area-inset-bottom)
+ *   --lz-safe-left   -> env(safe-area-inset-left)
+ *   --lz-safe-right  -> env(safe-area-inset-right)
+ *
+ * Utility-Klassen (Tailwind-kompatibel, statisch -> kein Purging-Problem):
+ *   Roh-Insets:          safe-pt | safe-pb | safe-pl | safe-pr | safe-px | safe-py | safe-p
+ *   Margin:              safe-mt | safe-mb | safe-ml | safe-mr
+ *   Positionierung:      safe-top-0 | safe-bottom-0 | safe-left-0 | safe-right-0
+ *   Mit Mindestabstand:  pt-safe-top | pb-safe-bottom | px-safe | mb-safe-bottom
+ *   Container-Shortcut:  safe-area-screen  (alle vier Seiten, mit Mindestabstand oben/unten)
+ *
+ * Voraussetzung: `<meta name="viewport" content="... viewport-fit=cover">` in index.html.
+ */
+
+:root {
+  --lz-safe-top: env(safe-area-inset-top, 0px);
+  --lz-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --lz-safe-left: env(safe-area-inset-left, 0px);
+  --lz-safe-right: env(safe-area-inset-right, 0px);
+}
+
+@layer utilities {
+  /* Roh-Insets (Padding) */
+  .safe-pt { padding-top: var(--lz-safe-top); }
+  .safe-pb { padding-bottom: var(--lz-safe-bottom); }
+  .safe-pl { padding-left: var(--lz-safe-left); }
+  .safe-pr { padding-right: var(--lz-safe-right); }
+  .safe-px {
+    padding-left: var(--lz-safe-left);
+    padding-right: var(--lz-safe-right);
+  }
+  .safe-py {
+    padding-top: var(--lz-safe-top);
+    padding-bottom: var(--lz-safe-bottom);
+  }
+  .safe-p {
+    padding-top: var(--lz-safe-top);
+    padding-right: var(--lz-safe-right);
+    padding-bottom: var(--lz-safe-bottom);
+    padding-left: var(--lz-safe-left);
+  }
+
+  /* Margin */
+  .safe-mt { margin-top: var(--lz-safe-top); }
+  .safe-mb { margin-bottom: var(--lz-safe-bottom); }
+  .safe-ml { margin-left: var(--lz-safe-left); }
+  .safe-mr { margin-right: var(--lz-safe-right); }
+
+  /* Positionierung (für fixed/absolute Elemente, z. B. Sticky-Bars) */
+  .safe-top-0 { top: var(--lz-safe-top); }
+  .safe-bottom-0 { bottom: var(--lz-safe-bottom); }
+  .safe-left-0 { left: var(--lz-safe-left); }
+  .safe-right-0 { right: var(--lz-safe-right); }
+
+  /* Aliase mit Mindestabstand (legacy-kompatibel, überall in der App genutzt) */
+  .pt-safe-top { padding-top: max(1rem, var(--lz-safe-top)); }
+  .pb-safe-bottom { padding-bottom: max(0.5rem, var(--lz-safe-bottom)); }
+  .px-safe {
+    padding-left: var(--lz-safe-left);
+    padding-right: var(--lz-safe-right);
+  }
+  .mb-safe-bottom { margin-bottom: var(--lz-safe-bottom); }
+
+  /* Container-Shortcut: alle vier Seiten in einem Rutsch */
+  .safe-area-screen {
+    padding-top: max(1rem, var(--lz-safe-top));
+    padding-bottom: max(0.5rem, var(--lz-safe-bottom));
+    padding-left: var(--lz-safe-left);
+    padding-right: var(--lz-safe-right);
+  }
+
+  /* Modal-Helfer: hält Inhalt innerhalb des sicheren Bereichs */
+  .safe-modal {
+    padding-left: max(1rem, var(--lz-safe-left));
+    padding-right: max(1rem, var(--lz-safe-right));
+  }
+  .safe-modal-y {
+    padding-top: max(1rem, var(--lz-safe-top));
+    padding-bottom: max(1rem, var(--lz-safe-bottom));
+  }
+}
