@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "REPLACE_WITH_TEAMID.de.lernzeit.app",
+        "paths": [
+          "/",
+          "/?*",
+          "/start",
+          "/start?*",
+          "/reset-password",
+          "/reset-password?*",
+          "/email-bestaetigung",
+          "/email-bestaetigung?*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["REPLACE_WITH_TEAMID.de.lernzeit.app"]
+  }
+}
