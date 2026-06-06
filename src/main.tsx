@@ -111,6 +111,14 @@ const bootstrap = async () => {
       const { initNativeStorage } = await import('./services/nativeStorageAdapter');
       await initNativeStorage();
       console.log('✅ Native storage initialized');
+
+      // Wire up Universal/App Link handling (lernzeit.app/?ref=CODE)
+      try {
+        const { initDeepLinkHandler } = await import('./services/deepLinkHandler');
+        await initDeepLinkHandler();
+      } catch (e) {
+        console.warn('Deep link handler init failed:', e);
+      }
     }
 
     const { default: App } = await import('./App.tsx');
