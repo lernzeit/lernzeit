@@ -25,11 +25,24 @@ const showBootError = (title: string, message: string) => {
   const root = document.getElementById('root');
   if (!root) return;
 
-  root.innerHTML = `<div style="padding:2rem;text-align:center;font-family:sans-serif;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;">
-    <h2 style="margin:0 0 0.75rem 0;">${title}</h2>
-    <p style="color:#666;margin:0 0 1.25rem 0;max-width:28rem;">${message}</p>
-    <button onclick="location.reload()" style="padding:0.5rem 1.5rem;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:1rem;cursor:pointer;">Neu laden</button>
-  </div>`;
+  // Use DOM API + textContent to prevent XSS from error messages that may contain HTML
+  root.replaceChildren();
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('style', 'padding:2rem;text-align:center;font-family:sans-serif;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;');
+  const h2 = document.createElement('h2');
+  h2.setAttribute('style', 'margin:0 0 0.75rem 0;');
+  h2.textContent = title;
+  const p = document.createElement('p');
+  p.setAttribute('style', 'color:#666;margin:0 0 1.25rem 0;max-width:28rem;');
+  p.textContent = message;
+  const btn = document.createElement('button');
+  btn.setAttribute('style', 'padding:0.5rem 1.5rem;background:#3b82f6;color:white;border:none;border-radius:8px;font-size:1rem;cursor:pointer;');
+  btn.textContent = 'Neu laden';
+  btn.addEventListener('click', () => location.reload());
+  wrapper.appendChild(h2);
+  wrapper.appendChild(p);
+  wrapper.appendChild(btn);
+  root.appendChild(wrapper);
 };
 
 const isAppMounted = () => window.__LERNZEIT_APP_MOUNTED__ === true;

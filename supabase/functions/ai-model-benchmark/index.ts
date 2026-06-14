@@ -156,7 +156,8 @@ serve(async (req) => {
       winner: ranked.find((r) => r.ok) ?? null,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: (err as Error).message }), {
+    console.error('[ai-model-benchmark] error:', err);
+    return new Response(JSON.stringify({ success: false, error: 'Benchmark konnte nicht ausgeführt werden.' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
