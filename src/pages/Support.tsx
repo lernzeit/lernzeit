@@ -12,9 +12,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, LifeBuoy, Mail, ExternalLink, ShieldCheck, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  ArrowLeft,
+  LifeBuoy,
+  Mail,
+  ExternalLink,
+  ShieldCheck,
+  Trash2,
+  Download,
+  Loader2,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import Seo from '@/components/Seo';
 
 const SUPPORT_EMAIL = 'info@lernzeit.app';
@@ -85,12 +105,17 @@ const CATEGORY_META: Record<RequestCategory, { label: string; subjectTag: string
 
 const Support = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [category, setCategory] = useState<RequestCategory>('general');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [topic, setTopic] = useState('');
   const [message, setMessage] = useState('');
   const [isAuthed, setIsAuthed] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   useEffect(() => {
     let active = true;
