@@ -12,6 +12,17 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+const ALLOWED_ORIGINS = [
+  "https://lernzeit.app",
+  "https://www.lernzeit.app",
+  "https://lernzeit.lovable.app",
+];
+const DEFAULT_ORIGIN = "https://lernzeit.app";
+const resolveOrigin = (req: Request): string => {
+  const raw = req.headers.get("origin") ?? "";
+  return ALLOWED_ORIGINS.includes(raw) ? raw : DEFAULT_ORIGIN;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,6 +54,7 @@ serve(async (req) => {
     }
     logStep("Customer lookup", { customerId: customerId || "new" });
 
+    const origin = resolveOrigin(req);
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -53,8 +65,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/?checkout=success`,
-      cancel_url: `${req.headers.get("origin")}/`,
+      success_url: `${origin}/?checkout=success`,
+      cancel_url: `${origin}/`,
     });
     logStep("Checkout session created", { sessionId: session.id });
 
