@@ -29,29 +29,41 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const token = authHeader.replace('Bearer ', '');
-    try {
-      const payloadBase64 = token.split('.')[1];
-      if (!payloadBase64) throw new Error('Invalid token');
-      const payload = JSON.parse(atob(payloadBase64));
-      if (!payload.sub) throw new Error('No user ID');
-      console.log('Tutor: authenticated user', payload.sub);
-    } catch {
-      return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+      const sb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+      const { data, error: authErr } = await sb.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authErr || !data?.user) {
+        return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     const { messages, question, correctAnswer, userAnswer, grade, subject }: TutorRequest = await req.json();
 
-    const systemPrompt = buildSystemPrompt(grade, subject, question, correctAnswer, userAnswer);
+    // Input validation: cap lengths to prevent abuse / prompt injection cost amplification
+    const clip = (s: unknown, n: number) => (typeof s === 'string' ? s.slice(0, n) : '');
+    const safeQuestion = clip(question, 500);
+    const safeCorrect = clip(correctAnswer, 500);
+    const safeUser = userAnswer ? clip(userAnswer, 500) : undefined;
+    const safeGrade = Number.isFinite(grade) ? Math.min(Math.max(Number(grade), 1), 10) : 1;
+    const safeSubject = clip(subject, 50);
+    const safeMessages = Array.isArray(messages)
+      ? messages.slice(-20).map((m) => ({
+          role: m?.role === 'assistant' ? 'assistant' : 'user',
+          content: clip(m?.content, 1000),
+        }))
+      : [];
+
+    const systemPrompt = buildSystemPrompt(safeGrade, safeSubject, safeQuestion, safeCorrect, safeUser);
 
     const { response } = await callAI({
       model: 'google/gemini-3-flash-preview',
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages,
+        ...safeMessages,
       ],
       stream: true,
     }, undefined, 'ai_tutor');
@@ -74,7 +86,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Tutor error:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
+    return new Response(JSON.stringify({ error: 'Tutor temporär nicht verfügbar' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

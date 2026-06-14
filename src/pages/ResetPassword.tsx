@@ -63,7 +63,7 @@ export default function ResetPassword() {
 
   if (!isRecovery && !success) {
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
         <Card className="w-full max-w-md shadow-card">
           <CardContent className="p-8 text-center">
             <BookOpen className="w-12 h-12 text-primary mx-auto mb-4" />
@@ -80,7 +80,7 @@ export default function ResetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
         <Card className="w-full max-w-md shadow-card">
           <CardContent className="p-8 text-center">
             <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
@@ -93,7 +93,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-2xl mb-3 shadow-lg">

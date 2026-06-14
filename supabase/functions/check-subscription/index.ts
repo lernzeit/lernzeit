@@ -271,6 +271,39 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
 
+    // Referral conversion: if user became paying premium, credit the referrer
+    if (isPremium && (activeSub.status === 'active' || activeSub.status === 'trialing')) {
+      try {
+        const { data: refRow } = await supabaseClient
+          .from('referrals')
+          .select('id, referrer_id, status')
+          .eq('referee_id', parentOrUserId)
+          .in('status', ['invited', 'active'])
+          .maybeSingle();
+        if (refRow?.referrer_id) {
+          const { data: capped } = await supabaseClient.rpc('cap_referral_grant', {
+            p_user_id: refRow.referrer_id, p_requested: 1,
+          });
+          const months = Number(capped) || 0;
+          if (months > 0) {
+            await supabaseClient.rpc('apply_premium_grant', {
+              p_user_id: refRow.referrer_id,
+              p_months: months,
+              p_reason: 'referral_paying',
+              p_source_ref: refRow.id,
+            });
+          }
+          await supabaseClient
+            .from('referrals')
+            .update({ status: 'paying', paid_at: new Date().toISOString() })
+            .eq('id', refRow.id);
+          logStep("Referral converted to paying", { referrer: refRow.referrer_id, months });
+        }
+      } catch (e) {
+        logStep("Referral conversion failed", { error: String(e) });
+      }
+    }
+
     return new Response(JSON.stringify({
       subscribed: isPremium,
       product_id: productId,
@@ -284,7 +317,7 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Ein unerwarteter Fehler ist aufgetreten." }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

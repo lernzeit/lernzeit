@@ -220,11 +220,15 @@ serve(async (req) => {
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-  // Auth: allow either admin user OR service-role-style cron (no auth header).
+  // Auth: require service-role bearer (cron) OR admin user JWT.
   const authHeader = req.headers.get('Authorization');
-  let triggeredBy = 'cron';
-  if (authHeader) {
-    const { data: userData } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+  const bearer = authHeader?.replace('Bearer ', '') ?? '';
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  let triggeredBy = '';
+  if (bearer && bearer === serviceKey) {
+    triggeredBy = 'cron';
+  } else if (bearer) {
+    const { data: userData } = await supabase.auth.getUser(bearer);
     if (userData?.user) {
       const { data: roleData } = await supabase.from('user_roles')
         .select('role').eq('user_id', userData.user.id).eq('role', 'admin').maybeSingle();
@@ -233,6 +237,9 @@ serve(async (req) => {
       }
       triggeredBy = `admin:${userData.user.id}`;
     }
+  }
+  if (!triggeredBy) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   let body: { use_cases?: string[]; apply?: boolean } = {};

@@ -17,7 +17,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple, Gift
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -27,6 +27,11 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
+import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
+import { ReferralCard } from '@/components/parent/ReferralCard';
+import { useRatingPrompt } from '@/hooks/useRatingPrompt';
+import { MessageSquareHeart } from 'lucide-react';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
@@ -73,6 +78,21 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
+  const [referralBannerDismissed, setReferralBannerDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('referralBannerDismissed') === '1';
+  });
+
+  // Deep-link from push notification: ?tab=referral focuses the Verschenken tab.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'referral') {
+      setActiveTab('referral');
+      setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
+  }, []);
+  const [isFoundingFamily, setIsFoundingFamily] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChanging, setPasswordChanging] = useState(false);
@@ -81,6 +101,19 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
   const [requestsRefreshTrigger, setRequestsRefreshTrigger] = useState(0);
   const [familyLinkInstallOpen, setFamilyLinkInstallOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const { shouldShow: ratingShouldShow, dismiss: ratingDismiss } = useRatingPrompt(userId, 'parent');
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setUserEmail(data.user?.email ?? undefined);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   
   const { toast } = useToast();
   const isNativeAndroid =
@@ -139,6 +172,40 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
 
+  // Echtes (bezahltes) Premium – Trial zählt nicht.
+  const isPaidPremium = isPremium && !isTrialing;
+
+  const [referralInfoOpen, setReferralInfoOpen] = useState(false);
+  const [referralIntroOpen, setReferralIntroOpen] = useState(false);
+  const introStorageKey = React.useMemo(
+    () => `premiumReferralIntroShown:${userId}`,
+    [userId]
+  );
+
+  // Einmalig nach Abschluss der Premium-Mitgliedschaft das Intro-Pop-up zeigen.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isPaidPremium) return;
+    try {
+      if (window.localStorage.getItem(introStorageKey) === '1') return;
+      setReferralIntroOpen(true);
+    } catch {
+      setReferralIntroOpen(true);
+    }
+  }, [isPaidPremium, introStorageKey]);
+
+  const dismissReferralIntro = () => {
+    setReferralIntroOpen(false);
+    try { window.localStorage.setItem(introStorageKey, '1'); } catch {}
+  };
+
+  // Falls Tab 'referral' aktiv ist, aber kein Paid-Premium besteht → zurück auf Abo.
+  useEffect(() => {
+    if (activeTab === 'referral' && !isPaidPremium) {
+      setActiveTab('subscription');
+    }
+  }, [activeTab, isPaidPremium]);
+
   const {
     loading,
     linkedChildren,
@@ -194,8 +261,13 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const loadProfileName = async () => {
     try {
-      const { data } = await supabase.from('profiles').select('name').eq('id', userId).single();
+      const { data } = await supabase
+        .from('profiles')
+        .select('name, is_founding_family')
+        .eq('id', userId)
+        .single();
       if (data?.name) setProfileName(data.name);
+      setIsFoundingFamily(!!data?.is_founding_family);
     } catch {}
   };
 
@@ -309,7 +381,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <h1 className="text-base sm:text-xl font-bold truncate">
                 Willkommen{profileName ? `, ${profileName}` : ''}!
               </h1>
-              <Badge className="mt-0.5 sm:mt-1 bg-success text-success-foreground hover:bg-success text-xs">Elternteil</Badge>
+              <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-1">
+                <Badge className="bg-success text-success-foreground hover:bg-success text-xs">Elternteil</Badge>
+                {isFoundingFamily && (
+                  <Badge
+                    className="text-xs border-0"
+                    style={{ backgroundColor: '#22d3ee', color: '#0b1220' }}
+                  >
+                    LernZeit-Familie 🚀
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -455,9 +537,52 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         </Card>
       )}
 
-      {/* Main Tabs - reduced to 3 (Konto in header) */}
+      {/* Empfehlungs-Hinweis im Dashboard. Für Premium-Mitglieder verlinkt der Hinweis
+          direkt zum Verschenken-Tab. Für alle anderen öffnet er eine Info-Kachel. */}
+      {!referralBannerDismissed && activeTab !== 'referral' && (
+        <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5">
+          <CardContent className="flex items-center justify-between gap-3 py-3 px-4">
+            <button
+              type="button"
+              className="flex items-center gap-3 min-w-0 text-left flex-1"
+              onClick={() => {
+                if (isPaidPremium) {
+                  setActiveTab('referral');
+                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                } else {
+                  setReferralInfoOpen(true);
+                }
+              }}
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                <Gift className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate">Empfehlungsprogramm</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isPaidPremium
+                    ? 'Lade Freunde ein – pro aktivem Kind 1 Monat Premium geschenkt.'
+                    : 'Exklusiv für Premium-Mitglieder. Mehr erfahren.'}
+                </p>
+              </div>
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label="Hinweis ausblenden"
+              onClick={() => {
+                setReferralBannerDismissed(true);
+                try { window.localStorage.setItem('referralBannerDismissed', '1'); } catch {}
+              }}
+            >
+              ✕
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Anfragen</span>
@@ -475,6 +600,12 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             <Crown className="h-4 w-4" />
             <span className="hidden sm:inline">Abo</span>
           </TabsTrigger>
+          {isPaidPremium && (
+            <TabsTrigger value="referral" className="flex items-center gap-1.5">
+              <Gift className="h-4 w-4" />
+              <span className="hidden sm:inline">Verschenken</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Tab: Anfragen */}
@@ -767,25 +898,34 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-muted bg-card">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Crown className="h-4 w-4 text-primary" />
+          {!isPremium && (
+            <Card className="border-muted bg-card">
+              <CardContent className="py-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Crown className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-semibold text-sm text-foreground">Kostenlos testen</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
+                    </p>
+                    <p className="text-xs text-muted-foreground/80 font-medium">
+                      ✓ Monatlich kündbar · Keine Mindestlaufzeit
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="font-semibold text-sm text-foreground">Kostenlos testen</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
-                  </p>
-                  <p className="text-xs text-muted-foreground/80 font-medium">
-                    ✓ Monatlich kündbar · Keine Mindestlaufzeit
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
+
+        {/* Tab: Verschenken – nur für zahlende Premium-Mitglieder */}
+        {isPaidPremium && (
+          <TabsContent value="referral" className="space-y-4">
+            <ReferralCard userId={userId} />
+          </TabsContent>
+        )}
 
       </Tabs>
 
@@ -827,6 +967,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </Card>
 
             <NotificationSettings userId={userId} role="parent" />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquareHeart className="h-5 w-5" />
+                  Feedback
+                </CardTitle>
+                <CardDescription>
+                  Schreib uns, was gut läuft oder besser werden kann.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" onClick={() => setFeedbackOpen(true)}>
+                  <MessageSquareHeart className="mr-2 h-4 w-4" />
+                  Feedback senden
+                </Button>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
@@ -890,6 +1048,114 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <Button onClick={handleInstallFamilyLink}>
                 <Download className="mr-2 h-4 w-4" />
                 Im Play Store installieren
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ParentFeedbackDialog
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        defaultEmail={userEmail}
+        isFoundingFamily={isFoundingFamily}
+      />
+
+      <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />
+
+      {/* Info-Kachel: erklärt das Empfehlungsprogramm für Nicht-Premium-Eltern */}
+      <Dialog open={referralInfoOpen} onOpenChange={setReferralInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Empfehlungsprogramm
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground leading-relaxed">
+              Mit dem LernZeit-Empfehlungsprogramm verschenken Sie <strong>2 Monate Premium</strong> an
+              Freunde und sichern sich pro aktivem Kind <strong>1 Monat Premium gratis</strong> – bis zu
+              insgesamt <strong>6 Bonus-Monate</strong>.
+            </p>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <p className="text-xs text-foreground/90 leading-relaxed">
+                <Crown className="inline h-3.5 w-3.5 text-primary mr-1 -mt-0.5" />
+                Das Programm steht <strong>ausschließlich Premium-Mitgliedern</strong> zur Verfügung –
+                nicht während der kostenlosen Testphase. Schließen Sie Ihre Premium-Mitgliedschaft ab,
+                um den Verschenken-Reiter freizuschalten.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+              <Button variant="outline" onClick={() => setReferralInfoOpen(false)}>
+                Schließen
+              </Button>
+              <Button
+                onClick={() => {
+                  setReferralInfoOpen(false);
+                  setActiveTab('subscription');
+                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                }}
+              >
+                <Crown className="mr-2 h-4 w-4" />
+                Zu Premium upgraden
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Einmaliges Intro-Pop-up nach Abschluss der Premium-Mitgliedschaft */}
+      <Dialog open={referralIntroOpen} onOpenChange={(o) => { if (!o) dismissReferralIntro(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-primary" />
+              Willkommen bei LernZeit Premium!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground leading-relaxed">
+              Vielen Dank für Ihr Vertrauen. Als Premium-Mitglied genießen Sie ab sofort alle Vorteile:
+            </p>
+            <ul className="space-y-2">
+              {[
+                'Alle Fächer & Klassenstufen freigeschaltet',
+                'KI-Tutor mit persönlichen Erklärungen',
+                'Individuelle Lernpläne für Klassenarbeiten',
+                'Premium-Belohnungen anpassen',
+                'Detaillierte Lernanalyse pro Kind',
+                'Prioritätssupport',
+              ].map((b) => (
+                <li key={b} className="flex items-start gap-2">
+                  <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <span className="text-foreground/90">{b}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="rounded-lg border border-primary/30 bg-gradient-to-r from-primary/10 to-accent/10 p-3 space-y-1.5">
+              <p className="font-semibold text-sm flex items-center gap-2">
+                <Gift className="h-4 w-4 text-primary" />
+                Neu freigeschaltet: Empfehlungsprogramm
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Verschenken Sie 2 Monate Premium an Freunde und sichern Sie sich bis zu
+                6 Bonus-Monate gratis.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+              <Button variant="outline" onClick={dismissReferralIntro}>
+                Später
+              </Button>
+              <Button
+                onClick={() => {
+                  dismissReferralIntro();
+                  setActiveTab('referral');
+                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                }}
+              >
+                <Gift className="mr-2 h-4 w-4" />
+                Zum Empfehlungsprogramm
               </Button>
             </div>
           </div>

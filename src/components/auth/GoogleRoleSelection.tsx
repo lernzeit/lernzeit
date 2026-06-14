@@ -38,6 +38,22 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
         data: { role, ...(role === 'child' ? { grade } : {}) },
       });
 
+      // If a referral code was captured before OAuth, link it now (parents only)
+      if (role === 'parent') {
+        try {
+          const stored = localStorage.getItem('lernzeit_referral_code');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.code && parsed?.expires > Date.now()) {
+              await supabase.rpc('link_referral', { p_code: parsed.code });
+            }
+            localStorage.removeItem('lernzeit_referral_code');
+          }
+        } catch (refErr) {
+          console.warn('Referral link after Google OAuth failed:', refErr);
+        }
+      }
+
       localStorage.setItem(`lernzeit_role_confirmed_${userId}`, 'true');
       onComplete(role, role === 'child' ? grade : undefined);
     } catch (error: any) {
@@ -52,7 +68,7 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
   };
 
   return (
-    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom px-safe">
       <Card className="w-full max-w-md shadow-card">
         <CardContent className="p-6 space-y-6">
           <div className="text-center space-y-2">

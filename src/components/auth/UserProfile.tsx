@@ -194,6 +194,21 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           await supabase.auth.updateUser({
             data: { role: pendingRole, ...(pendingRole === 'child' ? { grade: pendingGrade } : {}) },
           });
+          // If a referral code was captured pre-OAuth, link it now (parents only)
+          if (pendingRole === 'parent') {
+            try {
+              const stored = localStorage.getItem('lernzeit_referral_code');
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed?.code && parsed?.expires > Date.now()) {
+                  await supabase.rpc('link_referral', { p_code: parsed.code });
+                }
+                localStorage.removeItem('lernzeit_referral_code');
+              }
+            } catch (refErr) {
+              console.warn('Referral link after Google OAuth failed:', refErr);
+            }
+          }
           localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
           localStorage.removeItem('lernzeit_pending_google_role');
           localStorage.removeItem('lernzeit_pending_google_grade');

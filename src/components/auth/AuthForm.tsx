@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [invitationCode, setInvitationCode] = useState('');
   // Login identifier (email or username)
   const [loginIdentifier, setLoginIdentifier] = useState('');
+  // Optional tester code (parents only)
+  const [testerCode, setTesterCode] = useState('');
+  // Referral code (read from URL or localStorage)
+  const [referralCode, setReferralCode] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
@@ -51,6 +55,30 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     resetWidget: resetCaptcha,
     isEnabled: isCaptchaEnabled,
   } = useTurnstile('turnstile-container');
+
+  // Detect referral code from URL (?ref=XXXXXX) or localStorage
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      const fromUrl = url.searchParams.get('ref');
+      if (fromUrl && /^[A-Z0-9]{4,12}$/i.test(fromUrl)) {
+        const code = fromUrl.toUpperCase();
+        const payload = JSON.stringify({ code, expires: Date.now() + 30 * 86400_000 });
+        localStorage.setItem('lernzeit_referral_code', payload);
+        setReferralCode(code);
+        return;
+      }
+      const stored = localStorage.getItem('lernzeit_referral_code');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.code && parsed?.expires > Date.now()) {
+          setReferralCode(parsed.code);
+        } else {
+          localStorage.removeItem('lernzeit_referral_code');
+        }
+      }
+    } catch { /* noop */ }
+  }, []);
 
   const getCaptchaErrorDescription = () => {
     if (captchaErrorCode === '110200') {
@@ -271,12 +299,21 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             name,
             role,
             grade: role === 'child' ? grade : null,
+            tester_code: role === 'parent' && testerCode.trim()
+              ? testerCode.trim().toUpperCase()
+              : undefined,
+            referral_code: role === 'parent' && referralCode
+              ? referralCode
+              : undefined,
           },
           emailRedirectTo: `${window.location.origin}/`
         }
       });
 
       if (error) throw error;
+      if (role === 'parent' && referralCode) {
+        localStorage.removeItem('lernzeit_referral_code');
+      }
       navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       if (isCaptchaEnabled) resetCaptcha();
@@ -700,6 +737,39 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         </div>
                         <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
                       </div>
+
+                      {role === 'parent' && (
+                        <div className="space-y-2 animate-fade-in">
+                          <Label htmlFor="tester-code" className="text-sm font-medium">
+                            Tester-Code <span className="text-muted-foreground font-normal">(optional)</span>
+                          </Label>
+                          <div className="relative">
+                            <Sparkles className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              id="tester-code"
+                              type="text"
+                              value={testerCode}
+                              onChange={(e) => setTesterCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
+                              placeholder="z. B. LERNZEIT2026"
+                              className="pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Hast du einen Code als LernZeit-Familie erhalten? Trag ihn hier ein.
+                          </p>
+                        </div>
+                      )}
+
+                      {role === 'parent' && referralCode && (
+                        <div className="rounded-lg border-2 border-[#22d3ee]/40 bg-[#22d3ee]/10 px-4 py-3 animate-fade-in">
+                          <p className="text-sm font-medium text-foreground">
+                            🎉 Du wurdest eingeladen!
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Code <span className="font-mono font-semibold text-[#22d3ee]">{referralCode}</span> erkannt — du startest mit <strong>2 Monaten Premium</strong> statt 1.
+                          </p>
+                        </div>
+                      )}
                     </>
                   )}
                   

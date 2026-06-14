@@ -622,6 +622,78 @@ export type Database = {
           },
         ]
       }
+      parent_feedback: {
+        Row: {
+          admin_note: string | null
+          app_version: string | null
+          category: string
+          contact_email: string | null
+          created_at: string
+          id: string
+          is_tester_feedback: boolean
+          message: string
+          platform: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          app_version?: string | null
+          category: string
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          is_tester_feedback?: boolean
+          message: string
+          platform?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          app_version?: string | null
+          category?: string
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          is_tester_feedback?: boolean
+          message?: string
+          platform?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      premium_grants: {
+        Row: {
+          created_at: string
+          id: string
+          months: number
+          reason: string
+          source_ref: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          months: number
+          reason: string
+          source_ref?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          months?: number
+          reason?: string
+          source_ref?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_color: string | null
@@ -629,11 +701,17 @@ export type Database = {
           created_at: string | null
           daily_push_enabled: boolean
           daily_summary_hour: number
+          founding_family_at: string | null
           grade: number | null
           id: string
+          is_founding_family: boolean
+          last_rating_prompt_at: string | null
           learning_reminder_hour: number
           name: string | null
+          rating_prompt_response: string | null
+          referral_announce_sent_at: string | null
           role: string | null
+          role_locked: boolean
           updated_at: string | null
           username: string | null
         }
@@ -643,11 +721,17 @@ export type Database = {
           created_at?: string | null
           daily_push_enabled?: boolean
           daily_summary_hour?: number
+          founding_family_at?: string | null
           grade?: number | null
           id: string
+          is_founding_family?: boolean
+          last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
+          rating_prompt_response?: string | null
+          referral_announce_sent_at?: string | null
           role?: string | null
+          role_locked?: boolean
           updated_at?: string | null
           username?: string | null
         }
@@ -657,11 +741,17 @@ export type Database = {
           created_at?: string | null
           daily_push_enabled?: boolean
           daily_summary_hour?: number
+          founding_family_at?: string | null
           grade?: number | null
           id?: string
+          is_founding_family?: boolean
+          last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
+          rating_prompt_response?: string | null
+          referral_announce_sent_at?: string | null
           role?: string | null
+          role_locked?: boolean
           updated_at?: string | null
           username?: string | null
         }
@@ -772,6 +862,75 @@ export type Database = {
           question_type?: string
           template_id?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_milestones: {
+        Row: {
+          milestone: number
+          reached_at: string
+          user_id: string
+        }
+        Insert: {
+          milestone: number
+          reached_at?: string
+          user_id: string
+        }
+        Update: {
+          milestone?: number
+          reached_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          activated_at: string | null
+          blocked_reason: string | null
+          created_at: string
+          id: string
+          paid_at: string | null
+          referee_id: string
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referee_id: string
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          activated_at?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          referee_id?: string
+          referrer_id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -923,6 +1082,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tester_codes: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          max_uses: number
+          uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          max_uses?: number
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          max_uses?: number
+          uses?: number
+        }
+        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -1102,6 +1285,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_premium_grant: {
+        Args: {
+          p_months: number
+          p_reason: string
+          p_source_ref?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      cap_referral_grant: {
+        Args: { p_requested: number; p_user_id: string }
+        Returns: number
+      }
       claim_invitation_code: {
         Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json
@@ -1109,6 +1305,7 @@ export type Database = {
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       generate_invitation_code: { Args: never; Returns: string }
+      generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_ai_model_metrics_summary: {
         Args: { p_since?: string; p_use_case?: string }
         Returns: {
@@ -1145,6 +1342,7 @@ export type Database = {
         Returns: boolean
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
+      link_referral: { Args: { p_code: string }; Returns: Json }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {

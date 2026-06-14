@@ -10,7 +10,7 @@ const Impressum = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-bg p-4">
+    <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="Impressum – LernZeit"
         description="Impressum und Anbieterkennzeichnung von LernZeit gemäß § 5 TMG."
@@ -28,10 +28,10 @@ const Impressum = () => {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
               <Building2 className="w-6 h-6 text-primary" />
               Impressum
-            </CardTitle>
+            </h1>
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none">
             <Alert className="mb-6 border-amber-500 bg-amber-50">

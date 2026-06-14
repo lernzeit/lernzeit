@@ -44,7 +44,7 @@ export default function EmailBestaetigung() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-4">
               <Mail className="w-10 h-10" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Fast geschafft! 🎉</h1>
+            <h1 className="text-2xl font-bold text-foreground">E-Mail-Bestätigung</h1>
           </div>
 
           {/* Content */}

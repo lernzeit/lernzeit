@@ -12,9 +12,23 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ accepted: false, reason: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+      const sb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
+      const { data, error: authErr } = await sb.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authErr || !data?.user) {
+        return new Response(JSON.stringify({ accepted: false, reason: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
     const { question, correctAnswer, userAnswer, grade, subject } = await req.json();
 
-    if (!question || !correctAnswer || !userAnswer) {
+    if (!question || !correctAnswer || !userAnswer ||
+        String(question).length > 2000 || String(correctAnswer).length > 1000 || String(userAnswer).length > 1000) {
       return new Response(JSON.stringify({ accepted: false, reason: 'Missing fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

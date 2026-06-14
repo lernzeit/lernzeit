@@ -37,21 +37,19 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    let parentId: string;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      parentId = payload.sub;
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    let parentId: string;
+    {
+      const verifyClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+      const { data, error: authErr } = await verifyClient.auth.getUser(token);
+      if (authErr || !data?.user) {
+        return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      parentId = data.user.id;
+    }
 
     // Verify parent-child relationship
     const { data: relationship, error: relError } = await supabaseAdmin
@@ -84,8 +82,9 @@ Deno.serve(async (req) => {
     });
 
     if (updateError) {
+      console.error('reset-child-password update error:', updateError);
       return new Response(
-        JSON.stringify({ error: updateError.message }),
+        JSON.stringify({ error: "Passwort konnte nicht aktualisiert werden." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -95,8 +94,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error('reset-child-password error:', err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Passwort konnte nicht zurückgesetzt werden" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

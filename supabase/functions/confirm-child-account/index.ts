@@ -11,7 +11,48 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, password, name, role, grade, username } = await req.json();
+    // Require authenticated parent caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const sbAnon = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
+    const { data: authData, error: authErr } = await sbAnon.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (authErr || !authData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify caller is a parent
+    const { data: callerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+    if (!callerProfile || callerProfile.role !== "parent") {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { email, password, name, grade, username } = await req.json();
 
     // Validate required fields
     if (!email || !password || !username) {
@@ -28,12 +69,6 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Create admin client with service role
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     // Server-side username uniqueness check (authoritative)
     const { data: existing } = await supabaseAdmin
@@ -56,15 +91,16 @@ Deno.serve(async (req) => {
       email_confirm: true,
       user_metadata: {
         name: name || username,
-        role: role || "child",
+        role: "child", // hardcoded — never trust client
         grade: grade || 1,
         username: username.toLowerCase(),
       },
     });
 
     if (createError) {
+      console.error("[confirm-child-account] createUser error:", createError);
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: "Konto konnte nicht erstellt werden." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -74,8 +110,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error("[confirm-child-account] error:", err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: "Ein unerwarteter Fehler ist aufgetreten." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

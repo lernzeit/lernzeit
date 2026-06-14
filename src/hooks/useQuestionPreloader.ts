@@ -248,7 +248,9 @@ const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
 const RECENT_QUESTIONS_MAX = 30;
 const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
-const PARALLEL_BATCH_SIZE = 1; // Keep edge-function generation strictly sequential to avoid WORKER_LIMIT
+// Cache-First in der Edge Function macht die meisten Calls zu schnellen DB-Reads,
+// daher können wir die verbleibenden Fragen parallel laden.
+const PARALLEL_BATCH_SIZE = 3;
 
 export const useQuestionPreloader = ({
   grade,
@@ -320,7 +322,7 @@ export const useQuestionPreloader = ({
           grade: gradeRef.current,
           subject: subjectRef.current,
           difficulty,
-          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : [],
+          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-5) : [],
           topicHint: topicHintRef.current || undefined
         }
       });
