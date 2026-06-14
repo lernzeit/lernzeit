@@ -12,9 +12,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, LifeBuoy, Mail, ExternalLink, ShieldCheck, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  ArrowLeft,
+  LifeBuoy,
+  Mail,
+  ExternalLink,
+  ShieldCheck,
+  Trash2,
+  Download,
+  Loader2,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import Seo from '@/components/Seo';
 
 const SUPPORT_EMAIL = 'info@lernzeit.app';
@@ -85,12 +105,17 @@ const CATEGORY_META: Record<RequestCategory, { label: string; subjectTag: string
 
 const Support = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [category, setCategory] = useState<RequestCategory>('general');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [topic, setTopic] = useState('');
   const [message, setMessage] = useState('');
   const [isAuthed, setIsAuthed] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -118,6 +143,94 @@ const Support = () => {
   }, [category]);
 
   const targetEmail = meta.isGdpr ? PRIVACY_EMAIL : SUPPORT_EMAIL;
+
+  // Art. 20 DSGVO – Direkter Datenexport via Edge Function
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Keine aktive Sitzung gefunden.');
+
+      const { data, error } = await supabase.functions.invoke('export-user-data', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (error) throw error;
+
+      const jsonString =
+        typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `lernzeit-datenexport-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Datenexport bereit',
+        description: 'Deine Daten wurden als JSON-Datei heruntergeladen.',
+      });
+    } catch (err) {
+      console.error('export-user-data error:', err);
+      toast({
+        title: 'Export fehlgeschlagen',
+        description:
+          err instanceof Error ? err.message : 'Bitte versuche es erneut oder kontaktiere uns per E-Mail.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Art. 17 DSGVO – Direkte Konto-Löschung via Edge Function
+  const handleDeleteAccount = async () => {
+    if (confirmText !== 'LÖSCHEN') return;
+    setDeleting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Keine aktive Sitzung gefunden.');
+
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (error) throw error;
+
+      if (data?.error === 'active_subscription') {
+        toast({
+          title: 'Aktives Abo',
+          description:
+            data.message ?? 'Bitte kündige zuerst dein aktives Premium-Abonnement.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: 'Konto gelöscht',
+        description: 'Dein Konto und alle Daten wurden unwiderruflich entfernt.',
+      });
+      await supabase.auth.signOut();
+      setDeleteDialogOpen(false);
+      navigate('/');
+    } catch (err) {
+      console.error('delete-account error:', err);
+      toast({
+        title: 'Löschung fehlgeschlagen',
+        description:
+          err instanceof Error ? err.message : 'Bitte versuche es erneut oder kontaktiere uns per E-Mail.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,28 +344,57 @@ const Support = () => {
                   </Alert>
                 )}
 
+                {category === 'gdpr_export' && isAuthed && (
+                  <Alert className="border-primary/40 bg-primary/5">
+                    <Download className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-sm space-y-3">
+                      <p>
+                        <strong>Sofort-Export:</strong> Da du eingeloggt bist, können wir
+                        deinen Datenexport jetzt direkt erzeugen und als JSON-Datei
+                        herunterladen – ganz ohne Wartezeit.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleExport}
+                        disabled={exporting}
+                      >
+                        {exporting ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Datenexport jetzt herunterladen
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {category === 'gdpr_erasure' && (
                   <Alert className="border-destructive/40 bg-destructive/5">
                     <Trash2 className="h-4 w-4 text-destructive" />
-                    <AlertDescription className="text-sm space-y-2">
+                    <AlertDescription className="text-sm space-y-3">
                       <p>
-                        <strong>Schneller geht's direkt in der App:</strong> Eingeloggte Eltern
-                        können ihr Konto inkl. aller Kinder-Daten sofort selbst löschen.
+                        <strong>Sofort-Löschung:</strong> Eingeloggte Eltern können ihr Konto
+                        inkl. aller Kinder-Daten direkt hier endgültig löschen.
                       </p>
                       {isAuthed ? (
                         <Button
                           type="button"
                           variant="destructive"
                           size="sm"
-                          onClick={() => navigate('/?view=settings#account-delete')}
+                          onClick={() => {
+                            setConfirmText('');
+                            setDeleteDialogOpen(true);
+                          }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Zur Konto-Löschung im Dashboard
+                          Konto jetzt unwiderruflich löschen
                         </Button>
                       ) : (
                         <p className="text-muted-foreground">
-                          Logge dich in der App ein → „Einstellungen" → „Konto löschen".
-                          Alternativ kannst du die Löschung per E-Mail beantragen.
+                          Logge dich in der App ein, um dein Konto sofort selbst zu löschen.
+                          Alternativ kannst du die Löschung unten per E-Mail beantragen.
                         </p>
                       )}
                     </AlertDescription>
@@ -325,6 +467,48 @@ const Support = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              Konto endgültig löschen?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Aktion ist <strong>unwiderruflich</strong>. Alle Daten deines
+              Eltern-Kontos sowie aller verknüpften Kinder-Accounts werden sofort
+              und vollständig gelöscht (Art. 17 DSGVO).
+              <br /><br />
+              Tippe <strong>LÖSCHEN</strong> in Großbuchstaben zur Bestätigung:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="LÖSCHEN"
+            autoFocus
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteAccount();
+              }}
+              disabled={confirmText !== 'LÖSCHEN' || deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
