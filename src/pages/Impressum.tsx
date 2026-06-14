@@ -34,20 +34,12 @@ const Impressum = () => {
             </h1>
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none">
-            <Alert className="mb-6 border-amber-500 bg-amber-50">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800">
-                <strong>Hinweis:</strong> Bitte ersetzen Sie die Platzhalter unten mit Ihren echten 
-                Kontaktdaten, bevor Sie die App im Store veröffentlichen.
-              </AlertDescription>
-            </Alert>
-
             <section className="mb-8">
               <h2 className="text-xl font-semibold mb-3">Angaben gemäß § 5 TMG</h2>
               <div className="text-muted-foreground">
-                <p className="font-medium text-foreground">[Ihr Name / Firmenname]</p>
-                <p>[Straße und Hausnummer]</p>
-                <p>[PLZ] [Ort]</p>
+                <p className="font-medium text-foreground">LernZeit UG (haftungsbeschränkt)</p>
+                <p>Drachengasse 10</p>
+                <p>99084 Erfurt</p>
                 <p>Deutschland</p>
               </div>
             </section>
@@ -55,27 +47,24 @@ const Impressum = () => {
             <section className="mb-8">
               <h2 className="text-xl font-semibold mb-3">Kontakt</h2>
               <div className="text-muted-foreground">
-                <p>Telefon: [Ihre Telefonnummer]</p>
-                <p>E-Mail: [Ihre E-Mail-Adresse]</p>
+                <p>E-Mail: info@lernzeit.app</p>
               </div>
             </section>
 
             <section className="mb-8">
               <h2 className="text-xl font-semibold mb-3">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
               <div className="text-muted-foreground">
-                <p className="font-medium text-foreground">[Ihr Name]</p>
-                <p>[Straße und Hausnummer]</p>
-                <p>[PLZ] [Ort]</p>
+                <p className="font-medium text-foreground">Thomas Brösicke</p>
+                <p>Drachengasse 10</p>
+                <p>99084 Erfurt</p>
               </div>
             </section>
 
-            {/* Optional: Falls gewerblich */}
             <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">Handelsregister (falls zutreffend)</h2>
+              <h2 className="text-xl font-semibold mb-3">Handelsregister</h2>
               <div className="text-muted-foreground">
-                <p>Registergericht: [Amtsgericht]</p>
-                <p>Registernummer: [HRB-Nummer]</p>
-                <p>Umsatzsteuer-ID: [USt-IdNr.]</p>
+                <p>Registergericht: Jena</p>
+                <p>Registernummer: HRB 524759</p>
               </div>
             </section>
 
