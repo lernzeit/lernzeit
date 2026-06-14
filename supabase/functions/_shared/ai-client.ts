@@ -18,6 +18,9 @@ const GEMINI_GATEWAY = 'https://generativelanguage.googleapis.com/v1beta/openai/
 const OPENROUTER_GATEWAY = 'https://openrouter.ai/api/v1/chat/completions';
 const LOVABLE_GATEWAY = 'https://ai.gateway.lovable.dev/v1/chat/completions';
 
+// Hard per-attempt timeout. After this we abort and try the next model.
+const PER_ATTEMPT_TIMEOUT_MS = 12_000;
+
 const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 const ERROR_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes for non-auth errors
 const exhaustedUntil: Record<ProviderId, number> = {
@@ -61,6 +64,12 @@ function providerLabel(provider: ProviderId): string {
   return { gemini_direct: '🟢 Gemini', openrouter: '🔵 OpenRouter', lovable: '🟣 Lovable' }[provider];
 }
 
+function providerAuthHeader(provider: ProviderId, apiKey: string): Record<string, string> {
+  // Lovable AI Gateway expects `Authorization: Bearer ...` (OpenAI-compatible).
+  // Same for Gemini-direct OpenAI-compat endpoint and OpenRouter.
+  return { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+}
+
 interface ProviderAttempt {
   ok: boolean;
   response?: Response;
@@ -93,16 +102,21 @@ async function tryProvider(
   const start = Date.now();
   console.log(`${providerLabel(provider)} trying model: ${nativeModel} (use_case=${useCase})`);
 
+  // Combine caller's signal with a per-attempt timeout
+  const timeoutCtrl = new AbortController();
+  const timeoutId = setTimeout(() => timeoutCtrl.abort(), PER_ATTEMPT_TIMEOUT_MS);
+  const onOuterAbort = () => timeoutCtrl.abort();
+  if (signal) signal.addEventListener('abort', onOuterAbort, { once: true });
+
   try {
     const response = await fetch(providerGateway(provider), {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: providerAuthHeader(provider, apiKey),
       body: JSON.stringify(body),
-      signal,
+      signal: timeoutCtrl.signal,
     });
+    clearTimeout(timeoutId);
+    if (signal) signal.removeEventListener('abort', onOuterAbort);
     const latency = Date.now() - start;
 
     // Streaming responses can't be tee'd here — log without token usage and return
@@ -165,38 +179,59 @@ async function tryProvider(
     }
     return { ok: false, response, status: response.status };
   } catch (err) {
-    if ((err as Error).name === 'AbortError') throw err;
+    clearTimeout(timeoutId);
+    if (signal) signal.removeEventListener('abort', onOuterAbort);
     const latency = Date.now() - start;
+    const isTimeout = (err as Error).name === 'AbortError';
+    // If the caller's outer signal aborted, propagate up. Otherwise treat as
+    // our own per-attempt timeout and move to the next model.
+    if (isTimeout && signal?.aborted) throw err;
     logMetric({
       use_case: useCase, provider, model: canonicalModel,
       status_code: null, success: false, latency_ms: latency,
-      error_type: 'network',
+      error_type: isTimeout ? 'timeout' : 'network',
     });
-    console.warn(`⚠️ ${providerLabel(provider)} unreachable`, err);
+    console.warn(`⚠️ ${providerLabel(provider)} ${isTimeout ? `timeout after ${PER_ATTEMPT_TIMEOUT_MS}ms` : 'unreachable'} (${nativeModel})`);
     return { ok: false };
   }
 }
 
 /**
- * Call AI with per-use-case configurable provider chain.
- * - `useCase` triggers DB-backed config lookup (recommended).
- * - Without `useCase`, falls back to legacy chain: gemini_direct → openrouter → lovable
- *   using `options.model`.
+ * Call AI with a configurable model + provider chain.
+ *
+ * For each (model, provider) combination:
+ *   1. Build chain = [primary_model, ...fallback_models]
+ *   2. For each model, walk provider_order and try the first available one
+ *   3. Per-attempt hard timeout (12s) — on timeout, move to next model/provider
+ *   4. 429 from any attempt aborts the chain (rate-limit surface to caller)
+ *
+ * Default chain when no useCase/config: lovable-only with options.model.
  */
 export async function callAI(
   options: AiRequestOptions,
   signal?: AbortSignal,
   useCase?: string,
 ): Promise<AiCallResult> {
-  let canonicalModel = options.model;
-  let providerOrder: ProviderId[] = ['gemini_direct', 'openrouter', 'lovable'];
+  let primaryModel = options.model;
+  let fallbackModels: string[] = [];
+  let providerOrder: ProviderId[] = ['lovable'];
   let temperature = options.temperature;
 
   if (useCase) {
     const cfg = await loadModelConfig(useCase);
     if (cfg && cfg.is_active) {
-      canonicalModel = cfg.primary_model;
-      providerOrder = cfg.provider_order;
+      primaryModel = cfg.primary_model;
+      providerOrder = cfg.provider_order && cfg.provider_order.length > 0
+        ? cfg.provider_order
+        : ['lovable'];
+      // fallback_models can be: string[] OR Array<{provider, model}> OR Array<{model}>
+      fallbackModels = (cfg.fallback_models as unknown[]).map((entry) => {
+        if (typeof entry === 'string') return entry;
+        if (entry && typeof entry === 'object' && 'model' in entry) {
+          return String((entry as { model: unknown }).model);
+        }
+        return '';
+      }).filter((m) => m.length > 0);
       if (cfg.temperature !== null && temperature === undefined) {
         temperature = cfg.temperature;
       }
@@ -204,27 +239,33 @@ export async function callAI(
   }
 
   const effectiveOptions: AiRequestOptions = { ...options, temperature };
+  const modelChain = [primaryModel, ...fallbackModels];
+
+  console.log(`🤖 callAI use_case=${useCase ?? 'none'} chain=[${modelChain.join(', ')}] providers=[${providerOrder.join(', ')}]`);
 
   let lastResponse: Response | undefined;
   let lastStatus: number | undefined;
+  let lastProvider: ProviderId = providerOrder[0];
 
-  for (const provider of providerOrder) {
-    const attempt = await tryProvider(provider, canonicalModel, effectiveOptions, useCase ?? 'unknown', signal);
-    if (attempt.ok && attempt.response) {
-      return { response: attempt.response, provider, model: canonicalModel };
-    }
-    if (attempt.shouldStop && attempt.response) {
-      // 429 — return immediately so caller can surface rate-limit to user
-      return { response: attempt.response, provider, model: canonicalModel };
-    }
-    if (attempt.response) {
-      lastResponse = attempt.response;
-      lastStatus = attempt.status;
+  for (const model of modelChain) {
+    for (const provider of providerOrder) {
+      const attempt = await tryProvider(provider, model, effectiveOptions, useCase ?? 'unknown', signal);
+      if (attempt.ok && attempt.response) {
+        return { response: attempt.response, provider, model };
+      }
+      if (attempt.shouldStop && attempt.response) {
+        return { response: attempt.response, provider, model };
+      }
+      if (attempt.response) {
+        lastResponse = attempt.response;
+        lastStatus = attempt.status;
+        lastProvider = provider;
+      }
     }
   }
 
   if (lastResponse) {
-    return { response: lastResponse, provider: providerOrder[providerOrder.length - 1], model: canonicalModel };
+    return { response: lastResponse, provider: lastProvider, model: primaryModel };
   }
-  throw new Error(`All AI providers failed for use_case="${useCase ?? 'unknown'}" (last status: ${lastStatus ?? 'n/a'}). Check API keys, credits, and model availability.`);
+  throw new Error(`All AI models/providers failed for use_case="${useCase ?? 'unknown'}" chain=[${modelChain.join(', ')}] (last status: ${lastStatus ?? 'n/a'}).`);
 }
