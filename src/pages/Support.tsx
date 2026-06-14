@@ -144,6 +144,94 @@ const Support = () => {
 
   const targetEmail = meta.isGdpr ? PRIVACY_EMAIL : SUPPORT_EMAIL;
 
+  // Art. 20 DSGVO – Direkter Datenexport via Edge Function
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Keine aktive Sitzung gefunden.');
+
+      const { data, error } = await supabase.functions.invoke('export-user-data', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (error) throw error;
+
+      const jsonString =
+        typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `lernzeit-datenexport-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Datenexport bereit',
+        description: 'Deine Daten wurden als JSON-Datei heruntergeladen.',
+      });
+    } catch (err) {
+      console.error('export-user-data error:', err);
+      toast({
+        title: 'Export fehlgeschlagen',
+        description:
+          err instanceof Error ? err.message : 'Bitte versuche es erneut oder kontaktiere uns per E-Mail.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Art. 17 DSGVO – Direkte Konto-Löschung via Edge Function
+  const handleDeleteAccount = async () => {
+    if (confirmText !== 'LÖSCHEN') return;
+    setDeleting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Keine aktive Sitzung gefunden.');
+
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (error) throw error;
+
+      if (data?.error === 'active_subscription') {
+        toast({
+          title: 'Aktives Abo',
+          description:
+            data.message ?? 'Bitte kündige zuerst dein aktives Premium-Abonnement.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: 'Konto gelöscht',
+        description: 'Dein Konto und alle Daten wurden unwiderruflich entfernt.',
+      });
+      await supabase.auth.signOut();
+      setDeleteDialogOpen(false);
+      navigate('/');
+    } catch (err) {
+      console.error('delete-account error:', err);
+      toast({
+        title: 'Löschung fehlgeschlagen',
+        description:
+          err instanceof Error ? err.message : 'Bitte versuche es erneut oder kontaktiere uns per E-Mail.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const subject = encodeURIComponent(
