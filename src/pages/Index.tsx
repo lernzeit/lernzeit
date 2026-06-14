@@ -36,7 +36,8 @@ const Index = () => {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
+  const isDemo = searchParams.get('demo') === 'true';
+  const [selectedGrade, setSelectedGrade] = useState<number | null>(isDemo ? 3 : null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery'>('normal');
@@ -56,9 +57,9 @@ const Index = () => {
       searchParams.delete('checkout');
       setSearchParams(searchParams, { replace: true });
     }
-    // Handle demo param
+    // Handle demo param (selectedGrade already set synchronously above)
     if (searchParams.get('demo') === 'true') {
-      setSelectedGrade(3);
+      setSelectedGrade((g) => g ?? 3);
       searchParams.delete('demo');
       setSearchParams(searchParams, { replace: true });
     }
