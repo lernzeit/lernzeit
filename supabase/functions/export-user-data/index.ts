@@ -156,7 +156,7 @@ serve(async (req) => {
   } catch (err) {
     log("Error", err instanceof Error ? err.message : String(err));
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "unknown_error" }),
+      JSON.stringify({ error: "Daten-Export konnte nicht erstellt werden." }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
