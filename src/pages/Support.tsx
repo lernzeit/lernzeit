@@ -344,28 +344,57 @@ const Support = () => {
                   </Alert>
                 )}
 
+                {category === 'gdpr_export' && isAuthed && (
+                  <Alert className="border-primary/40 bg-primary/5">
+                    <Download className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-sm space-y-3">
+                      <p>
+                        <strong>Sofort-Export:</strong> Da du eingeloggt bist, können wir
+                        deinen Datenexport jetzt direkt erzeugen und als JSON-Datei
+                        herunterladen – ganz ohne Wartezeit.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleExport}
+                        disabled={exporting}
+                      >
+                        {exporting ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4 mr-2" />
+                        )}
+                        Datenexport jetzt herunterladen
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {category === 'gdpr_erasure' && (
                   <Alert className="border-destructive/40 bg-destructive/5">
                     <Trash2 className="h-4 w-4 text-destructive" />
-                    <AlertDescription className="text-sm space-y-2">
+                    <AlertDescription className="text-sm space-y-3">
                       <p>
-                        <strong>Schneller geht's direkt in der App:</strong> Eingeloggte Eltern
-                        können ihr Konto inkl. aller Kinder-Daten sofort selbst löschen.
+                        <strong>Sofort-Löschung:</strong> Eingeloggte Eltern können ihr Konto
+                        inkl. aller Kinder-Daten direkt hier endgültig löschen.
                       </p>
                       {isAuthed ? (
                         <Button
                           type="button"
                           variant="destructive"
                           size="sm"
-                          onClick={() => navigate('/?view=settings#account-delete')}
+                          onClick={() => {
+                            setConfirmText('');
+                            setDeleteDialogOpen(true);
+                          }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Zur Konto-Löschung im Dashboard
+                          Konto jetzt unwiderruflich löschen
                         </Button>
                       ) : (
                         <p className="text-muted-foreground">
-                          Logge dich in der App ein → „Einstellungen" → „Konto löschen".
-                          Alternativ kannst du die Löschung per E-Mail beantragen.
+                          Logge dich in der App ein, um dein Konto sofort selbst zu löschen.
+                          Alternativ kannst du die Löschung unten per E-Mail beantragen.
                         </p>
                       )}
                     </AlertDescription>
