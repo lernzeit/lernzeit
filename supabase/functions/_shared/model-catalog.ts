@@ -75,6 +75,18 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     recommended_for: ['question_generator', 'ai_tutor', 'ai_explain'],
   },
   {
+    id: 'google/gemini-3.1-flash-lite-preview',
+    label: 'Gemini 3.1 Flash Lite (Preview)',
+    family: 'google',
+    gemini_id: null,
+    openrouter_id: null,
+    lovable_id: 'google/gemini-3.1-flash-lite-preview',
+    input_price_per_1m: 0.10,
+    output_price_per_1m: 0.40,
+    supports_tools: true,
+    recommended_for: ['question_generator', 'validate_answer', 'classification'],
+  },
+  {
     id: 'google/gemini-2.5-pro',
     label: 'Gemini 2.5 Pro',
     family: 'google',
