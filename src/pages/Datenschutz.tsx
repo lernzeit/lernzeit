@@ -110,6 +110,46 @@ const Datenschutz = () => {
                 <li>Es werden keine Daten an Dritte zu Werbezwecken weitergegeben</li>
                 <li>Eltern können jederzeit die Daten ihrer Kinder einsehen und löschen lassen</li>
               </ul>
+              <p className="text-muted-foreground mt-4">
+                In Übereinstimmung mit den Apple App Store „Kids Category"-Richtlinien sowie
+                der DSGVO (insb. Art. 8) gilt zusätzlich:
+              </p>
+              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
+                <li>
+                  <strong>Keine Werbung:</strong> In LernZeit wird weder personalisierte noch
+                  kontextbezogene Werbung Dritter ausgespielt. Es sind keine Werbe-SDKs
+                  (z. B. AdMob, Meta Audience Network) integriert.
+                </li>
+                <li>
+                  <strong>Kein Tracking & keine Profilbildung:</strong> Wir nutzen keine
+                  Tracking-Technologien geräte- oder app-übergreifend. Die App fragt unter
+                  iOS daher auch keine „App Tracking Transparency"-Erlaubnis (ATT) ab.
+                </li>
+                <li>
+                  <strong>Keine Weitergabe an Werbenetzwerke oder Datenhändler:</strong>
+                  Daten von Kindern werden nicht für Marketing-, Profiling- oder
+                  Analysezwecke Dritter verwendet oder verkauft.
+                </li>
+                <li>
+                  <strong>Eingeschränkte Analytics:</strong> Wir verwenden ausschließlich
+                  datensparsame, aggregierte technische Logs zur Stabilitätssicherung – ohne
+                  Werbe-Identifier (IDFA/AAID) und ohne personenbezogene Profilbildung.
+                </li>
+                <li>
+                  <strong>In-App-Käufe nur durch Eltern:</strong> Premium-Abonnements und
+                  Käufe sind ausschließlich im Eltern-Account verfügbar und durch das Eltern-
+                  bzw. App-Store-Konto geschützt.
+                </li>
+                <li>
+                  <strong>Externe Links & Social Media:</strong> Innerhalb der Kinder-Ansicht
+                  gibt es keine Verlinkungen zu externen Webseiten oder sozialen Netzwerken,
+                  die nicht zuvor eine Eltern-Bestätigung erfordern.
+                </li>
+                <li>
+                  <strong>Elterliche Einwilligung:</strong> Bei der Anlage eines Kinder-Accounts
+                  wird die elterliche Einwilligung gemäß Art. 8 DSGVO eingeholt und protokolliert.
+                </li>
+              </ul>
             </section>
 
             <section className="mb-8">
@@ -119,6 +159,27 @@ const Datenschutz = () => {
                 Die Übertragung erfolgt verschlüsselt über HTTPS. Wir bewahren Ihre Daten nur so 
                 lange auf, wie es für die Bereitstellung unserer Dienste erforderlich ist oder 
                 gesetzliche Aufbewahrungspflichten bestehen.
+              </p>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold mb-3">6a. Eingesetzte Dienstleister (Auftragsverarbeiter)</h2>
+              <p className="text-muted-foreground">
+                Zur Bereitstellung der App nutzen wir sorgfältig ausgewählte Dienstleister,
+                mit denen Auftragsverarbeitungsverträge (Art. 28 DSGVO) bestehen:
+              </p>
+              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
+                <li><strong>Supabase</strong> (EU-Region) – Hosting, Datenbank, Authentifizierung</li>
+                <li><strong>Stripe Payments Europe, Ltd.</strong> – Zahlungsabwicklung für Premium-Abos (nur Eltern-Accounts)</li>
+                <li><strong>Google (Lovable AI Gateway / Gemini)</strong> sowie <strong>OpenRouter</strong> – Generierung von Lernfragen und KI-Erklärungen; Eingaben werden ohne personenbezogene Identifikatoren übertragen</li>
+                <li><strong>Resend</strong> – Versand transaktionaler E-Mails (z. B. Bestätigungen)</li>
+                <li><strong>Apple App Store / Google Play</strong> – App-Bereitstellung und ggf. In-App-Käufe</li>
+              </ul>
+              <p className="text-muted-foreground mt-2">
+                Diese Dienste werden ausschließlich zum Betrieb der App eingesetzt und nicht
+                für Werbezwecke. Datenübermittlungen in Drittländer (z. B. USA) erfolgen nur
+                auf Grundlage geeigneter Garantien (Standardvertragsklauseln und ggf. EU-US
+                Data Privacy Framework).
               </p>
             </section>
 
@@ -156,9 +217,12 @@ const Datenschutz = () => {
             <section className="mb-8">
               <h2 className="text-xl font-semibold mb-3">10. Kontakt und Beschwerderecht</h2>
               <p className="text-muted-foreground">
-                Bei Fragen zum Datenschutz kontaktieren Sie uns bitte über die im Impressum 
-                angegebenen Kontaktdaten. Sie haben außerdem das Recht, sich bei einer 
-                Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer Daten zu beschweren.
+                Bei Fragen zum Datenschutz erreichen Sie uns per E-Mail unter{' '}
+                <a href="mailto:info@lernzeit.app" className="text-primary hover:underline">info@lernzeit.app</a>{' '}
+                oder über unsere <a href="/support" className="text-primary hover:underline">Support-Seite</a>.
+                Vollständige Kontaktdaten finden Sie im <a href="/impressum" className="text-primary hover:underline">Impressum</a>.
+                Sie haben außerdem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde
+                über die Verarbeitung Ihrer Daten zu beschweren.
               </p>
             </section>
           </CardContent>
