@@ -1,84 +1,57 @@
-## Phase 2 — Empfehlungs-Basismechanik
+## Ziel
+Robustes, schnelles und kostengünstiges Laden der Fragen über das Lovable AI Gateway – ohne OpenRouter/DeepSeek-Fallbacks. Klare Modellkette, harte Timeouts und sauberes Cache-Fallback.
 
-Gedeckelt bei **max. 6 Monaten Premium pro Werber**. CI: Akzent `#22d3ee`, Du-Ansprache.
+## Modellstrategie (nur Lovable AI Gateway)
+1. **Primär:** `google/gemini-2.5-flash-lite` – günstig (0.10 $ / 0.40 $ pro 1M Tokens), schnell, stabil.
+2. **Fallback 1:** `google/gemini-3.1-flash-lite-preview` – falls Primär 429/5xx.
+3. **Fallback 2:** `google/gemini-3-flash-preview` – stabiler Standard, etwas teurer aber sehr zuverlässig.
+4. **Letzter Fallback:** Cache / vordefinierte Aufgabe aus `question_cache`.
 
-### Belohnungslogik (final)
+OpenRouter wird als Provider entfernt bzw. deaktiviert (kein DeepSeek, keine Gemma). Nur ein Provider = weniger Fehlerquellen.
 
-| Rolle | Belohnung | Trigger |
-|---|---|---|
-| Geworbener | +1 Monat extra (28 Tage Trial → +30 Tage Bonus = ~58 Tage) | Signup mit gültigem Code |
-| Werber (Aktivierung) | +1 Monat | Geworbener: 7 Tage aktiv ODER ≥20 korrekte Antworten |
-| Werber (Conversion) | +1 Monat | Geworbener wird zahlender Kunde |
-| Meilenstein 3 | +1 Monat Bonus | 3 aktivierte Empfehlungen (einmalig) |
-| Meilenstein 5 | +1 Monat Bonus | 5 aktivierte Empfehlungen (einmalig) |
+## Änderungen
 
-Max-Cap pro Werber: 6 Monate (5 Conversions × 2 + 2 Meilensteine = exakt 12, daher Hard-Cap in `apply_premium_grant` per `reason LIKE 'referral_%'`-Summe ≤ 6).
+### 1. `supabase/functions/_shared/model-catalog.ts`
+- Einträge auf die drei Gemini-Modelle oben reduzieren.
+- Pro Modell: `provider: "lovable"`, `endpoint: https://ai.gateway.lovable.dev/v1/chat/completions`, `header: Lovable-API-Key`.
+- Deprecated IDs (`gemini-2.5-flash-lite-preview-06-17`, OpenRouter-IDs) entfernen.
 
-### 1. Datenmodell (Migration)
+### 2. `supabase/functions/_shared/ai-client.ts`
+- `callAI()` so umbauen, dass **echte Fallback-Kette** abgearbeitet wird: Primärmodell → Fallback 1 → Fallback 2.
+- **Harte Timeouts pro Versuch:** 10 s via `AbortController`. Bei Timeout sofort nächster Eintrag.
+- **Retry-Logik:** Bei 429/5xx einmal nächstes Modell, kein Re-try auf gleichem Modell.
+- Fehler 402 (Credits) sauber surface'n.
+- Tool-/JSON-Schema vereinfachen (nur Felder, die alle drei Modelle akzeptieren) – verhindert 400er beim Modellwechsel.
 
-```sql
-referral_codes (user_id PK, code text UNIQUE, created_at)
-referrals (id, referrer_id, referee_id UNIQUE, status enum, 
-           created_at, activated_at, paid_at, blocked_reason)
-referral_milestones (user_id, milestone int CHECK 3|5, reached_at, PK(user_id,milestone))
+### 3. `supabase/functions/ai-question-generator/index.ts`
+- Liest Modellkette aus `ai_model_config` (Reihenfolge: primary, fallback_models[]).
+- Gesamtbudget: max. 25 s. Wenn überschritten → Cache-Fallback.
+- Cache-Lookup VOR AI-Call beibehalten, Cache-Write nach Erfolg.
+- Logging pro Versuch (Modell, Dauer, Status) für Debugging.
+
+### 4. DB-Migration: `ai_model_config` für `question_generator`
+```text
+primary_model        = google/gemini-2.5-flash-lite
+fallback_models      = [google/gemini-3.1-flash-lite-preview,
+                        google/gemini-3-flash-preview]
+provider             = lovable
+temperature          = 0.7
+max_tokens           = 1500
+timeout_ms           = 10000
 ```
 
-- RLS: User SELECT own (als Werber UND als Geworbener), service_role ALL.
-- GRANTs: `authenticated` SELECT, `service_role` ALL.
-- Trigger `handle_new_user` erweitern:
-  - Liest `user_meta_data.referral_code`
-  - Validiert: existiert, nicht self-referral (gleicher `referrer_id` ≠ NEW.id), `referee_id` nicht bereits in `referrals`
-  - Insert `referrals` (status=`invited`)
-  - Verlängert Trial: `subscriptions.trial_end + 30 days`
-- Helper-Funktion `cap_referral_grants(user_id, months)` (SECURITY DEFINER): Prüft Summe aller `premium_grants` mit `reason LIKE 'referral_%' OR reason LIKE 'milestone_%'`, gibt zurück wieviele Monate noch im Cap (6) erlaubt sind. Wird in den Edge Functions vor `apply_premium_grant` aufgerufen.
-- RPC `generate_referral_code()`: 6-stelliger alphanumerischer Code, kollisionssicher per Retry. Wird lazy beim ersten Besuch des Tabs erstellt.
+### 5. Cleanup
+- `OPENROUTER_API_KEY`-Referenzen aus AI-Client entfernen (Secret selbst bleibt erhalten, falls anderswo genutzt – nur prüfen).
+- Tote Code-Pfade für nicht-Lovable Provider entfernen.
 
-### 2. Attribution-Flow (Frontend)
+## Validierung
+1. `supabase--deploy_edge_functions` für `ai-question-generator`.
+2. `supabase--curl_edge_functions` mit Beispiel-Request (Klasse 3 Mathe) – Antwort < 8 s erwartet.
+3. `supabase--edge_function_logs` prüfen: nur 1 Versuch nötig im Normalfall, Fallback nur bei Fehler.
+4. Im Preview Demo-Fragen laden lassen, Konsole + Netzwerk prüfen.
 
-- **Landing-Page** (`Start.tsx` / `Index.tsx`): Parse `?ref=ABC123` → `localStorage.setItem('referral_code', code)` mit TTL 30 Tage (JSON {code, expires}).
-- **AuthForm.tsx**: Beim Parent-Signup `referral_code` aus localStorage in `user_metadata` mitgeben. Nach erfolgreichem Signup: localStorage cleanup.
-- Hinweis-Banner im AuthForm: „🎉 Du wurdest eingeladen — 2 Monate Premium statt 1!" wenn Code vorhanden.
-
-### 3. Edge Functions
-
-**`check-referral-activation`** (NEU)
-- Trigger: (a) Cron täglich um 03:00 via pg_cron, (b) nach Insert in `learning_sessions` per DB-Trigger `notify_referral_check` (http_post mit child user_id).
-- Body: `{ user_id }` oder `{ all: true }` (Cron).
-- Logik pro offenem `referrals` (status='invited'):
-  - Aktivierungs-Kriterien prüfen (7+ Tage seit `created_at` mit ≥1 Session ODER `SUM(correct_answers) ≥ 20`)
-  - Wenn erfüllt: status→`active`, `activated_at=now()`, `apply_premium_grant(referrer_id, capped(1), 'referral_active', referrals.id)`
-  - Meilensteine prüfen: `COUNT(status IN ('active','paying'))` für referrer → bei 3 oder 5 und nicht in `referral_milestones`: Insert + `apply_premium_grant(referrer_id, capped(1), 'milestone_3'|'milestone_5')`
-  - Push an Werber via send-push.
-
-**`check-subscription`** (BESTEHEND erweitern)
-- Nach Erkennung Plan=paid: Suche `referrals WHERE referee_id=user.id AND status='active'` → status→`paying`, `paid_at=now()`, `apply_premium_grant(referrer_id, capped(1), 'referral_paying', referrals.id)`.
-
-### 4. UI — Neue Komponente `ReferralCard.tsx`
-
-Integration: Neuer Tab/Section „Premium verschenken 🎁" im `ParentSettingsMenu.tsx`.
-
-Aufbau:
-- **Hero**: „Schenk Freunden 2 Monate Premium — und sichere dir bis zu 6 Monate für dich."
-- **Code-Card**: Großer Code (e.g. `LZ-AB12CD`), Copy-Button, Share-URL `https://lernzeit.app/?ref=AB12CD`.
-- **Share-Buttons**: WhatsApp (`wa.me/?text=...`), Native Share API (`navigator.share`), Copy-Link.
-- **Status-Liste**: Eingeladene Familien anonymisiert (Initialen + Datum + Badge):
-  - `Eingeladen` (grau) / `Aktiv 🎉` (cyan) / `Premium ⭐` (gold)
-- **Fortschritt**: Progress-Balken „2 von 3 aktiven Familien bis zum nächsten Bonus" + verbleibende Cap-Anzeige „Du hast 3 von 6 Bonus-Monaten freigeschaltet".
-- Hook `useReferral.ts`: Lädt/erstellt Code, fetched referrals + milestones.
-
-### 5. Admin (Phase 3 vorgezogen-Stub)
-
-Nur Daten-Erfassung jetzt; sichtbarer Admin-Tab folgt in Phase 3.
-
-### 6. Reihenfolge
-
-1. Migration (Tabellen, RLS, GRANTs, `handle_new_user` Erweiterung, `cap_referral_grants`, `generate_referral_code`, pg_cron Job).
-2. Edge Function `check-referral-activation` + DB-Trigger auf `learning_sessions`.
-3. `check-subscription` erweitern um Conversion-Logik.
-4. Frontend: Landing-Parser, AuthForm-Banner+Metadata, `ReferralCard` + Tab in `ParentSettingsMenu`.
-
-### Abnahme
-
-- E2E mit zwei Test-Accounts: Werber generiert Code → Geworbener registriert über Link → Trial = 58 Tage → nach 20 korrekten Antworten: Werber bekommt +1 Monat, Status `Aktiv 🎉`. Nach Stripe-Zahlung: Status `Premium ⭐`, Werber +1 Monat. Cap bei 6 greift.
-
-Soll ich so umsetzen?
+## Erwartetes Ergebnis
+- Antwortzeit i. d. R. 2–5 s.
+- Klare Fehlermeldung statt Hänger bei Ausfall.
+- Kosten: ~0.10 $ pro 1M Input-Tokens, also Bruchteil eines Cents pro Sitzung.
+- Keine 404/400-Schleifen mehr durch tote OpenRouter-Modelle.
