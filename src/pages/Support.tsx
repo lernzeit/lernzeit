@@ -36,9 +36,39 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Seo from '@/components/Seo';
+import { Helmet } from 'react-helmet-async';
 
 const SUPPORT_EMAIL = 'info@lernzeit.app';
 const PRIVACY_EMAIL = 'datenschutz@lernzeit.app';
+
+const FAQ_ITEMS: { q: string; a: string }[] = [
+  {
+    q: 'Wie verknüpfe ich Eltern- und Kinder-Account?',
+    a: 'Im Eltern-Dashboard auf „Kind hinzufügen" tippen und den angezeigten Code am Gerät des Kindes eingeben.',
+  },
+  {
+    q: 'Wie kündige ich Premium?',
+    a: 'Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten" (Stripe-Kundenportal). Käufe über den App Store kündigst du in den iOS-Einstellungen.',
+  },
+  {
+    q: 'Wie lösche ich mein Konto und alle Daten?',
+    a: 'Im Eltern-Dashboard unter „Einstellungen" → „Konto löschen". Alle Daten des Kontos und der verknüpften Kinder werden unwiderruflich entfernt.',
+  },
+  {
+    q: 'Mein Kind hat sein Passwort vergessen.',
+    a: 'Im Eltern-Dashboard kann das Passwort des Kindes jederzeit neu vergeben werden.',
+  },
+];
+
+const FAQ_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a },
+  })),
+};
 
 type RequestCategory =
   | 'general'
@@ -252,6 +282,9 @@ const Support = () => {
         description="Hilfe, FAQ und Kontaktformular für LernZeit. Wir helfen Eltern und Kindern bei Fragen rund um die App."
         path="/support"
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(FAQ_JSON_LD)}</script>
+      </Helmet>
       <div className="max-w-3xl mx-auto">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
