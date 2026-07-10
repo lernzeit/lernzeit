@@ -80,14 +80,15 @@ workflows:
       - name: Build web app
         script: npm run build
       
-      - name: Add iOS platform
+      - name: Prepare iOS platform
         script: |
-          npx cap add ios || true
+          # Löscht einen eventuell korrupten/leeren Ordner und erzwingt die Neuerstellung
+          rm -rf ios
+          npx cap add ios
           npx cap sync ios
-      
+
       - name: Install CocoaPods
         script: |
-          npx cap copy ios
           cd ios/App
           pod install
 
