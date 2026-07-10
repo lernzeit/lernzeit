@@ -978,10 +978,15 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   Schreib uns, was gut läuft oder besser werden kann.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => setFeedbackOpen(true)}>
                   <MessageSquareHeart className="mr-2 h-4 w-4" />
                   Feedback senden
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/ideen">
+                    💡 Ideen-Forum
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
