@@ -85,6 +85,8 @@ workflows:
       - name: Prepare and Sync iOS platform
         script: |
           rm -rf ios
+          # Initialisiert die Konfiguration nativ im Workspace, bevor add/sync ausgeführt wird
+          npx cap init LernZeit de.lernzeit.app --web-dir dist
           npx cap add ios
           npx cap sync ios
 
