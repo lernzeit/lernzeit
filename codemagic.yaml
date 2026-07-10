@@ -85,8 +85,6 @@ workflows:
       - name: Prepare and Sync iOS platform
         script: |
           rm -rf ios
-          # Erzwingt die saubere native Projekt-Initialisierung mitsamt Bundle-ID
-          npx cap init LernZeit de.lernzeit.app --web-dir dist || true
           npx cap add ios
           npx cap sync ios
 
