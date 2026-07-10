@@ -77,22 +77,15 @@ workflows:
       - name: Install dependencies
         script: |
           npm ci
-          # Stellt sicher, dass das native iOS-Modul für Capacitor bereitsteht
           npm install @capacitor/ios
       
       - name: Build web app
         script: npm run build
       
-      - name: Prepare iOS platform
+      - name: Prepare and Sync iOS platform
         script: |
-          rm -rf ios
-          npx cap add ios
+          npx cap add ios || true
           npx cap sync ios
-
-      - name: Install CocoaPods
-        script: |
-          cd ios/App
-          pod install
 
       - name: Fetch signing files
         script: |
