@@ -24,8 +24,10 @@ workflows:
       
       - name: Add Android platform
         script: |
-          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
-          npx cap add android || true
+          if [ ! -d "android" ]; then
+            npm install @capacitor/android
+            npx cap add android
+          fi
           npx cap sync android
       
       - name: Set Android version
@@ -76,24 +78,23 @@ workflows:
     
     scripts:
       - name: Install dependencies
-        script: |
-          npm ci
-          npm install @capacitor/cli @capacitor/ios
+        script: npm ci
       
       - name: Build web app
         script: npm run build
       
       - name: Prepare iOS platform
         script: |
-          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
-          rm -rf ios
-          npx cap add ios
+          if [ ! -d "ios" ]; then
+            npm install @capacitor/ios
+            npx cap add ios
+          fi
           npx cap sync ios
           
       - name: Install CocoaPods
         script: |
           cd ios/App
-          pod install
+          pod install --repo-update
 
       - name: Fetch signing files
         script: |
@@ -154,8 +155,10 @@ workflows:
       
       - name: Add Android platform
         script: |
-          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
-          npx cap add android || true
+          if [ ! -d "android" ]; then
+            npm install @capacitor/android
+            npx cap add android
+          fi
           npx cap sync android
       
       - name: Build debug APK
