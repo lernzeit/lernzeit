@@ -87,6 +87,7 @@ workflows:
       
       - name: Install CocoaPods
         script: |
+          npx cap copy ios
           cd ios/App
           pod install
 
