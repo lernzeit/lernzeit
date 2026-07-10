@@ -75,20 +75,20 @@ workflows:
     
     scripts:
       - name: Install dependencies
-        script: |
-          npm ci
-          npm install @capacitor/ios @capacitor/cli
+        script: npm ci
       
       - name: Build web app
         script: npm run build
       
-      - name: Prepare and Sync iOS platform
+      - name: Prepare iOS platform
         script: |
-          rm -rf ios
-          # Initialisiert die Konfiguration nativ im Workspace, bevor add/sync ausgeführt wird
-          npx cap init LernZeit de.lernzeit.app --web-dir dist
-          npx cap add ios
+          npx cap add ios || true
           npx cap sync ios
+          
+      - name: Install CocoaPods
+        script: |
+          cd ios/App
+          pod install --repo-update
 
       - name: Fetch signing files
         script: |
