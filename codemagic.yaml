@@ -60,13 +60,16 @@ workflows:
       app_store_connect: lernzeit_asc
     
     environment:
+      # Wir zwingen Codemagic, die manuell in den App-Einstellungen hochgeladenen Dateien zu nutzen!
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: de.lernzeit.app
+        provisioning_profiles:
+          - de.lernzeit.app App Store
+        certificates:
+          - cert
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        APP_STORE_APP_ID: "6789603688" # <-- Setze hier deine echte 10-stellige App-ID aus App Store Connect ein!
+        APP_STORE_APP_ID: "6789603688"
       node: 18
       xcode: latest
       cocoapods: default
@@ -88,10 +91,10 @@ workflows:
           cd ios/App
           pod install
 
-      # Weist Xcode an, das bei Apple hinterlegte Profil aktiv abzurufen
+      # Holt die manuellen Dateien aus den Codemagic-App-Settings ab
       - name: Fetch signing files
         script: |
-          xcode-project use-profiles --profile "de.lernzeit.app App Store"
+          xcode-project use-profiles
       
       - name: Set iOS version
         script: |
