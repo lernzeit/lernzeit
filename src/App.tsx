@@ -15,6 +15,7 @@ const Datenschutz = lazy(() => import("./pages/Datenschutz"));
 const Nutzungsbedingungen = lazy(() => import("./pages/Nutzungsbedingungen"));
 const Impressum = lazy(() => import("./pages/Impressum"));
 const Support = lazy(() => import("./pages/Support"));
+const IdeaForum = lazy(() => import("./pages/IdeaForum"));
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,11 @@ const App = () => (
           <Route path="/support" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
               <Support />
+            </Suspense>
+          } />
+          <Route path="/ideen" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <IdeaForum />
             </Suspense>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
