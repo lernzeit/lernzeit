@@ -66,7 +66,7 @@ workflows:
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        APP_STORE_APP_ID: "6789603688" # <-- Ersetze dies kurz durch deine echte App-ID aus App Store Connect!
+        APP_STORE_APP_ID: "6789603688" # <-- Setze hier deine echte 10-stellige App-ID aus App Store Connect ein!
       node: 18
       xcode: latest
       cocoapods: default
@@ -88,9 +88,10 @@ workflows:
           cd ios/App
           pod install
 
+      # Weist Xcode an, das bei Apple hinterlegte Profil aktiv abzurufen
       - name: Fetch signing files
         script: |
-          xcode-project use-profiles
+          xcode-project use-profiles --profile "de.lernzeit.app App Store"
       
       - name: Set iOS version
         script: |
