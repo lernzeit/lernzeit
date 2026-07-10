@@ -60,15 +60,13 @@ workflows:
       app_store_connect: lernzeit_asc
     
     environment:
-      # Die automatische API-Suche (ios_signing) wurde entfernt!
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.lernzeit.app
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-        # TODO Phase 2: Aus App Store Connect übernehmen, sobald App angelegt ist
-        APP_STORE_APP_ID: "YOUR_APP_STORE_APP_ID"
-        
-        PROVISIONING_PROFILE: "MIIwNAYJKoZIhvcNAQcCoIIwJTCCMCECAQExCzAJBgUrDgMCGgUAMIIgQQYJKoZIhvcNAQcBoIIgMgSCIC48P3htbCB2ZXJzaW9uPSIxLjAiIGVuY29kaW5nPSJVVEYtOCI/Pgo8IURPQ1RZUEUgcGxpc3QgUFVCTElDICItLy9BcHBsZS8vRFREIFBMSVNUIDEuMC8vRU4iICJodHRwOi8vd3d3LmFwcGxlLmNvbS9EVERzL1Byb3BlcnR5TGlzdC0xLjAuZHRkIj4KPHBsaXN0IHZlcnNpb249IjEuMCI+CjxkaWN0PgoJPGtleT5BcHBJRE5hbWU8L2tleT4KCTxzdHJpbmc+TGVyblplaXQ8L3N0cmluZz4KCTxrZXk+QXBwbGljYXRpb25JZGVudGlmaWVyUHJlZml4PC9rZXk+Cgk8YXJyYXk+Cgk8c3RyaW5nPjM2N1kyVVVYSkc8L3N0cmluZz4KCTwvYXJyYXk+Cgk8a2V5PkNyZWF0aW9uRGF0ZTwva2V5PgoJPGRhdGU+MjAyNi0wNy0xMFQyMDo1MjowM1o8L2RhdGU+Cgk8a2V5PlBsYXRmb3JtPC9rZXk+Cgk8YXJyYXk+CgkJPHN0cmluZz5pT1M8L3N0cmluZz4KCQk8c3RyaW5nPnhyT1M8L3N0cmluZz4KCQk8c3RyaW5nPnZpc2lvbk9TPC9zdHJpbmc+Cgk8L2FycmF5PgoJPGtleT5Js1hjb2RlTWFuYWdlZDwva2V5PgoJPGZhbHNlLz4KCTxrZXk+RGV2ZWxvcGVyQ2VydGlmaWNhdGVzPC9rZXk+Cgk8YXJyYXk+Cgk8bWFya2VyIGRhdGEgZW50ZmVybnQ+Cgk8L2FycmF5PgoKCTxrZXk+REVSTi1FbmNvZGVkLVByb2ZpbGU8L2tleT4KCTxkYXRhPk1JSV9kYXRhX2VudGZlcm50PC9kYXRhPgoKCTxrZXk+UFBRQ2hlY2s8L2tleT4KCTZmYWxzZS8+CgoJPGtleT5FbnRpdGxlbWVudHM8L2tleT4KCTxkaWN0PgoJCTxrZXk+YmV0YS1yZXBvcnRzLWFjdGl2ZPC9rZXk+CgkJPHRydWUvPgoJCQkJCgkJCQk8a2V5PmFwcy1lbnZpcm9ubWVudDwva2V5PgoJCTxzdHJpbmc+cHJvZHVjdGlvbjwvc3RyaW5nPgoJCQkJCgkJCQk8a2V5PmFwcGxpY2F0aW9uLWlkZW50aWZpZXI8L2tleT4KCQk8c3RyaW5nPjM2N1kyVVVYSkcuZGUubGVybnplaXQuYXBwPC9zdHJpbmc+CgkJCQkKCQkJCTxrZXk+a2V5Y2hhaW4tYWNjZXNzLWdyb3Vwczwva2V5PgoJCTxhcnJheT4KCQkJCTxzdHJpbmc+MzY3WTJVVVhKRy4qPC9zdHJpbmc+CgkJCQk8c3RyaW5nPmNvbS5hcHBsZS50b2tlbjwvc3RyaW5nPgoJCTwvYXJyYXk+CgkJCQkKCQkJCTxrZXk+Z2V0LXRhc2stYWxsb3c8L2tleT4KCQk8ZmFsc2UvPgoJCQkJCgkJCQk8a2V5PmNvbS5hcHBsZS5kZXZlbG9wZXIudGVhbS1pZGVudGlmaWVyPC9rZXk+CgkJPHN0cmluZz4zNjdZMlVVWEpHPC9zdHJpbmc+CgkJCgk8L2RpY3Q+Cgk8a2V5PkV4cGlyYXRpb25EYXRlPC9rZXk+Cgk8ZGF0ZT4yMDI3LTA3LTEwVDIwOjEzOjU0WjwvZGF0ZT4KCTxrZXk+TmFtZTwva2V5PgoJPHN0cmluZz5MZXJuemVpdCBBcHAgU3RvcmUgRGlzdHJpYnV0aW9uPC9zdHJpbmc+Cgk8a2V5PlRlYW1JZGVudGlmaWVyPC9rZXk+Cgk8YXJyYXk+CgkJPHN0cmluZz4zNjdZMlVVWEpHPC9zdHJpbmc+Cgk8L2FycmF5PgoJPGtleT5UZWFtTmFtZTwva2V5PgoJPHN0cmluZz5MZXJuWmVpdCBVRyAoaGFmdHVuZ3NiZXNjaHJhbmt0KTwvc3RyaW5nPgoJPGtleT5UaW1lVG9MaXZlPC9rZXk+Cgk8aW50ZWdlcj4zNjQ8L2ludGVnZXI+Cgk8a2V5PlVVSUQ8L2tleT4KCTxzdHJpbmc+Y2RmOWU0NWUtZThmOC00MWExLTg1YWUtYWRlZjU3MTNjMzdhPC9zdHJpbmc+Cgk8a2V5PlZlcnNpb248L2tleT4KCTxpbnRlZ2VyPjE8L2ludGVnZXI+CjwvZGljdD4KPC9wbGlzdD6ggg0_Zertifikatsdaten_entfernt_fuer_uebersicht_A3RDAwWDY="
-        
+        APP_STORE_APP_ID: "6503000000" # <-- Ersetze dies kurz durch deine echte App-ID aus App Store Connect!
       node: 18
       xcode: latest
       cocoapods: default
@@ -89,13 +87,6 @@ workflows:
         script: |
           cd ios/App
           pod install
-
-      # Speichert das Profil direkt an der richtigen Stelle im Mac-System ab
-      - name: Set up Provisioning Profile
-        script: |
-          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PROFILES_DIR"
-          echo "$PROVISIONING_PROFILE" | base64 --decode > "$PROFILES_DIR/profile.mobileprovision"
 
       - name: Fetch signing files
         script: |
