@@ -77,14 +77,17 @@ workflows:
       - name: Install dependencies
         script: |
           npm ci
-          npm install @capacitor/ios
+          npm install @capacitor/ios @capacitor/cli
       
       - name: Build web app
         script: npm run build
       
       - name: Prepare and Sync iOS platform
         script: |
-          npx cap add ios || true
+          rm -rf ios
+          # Erzwingt die saubere native Projekt-Initialisierung mitsamt Bundle-ID
+          npx cap init LernZeit de.lernzeit.app --web-dir dist || true
+          npx cap add ios
           npx cap sync ios
 
       - name: Fetch signing files
