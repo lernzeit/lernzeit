@@ -22,12 +22,12 @@ workflows:
       - name: Build web app
         script: npm run build
       
-      - name: Add Android platform
+      - name: Prepare Android platform
         script: |
-          if [ ! -d "android" ]; then
-            npm install @capacitor/android
-            npx cap add android
-          fi
+          npm install @capacitor/android @capacitor/cli
+          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
+          rm -rf android
+          npx cap add android
           npx cap sync android
       
       - name: Set Android version
@@ -85,10 +85,10 @@ workflows:
       
       - name: Prepare iOS platform
         script: |
-          if [ ! -d "ios" ]; then
-            npm install @capacitor/ios
-            npx cap add ios
-          fi
+          npm install @capacitor/ios @capacitor/cli
+          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
+          rm -rf ios
+          npx cap add ios
           npx cap sync ios
           
       - name: Install CocoaPods
@@ -125,46 +125,3 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false
-
-  # Development Build (für Testing)
-  development:
-    name: Development Build
-    max_build_duration: 30
-    instance_type: linux_x2
-    
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: 'develop'
-          include: true
-    
-    environment:
-      node: 22
-      java: 17
-    
-    scripts:
-      - name: Install dependencies
-        script: npm ci
-      
-      - name: Run tests
-        script: npm run test --if-present
-      
-      - name: Build web app
-        script: npm run build
-      
-      - name: Add Android platform
-        script: |
-          if [ ! -d "android" ]; then
-            npm install @capacitor/android
-            npx cap add android
-          fi
-          npx cap sync android
-      
-      - name: Build debug APK
-        script: |
-          cd android
-          ./gradlew assembleDebug
-    
-    artifacts:
-      - android/app/build/outputs/**/*.apk
