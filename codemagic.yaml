@@ -60,6 +60,8 @@ workflows:
       app_store_connect: lernzeit_asc
     
     environment:
+      groups:
+        - app_store_connect
       ios_signing:
         distribution_type: app_store
         bundle_identifier: de.lernzeit.app
