@@ -581,6 +581,26 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         </Card>
       )}
 
+      {/* Ideen-Forum Banner */}
+      <Card className="border-primary/30 bg-gradient-to-r from-accent/10 via-primary/10 to-accent/5">
+        <CardContent className="flex items-center justify-between gap-3 py-3 px-4">
+          <Link to="/ideen" className="flex items-center gap-3 min-w-0 text-left flex-1">
+            <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+              <span aria-hidden className="text-base">💡</span>
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm truncate">Ideen-Forum</p>
+              <p className="text-xs text-muted-foreground truncate">
+                Teile Ideen, stimme ab und gestalte LernZeit mit.
+              </p>
+            </div>
+          </Link>
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/ideen">Öffnen</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className={`grid w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="requests" className="flex items-center gap-1.5">
