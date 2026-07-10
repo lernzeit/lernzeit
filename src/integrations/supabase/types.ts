@@ -401,6 +401,7 @@ export type Database = {
           created_at: string
           id: string
           idea_id: string
+          is_hidden: boolean
           updated_at: string
           user_id: string
         }
@@ -409,6 +410,7 @@ export type Database = {
           created_at?: string
           id?: string
           idea_id: string
+          is_hidden?: boolean
           updated_at?: string
           user_id: string
         }
@@ -417,12 +419,51 @@ export type Database = {
           created_at?: string
           id?: string
           idea_id?: string
+          is_hidden?: boolean
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "feature_idea_comments_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "feature_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_idea_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string
+          payload: Json
+          read_at: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id: string
+          payload?: Json
+          read_at?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string
+          payload?: Json
+          read_at?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_idea_notifications_idea_id_fkey"
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "feature_ideas"
@@ -465,8 +506,10 @@ export type Database = {
           comment_count: number
           created_at: string
           description: string
+          duplicate_of: string | null
           id: string
           status: string
+          tags: string[]
           title: string
           updated_at: string
           user_id: string
@@ -477,8 +520,10 @@ export type Database = {
           comment_count?: number
           created_at?: string
           description: string
+          duplicate_of?: string | null
           id?: string
           status?: string
+          tags?: string[]
           title: string
           updated_at?: string
           user_id: string
@@ -489,14 +534,24 @@ export type Database = {
           comment_count?: number
           created_at?: string
           description?: string
+          duplicate_of?: string | null
           id?: string
           status?: string
+          tags?: string[]
           title?: string
           updated_at?: string
           user_id?: string
           vote_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feature_ideas_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "feature_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_sessions: {
         Row: {
