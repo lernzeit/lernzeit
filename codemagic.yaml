@@ -60,10 +60,9 @@ workflows:
       app_store_connect: lernzeit_asc
     
     environment:
-      # Wir zwingen Codemagic, die manuell in den App-Einstellungen hochgeladenen Dateien zu nutzen!
       ios_signing:
         provisioning_profiles:
-          - de.lernzeit.app App Store
+          - delernzeitapp_App_Store
         certificates:
           - cert
       vars:
@@ -91,7 +90,6 @@ workflows:
           cd ios/App
           pod install
 
-      # Holt die manuellen Dateien aus den Codemagic-App-Settings ab
       - name: Fetch signing files
         script: |
           xcode-project use-profiles
