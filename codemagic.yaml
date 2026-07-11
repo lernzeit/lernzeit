@@ -84,16 +84,28 @@ workflows:
           npm install @onesignal/onesignal-cordova-plugin@latest
           npm install @capacitor/ios@latest @capacitor/cli@latest
 
+      - name: Clean npm cache
+        script: |
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+          npm ci
+
       - name: Build web app
         script: npm run build
 
       - name: Prepare and Sync iOS platform
         script: |
-          npm install @capacitor/ios@latest @capacitor/cli@latest
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           rm -rf ios
-          npx cap add ios --web-dir dist
+          npx cap add ios
           npx cap sync ios
+
+          # Überprüfe, ob das iOS-Projekt erstellt wurde
+          if [ ! -d "ios/App" ]; then
+            echo "ERROR: iOS project was not created!"
+            exit 1
+          fi
+          echo "iOS project successfully created"
 
       - name: Clean and Install CocoaPods
         script: |
