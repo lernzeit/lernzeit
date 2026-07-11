@@ -235,14 +235,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     });
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
     try {
       setCheckoutLoading(true);
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
+      if (!priceId || !priceId.startsWith('price_')) {
+        throw new Error('Jährliche Price-ID noch nicht konfiguriert.');
+      }
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { price_id: priceId },
+      });
       if (error) throw error;
       if (data?.url) window.open(data.url, '_blank');
-    } catch {
-      toast({ title: 'Fehler', description: 'Checkout konnte nicht gestartet werden.', variant: 'destructive' });
+    } catch (err) {
+      toast({
+        title: 'Fehler',
+        description: err instanceof Error ? err.message : 'Checkout konnte nicht gestartet werden.',
+        variant: 'destructive',
+      });
     } finally {
       setCheckoutLoading(false);
     }
