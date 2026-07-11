@@ -1,13 +1,8 @@
 platform :ios, '13.0'
 use_frameworks!
 
-# Umgeht CocoaPods-Probleme auf M1/M2-Macs bei Codemagic
-options :allow_new_pods => true
-
 target 'App' do
   # Capacitor Pods
   pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-
-  # Hier fügt Capacitor normalerweise seine Plugins ein
 end
