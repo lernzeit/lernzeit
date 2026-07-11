@@ -87,7 +87,7 @@ workflows:
       - name: Build web app
         script: npm run build
 
-- name: Prepare and Sync iOS platform
+      - name: Prepare and Sync iOS platform
         script: |
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           rm -rf ios
