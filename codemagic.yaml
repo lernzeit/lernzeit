@@ -115,9 +115,15 @@ workflows:
         script: |
           cd ios/App
 
-          # Überprüfe Podfile
+          # Falls Podfile nicht existiert, erstelle es
           if [ ! -f "Podfile" ]; then
-            echo "ERROR: Podfile not found!"
+            echo "Podfile not found, creating one..."
+            pod init
+          fi
+
+          # Überprüfe Podfile nach Erstellung
+          if [ ! -f "Podfile" ]; then
+            echo "ERROR: Failed to create Podfile!"
             echo "Directory contents:"
             ls -la
             exit 1
