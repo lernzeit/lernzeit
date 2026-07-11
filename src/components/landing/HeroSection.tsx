@@ -41,7 +41,7 @@ const HeroSection = () => {
           </div>
         </div>
 
-        <h1 className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 leading-[1.1] tracking-tight">
+        <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-6 leading-[1.1] tracking-tight">
           Lernen belohnen.{' '}
           <br />
           <span className="bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
