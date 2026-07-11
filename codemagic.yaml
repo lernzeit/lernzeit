@@ -105,18 +105,21 @@ workflows:
           echo "Syncing web assets..."
           npx cap sync ios
 
-          # Injektion der fertigen IconKitchen-Dateien mittels nativem Linux-Copy
-          TARGET_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
-          if [ -d "ios-icons" ]; then
-            echo "Kopiere fertige IconKitchen-Assets in das Xcode-Projekt..."
-            rm -rf "$TARGET_DIR"/*
-            cp -R ios-icons/* "$TARGET_DIR"/
-          else
-            echo "ERROR: Ordner 'ios-icons' wurde nicht im GitHub-Hauptverzeichnis gefunden!"
-            exit 1
+          # 1. ERZWINGEN: Manuell hochgeladenes Podfile an die richtige Stelle setzen
+          if [ -f "ios-icons/Podfile" ]; then
+            echo "Injeziere stabiles Git-Podfile..."
+            cp ios-icons/Podfile ios/App/Podfile
           fi
 
-          # Eiche Xcode-Projektdatei auf das Asset-Set
+          # 2. ERZWINGEN: IconKitchen-Assets reinkopieren
+          TARGET_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          if [ -d "ios-icons" ]; then
+            echo "Kopiere App-Icons aus ios-icons..."
+            # Alle PNGs und Contents.json kopieren (Podfile ausschließen)
+            find ios-icons -name "*.png" -o -name "Contents.json" | xargs -I {} cp {} "$TARGET_DIR"/
+          fi
+
+          # 3. ERZWINGEN: Xcode-Projektdatei auf das Set eichen
           TARGET_BUILD_SETTINGS="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "$TARGET_BUILD_SETTINGS" ]; then
             sed -i '' 's/ASSETCATALOG_COMPILER_APPICON_NAME = .*/ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' "$TARGET_BUILD_SETTINGS" || sed -i 's/ASSETCATALOG_COMPILER_APPICON_NAME = .*/ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' "$TARGET_BUILD_SETTINGS"
