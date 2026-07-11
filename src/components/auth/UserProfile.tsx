@@ -741,7 +741,9 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   className="shrink-0"
                   onClick={async () => {
                     try {
-                      const { data, error } = await supabase.functions.invoke('create-checkout');
+                      const { data, error } = await supabase.functions.invoke('create-checkout', {
+                        body: { price_id: STRIPE_MONTHLY_PRICE_ID },
+                      });
                       if (error) throw error;
                       if (data?.url) window.open(data.url, '_blank');
                     } catch (err) {
