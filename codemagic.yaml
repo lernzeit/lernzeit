@@ -85,7 +85,6 @@ workflows:
           rm -rf node_modules package-lock.json
           npm cache clean --force
           npm install
-          # Asset-Utility installieren, um Icons on-the-fly zu bauen
           npm install @capacitor/assets --save-dev
 
       - name: Update Capacitor
@@ -100,26 +99,24 @@ workflows:
           npm uninstall @onesignal/onesignal-cordova-plugin || true
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           
-          # Ordner löschen und sauber von Capacitor generieren lassen
           rm -rf ios
           echo "Adding iOS platform..."
           npx cap add ios
           
-          # Kopiere dein icon.png ins Hauptverzeichnis für den Generator, falls vorhanden
+          echo "Syncing web assets and creating Podfile..."
+          npx cap sync ios
+
+          # Erst JETZT, wo die Struktur steht, generieren wir die Icons direkt hinein
           if [ -f "resources/icon.png" ]; then
             cp resources/icon.png ./icon.png
           elif [ -f "assets/icon.png" ]; then
             cp assets/icon.png ./icon.png
           fi
 
-          # Icons automatisch für alle iOS-Größen generieren (überschreibt die Standard-Icons)
           if [ -f "icon.png" ]; then
-            echo "Generating native app icons..."
+            echo "Generating native app icons into existing structure..."
             npx capacitor-assets generate --ios
           fi
-
-          echo "Syncing web assets to iOS platform..."
-          npx cap sync ios
 
       - name: Install CocoaPods dependencies
         script: |
