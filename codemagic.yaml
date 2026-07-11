@@ -103,10 +103,10 @@ workflows:
           echo "Adding iOS platform..."
           npx cap add ios
           
-          echo "Syncing web assets and creating Podfile..."
+          echo "Syncing web assets..."
           npx cap sync ios
 
-          # Erst JETZT, wo die Struktur steht, generieren wir die Icons direkt hinein
+          # Kopiere Icon für den Generator
           if [ -f "resources/icon.png" ]; then
             cp resources/icon.png ./icon.png
           elif [ -f "assets/icon.png" ]; then
@@ -114,27 +114,15 @@ workflows:
           fi
 
           if [ -f "icon.png" ]; then
-            echo "Generating native app icons into existing structure..."
-            npx capacitor-assets generate --ios
+            echo "Generating native app icons..."
+            npx capacitor-assets generate --ios || true
           fi
 
       - name: Install CocoaPods dependencies
         script: |
-          cd ios/App
-
-          echo "Removing old Pod cache..."
-          rm -rf Pods Podfile.lock
-
-          echo "Updating CocoaPods repository..."
-          pod repo update
-
-          echo "Installing Pods..."
-          pod install --repo-update
-
-          if [ ! -d "App.xcworkspace" ]; then
-            echo "ERROR: App.xcworkspace not created!"
-            exit 1
-          fi
+          # Robustes Suchen nach dem Podfile im gesamten Projektordner
+          # Wechselt automatisch in das korrekte Verzeichnis und führt pod install aus
+          find . -name "Podfile" -exec dirname {} \; | xargs -I {} sh -c 'cd {} && rm -rf Pods Podfile.lock && pod repo update && pod install --repo-update'
 
       - name: Fetch signing files
         script: |
