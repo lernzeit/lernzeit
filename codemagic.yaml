@@ -85,7 +85,6 @@ workflows:
           rm -rf node_modules package-lock.json
           npm cache clean --force
           npm install
-          npm install @capacitor/assets --save-dev
 
       - name: Update Capacitor
         script: |
@@ -98,31 +97,56 @@ workflows:
         script: |
           npm uninstall @onesignal/onesignal-cordova-plugin || true
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
-          
+
+          # Speichere die App-Icons vor dem Löschen
+          ICON_BACKUP="./icon_backup"
+          if [ -d "ios/App/App/Assets.xcassets/Appicon.appiconset" ]; then
+            echo "📦 Backing up app icons..."
+            mkdir -p "$ICON_BACKUP"
+            cp -R ios/App/App/Assets.xcassets/Appicon.appiconset "$ICON_BACKUP/"
+          fi
+
           rm -rf ios
           echo "Adding iOS platform..."
           npx cap add ios
-          
+
           echo "Syncing web assets..."
           npx cap sync ios
 
-          # Kopiere Icon für den Generator
-          if [ -f "resources/icon.png" ]; then
-            cp resources/icon.png ./icon.png
-          elif [ -f "assets/icon.png" ]; then
-            cp assets/icon.png ./icon.png
+          # Stelle die Icons wieder her
+          if [ -d "$ICON_BACKUP/Appicon.appiconset" ]; then
+            echo "📱 Restoring app icons..."
+            rm -rf ios/App/App/Assets.xcassets/Appicon.appiconset
+            cp -R "$ICON_BACKUP/Appicon.appiconset" ios/App/App/Assets.xcassets/
+            rm -rf "$ICON_BACKUP"
+            echo "✓ Icons restored successfully"
           fi
 
-          if [ -f "icon.png" ]; then
-            echo "Generating native app icons..."
-            npx capacitor-assets generate --ios || true
+          # Überprüfe, ob das iOS-Projekt erstellt wurde
+          if [ ! -d "ios/App" ]; then
+            echo "ERROR: iOS/App directory not created!"
+            exit 1
           fi
 
       - name: Install CocoaPods dependencies
         script: |
-          # Robustes Suchen nach dem Podfile im gesamten Projektordner
-          # Wechselt automatisch in das korrekte Verzeichnis und führt pod install aus
-          find . -name "Podfile" -exec dirname {} \; | xargs -I {} sh -c 'cd {} && rm -rf Pods Podfile.lock && pod repo update && pod install --repo-update'
+          cd ios/App
+
+          echo "Removing old Pod cache..."
+          rm -rf Pods Podfile.lock
+
+          echo "Updating CocoaPods repository..."
+          pod repo update
+
+          echo "Installing Pods..."
+          pod install --repo-update
+
+          if [ ! -d "App.xcworkspace" ]; then
+            echo "ERROR: App.xcworkspace not created!"
+            exit 1
+          fi
+
+          echo "✓ Pods successfully installed"
 
       - name: Fetch signing files
         script: |
