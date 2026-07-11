@@ -98,14 +98,6 @@ workflows:
           npm uninstall @onesignal/onesignal-cordova-plugin || true
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
 
-          # Speichere die App-Icons vor dem Löschen
-          ICON_BACKUP="./icon_backup"
-          if [ -d "ios/App/App/Assets.xcassets/Appicon.appiconset" ]; then
-            echo "📦 Backing up app icons..."
-            mkdir -p "$ICON_BACKUP"
-            cp -R ios/App/App/Assets.xcassets/Appicon.appiconset "$ICON_BACKUP/"
-          fi
-
           rm -rf ios
           echo "Adding iOS platform..."
           npx cap add ios
@@ -113,20 +105,17 @@ workflows:
           echo "Syncing web assets..."
           npx cap sync ios
 
-          # Stelle die Icons wieder her
-          if [ -d "$ICON_BACKUP/Appicon.appiconset" ]; then
-            echo "📱 Restoring app icons..."
-            rm -rf ios/App/App/Assets.xcassets/Appicon.appiconset
-            cp -R "$ICON_BACKUP/Appicon.appiconset" ios/App/App/Assets.xcassets/
-            rm -rf "$ICON_BACKUP"
-            echo "✓ Icons restored successfully"
-          fi
+          # Stelle die Icons aus Git wieder her (falls vorhanden)
+          echo "Restoring app icons from Git..."
+          git checkout ios/App/App/Assets.xcassets/Appicon.appiconset/ 2>/dev/null || echo "Icons not in git, using Capacitor defaults"
 
           # Überprüfe, ob das iOS-Projekt erstellt wurde
           if [ ! -d "ios/App" ]; then
             echo "ERROR: iOS/App directory not created!"
             exit 1
           fi
+
+          echo "✓ iOS project created successfully"
 
       - name: Install CocoaPods dependencies
         script: |
