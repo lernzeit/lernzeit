@@ -76,21 +76,19 @@ workflows:
       cocoapods: default
 
     scripts:
-      - name: Install dependencies
-        script: npm ci
-
-      - name: Update Capacitor and remove OneSignal
+      - name: Remove OneSignal from package.json
         script: |
-          npm install @capacitor/ios@latest @capacitor/cli@latest
-
-          # OneSignal Cordova Plugin wird entfernt BEVOR iOS sync (Xcode 26.4 Kompatibilität)
           npm uninstall @onesignal/onesignal-cordova-plugin || true
 
-      - name: Clean npm cache
+      - name: Install dependencies
         script: |
-          rm -rf node_modules
+          rm -rf node_modules package-lock.json
           npm cache clean --force
           npm install
+
+      - name: Update Capacitor
+        script: |
+          npm install @capacitor/ios@latest @capacitor/cli@latest
 
       - name: Build web app
         script: npm run build
