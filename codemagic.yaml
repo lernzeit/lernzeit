@@ -81,7 +81,7 @@ workflows:
 
       - name: Update OneSignal and Capacitor
         script: |
-          npm install @onesignal/onesignal-cordova-plugin@latest
+          npm install @onesignal/onesignal-cordova-plugin@5.1.4
           npm install @capacitor/ios@latest @capacitor/cli@latest
 
       - name: Clean npm cache
