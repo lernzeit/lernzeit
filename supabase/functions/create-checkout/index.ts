@@ -23,6 +23,12 @@ const resolveOrigin = (req: Request): string => {
   return ALLOWED_ORIGINS.includes(raw) ? raw : DEFAULT_ORIGIN;
 };
 
+const DEFAULT_MONTHLY_PRICE_ID = "price_1Ts1oYH54M7FMLTcAtI2CuNB";
+
+interface CheckoutBody {
+  price_id?: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
