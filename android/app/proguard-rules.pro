@@ -19,3 +19,39 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ---- Lernzeit / Capacitor release rules ----
+
+# Preserve line numbers for crash reports; hide original source file names
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Capacitor core + plugins use reflection to register @CapacitorPlugin classes
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keepclassmembers class * {
+    @com.getcapacitor.PluginMethod <methods>;
+}
+-keep class * extends com.getcapacitor.Plugin { *; }
+
+# Cordova bridge (used by some Capacitor plugins, e.g. OneSignal Cordova plugin)
+-keep class org.apache.cordova.** { *; }
+-dontwarn org.apache.cordova.**
+
+# JavaScript interface methods exposed to WebView
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# OneSignal
+-keep class com.onesignal.** { *; }
+-dontwarn com.onesignal.**
+
+# Firebase / Google Play Services
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# Keep annotations, generic signatures and enclosing method info
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
