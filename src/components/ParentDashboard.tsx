@@ -540,7 +540,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   <p className="text-xs text-muted-foreground">Ihre kostenlose Testphase ist beendet.</p>
                 </div>
               </div>
-              <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+              <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
                 {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
                 Jetzt upgraden
               </Button>
