@@ -79,10 +79,12 @@ workflows:
       - name: Install dependencies
         script: npm ci
 
-      - name: Update OneSignal and Capacitor
+      - name: Update Capacitor
         script: |
-          npm install @onesignal/onesignal-cordova-plugin@5.1.4
           npm install @capacitor/ios@latest @capacitor/cli@latest
+
+          # OneSignal Cordova Plugin wird vorübergehend entfernt (Xcode 26.4 Kompatibilität)
+          npm uninstall @onesignal/onesignal-cordova-plugin || true
 
       - name: Clean npm cache
         script: |
