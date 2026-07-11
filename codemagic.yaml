@@ -79,11 +79,11 @@ workflows:
       - name: Install dependencies
         script: npm ci
 
-      - name: Update Capacitor
+      - name: Update Capacitor and remove OneSignal
         script: |
           npm install @capacitor/ios@latest @capacitor/cli@latest
 
-          # OneSignal Cordova Plugin wird vorübergehend entfernt (Xcode 26.4 Kompatibilität)
+          # OneSignal Cordova Plugin wird entfernt BEVOR iOS sync (Xcode 26.4 Kompatibilität)
           npm uninstall @onesignal/onesignal-cordova-plugin || true
 
       - name: Clean npm cache
@@ -97,6 +97,9 @@ workflows:
 
       - name: Prepare and Sync iOS platform
         script: |
+          # Stelle sicher, dass OneSignal nicht in package.json ist
+          npm uninstall @onesignal/onesignal-cordova-plugin || true
+
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           rm -rf ios
           echo "Adding iOS platform..."
