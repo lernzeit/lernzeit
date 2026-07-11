@@ -878,17 +878,46 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                         </p>
                       </div>
                     )}
-                    <div className="pt-2">
-                      {!isPremium ? (
-                        <Button className="w-full" size="sm" onClick={handleUpgrade} disabled={checkoutLoading}>
-                          {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                          Premium aktivieren
-                        </Button>
-                      ) : isTrialing ? (
-                        <Button className="w-full" size="sm" onClick={handleUpgrade} disabled={checkoutLoading}>
-                          {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                          Jetzt Abo abschließen
-                        </Button>
+                    <div className="pt-2 space-y-3">
+                      {!isPremium || isTrialing ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBillingCycle('monthly')}
+                              className={`text-xs font-medium py-1.5 rounded-md transition-colors ${
+                                selectedBillingCycle === 'monthly'
+                                  ? 'bg-background text-foreground shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Monatlich
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBillingCycle('yearly')}
+                              className={`text-xs font-medium py-1.5 rounded-md transition-colors ${
+                                selectedBillingCycle === 'yearly'
+                                  ? 'bg-background text-foreground shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Jährlich
+                            </button>
+                          </div>
+                          <Button
+                            className="w-full"
+                            size="sm"
+                            onClick={() => handleUpgrade(selectedBillingCycle)}
+                            disabled={checkoutLoading}
+                          >
+                            {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                            {!isPremium ? 'Premium aktivieren' : 'Jetzt Abo abschließen'}
+                          </Button>
+                          <p className="text-xs text-center text-muted-foreground">
+                            {selectedBillingCycle === 'monthly' ? '2,99 € / Monat' : '29,99 € / Jahr'}
+                          </p>
+                        </>
                       ) : (
                         <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
                           {portalLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
