@@ -95,40 +95,30 @@ workflows:
 
       - name: Prepare and Sync iOS platform
         script: |
-          # Stelle sicher, dass OneSignal nicht in package.json ist
           npm uninstall @onesignal/onesignal-cordova-plugin || true
-
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
-          rm -rf ios
-          echo "Adding iOS platform..."
-          npx cap add ios
-          echo "Syncing iOS platform..."
+          
+          # WICHTIG: Ordner NICHT löschen, damit die IconKitchen-Icons aus GitHub erhalten bleiben!
+          if [ ! -d "ios" ]; then
+            echo "iOS folder missing in Git, adding platform from scratch..."
+            npx cap add ios
+          fi
+          
+          echo "Syncing web assets to iOS platform..."
           npx cap sync ios
 
-          # Überprüfe, ob das iOS-Projekt erstellt wurde
           if [ ! -d "ios/App" ]; then
-            echo "ERROR: iOS/App directory not created!"
+            echo "ERROR: iOS/App directory not found!"
             exit 1
           fi
-
-          echo "iOS project structure:"
-          ls -la ios/App/
 
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App
 
-          # Falls Podfile nicht existiert, erstelle es
+          # Überprüfen, ob das Git-Podfile da ist
           if [ ! -f "Podfile" ]; then
-            echo "Podfile not found, creating one..."
-            pod init
-          fi
-
-          # Überprüfe Podfile nach Erstellung
-          if [ ! -f "Podfile" ]; then
-            echo "ERROR: Failed to create Podfile!"
-            echo "Directory contents:"
-            ls -la
+            echo "ERROR: Podfile missing in repository!"
             exit 1
           fi
 
@@ -141,16 +131,11 @@ workflows:
           echo "Installing Pods..."
           pod install --repo-update
 
-          # Überprüfe, ob .xcworkspace erstellt wurde
           if [ ! -d "App.xcworkspace" ]; then
             echo "ERROR: App.xcworkspace not created!"
-            echo "Directory contents after pod install:"
-            ls -la
             exit 1
           fi
-
           echo "✓ Pods successfully installed"
-          echo "✓ App.xcworkspace created"
 
       - name: Fetch signing files
         script: |
