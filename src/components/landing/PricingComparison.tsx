@@ -79,8 +79,8 @@ const PricingComparison = () => {
             <h3 className="text-xl font-bold mb-1">Premium</h3>
             <p className="text-muted-foreground text-sm mb-6">Volle Kontrolle & KI-Tutor</p>
             <div className="mb-8">
-              <div className="text-4xl font-extrabold">2,49 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
-              <div className="mt-1 text-sm text-muted-foreground">oder <span className="font-semibold text-foreground">25 € /Jahr</span> <span className="text-xs">(spare ~16 %)</span></div>
+              <div className="text-4xl font-extrabold">2,99 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
+              <div className="mt-1 text-sm text-muted-foreground">oder <span className="font-semibold text-foreground">29,99 € /Jahr</span> <span className="text-xs">(spare ~16 %)</span></div>
             </div>
             <ul className="space-y-4">
               {features.map((f) => (
