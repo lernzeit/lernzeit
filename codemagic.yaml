@@ -85,6 +85,8 @@ workflows:
           rm -rf node_modules package-lock.json
           npm cache clean --force
           npm install
+          # Asset-Utility installieren, um Icons on-the-fly zu bauen
+          npm install @capacitor/assets --save-dev
 
       - name: Update Capacitor
         script: |
@@ -98,29 +100,30 @@ workflows:
           npm uninstall @onesignal/onesignal-cordova-plugin || true
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           
-          # WICHTIG: Ordner NICHT löschen, damit die IconKitchen-Icons aus GitHub erhalten bleiben!
-          if [ ! -d "ios" ]; then
-            echo "iOS folder missing in Git, adding platform from scratch..."
-            npx cap add ios
-          fi
+          # Ordner löschen und sauber von Capacitor generieren lassen
+          rm -rf ios
+          echo "Adding iOS platform..."
+          npx cap add ios
           
+          # Kopiere dein icon.png ins Hauptverzeichnis für den Generator, falls vorhanden
+          if [ -f "resources/icon.png" ]; then
+            cp resources/icon.png ./icon.png
+          elif [ -f "assets/icon.png" ]; then
+            cp assets/icon.png ./icon.png
+          fi
+
+          # Icons automatisch für alle iOS-Größen generieren (überschreibt die Standard-Icons)
+          if [ -f "icon.png" ]; then
+            echo "Generating native app icons..."
+            npx capacitor-assets generate --ios
+          fi
+
           echo "Syncing web assets to iOS platform..."
           npx cap sync ios
-
-          if [ ! -d "ios/App" ]; then
-            echo "ERROR: iOS/App directory not found!"
-            exit 1
-          fi
 
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App
-
-          # Überprüfen, ob das Git-Podfile da ist
-          if [ ! -f "Podfile" ]; then
-            echo "ERROR: Podfile missing in repository!"
-            exit 1
-          fi
 
           echo "Removing old Pod cache..."
           rm -rf Pods Podfile.lock
@@ -135,7 +138,6 @@ workflows:
             echo "ERROR: App.xcworkspace not created!"
             exit 1
           fi
-          echo "✓ Pods successfully installed"
 
       - name: Fetch signing files
         script: |
