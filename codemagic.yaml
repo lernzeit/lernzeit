@@ -89,18 +89,11 @@ workflows:
 
       - name: Prepare and Sync iOS platform
         script: |
+          npm install @capacitor/ios@latest @capacitor/cli@latest
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           rm -rf ios
-          npx cap add ios
+          npx cap add ios --web-dir dist
           npx cap sync ios
-          
-          # Überprüfe, ob das Workspace existiert
-          if [ ! -d "ios/App/App.xcworkspace" ]; then
-            echo "ERROR: iOS workspace was not created!"
-            ls -la ios/App/ || echo "ios/App does not exist"
-            exit 1
-          fi
-          echo "iOS workspace successfully created"
 
       - name: Clean and Install CocoaPods
         script: |
