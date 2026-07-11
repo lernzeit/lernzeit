@@ -12,7 +12,13 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-const PREMIUM_PRODUCT_ID = "prod_TyldQAhtysrjzz";
+// All Stripe product IDs that grant LernZeit Premium access.
+// Keep legacy IDs so existing subscriptions stay valid.
+const PREMIUM_PRODUCT_IDS = [
+  "prod_TyldQAhtysrjzz",
+  "prod_UrWLAA4HPQAh64",   // LernZeit Premium (Monatlich)
+  "prod_UrlOsuHTZZvXgd",   // LernZeit Premium (Jährlich)
+];
 
 /**
  * Safely convert a Stripe timestamp (number in seconds or ISO string) to an ISO string.
@@ -245,7 +251,7 @@ serve(async (req) => {
 
     const subscriptionEnd = toISOString(activeSub.current_period_end);
     const productId = activeSub.items.data[0].price.product;
-    const isPremium = productId === PREMIUM_PRODUCT_ID;
+    const isPremium = productId && PREMIUM_PRODUCT_IDS.includes(productId as string);
     const trialEnd = toISOString(activeSub.trial_end);
 
     logStep("Subscription found", {

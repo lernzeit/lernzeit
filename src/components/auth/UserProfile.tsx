@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen, Crown } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { STRIPE_MONTHLY_PRICE_ID } from '@/config/pricing';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
@@ -708,7 +709,9 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   className="shrink-0"
                   onClick={async () => {
                     try {
-                      const { data, error } = await supabase.functions.invoke('create-checkout');
+                      const { data, error } = await supabase.functions.invoke('create-checkout', {
+                        body: { price_id: STRIPE_MONTHLY_PRICE_ID },
+                      });
                       if (error) throw error;
                       if (data?.url) window.open(data.url, '_blank');
                     } catch (err) {
@@ -738,7 +741,9 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   className="shrink-0"
                   onClick={async () => {
                     try {
-                      const { data, error } = await supabase.functions.invoke('create-checkout');
+                      const { data, error } = await supabase.functions.invoke('create-checkout', {
+                        body: { price_id: STRIPE_MONTHLY_PRICE_ID },
+                      });
                       if (error) throw error;
                       if (data?.url) window.open(data.url, '_blank');
                     } catch (err) {

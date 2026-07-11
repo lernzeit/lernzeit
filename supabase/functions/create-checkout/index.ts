@@ -23,6 +23,12 @@ const resolveOrigin = (req: Request): string => {
   return ALLOWED_ORIGINS.includes(raw) ? raw : DEFAULT_ORIGIN;
 };
 
+const DEFAULT_MONTHLY_PRICE_ID = "price_1Ts1oYH54M7FMLTcAtI2CuNB";
+
+interface CheckoutBody {
+  price_id?: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,6 +49,20 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    let requestedPriceId: string | undefined;
+    try {
+      const body: CheckoutBody = await req.json();
+      requestedPriceId = body.price_id;
+    } catch {
+      // No body or invalid JSON – fall back to default monthly price
+      requestedPriceId = undefined;
+    }
+
+    const priceId = requestedPriceId && requestedPriceId.startsWith("price_")
+      ? requestedPriceId
+      : DEFAULT_MONTHLY_PRICE_ID;
+    logStep("Selected price", { priceId });
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
@@ -60,7 +80,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: "price_1T0o8dH54M7FMLTcpPW2TJXq",
+          price: priceId,
           quantity: 1,
         },
       ],

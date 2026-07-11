@@ -14,6 +14,7 @@ import { useChildDaySummary } from '@/hooks/useChildDaySummary';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
+import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
@@ -78,6 +79,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
+  const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [referralBannerDismissed, setReferralBannerDismissed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('referralBannerDismissed') === '1';
@@ -233,14 +235,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     });
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
     try {
       setCheckoutLoading(true);
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
+      if (!priceId || !priceId.startsWith('price_')) {
+        throw new Error('Jährliche Price-ID noch nicht konfiguriert.');
+      }
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { price_id: priceId },
+      });
       if (error) throw error;
       if (data?.url) window.open(data.url, '_blank');
-    } catch {
-      toast({ title: 'Fehler', description: 'Checkout konnte nicht gestartet werden.', variant: 'destructive' });
+    } catch (err) {
+      toast({
+        title: 'Fehler',
+        description: err instanceof Error ? err.message : 'Checkout konnte nicht gestartet werden.',
+        variant: 'destructive',
+      });
     } finally {
       setCheckoutLoading(false);
     }
@@ -507,7 +519,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 <p className="text-xs text-muted-foreground">Sichern Sie sich jetzt Premium – monatlich kündbar.</p>
               </div>
             </div>
-            <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+            <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
               {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
               Premium aktivieren
             </Button>
@@ -528,7 +540,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   <p className="text-xs text-muted-foreground">Ihre kostenlose Testphase ist beendet.</p>
                 </div>
               </div>
-              <Button size="sm" onClick={handleUpgrade} disabled={checkoutLoading} className="shrink-0">
+              <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
                 {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
                 Jetzt upgraden
               </Button>
@@ -866,17 +878,46 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                         </p>
                       </div>
                     )}
-                    <div className="pt-2">
-                      {!isPremium ? (
-                        <Button className="w-full" size="sm" onClick={handleUpgrade} disabled={checkoutLoading}>
-                          {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                          Premium aktivieren
-                        </Button>
-                      ) : isTrialing ? (
-                        <Button className="w-full" size="sm" onClick={handleUpgrade} disabled={checkoutLoading}>
-                          {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                          Jetzt Abo abschließen
-                        </Button>
+                    <div className="pt-2 space-y-3">
+                      {!isPremium || isTrialing ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBillingCycle('monthly')}
+                              className={`text-xs font-medium py-1.5 rounded-md transition-colors ${
+                                selectedBillingCycle === 'monthly'
+                                  ? 'bg-background text-foreground shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Monatlich
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBillingCycle('yearly')}
+                              className={`text-xs font-medium py-1.5 rounded-md transition-colors ${
+                                selectedBillingCycle === 'yearly'
+                                  ? 'bg-background text-foreground shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              Jährlich
+                            </button>
+                          </div>
+                          <Button
+                            className="w-full"
+                            size="sm"
+                            onClick={() => handleUpgrade(selectedBillingCycle)}
+                            disabled={checkoutLoading}
+                          >
+                            {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                            {!isPremium ? 'Premium aktivieren' : 'Jetzt Abo abschließen'}
+                          </Button>
+                          <p className="text-xs text-center text-muted-foreground">
+                            {selectedBillingCycle === 'monthly' ? '2,99 € / Monat' : '29,99 € / Jahr'}
+                          </p>
+                        </>
                       ) : (
                         <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
                           {portalLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
