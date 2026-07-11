@@ -97,26 +97,51 @@ workflows:
         script: |
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           rm -rf ios
+          echo "Adding iOS platform..."
           npx cap add ios
+          echo "Syncing iOS platform..."
           npx cap sync ios
 
           # Überprüfe, ob das iOS-Projekt erstellt wurde
           if [ ! -d "ios/App" ]; then
-            echo "ERROR: iOS project was not created!"
+            echo "ERROR: iOS/App directory not created!"
             exit 1
           fi
-          echo "iOS project successfully created"
 
-      - name: Clean and Install CocoaPods
+          echo "iOS project structure:"
+          ls -la ios/App/
+
+      - name: Install CocoaPods dependencies
         script: |
           cd ios/App
-          echo "Removing old Pod files..."
+
+          # Überprüfe Podfile
+          if [ ! -f "Podfile" ]; then
+            echo "ERROR: Podfile not found!"
+            echo "Directory contents:"
+            ls -la
+            exit 1
+          fi
+
+          echo "Removing old Pod cache..."
           rm -rf Pods Podfile.lock
-          echo "Updating Pod repository..."
+
+          echo "Updating CocoaPods repository..."
           pod repo update
-          echo "Installing Pods with verbose output..."
-          pod install --repo-update --verbose
-          echo "Pod installation complete"
+
+          echo "Installing Pods..."
+          pod install --repo-update
+
+          # Überprüfe, ob .xcworkspace erstellt wurde
+          if [ ! -d "App.xcworkspace" ]; then
+            echo "ERROR: App.xcworkspace not created!"
+            echo "Directory contents after pod install:"
+            ls -la
+            exit 1
+          fi
+
+          echo "✓ Pods successfully installed"
+          echo "✓ App.xcworkspace created"
 
       - name: Fetch signing files
         script: |
