@@ -93,8 +93,10 @@ workflows:
           
       - name: Install CocoaPods
         script: |
-          # Dynamische Suche nach dem Podfile und Ausführung
-          find . -name "Podfile" -exec dirname {} \; | xargs -I {} sh -c 'cd {} && pod install --repo-update'
+          cd ios/App
+          rm -rf Pods Podfile.lock
+          pod repo update
+          pod install --repo-update
 
       - name: Fetch signing files
         script: |
