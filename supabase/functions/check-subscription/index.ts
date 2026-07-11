@@ -251,7 +251,7 @@ serve(async (req) => {
 
     const subscriptionEnd = toISOString(activeSub.current_period_end);
     const productId = activeSub.items.data[0].price.product;
-    const isPremium = productId === PREMIUM_PRODUCT_ID;
+    const isPremium = productId && PREMIUM_PRODUCT_IDS.includes(productId as string);
     const trialEnd = toISOString(activeSub.trial_end);
 
     logStep("Subscription found", {
