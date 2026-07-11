@@ -97,55 +97,47 @@ workflows:
         script: |
           npm uninstall @onesignal/onesignal-cordova-plugin || true
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
-
+          
           rm -rf ios
           echo "Adding iOS platform..."
           npx cap add ios
-
+          
           echo "Syncing web assets..."
           npx cap sync ios
 
-          # Stelle die Icons aus Git wieder her (falls vorhanden)
-          echo "Restoring app icons from Git..."
-          git checkout ios/App/App/Assets.xcassets/Appicon.appiconset/ 2>/dev/null || echo "Icons not in git, using Capacitor defaults"
-
-          # Überprüfe, ob das iOS-Projekt erstellt wurde
-          if [ ! -d "ios/App" ]; then
-            echo "ERROR: iOS/App directory not created!"
-            exit 1
+          # Injektion der IconKitchen-Assets aus dem geschützten Ordner
+          TARGET_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          if [ -d "icon-assets" ]; then
+            echo "Icon-assets found. Overwriting Capacitor default icons..."
+            rm -rf "$TARGET_DIR"/*
+            cp -R icon-assets/* "$TARGET_DIR"/
+          else
+            echo "WARNING: icon-assets folder not found in repository root!"
           fi
 
-          echo "✓ iOS project created successfully"
+          # Xcode Projektdatei hart auf das Asset-Set kalibrieren
+          TARGET_BUILD_SETTINGS="ios/App/App.xcodeproj/project.pbxproj"
+          if [ -f "$TARGET_BUILD_SETTINGS" ]; then
+            echo "Fixing target build settings for AppIcon..."
+            sed -i '' 's/ASSETCATALOG_COMPILER_APPICON_NAME = .*/ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' "$TARGET_BUILD_SETTINGS" || sed -i 's/ASSETCATALOG_COMPILER_APPICON_NAME = .*/ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' "$TARGET_BUILD_SETTINGS"
+          fi
 
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App
-
-          echo "Checking for Podfile..."
-          if [ ! -f "Podfile" ]; then
-            echo "⚠️ Podfile not found, creating with pod init..."
-            pod init
-            echo "✓ Podfile created"
-          fi
-
           echo "Removing old Pod cache..."
           rm -rf Pods Podfile.lock
-
+          
           echo "Updating CocoaPods repository..."
           pod repo update
-
+          
           echo "Installing Pods..."
           pod install --repo-update
 
           if [ ! -d "App.xcworkspace" ]; then
             echo "ERROR: App.xcworkspace not created!"
-            echo "Directory contents:"
-            ls -la
             exit 1
           fi
-
-          echo "✓ Pods successfully installed"
-          echo "✓ App.xcworkspace created"
 
       - name: Fetch signing files
         script: |
