@@ -86,9 +86,9 @@ workflows:
 
       - name: Clean npm cache
         script: |
-          rm -rf node_modules package-lock.json
+          rm -rf node_modules
           npm cache clean --force
-          npm ci
+          npm install
 
       - name: Build web app
         script: npm run build
