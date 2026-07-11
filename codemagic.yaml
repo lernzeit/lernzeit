@@ -121,6 +121,13 @@ workflows:
         script: |
           cd ios/App
 
+          echo "Checking for Podfile..."
+          if [ ! -f "Podfile" ]; then
+            echo "⚠️ Podfile not found, creating with pod init..."
+            pod init
+            echo "✓ Podfile created"
+          fi
+
           echo "Removing old Pod cache..."
           rm -rf Pods Podfile.lock
 
@@ -132,10 +139,13 @@ workflows:
 
           if [ ! -d "App.xcworkspace" ]; then
             echo "ERROR: App.xcworkspace not created!"
+            echo "Directory contents:"
+            ls -la
             exit 1
           fi
 
           echo "✓ Pods successfully installed"
+          echo "✓ App.xcworkspace created"
 
       - name: Fetch signing files
         script: |
