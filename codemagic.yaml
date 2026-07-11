@@ -85,7 +85,6 @@ workflows:
           rm -rf node_modules package-lock.json
           npm cache clean --force
           npm install
-          npm install @capacitor/assets --save-dev
 
       - name: Update Capacitor
         script: |
@@ -106,23 +105,20 @@ workflows:
           echo "Syncing web assets..."
           npx cap sync ios
 
-          # Bereitet das Icon aus src/assets/ für den Generator vor
-          if [ -f "src/assets/app-icon-1024.png" ]; then
-            echo "Found app icon in src/assets/. Copying and setting up for generation..."
-            mkdir -p assets
-            cp src/assets/app-icon-1024.png ./assets/icon-only.png
-            
-            # Generiert das komplette native Set
-            npx capacitor-assets generate --ios
+          # Injektion der fertigen IconKitchen-Dateien mittels nativem Linux-Copy
+          TARGET_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          if [ -d "ios-icons" ]; then
+            echo "Kopiere fertige IconKitchen-Assets in das Xcode-Projekt..."
+            rm -rf "$TARGET_DIR"/*
+            cp -R ios-icons/* "$TARGET_DIR"/
           else
-            echo "ERROR: src/assets/app-icon-1024.png not found!"
+            echo "ERROR: Ordner 'ios-icons' wurde nicht im GitHub-Hauptverzeichnis gefunden!"
             exit 1
           fi
 
-          # Zwingt Xcode, das generierte Asset-Set statt des Platzhalters zu lesen
+          # Eiche Xcode-Projektdatei auf das Asset-Set
           TARGET_BUILD_SETTINGS="ios/App/App.xcodeproj/project.pbxproj"
           if [ -f "$TARGET_BUILD_SETTINGS" ]; then
-            echo "Configuring Xcode build settings for AppIcon..."
             sed -i '' 's/ASSETCATALOG_COMPILER_APPICON_NAME = .*/ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' "$TARGET_BUILD_SETTINGS" || sed -i 's/ASSETCATALOG_COMPILER_APPICON_NAME = .*/ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' "$TARGET_BUILD_SETTINGS"
           fi
 
