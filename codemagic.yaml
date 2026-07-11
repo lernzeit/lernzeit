@@ -79,24 +79,31 @@ workflows:
       - name: Install dependencies
         script: npm ci
 
+      - name: Update OneSignal and Capacitor
+        script: |
+          npm install @onesignal/onesignal-cordova-plugin@latest
+          npm install @capacitor/ios@latest @capacitor/cli@latest
+
       - name: Build web app
         script: npm run build
 
       - name: Prepare and Sync iOS platform
         script: |
-          npm install @capacitor/ios @capacitor/cli
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           rm -rf ios
           npx cap add ios
           npx cap sync ios
 
-      - name: Install CocoaPods
+      - name: Clean and Install CocoaPods
         script: |
           cd ios/App
-          if [ ! -f "Podfile" ]; then
-            pod init
-          fi
-          pod install --repo-update
+          echo "Removing old Pod files..."
+          rm -rf Pods Podfile.lock
+          echo "Updating Pod repository..."
+          pod repo update
+          echo "Installing Pods with verbose output..."
+          pod install --repo-update --verbose
+          echo "Pod installation complete"
 
       - name: Fetch signing files
         script: |
