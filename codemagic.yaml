@@ -115,7 +115,6 @@ workflows:
           TARGET_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           if [ -d "ios-icons" ]; then
             echo "Kopiere App-Icons aus ios-icons..."
-            # Alle PNGs und Contents.json kopieren (Podfile ausschließen)
             find ios-icons -name "*.png" -o -name "Contents.json" | xargs -I {} cp {} "$TARGET_DIR"/
           fi
 
