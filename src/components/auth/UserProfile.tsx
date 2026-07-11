@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen, Crown } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { STRIPE_MONTHLY_PRICE_ID } from '@/config/pricing';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
