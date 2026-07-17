@@ -166,8 +166,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         if (Capacitor.getPlatform() === 'ios') {
           const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
           const result = await SignInWithApple.authorize({
-            clientId: 'de.lernzeit.app.web', // Services ID (used as Supabase provider client id)
-            redirectURI: `${window.location.origin}/`,
+            // Native iOS: clientId MUST be the app's Bundle ID — that's the
+            // audience Apple embeds in the identity token when signing in via
+            // the native dialog. The Services ID (de.lernzeit.app.web) is only
+            // for the web/redirect flow.
+            clientId: 'de.lernzeit.app',
+            redirectURI: 'https://lernzeit.app/',
             scopes: 'email name',
             state: Math.random().toString(36).slice(2),
           });
@@ -191,6 +195,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           setLoading(false);
           return;
         }
+        console.error('[Apple Sign-In] native error:', nativeErr);
         throw nativeErr;
       }
 
@@ -202,9 +207,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
       if (error) throw error;
     } catch (error: any) {
+      console.error('[Apple Sign-In] failed:', error);
+      const detail = error?.message || error?.error_description || error?.code || 'Unbekannter Fehler';
       toast({
         title: "Fehler bei Apple-Anmeldung",
-        description: translateError(error.message),
+        description: translateError(detail) || detail,
         variant: "destructive",
       });
       setLoading(false);
