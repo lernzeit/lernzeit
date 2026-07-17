@@ -159,6 +159,41 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         localStorage.removeItem('lernzeit_pending_google_grade');
       }
 
+      // On native iOS use the native Sign in with Apple dialog and pass the
+      // identity token to Supabase (avoids the web redirect flow entirely).
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.getPlatform() === 'ios') {
+          const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+          const result = await SignInWithApple.authorize({
+            clientId: 'de.lernzeit.app.web', // Services ID (used as Supabase provider client id)
+            redirectURI: `${window.location.origin}/`,
+            scopes: 'email name',
+            state: Math.random().toString(36).slice(2),
+          });
+
+          const identityToken = result?.response?.identityToken;
+          if (!identityToken) throw new Error('Kein Apple Identity Token erhalten.');
+
+          const { error: idErr } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: identityToken,
+          });
+          if (idErr) throw idErr;
+
+          onAuthSuccess();
+          return;
+        }
+      } catch (nativeErr: any) {
+        // Cancel by user should be silent
+        const msg = String(nativeErr?.message || nativeErr?.code || '');
+        if (/cancel/i.test(msg) || nativeErr?.code === '1001') {
+          setLoading(false);
+          return;
+        }
+        throw nativeErr;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
