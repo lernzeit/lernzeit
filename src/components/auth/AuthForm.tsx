@@ -586,6 +586,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <GoogleIcon />
                   <span className="ml-2">Mit Google anmelden</span>
                 </Button>
+
+                {/* Apple Sign In (Apple Guideline 4.8) */}
+                <Button
+                  type="button"
+                  className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
+                  onClick={handleAppleSignIn}
+                  disabled={loading}
+                >
+                  <AppleIcon />
+                  <span className="ml-2">Mit Apple anmelden</span>
+                </Button>
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-5 animate-fade-in">
@@ -850,6 +861,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     >
                       <GoogleIcon />
                       <span className="ml-2">Mit Google registrieren</span>
+                    </Button>
+
+                    {/* Apple Sign Up (Apple Guideline 4.8) */}
+                    <Button
+                      type="button"
+                      className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
+                      onClick={handleAppleSignIn}
+                      disabled={loading}
+                    >
+                      <AppleIcon />
+                      <span className="ml-2">Mit Apple registrieren</span>
                     </Button>
                   </>
                 )}
