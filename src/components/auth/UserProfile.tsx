@@ -169,10 +169,14 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
     // Check if user signed in via Google
     const providers = user.app_metadata?.providers || [];
-    const isGoogleUser = providers.includes('google') || user.app_metadata?.provider === 'google';
+    const isOAuthUser =
+      providers.includes('google') ||
+      providers.includes('apple') ||
+      user.app_metadata?.provider === 'google' ||
+      user.app_metadata?.provider === 'apple';
     const hasExplicitRole = user.user_metadata?.role;
 
-    if (!isGoogleUser || hasExplicitRole) {
+    if (!isOAuthUser || hasExplicitRole) {
       localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
       return;
     }

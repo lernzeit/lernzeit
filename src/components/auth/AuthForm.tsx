@@ -22,6 +22,14 @@ const GoogleIcon = () => (
   </svg>
 );
 
+// Apple Icon SVG (official glyph shape, monochrome)
+const AppleIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path fill="currentColor" d="M16.365 1.43c0 1.14-.42 2.22-1.19 3.01-.82.85-2.16 1.51-3.27 1.42-.14-1.11.42-2.27 1.16-3.02.83-.85 2.24-1.48 3.3-1.41zM20.5 17.32c-.55 1.27-.82 1.83-1.53 2.95-.99 1.56-2.38 3.5-4.11 3.52-1.54.01-1.93-1-4.02-.99-2.09.01-2.52 1.01-4.06.99-1.73-.03-3.05-1.78-4.04-3.34C.29 16.24-.05 11.24 1.98 8.58c1.44-1.89 3.7-3 5.83-3 2.17 0 3.53 1.19 5.32 1.19 1.74 0 2.8-1.19 5.31-1.19 1.9 0 3.9 1.03 5.34 2.82-4.69 2.57-3.93 9.28-3.28 8.92z"/>
+  </svg>
+);
+
+
 interface AuthFormProps {
   onAuthSuccess: () => void;
 }
@@ -133,6 +141,34 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     } catch (error: any) {
       toast({
         title: "Fehler bei Google-Anmeldung",
+        description: translateError(error.message),
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    try {
+      // Store selected role/grade before OAuth redirect (reused by post-OAuth handler)
+      localStorage.setItem('lernzeit_pending_google_role', role);
+      if (role === 'child') {
+        localStorage.setItem('lernzeit_pending_google_grade', String(grade));
+      } else {
+        localStorage.removeItem('lernzeit_pending_google_grade');
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Fehler bei Apple-Anmeldung",
         description: translateError(error.message),
         variant: "destructive",
       });
@@ -550,6 +586,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <GoogleIcon />
                   <span className="ml-2">Mit Google anmelden</span>
                 </Button>
+
+                {/* Apple Sign In (Apple Guideline 4.8) */}
+                <Button
+                  type="button"
+                  className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
+                  onClick={handleAppleSignIn}
+                  disabled={loading}
+                >
+                  <AppleIcon />
+                  <span className="ml-2">Mit Apple anmelden</span>
+                </Button>
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-5 animate-fade-in">
@@ -814,6 +861,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     >
                       <GoogleIcon />
                       <span className="ml-2">Mit Google registrieren</span>
+                    </Button>
+
+                    {/* Apple Sign Up (Apple Guideline 4.8) */}
+                    <Button
+                      type="button"
+                      className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
+                      onClick={handleAppleSignIn}
+                      disabled={loading}
+                    >
+                      <AppleIcon />
+                      <span className="ml-2">Mit Apple registrieren</span>
                     </Button>
                   </>
                 )}
