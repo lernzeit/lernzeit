@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
+import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
@@ -96,13 +97,22 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const url = new URL(window.location.href);
       const fromUrl = url.searchParams.get('ref');
-      if (fromUrl && /^[A-Z0-9]{4,12}$/i.test(fromUrl)) {
-        const code = fromUrl.toUpperCase();
-        const payload = JSON.stringify({ code, expires: Date.now() + 30 * 86400_000 });
-        localStorage.setItem('lernzeit_referral_code', payload);
-        setReferralCode(code);
-        setTesterCode((prev) => prev || code);
-        return;
+      if (fromUrl) {
+        const check = validateReferralCode(fromUrl);
+        if (!check.valid) {
+          // Invalid `?ref=` in URL — inform the user rather than silently ignoring.
+          toast({
+            title: 'Empfehlungs-Code ungültig',
+            description: `${check.message} ${REFERRAL_CODE_HINT}`,
+            variant: 'destructive',
+          });
+        } else {
+          const payload = JSON.stringify({ code: check.normalized, expires: Date.now() + 30 * 86400_000 });
+          localStorage.setItem('lernzeit_referral_code', payload);
+          setReferralCode(check.normalized);
+          setTesterCode((prev) => prev || check.normalized);
+          return;
+        }
       }
       const stored = localStorage.getItem('lernzeit_referral_code');
       if (stored) {
@@ -115,6 +125,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         }
       }
     } catch { /* noop */ }
+    // toast is stable enough (memoized by useToast); ignore for eslint if needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getCaptchaErrorDescription = () => {
@@ -382,10 +394,27 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       }
 
       // Standard email registration
-      const manualCode = testerCode.trim().toUpperCase();
-      const effectiveReferral = role === 'parent'
-        ? (manualCode || referralCode || undefined)
-        : undefined;
+      const manualCodeRaw = testerCode.trim();
+      let effectiveReferral: string | undefined;
+      if (role === 'parent') {
+        if (manualCodeRaw) {
+          const check = validateReferralCode(manualCodeRaw);
+          if (!check.valid) {
+            toast({
+              title: 'Empfehlungs-Code ungültig',
+              description: `${check.message} ${REFERRAL_CODE_HINT}`,
+              variant: 'destructive',
+            });
+            setLoading(false);
+            if (isCaptchaEnabled) resetCaptcha();
+            return;
+          }
+          effectiveReferral = check.normalized;
+        } else if (referralCode) {
+          effectiveReferral = referralCode;
+        }
+      }
+      const manualCode = effectiveReferral ?? '';
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -891,12 +920,30 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                               value={testerCode}
                               onChange={(e) => setTesterCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
                               placeholder="z. B. ABC123"
-                              className="pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider"
+                              aria-invalid={testerCode.trim().length > 0 && !validateReferralCode(testerCode).valid}
+                              aria-describedby="tester-code-hint"
+                              className={`pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider ${
+                                testerCode.trim().length > 0 && !validateReferralCode(testerCode).valid
+                                  ? 'border-destructive focus:border-destructive'
+                                  : ''
+                              }`}
                             />
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte 2 Monate Premium statt 1.
-                          </p>
+                          {(() => {
+                            const check = validateReferralCode(testerCode);
+                            if (testerCode.trim().length > 0 && !check.valid) {
+                              return (
+                                <p id="tester-code-hint" className="text-xs text-destructive" role="alert">
+                                  {check.message} {REFERRAL_CODE_HINT}
+                                </p>
+                              );
+                            }
+                            return (
+                              <p id="tester-code-hint" className="text-xs text-muted-foreground">
+                                Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte 2 Monate Premium statt 1.
+                              </p>
+                            );
+                          })()}
                         </div>
                       )}
 
