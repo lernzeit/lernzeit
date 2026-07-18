@@ -185,6 +185,27 @@ workflows:
             exit 1
           fi
 
+          echo "--- Entitlements-Datei am erwarteten Pfad ---"
+          ls -la "$ENTITLEMENTS_PATH"
+
+          echo "--- CODE_SIGN_ENTITLEMENTS Treffer in project.pbxproj (erwartet: genau 2) ---"
+          grep -n "CODE_SIGN_ENTITLEMENTS" "$PBXPROJ_PATH" || true
+          MATCH_COUNT=$(grep -c "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" "$PBXPROJ_PATH" || true)
+          echo "Treffer: $MATCH_COUNT"
+          if [ "$MATCH_COUNT" -ne 2 ]; then
+            echo "ERROR: Erwartet 2 Treffer (Debug + Release), gefunden: $MATCH_COUNT"
+            exit 1
+          fi
+
+          echo "--- Integritätsprüfung der project.pbxproj ---"
+          plutil -lint "$PBXPROJ_PATH" || { echo "ERROR: project.pbxproj ist beschädigt (plutil)."; exit 1; }
+
+          echo "--- xcodebuild -list Sanity-Check ---"
+          xcodebuild -list -workspace ios/App/App.xcworkspace 2>&1 | tee /tmp/xcodebuild_list.txt || {
+            echo "Workspace noch nicht generiert (vor pod install) — versuche Projekt direkt..."
+            xcodebuild -list -project ios/App/App.xcodeproj || { echo "ERROR: project.pbxproj ist beschädigt (xcodebuild)."; exit 1; }
+          }
+
           EXPORT_OPTIONS_PATH="ios/App/ExportOptions.plist"
           echo "Schreibe explizite App-Store ExportOptions.plist (manuelles Signing mit Profil-Mapping)..."
           cat > "$EXPORT_OPTIONS_PATH" <<'EOF'
@@ -263,7 +284,17 @@ workflows:
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
             --export-options-plist "ios/App/ExportOptions.plist" \
-            --clean
+            --clean || {
+              echo "=== XCODEBUILD ERROR LOG ==="
+              if ls /tmp/xcodebuild_logs/*.log >/dev/null 2>&1; then
+                grep -B 5 -A 20 "error:" /tmp/xcodebuild_logs/*.log | tail -200
+                echo "=== TAIL DES LETZTEN LOGS ==="
+                tail -200 "$(ls -t /tmp/xcodebuild_logs/*.log | head -n 1)"
+              else
+                echo "Keine xcodebuild-Logs unter /tmp/xcodebuild_logs gefunden."
+              fi
+              exit 1
+            }
 
       - name: Verify Sign in with Apple in final IPA
         script: |
