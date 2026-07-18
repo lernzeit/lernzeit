@@ -36,8 +36,9 @@ const Index = () => {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isDemo = searchParams.get('demo') === 'true';
-  const [selectedGrade, setSelectedGrade] = useState<number | null>(isDemo ? 3 : null);
+  const isDemoParam = searchParams.get('demo') === 'true';
+  const [demoMode, setDemoMode] = useState<boolean>(isDemoParam);
+  const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery'>('normal');
@@ -57,9 +58,9 @@ const Index = () => {
       searchParams.delete('checkout');
       setSearchParams(searchParams, { replace: true });
     }
-    // Handle demo param (selectedGrade already set synchronously above)
+    // Handle demo param — enable demo mode but let visitors pick their grade
     if (searchParams.get('demo') === 'true') {
-      setSelectedGrade((g) => g ?? 3);
+      setDemoMode(true);
       searchParams.delete('demo');
       setSearchParams(searchParams, { replace: true });
     }
@@ -192,9 +193,18 @@ const Index = () => {
   }
 
   // Redirect unauthenticated visitors to /start (unless they requested auth or demo)
-  if (!user && !showAuth && !selectedGrade) {
+  if (!user && !showAuth && !selectedGrade && !demoMode) {
     navigate('/start', { replace: true });
     return null;
+  }
+
+  // Demo mode without a grade yet — show grade picker for anonymous visitors
+  if (!user && demoMode && !selectedGrade) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <GradeSelector onSelectGrade={handleGradeSelect} />
+      </Suspense>
+    );
   }
 
   // Show auth form if no user and auth is requested
