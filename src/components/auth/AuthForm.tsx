@@ -900,7 +900,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         </div>
                       )}
 
-                      {referralCode && (
+                      {referralCode && role === 'parent' && (
                         <div className="rounded-lg border-2 border-[#22d3ee]/40 bg-[#22d3ee]/10 px-4 py-3 animate-fade-in">
                           <p className="text-sm font-medium text-foreground">
                             🎉 Du wurdest eingeladen!
