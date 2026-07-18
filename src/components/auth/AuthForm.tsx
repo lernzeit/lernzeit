@@ -691,9 +691,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold">Konto erstellen</h3>
                   <p className="text-sm text-muted-foreground">
-                    {role === 'parent'
-                      ? 'Behalte den Lernfortschritt deiner Kinder im Blick'
-                      : 'Starte dein Lernabenteuer und verdiene Handyzeit'}
+                    Kinder lernen spielend, Eltern behalten den Überblick
                   </p>
                 </div>
 
