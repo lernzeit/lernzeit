@@ -920,12 +920,30 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                               value={testerCode}
                               onChange={(e) => setTesterCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
                               placeholder="z. B. ABC123"
-                              className="pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider"
+                              aria-invalid={testerCode.trim().length > 0 && !validateReferralCode(testerCode).valid}
+                              aria-describedby="tester-code-hint"
+                              className={`pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider ${
+                                testerCode.trim().length > 0 && !validateReferralCode(testerCode).valid
+                                  ? 'border-destructive focus:border-destructive'
+                                  : ''
+                              }`}
                             />
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte 2 Monate Premium statt 1.
-                          </p>
+                          {(() => {
+                            const check = validateReferralCode(testerCode);
+                            if (testerCode.trim().length > 0 && !check.valid) {
+                              return (
+                                <p id="tester-code-hint" className="text-xs text-destructive" role="alert">
+                                  {check.message} {REFERRAL_CODE_HINT}
+                                </p>
+                              );
+                            }
+                            return (
+                              <p id="tester-code-hint" className="text-xs text-muted-foreground">
+                                Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte 2 Monate Premium statt 1.
+                              </p>
+                            );
+                          })()}
                         </div>
                       )}
 
