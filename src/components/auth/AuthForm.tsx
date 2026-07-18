@@ -99,19 +99,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       const fromUrl = url.searchParams.get('ref');
       if (fromUrl) {
         const check = validateReferralCode(fromUrl);
-        if (check.valid) {
+        if (!check.valid) {
+          // Invalid `?ref=` in URL — inform the user rather than silently ignoring.
+          toast({
+            title: 'Empfehlungs-Code ungültig',
+            description: `${check.message} ${REFERRAL_CODE_HINT}`,
+            variant: 'destructive',
+          });
+        } else {
           const payload = JSON.stringify({ code: check.normalized, expires: Date.now() + 30 * 86400_000 });
           localStorage.setItem('lernzeit_referral_code', payload);
           setReferralCode(check.normalized);
           setTesterCode((prev) => prev || check.normalized);
           return;
         }
-        // Invalid `?ref=` in URL — inform the user rather than silently ignoring.
-        toast({
-          title: 'Empfehlungs-Code ungültig',
-          description: `${check.message} ${REFERRAL_CODE_HINT}`,
-          variant: 'destructive',
-        });
       }
       const stored = localStorage.getItem('lernzeit_referral_code');
       if (stored) {
