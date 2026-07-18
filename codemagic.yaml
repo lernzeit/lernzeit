@@ -131,11 +131,15 @@ workflows:
             /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Diese App benötigt keinen aktiven Zugriff auf Ihren Standort. Die Schnittstelle wird von System-Frameworks bereitgestellt.'" "$PLIST_PATH" || true
           fi
 
-          # 5. ERZWINGEN: Sign-in-with-Apple-Entitlements nach dem Neuaufbau der iOS-Plattform setzen.
-          # Codemagic löscht ios/ oben bewusst neu; deshalb muss die Datei hier erneut erstellt
-          # und im Xcode-Projekt mit exakt relativem Pfad App/App.entitlements verlinkt werden.
+      # WICHTIG: Der Entitlements-Patch MUSS nach `npx cap sync ios` und VOR `pod install`
+      # sowie `xcode-project use-profiles` laufen. Andernfalls überschreibt Capacitor die
+      # project.pbxproj oder das falsche Provisioning Profile wird verlinkt.
+      - name: Patch iOS entitlements & ExportOptions (post cap sync)
+        script: |
+          set -e
           ENTITLEMENTS_PATH="ios/App/App/App.entitlements"
           PBXPROJ_PATH="ios/App/App.xcodeproj/project.pbxproj"
+
           echo "Schreibe App.entitlements für Sign in with Apple..."
           cat > "$ENTITLEMENTS_PATH" <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -182,7 +186,7 @@ workflows:
           fi
 
           EXPORT_OPTIONS_PATH="ios/App/ExportOptions.plist"
-          echo "Schreibe explizite App-Store ExportOptions.plist..."
+          echo "Schreibe explizite App-Store ExportOptions.plist (manuelles Signing mit Profil-Mapping)..."
           cat > "$EXPORT_OPTIONS_PATH" <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -261,20 +265,46 @@ workflows:
             --export-options-plist "ios/App/ExportOptions.plist" \
             --clean
 
-          echo "Temporäre Archiv-Diagnose: kopiere App.entitlements neben das erzeugte .xcarchive und prüfe signierte Entitlements."
-          for APP_PATH in ios/App/*.xcarchive/Products/Applications/*.app build/ios/archive/*.xcarchive/Products/Applications/*.app; do
-            if [ -d "$APP_PATH" ]; then
-              ARCHIVE_PATH="${APP_PATH%%/Products/Applications/*}"
-              cp ios/App/App/App.entitlements "$ARCHIVE_PATH/App.entitlements.diagnostic"
-              codesign -d --entitlements :- "$APP_PATH" > /tmp/app_signed_entitlements.plist 2>/dev/null || true
-              cat /tmp/app_signed_entitlements.plist || true
-            fi
-          done
+      - name: Verify Sign in with Apple in final IPA
+        script: |
+          set -e
+          echo "Suche exportierte .ipa..."
+          IPA_PATH=$(ls build/ios/ipa/*.ipa 2>/dev/null | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            IPA_PATH=$(find . -name "*.ipa" -path "*/ipa/*" 2>/dev/null | head -n 1)
+          fi
+          if [ -z "$IPA_PATH" ] || [ ! -f "$IPA_PATH" ]; then
+            echo "ERROR: Keine .ipa gefunden."
+            exit 1
+          fi
+          echo "Prüfe IPA: $IPA_PATH"
+
+          rm -rf /tmp/ipa
+          mkdir -p /tmp/ipa
+          unzip -q "$IPA_PATH" -d /tmp/ipa
+
+          APP_BUNDLE=$(ls -d /tmp/ipa/Payload/*.app | head -n 1)
+          echo "App-Bundle: $APP_BUNDLE"
+
+          echo "--- Signierte Entitlements ---"
+          codesign -d --entitlements :- "$APP_BUNDLE" > /tmp/app_signed_entitlements.plist 2>/dev/null || true
+          cat /tmp/app_signed_entitlements.plist
+          grep -q "com.apple.developer.applesignin" /tmp/app_signed_entitlements.plist \
+            || { echo "ERROR: applesignin fehlt in signierten Entitlements der IPA."; exit 1; }
+
+          echo "--- Embedded Provisioning Profile ---"
+          security cms -D -i "$APP_BUNDLE/embedded.mobileprovision" > /tmp/embedded_profile.plist
+          grep -A2 "applesignin" /tmp/embedded_profile.plist \
+            || { echo "ERROR: applesignin fehlt im embedded.mobileprovision."; exit 1; }
+
+          echo "OK: Sign in with Apple ist in Entitlements und Provisioning Profile der IPA enthalten."
 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - ios/App/App.xcarchive
+      - /tmp/app_signed_entitlements.plist
+      - /tmp/embedded_profile.plist
 
     publishing:
       app_store_connect:
