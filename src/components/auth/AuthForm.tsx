@@ -881,7 +881,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       {role === 'parent' && (
                         <div className="space-y-2 animate-fade-in">
                           <Label htmlFor="tester-code" className="text-sm font-medium">
-                            Tester-Code <span className="text-muted-foreground font-normal">(optional)</span>
+                            Empfehlungs-Code <span className="text-muted-foreground font-normal">(optional)</span>
                           </Label>
                           <div className="relative">
                             <Sparkles className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -890,12 +890,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                               type="text"
                               value={testerCode}
                               onChange={(e) => setTesterCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
-                              placeholder="z. B. LERNZEIT2026"
+                              placeholder="z. B. ABC123"
                               className="pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider"
                             />
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Hast du einen Code als LernZeit-Familie erhalten? Trag ihn hier ein.
+                            Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte 2 Monate Premium statt 1.
                           </p>
                         </div>
                       )}
