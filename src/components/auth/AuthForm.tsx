@@ -382,6 +382,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       }
 
       // Standard email registration
+      const manualCode = testerCode.trim().toUpperCase();
+      const effectiveReferral = role === 'parent'
+        ? (manualCode || referralCode || undefined)
+        : undefined;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -391,19 +395,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             name,
             role,
             grade: role === 'child' ? grade : null,
-            tester_code: role === 'parent' && testerCode.trim()
-              ? testerCode.trim().toUpperCase()
-              : undefined,
-            referral_code: role === 'parent' && referralCode
-              ? referralCode
-              : undefined,
+            // Also send as tester_code — the server handles a mismatch gracefully
+            // (only real tester codes in `tester_codes` grant founding-family status).
+            tester_code: role === 'parent' && manualCode ? manualCode : undefined,
+            referral_code: effectiveReferral,
           },
           emailRedirectTo: `${window.location.origin}/`
         }
       });
 
       if (error) throw error;
-      if (role === 'parent' && referralCode) {
+      if (role === 'parent' && effectiveReferral) {
         localStorage.removeItem('lernzeit_referral_code');
       }
       navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
