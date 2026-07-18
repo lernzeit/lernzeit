@@ -29,6 +29,33 @@ const AppleIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
   </svg>
 );
 
+const UNKNOWN_ERROR_FALLBACK = 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.';
+
+const generateAppleRawNonce = () => {
+  const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => charset[byte % charset.length]).join('');
+};
+
+const sha256Hex = async (value: string) => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const getAppleErrorDescription = (error: any) => {
+  const detail = String(
+    error?.message ||
+    error?.error_description ||
+    error?.code ||
+    'Unbekannter Fehler'
+  );
+  const translated = translateError(detail);
+  return translated === UNKNOWN_ERROR_FALLBACK && detail !== 'Unbekannter Fehler'
+    ? detail
+    : translated;
+};
+
 
 interface AuthFormProps {
   onAuthSuccess: () => void;
@@ -165,15 +192,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const { Capacitor } = await import('@capacitor/core');
         if (Capacitor.getPlatform() === 'ios') {
           const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+          const rawNonce = generateAppleRawNonce();
+          const nonceDigest = await sha256Hex(rawNonce);
           const result = await SignInWithApple.authorize({
-            // Native iOS: clientId MUST be the app's Bundle ID — that's the
-            // audience Apple embeds in the identity token when signing in via
-            // the native dialog. The Services ID (de.lernzeit.app.web) is only
-            // for the web/redirect flow.
-            clientId: 'de.lernzeit.app',
-            redirectURI: 'https://lernzeit.app/',
             scopes: 'email name',
             state: Math.random().toString(36).slice(2),
+            nonce: nonceDigest,
           });
 
           const identityToken = result?.response?.identityToken;
@@ -182,6 +206,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           const { error: idErr } = await supabase.auth.signInWithIdToken({
             provider: 'apple',
             token: identityToken,
+            nonce: rawNonce,
           });
           if (idErr) throw idErr;
 
@@ -208,10 +233,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       if (error) throw error;
     } catch (error: any) {
       console.error('[Apple Sign-In] failed:', error);
-      const detail = error?.message || error?.error_description || error?.code || 'Unbekannter Fehler';
       toast({
         title: "Fehler bei Apple-Anmeldung",
-        description: translateError(detail) || detail,
+        description: getAppleErrorDescription(error),
         variant: "destructive",
       });
       setLoading(false);

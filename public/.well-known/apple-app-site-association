@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "REPLACE_WITH_TEAMID.de.lernzeit.app",
+        "appID": "367Y2UUXJG.de.lernzeit.app",
         "paths": [
           "/",
           "/?*",
@@ -18,6 +18,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["REPLACE_WITH_TEAMID.de.lernzeit.app"]
+    "apps": ["367Y2UUXJG.de.lernzeit.app"]
   }
 }

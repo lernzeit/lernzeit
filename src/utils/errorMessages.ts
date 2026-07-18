@@ -16,6 +16,10 @@ const errorMap: Record<string, string> = {
   'token has expired or is invalid': 'Der Link ist abgelaufen oder ungültig. Bitte fordere einen neuen an.',
   'unable to validate email address: invalid format': 'Bitte gib eine gültige E-Mail-Adresse ein.',
   'rate limit exceeded': 'Zu viele Anfragen. Bitte versuche es später erneut.',
+  'authorizationerror error 1000': 'Apple-Anmeldung ist für diese iOS-App noch nicht korrekt aktiviert. Bitte die App mit Apple-Sign-In-Capability neu bauen.',
+  'invalid audience': 'Supabase akzeptiert dieses Apple-Token noch nicht. Bitte Bundle-ID „de.lernzeit.app“ als Apple Client-ID prüfen.',
+  'nonce mismatch': 'Apple-Anmeldung konnte nicht sicher validiert werden. Bitte App aktualisieren und erneut versuchen.',
+  'invalid nonce': 'Apple-Anmeldung konnte nicht sicher validiert werden. Bitte App aktualisieren und erneut versuchen.',
 };
 
 export function translateError(message: string): string {
