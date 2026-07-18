@@ -196,6 +196,7 @@ test.describe('Login Elternteil', () => {
 // -------------------------------------------------------------------------
 test.describe('Login Kind (Username)', () => {
   test('Username-Login löst Pseudo-E-Mail auf und öffnet Kind-Ansicht', async ({ page }) => {
+    test.setTimeout(90_000);
     await gotoStart(page);
     await openSignin(page);
 
@@ -203,11 +204,10 @@ test.describe('Login Kind (Username)', () => {
     await page.getByLabel('Passwort').fill(TEST_CHILD.password);
     await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
 
-    // Nach Login schließt sich der Auth-Dialog (Query-Param entfernt) oder es folgt Redirect
-    await page.waitForFunction(
-      () => !new URL(window.location.href).searchParams.get('auth'),
-      { timeout: 20_000 },
-    ).catch(() => {});
+    // Nach Login erscheint Kind-Dashboard („Lernen starten"-Button)
+    await expect(
+      page.getByRole('button', { name: /Lernen starten/i }),
+    ).toBeVisible({ timeout: 25_000 });
 
     // DB-Sync: Rolle=child, grade gesetzt
     const supabase = makeSupabase();
