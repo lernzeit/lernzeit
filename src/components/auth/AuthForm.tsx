@@ -932,42 +932,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </Button>
                 </form>
 
-                {/* Divider */}
-                {!(role === 'child' && childNoEmail) && (
-                  <>
-                    <div className="relative my-6">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-border"></div>
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">oder</span>
-                      </div>
-                    </div>
-
-                    {/* Google Sign Up */}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
-                      onClick={handleGoogleSignIn}
-                      disabled={loading}
-                    >
-                      <GoogleIcon />
-                      <span className="ml-2">Mit Google registrieren</span>
-                    </Button>
-
-                    {/* Apple Sign Up (Apple Guideline 4.8) */}
-                    <Button
-                      type="button"
-                      className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
-                      onClick={handleAppleSignIn}
-                      disabled={loading}
-                    >
-                      <AppleIcon />
-                      <span className="ml-2">Mit Apple registrieren</span>
-                    </Button>
-                  </>
-                )}
               </TabsContent>
             </Tabs>
           </CardContent>
