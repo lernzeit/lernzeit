@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
-import prerender from "vite-plugin-prerender";
-import Renderer from "@prerenderer/renderer-puppeteer";
+import prerender from "@prerenderer/rollup-plugin";
+import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 
 // Marketing-Routen, die für Crawler ohne JavaScript als statisches HTML
 // vorgerendert werden. Interaktive Routen (App/Login/Dashboard) bleiben
@@ -126,7 +126,7 @@ export default defineConfig(({ mode }) => ({
     // per `PRERENDER=false` deaktiviert werden.
     mode === 'production' && process.env.PRERENDER !== 'false' && prerender({
       routes: PRERENDER_ROUTES,
-      renderer: new Renderer({
+      renderer: new PuppeteerRenderer({
         renderAfterTime: 2000,
         headless: true,
         maxConcurrentRoutes: 2,
