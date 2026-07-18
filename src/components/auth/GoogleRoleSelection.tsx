@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Shield, Heart, GraduationCap, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
 
 interface GoogleRoleSelectionProps {
   userId: string;
@@ -51,9 +52,20 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
 
       // Link referral code (parents only): prefer manually entered code, fall back to stored
       if (role === 'parent') {
-        const code = (referralCode || '').trim().toUpperCase();
+        const rawCode = (referralCode || '').trim();
+        const check = rawCode ? validateReferralCode(rawCode) : null;
+        if (check && !check.valid) {
+          toast({
+            title: 'Empfehlungs-Code ungültig',
+            description: `${check.message} ${REFERRAL_CODE_HINT}`,
+            variant: 'destructive',
+          });
+          setSaving(false);
+          return;
+        }
+        const code = check?.valid ? check.normalized : '';
         try {
-          if (code && /^[A-Z0-9]{4,12}$/.test(code)) {
+          if (code) {
             const { data, error: refErr } = await supabase.rpc('link_referral', { p_code: code });
             if (refErr) throw refErr;
             const res = data as any;
@@ -169,17 +181,33 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
                 <Sparkles className="w-4 h-4" />
                 Empfehlungs-Code <span className="text-muted-foreground font-normal text-xs">(optional)</span>
               </Label>
-              <Input
-                id="referral-code-oauth"
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase())}
-                placeholder="z. B. ABC123"
-                className="uppercase tracking-wider font-mono"
-              />
-              <p className="text-xs text-muted-foreground">
-                Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte <strong>2 Monate Premium</strong> statt 1.
-              </p>
+              {(() => {
+                const check = validateReferralCode(referralCode);
+                const showError = referralCode.trim().length > 0 && !check.valid;
+                return (
+                  <>
+                    <Input
+                      id="referral-code-oauth"
+                      type="text"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase())}
+                      placeholder="z. B. ABC123"
+                      aria-invalid={showError}
+                      aria-describedby="referral-code-oauth-hint"
+                      className={`uppercase tracking-wider font-mono ${showError ? 'border-destructive focus:border-destructive' : ''}`}
+                    />
+                    {showError ? (
+                      <p id="referral-code-oauth-hint" className="text-xs text-destructive" role="alert">
+                        {check.message} {REFERRAL_CODE_HINT}
+                      </p>
+                    ) : (
+                      <p id="referral-code-oauth-hint" className="text-xs text-muted-foreground">
+                        Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte <strong>2 Monate Premium</strong> statt 1.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 
