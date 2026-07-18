@@ -97,13 +97,21 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const url = new URL(window.location.href);
       const fromUrl = url.searchParams.get('ref');
-      if (fromUrl && /^[A-Z0-9]{4,12}$/i.test(fromUrl)) {
-        const code = fromUrl.toUpperCase();
-        const payload = JSON.stringify({ code, expires: Date.now() + 30 * 86400_000 });
-        localStorage.setItem('lernzeit_referral_code', payload);
-        setReferralCode(code);
-        setTesterCode((prev) => prev || code);
-        return;
+      if (fromUrl) {
+        const check = validateReferralCode(fromUrl);
+        if (check.valid) {
+          const payload = JSON.stringify({ code: check.normalized, expires: Date.now() + 30 * 86400_000 });
+          localStorage.setItem('lernzeit_referral_code', payload);
+          setReferralCode(check.normalized);
+          setTesterCode((prev) => prev || check.normalized);
+          return;
+        }
+        // Invalid `?ref=` in URL — inform the user rather than silently ignoring.
+        toast({
+          title: 'Empfehlungs-Code ungültig',
+          description: `${check.message} ${REFERRAL_CODE_HINT}`,
+          variant: 'destructive',
+        });
       }
       const stored = localStorage.getItem('lernzeit_referral_code');
       if (stored) {
@@ -116,6 +124,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         }
       }
     } catch { /* noop */ }
+    // toast is stable enough (memoized by useToast); ignore for eslint if needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getCaptchaErrorDescription = () => {
