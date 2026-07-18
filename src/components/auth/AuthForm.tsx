@@ -149,14 +149,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      // Store selected role/grade before OAuth redirect so we can apply it after callback
-      localStorage.setItem('lernzeit_pending_google_role', role);
-      if (role === 'child') {
-        localStorage.setItem('lernzeit_pending_google_grade', String(grade));
-      } else {
-        localStorage.removeItem('lernzeit_pending_google_grade');
-      }
-
+      // Role/grade/referral will be captured AFTER OAuth via GoogleRoleSelection.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -178,14 +171,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleAppleSignIn = async () => {
     setLoading(true);
     try {
-      // Store selected role/grade before OAuth redirect (reused by post-OAuth handler)
-      localStorage.setItem('lernzeit_pending_google_role', role);
-      if (role === 'child') {
-        localStorage.setItem('lernzeit_pending_google_grade', String(grade));
-      } else {
-        localStorage.removeItem('lernzeit_pending_google_grade');
-      }
-
+      // Role/grade/referral will be captured AFTER OAuth via GoogleRoleSelection.
       // On native iOS use the native Sign in with Apple dialog and pass the
       // identity token to Supabase (avoids the web redirect flow entirely).
       try {
