@@ -232,10 +232,11 @@ workflows:
             --scheme "$XCODE_SCHEME" \
             --clean
 
-          echo "Temporäre Archiv-Diagnose: kopiere App.entitlements ins erzeugte .xcarchive und prüfe signierte Entitlements."
+          echo "Temporäre Archiv-Diagnose: kopiere App.entitlements neben das erzeugte .xcarchive und prüfe signierte Entitlements."
           for APP_PATH in ios/App/*.xcarchive/Products/Applications/*.app build/ios/archive/*.xcarchive/Products/Applications/*.app; do
             if [ -d "$APP_PATH" ]; then
-              cp ios/App/App/App.entitlements "$APP_PATH/App.entitlements.diagnostic"
+              ARCHIVE_PATH="${APP_PATH%%/Products/Applications/*}"
+              cp ios/App/App/App.entitlements "$ARCHIVE_PATH/App.entitlements.diagnostic"
               codesign -d --entitlements :- "$APP_PATH" > /tmp/app_signed_entitlements.plist 2>/dev/null || true
               cat /tmp/app_signed_entitlements.plist || true
             fi
