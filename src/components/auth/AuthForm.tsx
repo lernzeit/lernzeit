@@ -195,6 +195,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           const rawNonce = generateAppleRawNonce();
           const nonceDigest = await sha256Hex(rawNonce);
           const result = await SignInWithApple.authorize({
+            clientId: 'de.lernzeit.app',
+            redirectURI: 'https://lernzeit.app/',
             scopes: 'email name',
             state: Math.random().toString(36).slice(2),
             nonce: nonceDigest,
