@@ -129,6 +129,16 @@ workflows:
           if [ -f "$PLIST_PATH" ]; then
             echo "Füge NSLocationWhenInUseUsageDescription zur Info.plist hinzu..."
             /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Diese App benötigt keinen aktiven Zugriff auf Ihren Standort. Die Schnittstelle wird von System-Frameworks bereitgestellt.'" "$PLIST_PATH" || true
+
+            # 5. Export-Compliance: App nutzt ausschließlich Standard-TLS (HTTPS) → exempt.
+            # Setzt ITSAppUsesNonExemptEncryption=false, damit TestFlight-Upload nicht
+            # mehr mit 422 "Build is missing export compliance" abbricht.
+            # Deckt auch die zusätzliche Compliance-Frage für Frankreich ab: da keine
+            # nicht-exempte Verschlüsselung genutzt wird, ist keine französische
+            # Import-Deklaration nötig.
+            echo "Setze ITSAppUsesNonExemptEncryption=false in Info.plist..."
+            /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST_PATH" \
+              || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST_PATH"
           fi
 
       # WICHTIG: Der Entitlements-Patch MUSS nach `npx cap sync ios` und VOR `pod install`
