@@ -181,6 +181,32 @@ workflows:
             exit 1
           fi
 
+          EXPORT_OPTIONS_PATH="ios/App/ExportOptions.plist"
+          echo "Schreibe explizite App-Store ExportOptions.plist..."
+          cat > "$EXPORT_OPTIONS_PATH" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+          	<key>method</key>
+          	<string>app-store</string>
+          	<key>signingStyle</key>
+          	<string>manual</string>
+          	<key>teamID</key>
+          	<string>367Y2UUXJG</string>
+          	<key>provisioningProfiles</key>
+          	<dict>
+          		<key>de.lernzeit.app</key>
+          		<string>delernzeitapp_App_Store</string>
+          	</dict>
+          	<key>uploadSymbols</key>
+          	<true/>
+          	<key>compileBitcode</key>
+          	<false/>
+          </dict>
+          </plist>
+          EOF
+
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App
@@ -218,8 +244,10 @@ workflows:
 
           echo "Prüfe Entitlements-Datei und Xcode-Release-Build-Settings..."
           test -f "$ENTITLEMENTS_PATH"
+          test -f "ios/App/ExportOptions.plist"
           grep -q "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" "$PBXPROJ_PATH"
           /usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin:0" "$ENTITLEMENTS_PATH" | grep -q "Default"
+          /usr/libexec/PlistBuddy -c "Print :method" "ios/App/ExportOptions.plist" | grep -q "app-store"
 
           cd ios/App
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -showBuildSettings > /tmp/app_release_build_settings.txt
@@ -230,6 +258,7 @@ workflows:
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
+            --export-options-plist "ios/App/ExportOptions.plist" \
             --clean
 
           echo "Temporäre Archiv-Diagnose: kopiere App.entitlements neben das erzeugte .xcarchive und prüfe signierte Entitlements."
