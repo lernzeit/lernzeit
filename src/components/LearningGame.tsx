@@ -95,7 +95,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     updateDifficulty,
     reload,
     cancelLoading
-  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint, difficultySequence: adaptiveDifficultySequence });
+  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint, difficultySequence: adaptiveDifficultySequence, demoMode: !user });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   
