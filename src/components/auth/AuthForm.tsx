@@ -878,7 +878,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
                       </div>
 
-                      {(role === 'parent' || !childNoEmail) && (
+                      {role === 'parent' && (
                         <div className="space-y-2 animate-fade-in">
                           <Label htmlFor="tester-code" className="text-sm font-medium">
                             Empfehlungs-Code <span className="text-muted-foreground font-normal">(optional)</span>
