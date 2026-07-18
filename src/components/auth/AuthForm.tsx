@@ -878,7 +878,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
                       </div>
 
-                      {role === 'parent' && (
+                      {(role === 'parent' || !childNoEmail) && (
                         <div className="space-y-2 animate-fade-in">
                           <Label htmlFor="tester-code" className="text-sm font-medium">
                             Empfehlungs-Code <span className="text-muted-foreground font-normal">(optional)</span>
@@ -900,7 +900,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         </div>
                       )}
 
-                      {role === 'parent' && referralCode && (
+                      {referralCode && (
                         <div className="rounded-lg border-2 border-[#22d3ee]/40 bg-[#22d3ee]/10 px-4 py-3 animate-fade-in">
                           <p className="text-sm font-medium text-foreground">
                             🎉 Du wurdest eingeladen!
