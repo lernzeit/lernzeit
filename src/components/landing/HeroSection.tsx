@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { BookOpen, ArrowRight, Star, GraduationCap, Brain, Clock } from 'lucide-react';
+import { BookOpen, ArrowRight, GraduationCap, Brain, Clock, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
@@ -26,12 +26,8 @@ const HeroSection = () => {
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
         {/* Trust badge */}
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 inline-flex items-center gap-2 bg-card/80 backdrop-blur-sm border rounded-full px-4 py-2 mb-8 shadow-sm">
-          <div className="flex gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-3.5 h-3.5 fill-accent text-accent" />
-            ))}
-          </div>
-          <span className="text-xs text-muted-foreground">Lehrplanorientiert · Klasse 1–10</span>
+          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs text-muted-foreground">Lehrplanorientiert · Klasse 1–10 · DSGVO-konform</span>
         </div>
 
         {/* Logo */}
