@@ -394,10 +394,27 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       }
 
       // Standard email registration
-      const manualCode = testerCode.trim().toUpperCase();
-      const effectiveReferral = role === 'parent'
-        ? (manualCode || referralCode || undefined)
-        : undefined;
+      const manualCodeRaw = testerCode.trim();
+      let effectiveReferral: string | undefined;
+      if (role === 'parent') {
+        if (manualCodeRaw) {
+          const check = validateReferralCode(manualCodeRaw);
+          if (!check.valid) {
+            toast({
+              title: 'Empfehlungs-Code ungültig',
+              description: `${check.message} ${REFERRAL_CODE_HINT}`,
+              variant: 'destructive',
+            });
+            setLoading(false);
+            if (isCaptchaEnabled) resetCaptcha();
+            return;
+          }
+          effectiveReferral = check.normalized;
+        } else if (referralCode) {
+          effectiveReferral = referralCode;
+        }
+      }
+      const manualCode = effectiveReferral ?? '';
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
