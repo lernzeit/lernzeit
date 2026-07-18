@@ -101,6 +101,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const payload = JSON.stringify({ code, expires: Date.now() + 30 * 86400_000 });
         localStorage.setItem('lernzeit_referral_code', payload);
         setReferralCode(code);
+        setTesterCode((prev) => prev || code);
         return;
       }
       const stored = localStorage.getItem('lernzeit_referral_code');
@@ -108,6 +109,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const parsed = JSON.parse(stored);
         if (parsed?.code && parsed?.expires > Date.now()) {
           setReferralCode(parsed.code);
+          setTesterCode((prev) => prev || parsed.code);
         } else {
           localStorage.removeItem('lernzeit_referral_code');
         }
