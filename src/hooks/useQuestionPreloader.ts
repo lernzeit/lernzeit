@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getDemoQuestions } from '@/data/demoQuestions';
 
 export interface PreloadedQuestion {
   id: string;
@@ -242,6 +243,7 @@ interface UseQuestionPreloaderOptions {
   initialDifficulty?: 'easy' | 'medium' | 'hard';
   topicHint?: string;
   difficultySequence?: ('easy' | 'medium' | 'hard')[];
+  demoMode?: boolean;
 }
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
@@ -258,7 +260,8 @@ export const useQuestionPreloader = ({
   totalQuestions,
   initialDifficulty = 'medium',
   topicHint,
-  difficultySequence
+  difficultySequence,
+  demoMode = false,
 }: UseQuestionPreloaderOptions) => {
   const [questions, setQuestions] = useState<PreloadedQuestion[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -435,6 +438,23 @@ export const useQuestionPreloader = ({
     const recentTexts = getRecentQuestionTexts();
     const total = totalQuestionsRef.current;
 
+    // Demo-Modus: statisch gebündelte Fragen verwenden, kein Edge-Function-Aufruf.
+    if (demoMode) {
+      const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
+      if (!signal.aborted && mountedRef.current) {
+        if (demo.length === 0) {
+          setError('Für dieses Fach steht in der Demo aktuell keine Aufgabe bereit. Bitte wähle ein anderes Fach oder registriere dich kostenlos.');
+          setIsInitialLoading(false);
+        } else {
+          setQuestions(demo);
+          setLoadingProgress(demo.length);
+          setIsInitialLoading(false);
+        }
+      }
+      isLoadingRef.current = false;
+      return;
+    }
+
     // Use adaptive sequence if provided, otherwise fallback to hardcoded default
     const difficulties: ('easy' | 'medium' | 'hard')[] = difficultySequenceRef.current || ['medium', 'medium', 'easy', 'medium', 'hard'];
 
@@ -504,13 +524,13 @@ export const useQuestionPreloader = ({
     } else {
       console.error('❌ First question failed to load');
       if (mountedRef.current) {
-        setError('Frage konnte nicht geladen werden. Bitte prüfe deine Internetverbindung und versuche es erneut.');
+        setError('Aufgabe konnte gerade nicht geladen werden. Bitte versuche es erneut.');
         setIsInitialLoading(false);
       }
     }
 
     isLoadingRef.current = false;
-  }, [generateSingleQuestion, getRecentQuestionTexts, saveRecentQuestionTexts]);
+  }, [generateSingleQuestion, getRecentQuestionTexts, saveRecentQuestionTexts, demoMode]);
 
   const getQuestion = useCallback((index: number): PreloadedQuestion | null => {
     return questions[index] || null;
