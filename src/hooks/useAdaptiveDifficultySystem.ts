@@ -74,6 +74,22 @@ export function useAdaptiveDifficultySystem(
 
   // Load user's difficulty profile from database
   const loadDifficultyProfile = useCallback(async () => {
+    // Demo/anon-Modus: keine DB-Query, direkt Default-Profil setzen.
+    if (!userId) {
+      setDifficultyProfile({
+        user_id: '',
+        category,
+        grade,
+        current_level: 0.5,
+        mastery_score: 0,
+        learning_velocity: 0,
+        strengths: [],
+        weaknesses: [],
+        last_updated: new Date(),
+      });
+      return;
+    }
+
     try {
       const { data, error } = await (supabase as any)
         .from('user_difficulty_profiles')
