@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
+import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
 
 // Google Icon SVG component
 const GoogleIcon = () => (
