@@ -666,7 +666,42 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       : 'Starte dein Lernabenteuer und verdiene Handyzeit'}
                   </p>
                 </div>
-                
+
+                {/* Social sign-up (fast path) — shown above the manual form */}
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
+                  >
+                    <GoogleIcon />
+                    <span className="ml-2">Mit Google registrieren</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200"
+                    onClick={handleAppleSignIn}
+                    disabled={loading}
+                  >
+                    <AppleIcon />
+                    <span className="ml-2">Mit Apple registrieren</span>
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Rolle, Klassenstufe und Empfehlungs-Code werden im nächsten Schritt abgefragt.
+                  </p>
+                </div>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
+                  </div>
+                </div>
+
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-sm font-medium">Name</Label>
