@@ -803,7 +803,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               <>
                 <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
                 <p className="text-lg mb-2">{preloadError}</p>
-                <p className="text-sm text-muted-foreground mb-6">Prüfe deine Internetverbindung und versuche es erneut.</p>
+                <p className="text-sm text-muted-foreground mb-6">Bitte versuche es in einem Moment erneut.</p>
               </>
             ) : (
               <>
