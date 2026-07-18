@@ -131,6 +131,56 @@ workflows:
             /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Diese App benötigt keinen aktiven Zugriff auf Ihren Standort. Die Schnittstelle wird von System-Frameworks bereitgestellt.'" "$PLIST_PATH" || true
           fi
 
+          # 5. ERZWINGEN: Sign-in-with-Apple-Entitlements nach dem Neuaufbau der iOS-Plattform setzen.
+          # Codemagic löscht ios/ oben bewusst neu; deshalb muss die Datei hier erneut erstellt
+          # und im Xcode-Projekt mit exakt relativem Pfad App/App.entitlements verlinkt werden.
+          ENTITLEMENTS_PATH="ios/App/App/App.entitlements"
+          PBXPROJ_PATH="ios/App/App.xcodeproj/project.pbxproj"
+          echo "Schreibe App.entitlements für Sign in with Apple..."
+          cat > "$ENTITLEMENTS_PATH" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+          	<key>aps-environment</key>
+          	<string>production</string>
+          	<key>com.apple.developer.applesignin</key>
+          	<array>
+          		<string>Default</string>
+          	</array>
+          	<key>com.apple.developer.associated-domains</key>
+          	<array>
+          		<string>applinks:lernzeit.app</string>
+          		<string>webcredentials:lernzeit.app</string>
+          	</array>
+          </dict>
+          </plist>
+          EOF
+
+          echo "Verlinke Entitlements im Xcode-Projekt mit exakt App/App.entitlements..."
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          pbxproj = Path("ios/App/App.xcodeproj/project.pbxproj")
+          text = pbxproj.read_text()
+          text = re.sub(r"CODE_SIGN_ENTITLEMENTS = [^;]+;", "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;", text)
+
+          if "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" not in text:
+              text = text.replace(
+                  "ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;\n",
+                  "ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n",
+                  2,
+              )
+
+          pbxproj.write_text(text)
+          PY
+
+          if ! grep -q "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" "$PBXPROJ_PATH"; then
+            echo "ERROR: CODE_SIGN_ENTITLEMENTS ist nicht exakt auf App/App.entitlements gesetzt."
+            exit 1
+          fi
+
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App
@@ -160,12 +210,36 @@ workflows:
           echo "Setting build number to $NEW_BUILD_NUMBER"
           agvtool new-version -all $NEW_BUILD_NUMBER
 
+      - name: Verify Sign in with Apple entitlements
+        script: |
+          set -e
+          ENTITLEMENTS_PATH="ios/App/App/App.entitlements"
+          PBXPROJ_PATH="ios/App/App.xcodeproj/project.pbxproj"
+
+          echo "Prüfe Entitlements-Datei und Xcode-Release-Build-Settings..."
+          test -f "$ENTITLEMENTS_PATH"
+          grep -q "CODE_SIGN_ENTITLEMENTS = App/App.entitlements;" "$PBXPROJ_PATH"
+          /usr/libexec/PlistBuddy -c "Print :com.apple.developer.applesignin:0" "$ENTITLEMENTS_PATH" | grep -q "Default"
+
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -showBuildSettings > /tmp/app_release_build_settings.txt
+          grep "CODE_SIGN_ENTITLEMENTS = App/App.entitlements" /tmp/app_release_build_settings.txt
+
       - name: Build iOS
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
             --clean
+
+          echo "Temporäre Archiv-Diagnose: kopiere App.entitlements ins erzeugte .xcarchive und prüfe signierte Entitlements."
+          for APP_PATH in ios/App/*.xcarchive/Products/Applications/*.app build/ios/archive/*.xcarchive/Products/Applications/*.app; do
+            if [ -d "$APP_PATH" ]; then
+              cp ios/App/App/App.entitlements "$APP_PATH/App.entitlements.diagnostic"
+              codesign -d --entitlements :- "$APP_PATH" > /tmp/app_signed_entitlements.plist 2>/dev/null || true
+              cat /tmp/app_signed_entitlements.plist || true
+            fi
+          done
 
     artifacts:
       - build/ios/ipa/*.ipa
