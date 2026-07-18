@@ -560,6 +560,40 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
                   <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
                 </div>
+
+                {/* Social sign-in (fast path) — shown above the manual form */}
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
+                  >
+                    <GoogleIcon />
+                    <span className="ml-2">Mit Google anmelden</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200"
+                    onClick={handleAppleSignIn}
+                    disabled={loading}
+                  >
+                    <AppleIcon />
+                    <span className="ml-2">Mit Apple anmelden</span>
+                  </Button>
+                </div>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
+                  </div>
+                </div>
+
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-identifier" className="text-sm font-medium">E-Mail oder Benutzername</Label>
@@ -651,39 +685,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     Passwort vergessen?
                   </button>
                 )}
-
-                {/* Divider */}
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">oder</span>
-                  </div>
-                </div>
-
-                {/* Google Sign In */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <GoogleIcon />
-                  <span className="ml-2">Mit Google anmelden</span>
-                </Button>
-
-                {/* Apple Sign In (Apple Guideline 4.8) */}
-                <Button
-                  type="button"
-                  className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
-                  onClick={handleAppleSignIn}
-                  disabled={loading}
-                >
-                  <AppleIcon />
-                  <span className="ml-2">Mit Apple anmelden</span>
-                </Button>
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-5 animate-fade-in">
