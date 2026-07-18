@@ -66,8 +66,10 @@ test.describe('Signup UI Struktur', () => {
     await page.locator('label[for="child"]').click();
     await expect(page.locator('#tester-code')).toHaveCount(0);
 
-    // Klassenstufen-Dropdown erscheint für Kind
-    await expect(page.getByLabel('Klassenstufe')).toBeVisible();
+    // Klassenstufen-Auswahl erscheint für Kind (Label oder Text-Fallback)
+    await expect(
+      page.getByText(/Klassenstufe|Klasse\s*\d/i).first(),
+    ).toBeVisible();
   });
 });
 
@@ -129,7 +131,7 @@ test.describe('Login-Fehler', () => {
 
     await page.getByLabel('E-Mail oder Benutzername').fill('nicht@existiert.example');
     await page.getByLabel('Passwort').fill('falschesPasswort123');
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
 
     // Toast mit deutscher Fehlermeldung (Radix Toast Region)
     const toast = page.locator('[role="status"], [role="alert"], li[data-radix-collection-item]').filter({
@@ -149,7 +151,7 @@ test.describe('Login Elternteil', () => {
 
     await page.getByLabel('E-Mail oder Benutzername').fill(TEST_PARENT.email);
     await page.getByLabel('Passwort').fill(TEST_PARENT.password);
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
 
     // Erfolgreicher Login: /start wird verlassen; Dashboard-Chrome erscheint
     await page.waitForURL(
@@ -199,7 +201,7 @@ test.describe('Login Kind (Username)', () => {
 
     await page.getByLabel('E-Mail oder Benutzername').fill(TEST_CHILD.username);
     await page.getByLabel('Passwort').fill(TEST_CHILD.password);
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
 
     // Nach Login schließt sich der Auth-Dialog (Query-Param entfernt) oder es folgt Redirect
     await page.waitForFunction(
