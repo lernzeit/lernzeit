@@ -107,13 +107,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           return;
         }
         // Invalid `?ref=` in URL — inform the user rather than silently ignoring.
-        if (!check.valid) {
-          toast({
-            title: 'Empfehlungs-Code ungültig',
-            description: `${check.message} ${REFERRAL_CODE_HINT}`,
-            variant: 'destructive',
-          });
-        }
+        toast({
+          title: 'Empfehlungs-Code ungültig',
+          description: `${check.message} ${REFERRAL_CODE_HINT}`,
+          variant: 'destructive',
+        });
       }
       const stored = localStorage.getItem('lernzeit_referral_code');
       if (stored) {
