@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Shield, Heart, GraduationCap, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Shield, Heart, GraduationCap, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,6 +16,16 @@ interface GoogleRoleSelectionProps {
 export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionProps) {
   const [role, setRole] = useState<'parent' | 'child'>('child');
   const [grade, setGrade] = useState<number>(1);
+  const [referralCode, setReferralCode] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem('lernzeit_referral_code');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.code && parsed?.expires > Date.now()) return parsed.code as string;
+      }
+    } catch { /* ignore */ }
+    return '';
+  });
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -38,19 +49,30 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
         data: { role, ...(role === 'child' ? { grade } : {}) },
       });
 
-      // If a referral code was captured before OAuth, link it now (parents only)
+      // Link referral code (parents only): prefer manually entered code, fall back to stored
       if (role === 'parent') {
+        const code = (referralCode || '').trim().toUpperCase();
         try {
-          const stored = localStorage.getItem('lernzeit_referral_code');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed?.code && parsed?.expires > Date.now()) {
-              await supabase.rpc('link_referral', { p_code: parsed.code });
+          if (code && /^[A-Z0-9]{4,12}$/.test(code)) {
+            const { data, error: refErr } = await supabase.rpc('link_referral', { p_code: code });
+            if (refErr) throw refErr;
+            const res = data as any;
+            if (res?.success) {
+              toast({
+                title: 'Empfehlungscode eingelöst 🎉',
+                description: 'Du startest mit 2 Monaten Premium statt 1.',
+              });
+            } else if (res?.error && res.error !== 'no_code') {
+              toast({
+                title: 'Empfehlungscode nicht angewendet',
+                description: 'Der Code konnte nicht eingelöst werden — du kannst ihn später in den Einstellungen erneut probieren.',
+                variant: 'destructive',
+              });
             }
-            localStorage.removeItem('lernzeit_referral_code');
           }
+          localStorage.removeItem('lernzeit_referral_code');
         } catch (refErr) {
-          console.warn('Referral link after Google OAuth failed:', refErr);
+          console.warn('Referral link after OAuth failed:', refErr);
         }
       }
 
@@ -138,6 +160,26 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
                   </Button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {role === 'parent' && (
+            <div className="space-y-2">
+              <Label htmlFor="referral-code-oauth" className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Empfehlungs-Code <span className="text-muted-foreground font-normal text-xs">(optional)</span>
+              </Label>
+              <Input
+                id="referral-code-oauth"
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase())}
+                placeholder="z. B. ABC123"
+                className="uppercase tracking-wider font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte <strong>2 Monate Premium</strong> statt 1.
+              </p>
             </div>
           )}
 
