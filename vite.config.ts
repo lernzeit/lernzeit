@@ -3,6 +3,13 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
+import prerender from "vite-plugin-prerender";
+import Renderer from "@prerenderer/renderer-puppeteer";
+
+// Marketing-Routen, die für Crawler ohne JavaScript als statisches HTML
+// vorgerendert werden. Interaktive Routen (App/Login/Dashboard) bleiben
+// weiterhin klassische SPA.
+const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support'];
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -113,6 +120,22 @@ export default defineConfig(({ mode }) => ({
         ]
       }
     })
+  ,
+    // Prerendering nur beim Production-Build aktivieren. Wenn Puppeteer/Chromium
+    // in einer restriktiven Build-Umgebung nicht verfügbar ist, kann das Feature
+    // per `PRERENDER=false` deaktiviert werden.
+    mode === 'production' && process.env.PRERENDER !== 'false' && prerender({
+      routes: PRERENDER_ROUTES,
+      renderer: new Renderer({
+        renderAfterTime: 2000,
+        headless: true,
+        maxConcurrentRoutes: 2,
+        // Chromium in CI-Sandboxen (Docker, Codemagic) braucht diese Flags.
+        launchOptions: {
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        },
+      }),
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
