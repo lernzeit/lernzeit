@@ -181,53 +181,11 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
       return;
     }
 
-    // Check if we have a pending role from pre-OAuth selection
-    const pendingRole = localStorage.getItem('lernzeit_pending_google_role');
-    if (pendingRole && (pendingRole === 'parent' || pendingRole === 'child')) {
-      const pendingGrade = pendingRole === 'child'
-        ? parseInt(localStorage.getItem('lernzeit_pending_google_grade') || '1', 10)
-        : null;
-
-      // Auto-apply the pending role
-      (async () => {
-        try {
-          const updateData: any = {
-            role: pendingRole,
-            ...(pendingRole === 'child' ? { grade: pendingGrade } : { grade: null }),
-          };
-          await supabase.from('profiles').update(updateData).eq('id', user.id);
-          await supabase.auth.updateUser({
-            data: { role: pendingRole, ...(pendingRole === 'child' ? { grade: pendingGrade } : {}) },
-          });
-          // If a referral code was captured pre-OAuth, link it now (parents only)
-          if (pendingRole === 'parent') {
-            try {
-              const stored = localStorage.getItem('lernzeit_referral_code');
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed?.code && parsed?.expires > Date.now()) {
-                  await supabase.rpc('link_referral', { p_code: parsed.code });
-                }
-                localStorage.removeItem('lernzeit_referral_code');
-              }
-            } catch (refErr) {
-              console.warn('Referral link after Google OAuth failed:', refErr);
-            }
-          }
-          localStorage.setItem(`lernzeit_role_confirmed_${user.id}`, 'true');
-          localStorage.removeItem('lernzeit_pending_google_role');
-          localStorage.removeItem('lernzeit_pending_google_grade');
-          // Reload profile with correct role
-          loadProfile();
-        } catch (err) {
-          console.error('Failed to auto-apply Google role:', err);
-          setNeedsRoleSelection(true);
-        }
-      })();
-    } else {
-      // No pending role → show role selection dialog
-      setNeedsRoleSelection(true);
-    }
+    // Always show role selection dialog for OAuth users without a confirmed role.
+    // Clean up any legacy pre-OAuth hints so they don't interfere.
+    localStorage.removeItem('lernzeit_pending_google_role');
+    localStorage.removeItem('lernzeit_pending_google_grade');
+    setNeedsRoleSelection(true);
   }, [profile, user?.id]);
 
   // Check parent link when profile is loaded

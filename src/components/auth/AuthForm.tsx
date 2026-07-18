@@ -101,6 +101,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const payload = JSON.stringify({ code, expires: Date.now() + 30 * 86400_000 });
         localStorage.setItem('lernzeit_referral_code', payload);
         setReferralCode(code);
+        setTesterCode((prev) => prev || code);
         return;
       }
       const stored = localStorage.getItem('lernzeit_referral_code');
@@ -108,6 +109,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const parsed = JSON.parse(stored);
         if (parsed?.code && parsed?.expires > Date.now()) {
           setReferralCode(parsed.code);
+          setTesterCode((prev) => prev || parsed.code);
         } else {
           localStorage.removeItem('lernzeit_referral_code');
         }
@@ -149,14 +151,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      // Store selected role/grade before OAuth redirect so we can apply it after callback
-      localStorage.setItem('lernzeit_pending_google_role', role);
-      if (role === 'child') {
-        localStorage.setItem('lernzeit_pending_google_grade', String(grade));
-      } else {
-        localStorage.removeItem('lernzeit_pending_google_grade');
-      }
-
+      // Role/grade/referral will be captured AFTER OAuth via GoogleRoleSelection.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -178,14 +173,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleAppleSignIn = async () => {
     setLoading(true);
     try {
-      // Store selected role/grade before OAuth redirect (reused by post-OAuth handler)
-      localStorage.setItem('lernzeit_pending_google_role', role);
-      if (role === 'child') {
-        localStorage.setItem('lernzeit_pending_google_grade', String(grade));
-      } else {
-        localStorage.removeItem('lernzeit_pending_google_grade');
-      }
-
+      // Role/grade/referral will be captured AFTER OAuth via GoogleRoleSelection.
       // On native iOS use the native Sign in with Apple dialog and pass the
       // identity token to Supabase (avoids the web redirect flow entirely).
       try {
@@ -394,6 +382,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       }
 
       // Standard email registration
+      const manualCode = testerCode.trim().toUpperCase();
+      const effectiveReferral = role === 'parent'
+        ? (manualCode || referralCode || undefined)
+        : undefined;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -403,19 +395,17 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             name,
             role,
             grade: role === 'child' ? grade : null,
-            tester_code: role === 'parent' && testerCode.trim()
-              ? testerCode.trim().toUpperCase()
-              : undefined,
-            referral_code: role === 'parent' && referralCode
-              ? referralCode
-              : undefined,
+            // Also send as tester_code — the server handles a mismatch gracefully
+            // (only real tester codes in `tester_codes` grant founding-family status).
+            tester_code: role === 'parent' && manualCode ? manualCode : undefined,
+            referral_code: effectiveReferral,
           },
           emailRedirectTo: `${window.location.origin}/`
         }
       });
 
       if (error) throw error;
-      if (role === 'parent' && referralCode) {
+      if (role === 'parent' && effectiveReferral) {
         localStorage.removeItem('lernzeit_referral_code');
       }
       navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
@@ -676,7 +666,42 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       : 'Starte dein Lernabenteuer und verdiene Handyzeit'}
                   </p>
                 </div>
-                
+
+                {/* Social sign-up (fast path) — shown above the manual form */}
+                <div className="space-y-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
+                  >
+                    <GoogleIcon />
+                    <span className="ml-2">Mit Google registrieren</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200"
+                    onClick={handleAppleSignIn}
+                    disabled={loading}
+                  >
+                    <AppleIcon />
+                    <span className="ml-2">Mit Apple registrieren</span>
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Rolle, Klassenstufe und Empfehlungs-Code werden im nächsten Schritt abgefragt.
+                  </p>
+                </div>
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
+                  </div>
+                </div>
+
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-sm font-medium">Name</Label>
@@ -856,7 +881,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       {role === 'parent' && (
                         <div className="space-y-2 animate-fade-in">
                           <Label htmlFor="tester-code" className="text-sm font-medium">
-                            Tester-Code <span className="text-muted-foreground font-normal">(optional)</span>
+                            Empfehlungs-Code <span className="text-muted-foreground font-normal">(optional)</span>
                           </Label>
                           <div className="relative">
                             <Sparkles className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
@@ -865,12 +890,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                               type="text"
                               value={testerCode}
                               onChange={(e) => setTesterCode(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
-                              placeholder="z. B. LERNZEIT2026"
+                              placeholder="z. B. ABC123"
                               className="pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider"
                             />
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Hast du einen Code als LernZeit-Familie erhalten? Trag ihn hier ein.
+                            Wurdest du von jemandem eingeladen? Trage den Code hier ein und erhalte 2 Monate Premium statt 1.
                           </p>
                         </div>
                       )}
@@ -907,42 +932,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </Button>
                 </form>
 
-                {/* Divider */}
-                {!(role === 'child' && childNoEmail) && (
-                  <>
-                    <div className="relative my-6">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-border"></div>
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">oder</span>
-                      </div>
-                    </div>
-
-                    {/* Google Sign Up */}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
-                      onClick={handleGoogleSignIn}
-                      disabled={loading}
-                    >
-                      <GoogleIcon />
-                      <span className="ml-2">Mit Google registrieren</span>
-                    </Button>
-
-                    {/* Apple Sign Up (Apple Guideline 4.8) */}
-                    <Button
-                      type="button"
-                      className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200 mt-3"
-                      onClick={handleAppleSignIn}
-                      disabled={loading}
-                    >
-                      <AppleIcon />
-                      <span className="ml-2">Mit Apple registrieren</span>
-                    </Button>
-                  </>
-                )}
               </TabsContent>
             </Tabs>
           </CardContent>
