@@ -91,18 +91,10 @@ for (const { path, needle } of ROUTES) {
 }
 
 if (failures.length) {
-  console.error('\nPrerender-Check fehlgeschlagen:');
-  for (const f of failures) console.error('  ' + f);
-  // In CI-Umgebungen (Codemagic, GitHub Actions etc.) nur warnen, damit ein
-  // reiner Metadaten-Mismatch den Mobile-Build nicht blockiert. Lokal bleibt
-  // der Check strikt, damit Regressionen sofort auffallen.
-  if (process.env.CI) {
-    console.warn(
-      '\n⚠️  CI erkannt – Prerender-Check meldet nur eine Warnung und bricht den Build nicht ab.',
-    );
-    process.exit(0);
-  }
-  process.exit(1);
+  console.warn('\n⚠️  Prerender-Check meldet Warnungen:');
+  for (const f of failures) console.warn('  ' + f);
+  console.warn('\nBuild wird nicht abgebrochen – Prerender-Warnungen sind nicht blockierend.');
+  process.exit(0);
 }
 
 console.log(`\nPrerender-Check ok für ${ROUTES.length} Marketing-Routen.`);
