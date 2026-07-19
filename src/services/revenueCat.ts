@@ -1,6 +1,9 @@
 import { Capacitor } from '@capacitor/core';
 
 const IOS_API_KEY = 'appl_zkfprSgXsfzzfCAUsdTWTCbhgir';
+// Android key not yet configured. When available, set here to enable RevenueCat
+// on Android as well. If empty, Android falls back to Stripe via usePremium.
+const ANDROID_API_KEY = '';
 export const PREMIUM_ENTITLEMENT_ID = 'premium';
 
 let initialized = false;
@@ -8,10 +11,21 @@ let initPromise: Promise<void> | null = null;
 
 export function isRevenueCatSupported(): boolean {
   try {
-    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+    if (!Capacitor.isNativePlatform()) return false;
+    const p = Capacitor.getPlatform();
+    if (p === 'ios') return !!IOS_API_KEY;
+    if (p === 'android') return !!ANDROID_API_KEY;
+    return false;
   } catch {
     return false;
   }
+}
+
+function getApiKey(): string {
+  const p = Capacitor.getPlatform();
+  if (p === 'ios') return IOS_API_KEY;
+  if (p === 'android') return ANDROID_API_KEY;
+  return '';
 }
 
 export async function initRevenueCat(appUserId?: string | null): Promise<void> {
@@ -24,7 +38,7 @@ export async function initRevenueCat(appUserId?: string | null): Promise<void> {
       const { Purchases, LOG_LEVEL } = await import('@revenuecat/purchases-capacitor');
       await Purchases.setLogLevel({ level: LOG_LEVEL.WARN });
       await Purchases.configure({
-        apiKey: IOS_API_KEY,
+        apiKey: getApiKey(),
         appUserID: appUserId ?? undefined,
       });
       initialized = true;
