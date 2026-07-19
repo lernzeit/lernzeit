@@ -85,6 +85,24 @@ if ('serviceWorker' in navigator && !isNativePlatform()) {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('SW registered: ', registration);
+        // Force reload when a new SW takes control, so cached routes/bundles
+        // (e.g. a missing new page like /konto-loeschen) refresh automatically.
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+        registration.addEventListener('updatefound', () => {
+          const nw = registration.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              // A new version is ready — activate it immediately.
+              nw.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
       })
       .catch((registrationError) => {
         console.log('SW registration failed: ', registrationError);
