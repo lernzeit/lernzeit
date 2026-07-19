@@ -5,6 +5,8 @@ import {
   initRevenueCat,
   identifyRevenueCatUser,
   isRevenueCatSupported,
+  verifyEntitlementActive,
+  getActivePlatform,
   PREMIUM_ENTITLEMENT_ID,
 } from '@/services/revenueCat';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -35,9 +37,7 @@ export function usePremium(): PremiumState {
     try {
       await initRevenueCat(user?.id ?? null);
       if (user?.id) await identifyRevenueCatUser(user.id);
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const { customerInfo } = await Purchases.getCustomerInfo();
-      const active = !!customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+      const active = await verifyEntitlementActive();
       setRcPremium(active);
     } catch (err) {
       console.warn('Premium check failed:', err);
@@ -87,9 +87,10 @@ export function usePremium(): PremiumState {
     };
   }, [check]);
 
-  // Listen for RevenueCat updates
+  // Listen for RevenueCat updates (native only – Web SDK exposes no listener API)
   useEffect(() => {
     if (!isRevenueCatSupported()) return;
+    if (getActivePlatform() === 'web') return;
     let cleanup: (() => void) | undefined;
     (async () => {
       try {

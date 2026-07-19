@@ -45,6 +45,7 @@
         "@radix-ui/react-toggle-group": "^1.1.0",
         "@radix-ui/react-tooltip": "^1.1.4",
         "@revenuecat/purchases-capacitor": "^13.2.3",
+        "@revenuecat/purchases-js": "^1.47.3",
         "@supabase/supabase-js": "^2.51.0",
         "@tanstack/react-query": "^5.56.2",
         "canvas-confetti": "^1.9.4",
@@ -552,6 +553,8 @@
     "@remix-run/router": ["@remix-run/router@1.20.0", "", {}, "sha512-mUnk8rPJBI9loFDZ+YzPGdeniYK+FTmRD1TMCz7ev2SNIozyKKpnGgsxO34u6Z4z/t0ITuu7voi/AshfsGsgFg=="],
 
     "@revenuecat/purchases-capacitor": ["@revenuecat/purchases-capacitor@13.2.3", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@revenuecat/purchases-capacitor/-/purchases-capacitor-13.2.3.tgz", { "dependencies": { "@revenuecat/purchases-typescript-internal-esm": "18.21.0" }, "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-fW10KEjRnDev5G/KLBkMHyE8XRrDv4ivzV+Jv/2ACj9u28CXAcc39323rKaYsQiiTen40JEyeQXBsQUtTNyFBg=="],
+
+    "@revenuecat/purchases-js": ["@revenuecat/purchases-js@1.47.3", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@revenuecat/purchases-js/-/purchases-js-1.47.3.tgz", {}, "sha512-CfM1BWBILcDVNwoAXtgYsGlpOxY7dFqioaToBWiK4UfZa4fqphHAeOcq1JUpHWrkNv8m25srB7qSBsaT1GEWJQ=="],
 
     "@revenuecat/purchases-typescript-internal-esm": ["@revenuecat/purchases-typescript-internal-esm@18.21.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@revenuecat/purchases-typescript-internal-esm/-/purchases-typescript-internal-esm-18.21.0.tgz", {}, "sha512-6aOc/RaWiIL8w69DzGZX9eenQ+dATc0ZcLbQlusFT28+6ODukSYyy4xPbVo7uZO5wkeZ0nRO74Yoi00kTOdfhg=="],
 
