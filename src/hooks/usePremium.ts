@@ -10,6 +10,7 @@ import {
   PREMIUM_ENTITLEMENT_ID,
 } from '@/services/revenueCat';
 import { useSubscription } from '@/hooks/useSubscription';
+import { trackEvent } from '@/utils/analytics';
 
 export interface PremiumState {
   isPremium: boolean;
@@ -38,7 +39,16 @@ export function usePremium(): PremiumState {
       await initRevenueCat(user?.id ?? null);
       if (user?.id) await identifyRevenueCatUser(user.id);
       const active = await verifyEntitlementActive();
-      setRcPremium(active);
+      setRcPremium((prev) => {
+        if (prev !== active) {
+          trackEvent('entitlement_status_updated', {
+            source: 'revenuecat',
+            platform: getActivePlatform() ?? 'unknown',
+            is_premium: active,
+          });
+        }
+        return active;
+      });
     } catch (err) {
       console.warn('Premium check failed:', err);
       setRcPremium(false);
@@ -97,7 +107,16 @@ export function usePremium(): PremiumState {
         const { Purchases } = await import('@revenuecat/purchases-capacitor');
         const callbackID = await Purchases.addCustomerInfoUpdateListener((info: any) => {
           const active = !!info?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
-          setRcPremium(active);
+          setRcPremium((prev) => {
+            if (prev !== active) {
+              trackEvent('entitlement_status_updated', {
+                source: 'revenuecat_listener',
+                platform: getActivePlatform() ?? 'unknown',
+                is_premium: active,
+              });
+            }
+            return active;
+          });
         });
         cleanup = () => {
           try {
