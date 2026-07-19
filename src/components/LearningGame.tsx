@@ -98,6 +98,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint, difficultySequence: adaptiveDifficultySequence, demoMode: !user });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
+  const [answerRecovered, setAnswerRecovered] = useState(false);
   
   // Active timer - only counts time spent answering questions
   const { elapsedTime, isRunning, start: startTimer, pause: pauseTimer, reset: resetTimer, formattedTime } = useActiveTimer();
@@ -461,13 +462,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     const correctAnswerText = getCorrectAnswerText();
     const userAnswerText = getUserAnswerText();
     
-    await fetchExplanation(
+    const result = await fetchExplanation(
       question.questionText,
       correctAnswerText,
       grade,
       subject,
       userAnswerText
     );
+    maybeRecoverAnswer(result, correctAnswerText, userAnswerText);
   };
 
   // Handle "Show Answer" button - marks as incorrect and shows answer + explanation
@@ -496,6 +498,46 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       subject,
       'Ich konnte die Antwort nicht finden.'
     );
+  };
+
+  // If the AI verification determined the user's answer was actually correct,
+  // flip the result, credit the score, and auto-report the broken question.
+  const maybeRecoverAnswer = (
+    result: { verdict: string | null; verifiedCorrectAnswer: string | null } | any,
+    statedAnswer: string,
+    userAnswerText: string,
+  ) => {
+    if (!question || answerRecovered || isCorrect || !hasAnswered) return;
+    const verdict = result?.verdict;
+    if (verdict !== 'user_correct' && verdict !== 'both_correct') return;
+    if (!userAnswerText || !userAnswerText.trim()) return;
+
+    setAnswerRecovered(true);
+    setIsCorrect(true);
+    setScore(prev => prev + 1);
+    setCorrectStreak(prev => prev + 1);
+
+    // Undo the "incorrect" penalty in the adaptive system
+    updateAdaptivePerformance(true, Math.max(1, Date.now() - questionStartTime));
+
+    triggerSparkle();
+    toast.success('Deine Antwort war doch richtig! Wird als korrekt gewertet. 🎉', {
+      description: 'Wir haben die Frage automatisch zur Prüfung markiert.',
+    });
+
+    // Background-report so the broken question gets cleaned/rotated
+    reportQuestion({
+      reason: 'wrong_answer',
+      details: `Auto-verified: Nutzerantwort "${userAnswerText}" war korrekt, System-Antwort "${statedAnswer}" wurde als falsch erkannt (verdict=${verdict}).`,
+      question: question.questionText,
+      statedAnswer,
+      userAnswer: userAnswerText,
+      explanation: result?.explanation,
+      grade,
+      subject,
+      templateId: question.id,
+    });
+    markReviewReported(question.questionText);
   };
 
   const getCorrectAnswerText = (): string => {
@@ -549,6 +591,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   };
 
   const handleNextQuestion = async () => {
+    setAnswerRecovered(false);
     if (currentIndex + 1 >= totalQuestions) {
       // Game complete - show completion screen and save to DB
       pauseTimer(); // Make sure timer is paused
