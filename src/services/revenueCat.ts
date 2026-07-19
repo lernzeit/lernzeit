@@ -7,7 +7,7 @@ const ANDROID_API_KEY = '';
 // RevenueCat Web Billing (Stripe) public API key. Starts with `rcb_`.
 // Configure in RevenueCat Dashboard → Project Settings → API Keys → Web Billing.
 // When empty, the web paywall uses the legacy Stripe direct checkout fallback.
-const WEB_API_KEY = '';
+const WEB_API_KEY = 'rcb_sb_JnGknqcExsrNbPQbXDLpxdEev';
 export const PREMIUM_ENTITLEMENT_ID = 'premium';
 
 export type RCPlatform = 'ios' | 'android' | 'web';
