@@ -63,7 +63,7 @@ export function usePremium(): PremiumState {
         });
         cleanup = () => {
           try {
-            Purchases.removeCustomerInfoUpdateListener({ callbackID: callbackID as any });
+            Purchases.removeCustomerInfoUpdateListener({ listenerToRemove: callbackID as any });
           } catch { /* ignore */ }
         };
       } catch { /* ignore */ }
