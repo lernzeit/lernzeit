@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, FileText, Building2, LifeBuoy } from 'lucide-react';
+import { Shield, FileText, Building2, LifeBuoy, Trash2 } from 'lucide-react';
 
 interface LegalFooterProps {
   className?: string;
@@ -45,6 +45,14 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
         >
           <LifeBuoy className="w-3.5 h-3.5" />
           Support
+        </Link>
+        <span className={`hidden sm:inline ${variant === 'dark' ? 'text-gray-600' : 'text-muted'}`}>•</span>
+        <Link
+          to="/konto-loeschen"
+          className={`flex items-center gap-1.5 transition-colors ${textClass}`}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Konto löschen
         </Link>
       </div>
       <p className={`text-center text-xs mt-2 ${variant === 'dark' ? 'text-gray-300' : 'text-muted-foreground'}`}>
