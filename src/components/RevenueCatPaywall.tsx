@@ -196,7 +196,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     );
   }
 
-  const isWeb = getActivePlatform() === 'web';
+  // Platform is available via getActivePlatform() if UI needs to branch later.
 
   const features = [
     'Alle Fächer & Klassenstufen',
