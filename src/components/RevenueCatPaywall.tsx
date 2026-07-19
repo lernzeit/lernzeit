@@ -17,6 +17,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePremium } from '@/hooks/usePremium';
 import { supabase } from '@/lib/supabase';
 import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
+import { trackEvent } from '@/utils/analytics';
+import { getActivePlatform } from '@/services/revenueCat';
+
+// Poll the entitlement a few times after a web purchase – the RC webhook
+// pipeline can take a moment to propagate before getCustomerInfo reflects it.
+async function pollEntitlement(maxTries = 5, delayMs = 1500): Promise<boolean> {
+  for (let i = 0; i < maxTries; i++) {
+    const active = await verifyEntitlementActive();
+    if (active) return true;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return false;
+}
 
 interface Props {
   open: boolean;
@@ -41,6 +54,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const startStripeFallback = async (plan: 'monthly' | 'yearly') => {
     setStripeFallbackLoading(plan);
     setActionError(null);
+    trackEvent('paywall_stripe_fallback_started', { plan });
     try {
       const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
       if (!priceId || !priceId.startsWith('price_')) {
@@ -59,6 +73,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
         description: 'Schließen Sie den Kauf im Browser ab – der Status wird beim nächsten App-Wechsel aktualisiert.',
       });
     } catch (err: any) {
+      trackEvent('paywall_stripe_fallback_failed', { plan, message: err?.message ?? 'unknown' });
       setActionError(
         err?.message
           ? `Alternative Zahlung fehlgeschlagen: ${err.message}`
@@ -78,27 +93,47 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     setLoading(true);
     setLoadError(null);
     setActionError(null);
+    trackEvent('paywall_offerings_load_started', { platform: getActivePlatform() ?? 'unknown' });
     try {
       await initRevenueCat(user?.id ?? null);
       const { monthly: m, annual: a } = await getOfferings();
       setMonthly(m);
       setAnnual(a);
       if (!m && !a) {
+        trackEvent('paywall_offerings_empty', { platform: getActivePlatform() ?? 'unknown' });
         setLoadError('Derzeit sind keine Abo-Pakete verfügbar. Bitte versuchen Sie es später erneut.');
+      } else {
+        trackEvent('paywall_offerings_loaded', {
+          has_monthly: !!m,
+          has_annual: !!a,
+          monthly_price: m?.priceString ?? null,
+          annual_price: a?.priceString ?? null,
+          platform: getActivePlatform() ?? 'unknown',
+        });
       }
     } catch (err: any) {
       console.error('Load offerings failed:', err);
+      trackEvent('paywall_offerings_failed', {
+        message: err?.message ?? 'unknown',
+        platform: getActivePlatform() ?? 'unknown',
+      });
       setLoadError(
         err?.message
           ? `Angebote konnten nicht geladen werden: ${err.message}`
           : 'Angebote konnten nicht geladen werden. Bitte prüfen Sie Ihre Internetverbindung.'
       );
+      toast({
+        title: 'Angebote nicht verfügbar',
+        description: 'Wir konnten die Abos gerade nicht laden. Bitte erneut versuchen.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (open) trackEvent('paywall_opened', { platform: getActivePlatform() ?? 'unknown' });
     void loadOfferings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
@@ -106,21 +141,57 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const purchase = async (pkg: NormalizedPackage) => {
     setPurchasing(pkg.identifier);
     setActionError(null);
+    const platform = getActivePlatform() ?? 'unknown';
+    trackEvent('paywall_purchase_started', {
+      package: pkg.identifier,
+      product: pkg.productIdentifier,
+      price: pkg.priceString,
+      platform,
+    });
     try {
       const outcome = await rcPurchasePackage(pkg, { customerEmail: user?.email ?? undefined });
-      if (outcome.userCancelled) return;
+      if (outcome.userCancelled) {
+        trackEvent('paywall_purchase_cancelled', { package: pkg.identifier, platform });
+        toast({ title: 'Kauf abgebrochen', description: 'Sie können jederzeit erneut starten.' });
+        return;
+      }
+      // On web (RC Web Billing / Stripe) the entitlement webhook may lag a
+      // moment. Poll a few times so the paywall refreshes without a manual reload.
       let active = outcome.active;
-      if (!active) active = await verifyEntitlementActive();
+      if (!active) {
+        active = platform === 'web' ? await pollEntitlement() : await verifyEntitlementActive();
+      }
       await refresh();
       if (active) {
+        trackEvent('paywall_purchase_completed', {
+          package: pkg.identifier,
+          product: pkg.productIdentifier,
+          platform,
+        });
+        trackEvent('entitlement_activated', { source: platform === 'web' ? 'revenuecat_web' : 'revenuecat_native' });
         toast({ title: 'Willkommen bei Premium!', description: 'Alle Funktionen sind jetzt freigeschaltet.' });
         onPurchased?.();
         onOpenChange(false);
       } else {
+        trackEvent('paywall_purchase_pending', { package: pkg.identifier, platform });
+        toast({
+          title: 'Kauf verarbeitet',
+          description: 'Der Kauf wurde übermittelt, ist aber noch nicht aktiv. Bitte in Kürze „Käufe wiederherstellen“ nutzen.',
+        });
         setActionError('Kauf abgeschlossen, aber Premium konnte nicht aktiviert werden. Bitte versuchen Sie „Käufe wiederherstellen“.');
       }
     } catch (err: any) {
       console.error('Purchase failed:', err);
+      trackEvent('paywall_purchase_failed', {
+        package: pkg.identifier,
+        platform,
+        message: err?.message ?? 'unknown',
+      });
+      toast({
+        title: 'Kauf fehlgeschlagen',
+        description: err?.message ?? 'Bitte versuchen Sie es erneut.',
+        variant: 'destructive',
+      });
       setActionError(
         err?.message
           ? `Kauf fehlgeschlagen: ${err.message}`
@@ -134,18 +205,30 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const restore = async () => {
     setRestoring(true);
     setActionError(null);
+    const platform = getActivePlatform() ?? 'unknown';
+    trackEvent('paywall_restore_started', { platform });
     try {
       let active = await rcRestorePurchases();
       if (!active) active = await verifyEntitlementActive();
       await refresh();
       if (active) {
+        trackEvent('paywall_restore_completed', { platform });
+        trackEvent('entitlement_activated', { source: 'restore' });
         toast({ title: 'Käufe wiederhergestellt', description: 'Premium ist wieder aktiv.' });
         onOpenChange(false);
       } else {
+        trackEvent('paywall_restore_empty', { platform });
+        toast({ title: 'Keine Käufe gefunden', description: 'Es sind aktuell keine aktiven Abos hinterlegt.' });
         setActionError('Keine aktiven Käufe gefunden.');
       }
     } catch (err: any) {
       console.error('Restore failed:', err);
+      trackEvent('paywall_restore_failed', { platform, message: err?.message ?? 'unknown' });
+      toast({
+        title: 'Wiederherstellung fehlgeschlagen',
+        description: err?.message ?? 'Bitte versuchen Sie es erneut.',
+        variant: 'destructive',
+      });
       setActionError(
         err?.message
           ? `Wiederherstellung fehlgeschlagen: ${err.message}`
