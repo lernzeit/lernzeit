@@ -150,6 +150,14 @@ const bootstrap = async () => {
       } catch (e) {
         console.warn('Deep link handler init failed:', e);
       }
+
+      // Initialize RevenueCat (iOS only, no-op elsewhere)
+      try {
+        const { initRevenueCat } = await import('./services/revenueCat');
+        await initRevenueCat();
+      } catch (e) {
+        console.warn('RevenueCat init failed:', e);
+      }
     }
 
     const { default: App } = await import('./App.tsx');
