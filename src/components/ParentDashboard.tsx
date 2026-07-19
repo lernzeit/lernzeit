@@ -14,6 +14,9 @@ import { useChildDaySummary } from '@/hooks/useChildDaySummary';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePremium } from '@/hooks/usePremium';
+import { getActivePlatform } from '@/services/revenueCat';
+import { Capacitor } from '@capacitor/core';
 import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
@@ -171,6 +174,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const { isPremium, isTrialing, trialJustExpired, trialDaysLeft, status, currentPeriodEnd } = useSubscription();
+  const { source: premiumSource } = usePremium();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -259,6 +263,36 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleManageSubscription = async () => {
+    // If premium was purchased through RevenueCat / an app store (iOS or
+    // Android), Apple/Google require that we deep-link to the OS subscription
+    // settings instead of opening a web billing portal.
+    const rcPlatform = getActivePlatform();
+    const isAppStoreSub =
+      premiumSource === 'revenuecat' &&
+      (rcPlatform === 'ios' || rcPlatform === 'android');
+
+    if (isAppStoreSub) {
+      const url =
+        rcPlatform === 'ios'
+          ? 'itms-apps://apps.apple.com/account/subscriptions'
+          : 'https://play.google.com/store/account/subscriptions';
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const { Browser } = await import('@capacitor/browser').catch(() => ({ Browser: null } as any));
+          if (Browser?.open) {
+            await Browser.open({ url });
+          } else {
+            window.location.href = url;
+          }
+        } else {
+          window.open(url, '_blank');
+        }
+      } catch {
+        window.location.href = url;
+      }
+      return;
+    }
+
     try {
       setPortalLoading(true);
       const { data, error } = await supabase.functions.invoke('customer-portal');
