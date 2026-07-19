@@ -294,7 +294,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
                     {purchasing === annual.identifier ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <span className="font-bold text-lg">{annual.product.priceString}</span>
+                      <span className="font-bold text-lg">{annual.priceString}</span>
                     )}
                   </div>
                 </div>
@@ -314,7 +314,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
                     {purchasing === monthly.identifier ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <span className="font-bold text-lg">{monthly.product.priceString}</span>
+                      <span className="font-bold text-lg">{monthly.priceString}</span>
                     )}
                   </div>
                 </div>
