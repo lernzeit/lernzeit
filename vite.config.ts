@@ -124,7 +124,7 @@ export default defineConfig(({ mode }) => ({
     // Prerendering nur beim Production-Build aktivieren. Wenn Puppeteer/Chromium
     // in einer restriktiven Build-Umgebung nicht verfügbar ist, kann das Feature
     // per `PRERENDER=false` deaktiviert werden.
-    mode === 'production' && process.env.PRERENDER !== 'false' && prerender({
+    mode === 'production' && process.env.PRERENDER !== 'false' && (prerender({
       routes: PRERENDER_ROUTES,
       renderer: new PuppeteerRenderer({
         renderAfterTime: 2000,
@@ -135,7 +135,7 @@ export default defineConfig(({ mode }) => ({
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         },
       }),
-    }),
+    }) as any),
   ].filter(Boolean),
   resolve: {
     alias: {
