@@ -21,6 +21,7 @@ const ROUTES = [
   { path: '/impressum',          needle: 'Impressum' },
   { path: '/datenschutz',        needle: 'Datenschutz' },
   { path: '/nutzungsbedingungen', needle: 'Nutzungsbedingungen' },
+  { path: '/konto-loeschen',     needle: 'Konto' },
 ];
 
 // Minimum bytes of visible text (excluding `<script>` blocks). A JS-only
