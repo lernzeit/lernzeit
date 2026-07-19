@@ -10,6 +10,8 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFallback, setIsFallback] = useState(false);
+  const [verdict, setVerdict] = useState<'stated_correct' | 'user_correct' | 'both_correct' | 'both_wrong' | 'unclear' | null>(null);
+  const [verifiedCorrectAnswer, setVerifiedCorrectAnswer] = useState<string | null>(null);
 
   const fetchExplanation = useCallback(async (
     question: string,
@@ -21,6 +23,8 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
     setIsLoading(true);
     setError(null);
     setIsFallback(false);
+    setVerdict(null);
+    setVerifiedCorrectAnswer(null);
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('ai-explain', {
@@ -43,7 +47,13 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
 
       setExplanation(data.explanation);
       setIsFallback(data.isFallback || false);
-      return data.explanation;
+      setVerdict(data.verdict ?? null);
+      setVerifiedCorrectAnswer(data.verifiedCorrectAnswer ?? null);
+      return {
+        explanation: data.explanation as string,
+        verdict: (data.verdict ?? null) as typeof verdict,
+        verifiedCorrectAnswer: (data.verifiedCorrectAnswer ?? null) as string | null,
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
@@ -53,7 +63,7 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
       const fallback = "Toll gemacht! Übung macht den Meister - versuche es gleich nochmal! 💪";
       setExplanation(fallback);
       setIsFallback(true);
-      return fallback;
+      return { explanation: fallback, verdict: null, verifiedCorrectAnswer: null };
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +73,8 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
     setExplanation(null);
     setError(null);
     setIsFallback(false);
+    setVerdict(null);
+    setVerifiedCorrectAnswer(null);
   }, []);
 
   return {
@@ -70,6 +82,8 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
     isLoading,
     error,
     isFallback,
+    verdict,
+    verifiedCorrectAnswer,
     fetchExplanation,
     clearExplanation
   };
