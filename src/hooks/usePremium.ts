@@ -57,13 +57,13 @@ export function usePremium(): PremiumState {
     (async () => {
       try {
         const { Purchases } = await import('@revenuecat/purchases-capacitor');
-        const handle = await Purchases.addCustomerInfoUpdateListener((info: any) => {
+        const callbackID = await Purchases.addCustomerInfoUpdateListener((info: any) => {
           const active = !!info?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
           setRcPremium(active);
         });
         cleanup = () => {
           try {
-            (Purchases as any).removeCustomerInfoUpdateListener?.(handle);
+            Purchases.removeCustomerInfoUpdateListener({ callbackID: callbackID as any });
           } catch { /* ignore */ }
         };
       } catch { /* ignore */ }
