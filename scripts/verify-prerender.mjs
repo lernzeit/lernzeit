@@ -11,7 +11,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const DIST = resolve(process.cwd(), 'dist');
-const SITE_URL = 'https://lernzeit.lovable.app';
+const SITE_URL = 'https://lernzeit.app';
 
 // Route → expected substring that MUST appear in the raw HTML (case-insensitive).
 // Pick text that only the fully rendered marketing page produces, so a bare

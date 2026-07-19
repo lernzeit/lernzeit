@@ -7,7 +7,7 @@ interface SeoProps {
   image?: string;
 }
 
-const SITE_URL = 'https://lernzeit.lovable.app';
+const SITE_URL = 'https://lernzeit.app';
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 const Seo = ({ title, description, path, image }: SeoProps) => {
