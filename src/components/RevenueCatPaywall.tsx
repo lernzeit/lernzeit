@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Crown, Check, Loader2 } from 'lucide-react';
+import { Crown, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
   initRevenueCat,
@@ -36,38 +36,49 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const [annual, setAnnual] = useState<PkgLike | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadOfferings = async () => {
     if (!open) return;
     if (!isRevenueCatSupported()) {
       setLoading(false);
       return;
     }
-    (async () => {
-      setLoading(true);
-      try {
-        await initRevenueCat(user?.id ?? null);
-        const { Purchases } = await import('@revenuecat/purchases-capacitor');
-        const { current } = await Purchases.getOfferings();
-        if (current) {
-          setMonthly((current.monthly as PkgLike) ?? null);
-          setAnnual((current.annual as PkgLike) ?? null);
-        }
-      } catch (err) {
-        console.error('Load offerings failed:', err);
-        toast({
-          title: 'Angebote konnten nicht geladen werden',
-          description: 'Bitte prüfen Sie Ihre Internetverbindung.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setLoadError(null);
+    setActionError(null);
+    try {
+      await initRevenueCat(user?.id ?? null);
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { current } = await Purchases.getOfferings();
+      const m = (current?.monthly as PkgLike) ?? null;
+      const a = (current?.annual as PkgLike) ?? null;
+      setMonthly(m);
+      setAnnual(a);
+      if (!m && !a) {
+        setLoadError('Derzeit sind keine Abo-Pakete verfügbar. Bitte versuchen Sie es später erneut.');
       }
-    })();
+    } catch (err: any) {
+      console.error('Load offerings failed:', err);
+      setLoadError(
+        err?.message
+          ? `Angebote konnten nicht geladen werden: ${err.message}`
+          : 'Angebote konnten nicht geladen werden. Bitte prüfen Sie Ihre Internetverbindung.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadOfferings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 
   const purchase = async (pkg: PkgLike) => {
     setPurchasing(pkg.identifier);
+    setActionError(null);
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const result: any = await Purchases.purchasePackage({ aPackage: pkg as any });
@@ -77,15 +88,17 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
         await refresh();
         onPurchased?.();
         onOpenChange(false);
+      } else {
+        setActionError('Kauf abgeschlossen, aber Premium konnte nicht aktiviert werden. Bitte versuchen Sie „Käufe wiederherstellen“.');
       }
     } catch (err: any) {
       if (!err?.userCancelled) {
         console.error('Purchase failed:', err);
-        toast({
-          title: 'Kauf fehlgeschlagen',
-          description: 'Bitte versuchen Sie es erneut.',
-          variant: 'destructive',
-        });
+        setActionError(
+          err?.message
+            ? `Kauf fehlgeschlagen: ${err.message}`
+            : 'Kauf fehlgeschlagen. Bitte versuchen Sie es erneut.'
+        );
       }
     } finally {
       setPurchasing(null);
@@ -94,6 +107,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
 
   const restore = async () => {
     setRestoring(true);
+    setActionError(null);
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { customerInfo } = await Purchases.restorePurchases();
@@ -103,11 +117,15 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
         await refresh();
         onOpenChange(false);
       } else {
-        toast({ title: 'Keine aktiven Käufe gefunden' });
+        setActionError('Keine aktiven Käufe gefunden.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Restore failed:', err);
-      toast({ title: 'Wiederherstellung fehlgeschlagen', variant: 'destructive' });
+      setActionError(
+        err?.message
+          ? `Wiederherstellung fehlgeschlagen: ${err.message}`
+          : 'Wiederherstellung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      );
     } finally {
       setRestoring(false);
     }
@@ -158,11 +176,29 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
         </ul>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center py-10 gap-2">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Angebote werden geladen …</p>
+          </div>
+        ) : loadError ? (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+            <div className="flex items-start gap-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{loadError}</span>
+            </div>
+            <Button size="sm" variant="outline" className="w-full" onClick={() => void loadOfferings()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Erneut versuchen
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
+            {actionError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2 text-xs text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{actionError}</span>
+              </div>
+            )}
             {annual && (
               <Card
                 className="p-4 border-2 border-primary cursor-pointer hover:bg-accent transition"
