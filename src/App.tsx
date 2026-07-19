@@ -18,6 +18,7 @@ const Nutzungsbedingungen = lazy(() => import("./pages/Nutzungsbedingungen"));
 const Impressum = lazy(() => import("./pages/Impressum"));
 const Support = lazy(() => import("./pages/Support"));
 const IdeaForum = lazy(() => import("./pages/IdeaForum"));
+const KontoLoeschen = lazy(() => import("./pages/KontoLoeschen"));
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,13 @@ const App = () => (
               <Support />
             </Suspense>
           } />
+          <Route path="/konto-loeschen" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <KontoLoeschen />
+            </Suspense>
+          } />
+          <Route path="/account-loeschen" element={<Navigate to="/konto-loeschen" replace />} />
+          <Route path="/delete-account" element={<Navigate to="/konto-loeschen" replace />} />
           <Route path="/ideen" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
               <IdeaForum />

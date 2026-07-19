@@ -9,7 +9,7 @@ import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 // Marketing-Routen, die für Crawler ohne JavaScript als statisches HTML
 // vorgerendert werden. Interaktive Routen (App/Login/Dashboard) bleiben
 // weiterhin klassische SPA.
-const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support'];
+const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support', '/konto-loeschen'];
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
