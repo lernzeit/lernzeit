@@ -1,57 +1,54 @@
 ## Ziel
-Robustes, schnelles und kostengünstiges Laden der Fragen über das Lovable AI Gateway – ohne OpenRouter/DeepSeek-Fallbacks. Klare Modellkette, harte Timeouts und sauberes Cache-Fallback.
 
-## Modellstrategie (nur Lovable AI Gateway)
-1. **Primär:** `google/gemini-2.5-flash-lite` – günstig (0.10 $ / 0.40 $ pro 1M Tokens), schnell, stabil.
-2. **Fallback 1:** `google/gemini-3.1-flash-lite-preview` – falls Primär 429/5xx.
-3. **Fallback 2:** `google/gemini-3-flash-preview` – stabiler Standard, etwas teurer aber sehr zuverlässig.
-4. **Letzter Fallback:** Cache / vordefinierte Aufgabe aus `question_cache`.
+Besucher auf einem Android-Gerät (mobiler Browser) bekommen einen dezenten, professionellen Hinweis, dass es LernZeit auch als native Android-App im Play Store gibt — mit direktem Link zum Store-Listing.
 
-OpenRouter wird als Provider entfernt bzw. deaktiviert (kein DeepSeek, keine Gemma). Nur ein Provider = weniger Fehlerquellen.
+## Warum kein QR-Code
 
-## Änderungen
+QR-Codes ergeben nur Sinn auf Desktop/Print — der Nutzer schaut das Handy ja bereits an, mit dem er installieren würde. Ein direkter „Im Play Store öffnen"-Button ist ein Tap statt Kamera-App + Scan. Deshalb: Smart App Banner statt QR.
 
-### 1. `supabase/functions/_shared/model-catalog.ts`
-- Einträge auf die drei Gemini-Modelle oben reduzieren.
-- Pro Modell: `provider: "lovable"`, `endpoint: https://ai.gateway.lovable.dev/v1/chat/completions`, `header: Lovable-API-Key`.
-- Deprecated IDs (`gemini-2.5-flash-lite-preview-06-17`, OpenRouter-IDs) entfernen.
+## UX-Muster: Smart App Banner (analog iOS Smart App Banner)
 
-### 2. `supabase/functions/_shared/ai-client.ts`
-- `callAI()` so umbauen, dass **echte Fallback-Kette** abgearbeitet wird: Primärmodell → Fallback 1 → Fallback 2.
-- **Harte Timeouts pro Versuch:** 10 s via `AbortController`. Bei Timeout sofort nächster Eintrag.
-- **Retry-Logik:** Bei 429/5xx einmal nächstes Modell, kein Re-try auf gleichem Modell.
-- Fehler 402 (Credits) sauber surface'n.
-- Tool-/JSON-Schema vereinfachen (nur Felder, die alle drei Modelle akzeptieren) – verhindert 400er beim Modellwechsel.
+Schmaler, sticky Banner am oberen Rand — nicht als modaler Interstitial, weil:
 
-### 3. `supabase/functions/ai-question-generator/index.ts`
-- Liest Modellkette aus `ai_model_config` (Reihenfolge: primary, fallback_models[]).
-- Gesamtbudget: max. 25 s. Wenn überschritten → Cache-Fallback.
-- Cache-Lookup VOR AI-Call beibehalten, Cache-Write nach Erfolg.
-- Logging pro Versuch (Modell, Dauer, Status) für Debugging.
+- Google straft Full-Screen App-Install-Interstitials in Search Rankings ab.
+- Nutzer, die die Website bewusst öffnen, sollen nicht blockiert werden.
 
-### 4. DB-Migration: `ai_model_config` für `question_generator`
-```text
-primary_model        = google/gemini-2.5-flash-lite
-fallback_models      = [google/gemini-3.1-flash-lite-preview,
-                        google/gemini-3-flash-preview]
-provider             = lovable
-temperature          = 0.7
-max_tokens           = 1500
-timeout_ms           = 10000
-```
+Muster erfolgreicher Apps (Spotify, Reddit, Medium):
 
-### 5. Cleanup
-- `OPENROUTER_API_KEY`-Referenzen aus AI-Client entfernen (Secret selbst bleibt erhalten, falls anderswo genutzt – nur prüfen).
-- Tote Code-Pfade für nicht-Lovable Provider entfernen.
+- App-Icon links, kurzer Text mittig, Primär-CTA rechts, Schließen-„×" ganz links.
+- Persistente Dismissal (localStorage) für z. B. 30 Tage — nicht bei jedem Reload nerven.
+- Nur einmal pro Session animiert einblenden (Slide-in nach ~600 ms), danach ohne Animation.
 
-## Validierung
-1. `supabase--deploy_edge_functions` für `ai-question-generator`.
-2. `supabase--curl_edge_functions` mit Beispiel-Request (Klasse 3 Mathe) – Antwort < 8 s erwartet.
-3. `supabase--edge_function_logs` prüfen: nur 1 Versuch nötig im Normalfall, Fallback nur bei Fehler.
-4. Im Preview Demo-Fragen laden lassen, Konsole + Netzwerk prüfen.
+## Trigger-Bedingungen (alle müssen zutreffen)
 
-## Erwartetes Ergebnis
-- Antwortzeit i. d. R. 2–5 s.
-- Klare Fehlermeldung statt Hänger bei Ausfall.
-- Kosten: ~0.10 $ pro 1M Input-Tokens, also Bruchteil eines Cents pro Sitzung.
-- Keine 404/400-Schleifen mehr durch tote OpenRouter-Modelle.
+1. `navigator.userAgent` enthält `Android` UND nicht `wv` (WebView) — verhindert Banner in der bereits installierten App.
+2. Nicht im Capacitor-Kontext (`window.Capacitor?.isNativePlatform()` = false).
+3. Kein `display-mode: standalone` (installierte PWA).
+4. Kein Dismissal-Flag in `localStorage` (Key `lernzeit_android_banner_dismissed` mit Ablauf 30 Tage).
+5. Route ist eine öffentliche Marketing-Route (`/`, `/start`, `/support`, `/impressum`, `/datenschutz`, `/nutzungsbedingungen`) — nicht während einer aktiven Lernsession oder im eingeloggten Dashboard, um Ablenkung zu vermeiden.
+
+## Komponenten & Dateien
+
+- **Neu:** `src/components/AndroidAppBanner.tsx` — die Bannerkomponente selbst. Nutzt Design-Tokens (`bg-card`, `border-border`, `text-primary`), das bestehende Book-Icon-Motiv aus dem Hero und Tailwind-Klassen (`fixed top-0 inset-x-0 z-50`, `pt-safe-top`). Inline SVG des Google-Play-Logos im CTA-Button.
+- **Neu:** `src/hooks/useAndroidAppBanner.ts` — kapselt Erkennung, Dismissal und Persistenz.
+- **Update:** `src/App.tsx` — Banner global mountet, aber die Komponente entscheidet selbst per Hook, ob sie rendert (kein Layout-Shift, wenn sie schwiegt).
+- **Update:** `index.html` — optionales `<meta name="google-play-app" content="app-id=de.lernzeit.app">` als semantisches Signal für Chrome/Google.
+
+## Copy (Deutsch)
+
+- Headline: „LernZeit-App für Android"
+- Sub: „Schneller starten. App immer dabei."
+- CTA-Button: „Im Play Store öffnen" → `https://play.google.com/store/apps/details?id=de.lernzeit.app&utm_source=web_banner`
+- Dismissal: „×" mit `aria-label="Hinweis schließen"`
+
+## Verhalten
+
+- Slide-in-Animation via Tailwind `animate-slide-down` (Keyframe ggf. neu in `tailwind.config.ts` / `index.css`).
+- CTA öffnet in neuem Tab (`target="_blank" rel="noopener"`), damit die Website-Session erhalten bleibt.
+- `utm_source=web_banner` (statt `emea_Med`), damit du in der Play Console die Herkunft „Web-Banner" sauber tracken kannst.
+- Banner respektiert `prefers-reduced-motion` (kein Slide-in bei Reduce-Motion).
+
+## Nicht Teil dieses Plans
+
+- iOS Smart App Banner (App Store) — kann analog nachgezogen werden, wenn iOS-Version live ist.
+- Serverseitiges Prerendering-Rendering des Banners (bewusst nur clientseitig, damit Prerender-Snapshots sauber bleiben und der Banner nur für echte Android-Nutzer erscheint).
