@@ -59,8 +59,9 @@ serve(async (req) => {
         { role: 'system', content: getSystemPrompt(safeGrade) },
         { role: 'user', content: prompt }
       ],
-      temperature: 0.3,
-    }, undefined, 'ai_explain');
+      temperature: 0.2,
+      response_format: { type: 'json_object' } as any,
+    } as any, undefined, 'ai_explain');
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -76,17 +77,33 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    const explanation = result.choices?.[0]?.message?.content?.trim();
+    const raw = result.choices?.[0]?.message?.content?.trim();
 
-    if (!explanation) {
+    if (!raw) {
       throw new Error('No explanation generated');
     }
 
-    console.log(`✅ Explanation generated (${explanation.length} chars)`);
+    // Parse structured JSON — model is instructed to return {verdict, verifiedCorrectAnswer, explanation}
+    let parsed: { verdict?: string; verifiedCorrectAnswer?: string; explanation?: string } = {};
+    try {
+      const jsonText = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+      parsed = JSON.parse(jsonText);
+    } catch (e) {
+      // Fallback: treat entire response as plain explanation
+      parsed = { explanation: raw, verdict: 'unclear' };
+    }
+
+    const explanation = (parsed.explanation || raw).trim();
+    const verdict = parsed.verdict || 'unclear';
+    const verifiedCorrectAnswer = parsed.verifiedCorrectAnswer || safeCorrect;
+
+    console.log(`✅ Explanation generated (${explanation.length} chars, verdict=${verdict})`);
 
     return new Response(JSON.stringify({
       success: true,
       explanation,
+      verdict,
+      verifiedCorrectAnswer,
       grade,
       subject
     }), {
@@ -156,37 +173,38 @@ function buildExplanationPrompt(
   subject: string
 ): string {
   const subjectGerman = getSubjectGerman(subject);
-  
-  let context = `Erkläre diese ${subjectGerman}-Aufgabe:
 
-**Aufgabe:** ${question}
-**Richtige Antwort:** ${correctAnswer}`;
+  let gradeHint = '';
+  if (grade <= 2) gradeHint = 'Sehr einfache Wörter und kurze Sätze.';
+  else if (grade <= 4) gradeHint = 'Schritt für Schritt, mit Alltagsbeispielen (Euro).';
+  else if (grade <= 6) gradeHint = 'Erkläre das Konzept dahinter.';
+  else gradeHint = 'Erkläre das Prinzip und die Methode.';
 
-  if (userAnswer && userAnswer !== correctAnswer) {
-    context += `
-**Antwort des Kindes:** ${userAnswer}
+  return `Du prüfst und erklärst eine ${subjectGerman}-Aufgabe für die Klasse ${grade}.
 
-Das Kind hat die falsche Antwort gegeben. Erkläre freundlich, warum die richtige Antwort "${correctAnswer}" ist und wie man darauf kommt.`;
-  } else {
-    context += `
+AUFGABE: ${question}
+ANGEGEBENE RICHTIGE ANTWORT: ${correctAnswer}
+ANTWORT DES KINDES: ${userAnswer ?? '(keine)'}
 
-Erkläre kurz und verständlich, warum die Antwort richtig ist.`;
-  }
+SCHRITT 1 — Prüfe unabhängig, was tatsächlich die korrekte Antwort ist. Ignoriere zunächst die "angegebene richtige Antwort".
+SCHRITT 2 — Vergleiche mit der "angegebenen richtigen Antwort" UND mit der "Antwort des Kindes".
+SCHRITT 3 — Bestimme das verdict:
+  • "stated_correct" — Die angegebene Antwort ist korrekt, das Kind lag falsch.
+  • "user_correct"   — Die Antwort des Kindes ist korrekt, die angegebene Antwort ist FALSCH.
+  • "both_correct"   — Beide sind akzeptabel (z.B. Synonym, Rundung).
+  • "both_wrong"     — Weder die angegebene noch die des Kindes stimmt.
+  • "unclear"        — Nicht eindeutig entscheidbar.
 
-  // Add grade-specific instruction with German locale reminders
-  context += "\n\nWICHTIG: Verwende ausschließlich deutsche Schreibweisen - Euro statt Dollar, Komma als Dezimaltrennzeichen, deutsche Maßeinheiten.";
-  
-  if (grade <= 2) {
-    context += "\nVerwende sehr einfache Wörter und kurze Sätze. Zeige bei Mathe den Rechenweg mit einfachen Zahlen.";
-  } else if (grade <= 4) {
-    context += "\nErkläre den Lösungsweg Schritt für Schritt. Verwende Beispiele aus dem deutschen Alltag (z.B. Einkaufen in Euro).";
-  } else if (grade <= 6) {
-    context += "\nErkläre das zugrundeliegende Konzept. Nenne ggf. ähnliche Aufgaben zum Üben.";
-  } else {
-    context += "\nErkläre das Prinzip und zeige, wie man ähnliche Aufgaben lösen kann.";
-  }
+SCHRITT 4 — Schreibe eine kindgerechte Erklärung (2-4 Sätze, ${gradeHint}). Deutsche Schreibweise: Euro (€), Komma-Dezimal, deutsche Einheiten. KEIN Markdown.
+  • Bei "user_correct": lobe das Kind ("Du hattest recht!") und erkläre kurz, warum SEINE Antwort stimmt.
+  • Bei "stated_correct" oder "both_wrong": erkläre freundlich die tatsächlich richtige Antwort.
 
-  return context;
+ANTWORTE AUSSCHLIESSLICH als JSON-Objekt (kein Markdown, kein Code-Block):
+{
+  "verdict": "stated_correct" | "user_correct" | "both_correct" | "both_wrong" | "unclear",
+  "verifiedCorrectAnswer": "<die tatsächlich korrekte Antwort als String>",
+  "explanation": "<kindgerechte Erklärung als reiner Fließtext>"
+}`;
 }
 
 function getSubjectGerman(subject: string): string {
