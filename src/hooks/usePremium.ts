@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/hooks/useAuth';
 import {
   initRevenueCat,
@@ -50,6 +51,42 @@ export function usePremium(): PremiumState {
     check();
   }, [check]);
 
+  // Refresh entitlement whenever the app returns to foreground.
+  // Covers cases where a purchase / cancel happened outside the app
+  // (App Store, Subscription settings, browser Stripe checkout, etc.).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void check();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    let cleanupNative: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      (async () => {
+        try {
+          const { App } = await import('@capacitor/app');
+          const handle = await App.addListener('appStateChange', (state) => {
+            if (state.isActive) void check();
+          });
+          const resumeHandle = await App.addListener('resume', () => {
+            void check();
+          });
+          cleanupNative = () => {
+            try { handle.remove(); } catch { /* ignore */ }
+            try { resumeHandle.remove(); } catch { /* ignore */ }
+          };
+        } catch { /* ignore */ }
+      })();
+    }
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      cleanupNative?.();
+    };
+  }, [check]);
+
   // Listen for RevenueCat updates
   useEffect(() => {
     if (!isRevenueCatSupported()) return;
@@ -84,6 +121,6 @@ export function usePremium(): PremiumState {
     isPremium: stripe.isPremium || stripe.isTrialing,
     loading: stripe.loading,
     source: stripe.isPremium || stripe.isTrialing ? 'stripe' : 'none',
-    refresh: async () => { /* Stripe refresh handled via useSubscription interval */ },
+    refresh: check,
   };
 }
