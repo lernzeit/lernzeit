@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "postbuild": "node scripts/verify-prerender.mjs",
+    "postinstall": "node scripts/patch-apple-sign-in.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test",
