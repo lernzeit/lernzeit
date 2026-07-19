@@ -7,22 +7,17 @@ import { toast } from '@/hooks/use-toast';
 import {
   initRevenueCat,
   isRevenueCatSupported,
-  PREMIUM_ENTITLEMENT_ID,
+  getOfferings,
+  purchasePackage as rcPurchasePackage,
+  restorePurchases as rcRestorePurchases,
+  verifyEntitlementActive,
+  getActivePlatform,
+  type NormalizedPackage,
 } from '@/services/revenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { usePremium } from '@/hooks/usePremium';
 import { supabase } from '@/lib/supabase';
 import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
-
-interface PkgLike {
-  identifier: string;
-  product: {
-    priceString: string;
-    title?: string;
-    description?: string;
-    identifier: string;
-  };
-}
 
 interface Props {
   open: boolean;
@@ -34,25 +29,14 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const { user } = useAuth();
   const { refresh } = usePremium();
   const [loading, setLoading] = useState(true);
-  const [monthly, setMonthly] = useState<PkgLike | null>(null);
-  const [annual, setAnnual] = useState<PkgLike | null>(null);
+  const [monthly, setMonthly] = useState<NormalizedPackage | null>(null);
+  const [annual, setAnnual] = useState<NormalizedPackage | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [stripeFallbackLoading, setStripeFallbackLoading] = useState<string | null>(null);
-
-  // Re-checks the RevenueCat entitlement directly and returns whether premium is active.
-  const verifyEntitlementActive = async (): Promise<boolean> => {
-    try {
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const { customerInfo } = await Purchases.getCustomerInfo();
-      return !!customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
-    } catch (err) {
-      console.warn('Entitlement re-check failed:', err);
-      return false;
-    }
-  };
+  const rcSupported = isRevenueCatSupported();
 
   // Fallback: start a Stripe Checkout in an external browser tab when RevenueCat is unreachable.
   const startStripeFallback = async (plan: 'monthly' | 'yearly') => {
@@ -88,7 +72,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
 
   const loadOfferings = async () => {
     if (!open) return;
-    if (!isRevenueCatSupported()) {
+    if (!rcSupported) {
       setLoading(false);
       return;
     }
@@ -97,10 +81,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     setActionError(null);
     try {
       await initRevenueCat(user?.id ?? null);
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const { current } = await Purchases.getOfferings();
-      const m = (current?.monthly as PkgLike) ?? null;
-      const a = (current?.annual as PkgLike) ?? null;
+      const { monthly: m, annual: a } = await getOfferings();
       setMonthly(m);
       setAnnual(a);
       if (!m && !a) {
@@ -123,14 +104,13 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.id]);
 
-  const purchase = async (pkg: PkgLike) => {
+  const purchase = async (pkg: NormalizedPackage) => {
     setPurchasing(pkg.identifier);
     setActionError(null);
     try {
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const result: any = await Purchases.purchasePackage({ aPackage: pkg as any });
-      let active = !!result?.customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
-      // Explicit re-check to guard against stale customerInfo in the purchase response.
+      const outcome = await rcPurchasePackage(pkg, { customerEmail: user?.email ?? undefined });
+      if (outcome.userCancelled) return;
+      let active = outcome.active;
       if (!active) active = await verifyEntitlementActive();
       await refresh();
       if (active) {
@@ -141,14 +121,12 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
         setActionError('Kauf abgeschlossen, aber Premium konnte nicht aktiviert werden. Bitte versuchen Sie „Käufe wiederherstellen“.');
       }
     } catch (err: any) {
-      if (!err?.userCancelled) {
-        console.error('Purchase failed:', err);
-        setActionError(
-          err?.message
-            ? `Kauf fehlgeschlagen: ${err.message}`
-            : 'Kauf fehlgeschlagen. Bitte versuchen Sie es erneut.'
-        );
-      }
+      console.error('Purchase failed:', err);
+      setActionError(
+        err?.message
+          ? `Kauf fehlgeschlagen: ${err.message}`
+          : 'Kauf fehlgeschlagen. Bitte versuchen Sie es erneut.'
+      );
     } finally {
       setPurchasing(null);
     }
@@ -158,9 +136,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     setRestoring(true);
     setActionError(null);
     try {
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const { customerInfo } = await Purchases.restorePurchases();
-      let active = !!customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+      let active = await rcRestorePurchases();
       if (!active) active = await verifyEntitlementActive();
       await refresh();
       if (active) {
@@ -181,20 +157,46 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     }
   };
 
-  if (!isRevenueCatSupported()) {
+  // If RevenueCat is not supported (e.g. Web without a Web Billing key, or Android
+  // before the RC Android key is set), show the direct Stripe checkout fallback UI.
+  if (!rcSupported) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Premium</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Crown className="h-6 w-6 text-warning" />
+              <DialogTitle>LernZeit Premium</DialogTitle>
+            </div>
             <DialogDescription>
-              In-App-Käufe sind nur in der iOS-App verfügbar. Nutzen Sie im Web bitte die Stripe-Zahlung.
+              Schalten Sie alle Funktionen für Ihre Familie frei.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-2">
+            <Button
+              className="w-full"
+              onClick={() => void startStripeFallback('yearly')}
+              disabled={stripeFallbackLoading !== null}
+            >
+              {stripeFallbackLoading === 'yearly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Jährlich – im Browser bezahlen
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void startStripeFallback('monthly')}
+              disabled={stripeFallbackLoading !== null}
+            >
+              {stripeFallbackLoading === 'monthly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Monatlich – im Browser bezahlen
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     );
   }
+
+  const isWeb = getActivePlatform() === 'web';
 
   const features = [
     'Alle Fächer & Klassenstufen',
