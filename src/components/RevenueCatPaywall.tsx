@@ -11,7 +11,6 @@ import {
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
   verifyEntitlementActive,
-  getActivePlatform,
   type NormalizedPackage,
 } from '@/services/revenueCat';
 import { useAuth } from '@/hooks/useAuth';
