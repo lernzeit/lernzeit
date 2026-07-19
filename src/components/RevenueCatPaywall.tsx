@@ -11,6 +11,8 @@ import {
 } from '@/services/revenueCat';
 import { useAuth } from '@/hooks/useAuth';
 import { usePremium } from '@/hooks/usePremium';
+import { supabase } from '@/lib/supabase';
+import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
 
 interface PkgLike {
   identifier: string;
@@ -38,6 +40,51 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const [restoring, setRestoring] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [stripeFallbackLoading, setStripeFallbackLoading] = useState<string | null>(null);
+
+  // Re-checks the RevenueCat entitlement directly and returns whether premium is active.
+  const verifyEntitlementActive = async (): Promise<boolean> => {
+    try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      return !!customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+    } catch (err) {
+      console.warn('Entitlement re-check failed:', err);
+      return false;
+    }
+  };
+
+  // Fallback: start a Stripe Checkout in an external browser tab when RevenueCat is unreachable.
+  const startStripeFallback = async (plan: 'monthly' | 'yearly') => {
+    setStripeFallbackLoading(plan);
+    setActionError(null);
+    try {
+      const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
+      if (!priceId || !priceId.startsWith('price_')) {
+        throw new Error('Preis ist derzeit nicht verfügbar.');
+      }
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { price_id: priceId },
+      });
+      if (error) throw error;
+      const url: string | undefined = data?.url;
+      if (!url) throw new Error('Checkout konnte nicht gestartet werden.');
+      // Open in the system browser so Stripe Checkout works even inside the app WebView.
+      window.open(url, '_blank');
+      toast({
+        title: 'Checkout geöffnet',
+        description: 'Schließen Sie den Kauf im Browser ab – der Status wird beim nächsten App-Wechsel aktualisiert.',
+      });
+    } catch (err: any) {
+      setActionError(
+        err?.message
+          ? `Alternative Zahlung fehlgeschlagen: ${err.message}`
+          : 'Alternative Zahlung fehlgeschlagen. Bitte versuchen Sie es später erneut.'
+      );
+    } finally {
+      setStripeFallbackLoading(null);
+    }
+  };
 
   const loadOfferings = async () => {
     if (!open) return;
@@ -82,10 +129,12 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const result: any = await Purchases.purchasePackage({ aPackage: pkg as any });
-      const active = !!result?.customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+      let active = !!result?.customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+      // Explicit re-check to guard against stale customerInfo in the purchase response.
+      if (!active) active = await verifyEntitlementActive();
+      await refresh();
       if (active) {
         toast({ title: 'Willkommen bei Premium!', description: 'Alle Funktionen sind jetzt freigeschaltet.' });
-        await refresh();
         onPurchased?.();
         onOpenChange(false);
       } else {
@@ -111,10 +160,11 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { customerInfo } = await Purchases.restorePurchases();
-      const active = !!customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+      let active = !!customerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+      if (!active) active = await verifyEntitlementActive();
+      await refresh();
       if (active) {
         toast({ title: 'Käufe wiederhergestellt', description: 'Premium ist wieder aktiv.' });
-        await refresh();
         onOpenChange(false);
       } else {
         setActionError('Keine aktiven Käufe gefunden.');
@@ -190,6 +240,30 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
               <RefreshCw className="h-4 w-4 mr-2" />
               Erneut versuchen
             </Button>
+            <div className="pt-2 border-t space-y-2">
+              <p className="text-xs text-muted-foreground text-center">
+                Alternativ per Kreditkarte / SEPA bezahlen:
+              </p>
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={() => void startStripeFallback('yearly')}
+                disabled={stripeFallbackLoading !== null}
+              >
+                {stripeFallbackLoading === 'yearly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Jährlich – im Browser bezahlen
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => void startStripeFallback('monthly')}
+                disabled={stripeFallbackLoading !== null}
+              >
+                {stripeFallbackLoading === 'monthly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Monatlich – im Browser bezahlen
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
