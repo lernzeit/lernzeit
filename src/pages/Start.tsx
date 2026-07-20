@@ -16,7 +16,7 @@ const Start = () => {
     <main className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="LernZeit – Lernen belohnen. Handyzeit verdienen."
-        description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Lehrplanorientiert für Klasse 1–10. Jetzt kostenlos starten."
+        description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Lehrplanorientiert für Klasse 1–10. Jetzt starten."
         path="/start"
       />
       <HeroSection />
@@ -30,7 +30,7 @@ const Start = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         <div className="relative">
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 tracking-tight">
-            Jetzt kostenlos starten
+            Jetzt starten
           </h2>
           <p className="text-muted-foreground mb-10 max-w-md mx-auto text-lg">
             Melde dich an und teste alle Funktionen – die ersten 4 Wochen sind kostenlos.
