@@ -33,7 +33,7 @@ const PricingComparison = () => {
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
           <span className="text-sm font-semibold text-accent uppercase tracking-wider">Preise</span>
           <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
-            Kostenlos starten,{' '}
+            Jetzt starten,{' '}
             <span className="bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               jederzeit upgraden
             </span>
@@ -66,7 +66,7 @@ const PricingComparison = () => {
               variant="outline"
               className="w-full mt-8 h-12 rounded-full font-semibold"
             >
-              Kostenlos starten
+              Jetzt starten
             </Button>
           </div>
 

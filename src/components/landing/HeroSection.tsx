@@ -27,7 +27,7 @@ const HeroSection = () => {
         {/* Trust badge */}
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 inline-flex items-center gap-2 bg-card/80 backdrop-blur-sm border rounded-full px-4 py-2 mb-8 shadow-sm">
           <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs text-muted-foreground">Lehrplanorientiert · Klasse 1–10 · DSGVO-konform</span>
+          <span className="text-xs text-muted-foreground">Lehrplanorientiert · Klasse 1–10</span>
         </div>
 
         {/* Logo */}
@@ -56,7 +56,7 @@ const HeroSection = () => {
             size="lg"
             className="h-14 px-10 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
-            Kostenlos starten
+            Jetzt starten
             <ArrowRight className="w-5 h-5 ml-1" />
           </Button>
           <Button
