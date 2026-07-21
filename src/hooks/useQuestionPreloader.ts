@@ -325,7 +325,9 @@ export const useQuestionPreloader = ({
           grade: gradeRef.current,
           subject: subjectRef.current,
           difficulty,
-          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-5) : [],
+          // Mehr Kontext an die Edge-Function schicken, damit Cache-Filter und
+          // KI-Prompt zuverlässig Wiederholungen vermeiden.
+          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : [],
           topicHint: topicHintRef.current || undefined
         }
       });
@@ -455,8 +457,13 @@ export const useQuestionPreloader = ({
       return;
     }
 
-    // Use adaptive sequence if provided, otherwise fallback to hardcoded default
-    const difficulties: ('easy' | 'medium' | 'hard')[] = difficultySequenceRef.current || ['medium', 'medium', 'easy', 'medium', 'hard'];
+    // Use adaptive sequence if provided, otherwise fallback to grade-appropriate default.
+    // Ab Klasse 5 wird „easy" für Klasse-6-Niveau schnell banal → mehr medium/hard.
+    const defaultSequence: ('easy' | 'medium' | 'hard')[] = gradeRef.current >= 5
+      ? ['medium', 'medium', 'medium', 'hard', 'hard']
+      : ['easy', 'medium', 'medium', 'medium', 'hard'];
+    const difficulties: ('easy' | 'medium' | 'hard')[] =
+      difficultySequenceRef.current || defaultSequence;
 
     console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
 
