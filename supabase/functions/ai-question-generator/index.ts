@@ -210,12 +210,13 @@ serve(async (req) => {
 
     // ─────────────────────────────────────────────────────────────────
     // CACHE-FIRST STRATEGIE
-    // Wenn kein topicHint (Lernplan-Modus) und genug Cache-Einträge vorhanden,
-    // serviere ~70% der Anfragen direkt aus dem Cache. Massive Latenz-Reduktion.
+    // Cache liefert nur bei ausreichend großem Pool und mit echter Zufallswahl,
+    // damit sich Fragen nicht wiederholen. Wahrscheinlichkeit bewusst niedrig,
+    // um mehr frische KI-Fragen zu erzeugen.
     // ─────────────────────────────────────────────────────────────────
-    const CACHE_FIRST_PROBABILITY = 0.7;
-    const CACHE_MIN_POOL = 15;
-    const CACHE_REFILL_THRESHOLD = 30;
+    const CACHE_FIRST_PROBABILITY = 0.35;
+    const CACHE_MIN_POOL = 40;
+    const CACHE_REFILL_THRESHOLD = 60;
 
     const SUPABASE_URL_EARLY = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SRK_EARLY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -230,18 +231,19 @@ serve(async (req) => {
           .eq('subject', subject)
           .eq('difficulty', difficulty)
           .order('times_served', { ascending: true })
-          .limit(20);
+          .limit(60);
 
         const poolSize = count ?? cachedPool?.length ?? 0;
 
         if (cachedPool && cachedPool.length > 0 && poolSize >= CACHE_MIN_POOL) {
-          // Client-seitig gegen excludeTexts filtern
-          const exclSet = new Set(excludeTexts.map((t) => t.trim()));
-          const candidates = cachedPool.filter((q: any) => !exclSet.has((q.question_text || '').trim()));
-          const pickFrom = candidates.length > 0 ? candidates : cachedPool;
-          // Aus den 10 wenigst-genutzten zufällig auswählen
-          const topLeastServed = pickFrom.slice(0, 10);
-          const picked = topLeastServed[Math.floor(Math.random() * topLeastServed.length)];
+          // Client-seitig gegen excludeTexts filtern (case-insensitiv)
+          const exclSet = new Set(excludeTexts.map((t) => t.trim().toLowerCase()));
+          const candidates = cachedPool.filter(
+            (q: any) => !exclSet.has(String(q.question_text || '').trim().toLowerCase())
+          );
+          const pickFrom = candidates.length >= 10 ? candidates : cachedPool;
+          // Vollständig zufällige Auswahl aus dem gesamten (gefilterten) Pool
+          const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)];
 
           console.log(`⚡ CACHE-FIRST hit (pool=${poolSize}): serving ${picked.id} (times_served=${picked.times_served})`);
 
