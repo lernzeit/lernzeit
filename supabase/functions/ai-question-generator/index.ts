@@ -820,7 +820,7 @@ function buildQuestionPrompt(
 
   let exclusionNote = '';
   if (excludeTexts && excludeTexts.length > 0) {
-    exclusionNote = `\n\nWICHTIG - Vermeide diese Fragen:\n${excludeTexts.slice(0, 5).map(t => `- "${t.substring(0, 50)}"`).join('\n')}`;
+    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten davon, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(0, 15).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nWähle stattdessen ein deutlich anderes Teilthema, einen anderen Aufgabentyp oder Kontext.`;
   }
 
   let topicNote = '';
@@ -878,10 +878,14 @@ function getSubjectGerman(subject: string): string {
 function getGradeGuidelines(grade: number): string {
   if (grade === 1) return 'Klasse 1: ZR bis 20, max 10 Wörter, einfache Alltagssprache';
   if (grade === 2) return 'Klasse 2: ZR bis 100, max 12 Wörter, einfache Sprache';
-  if (grade <= 4) return `Klasse ${grade}: Grundrechenarten, einfache Texte, Sachkunde`;
-  if (grade <= 6) return `Klasse ${grade}: Brüche, Dezimalzahlen, Grammatik, Geschichte`;
-  if (grade <= 8) return `Klasse ${grade}: Algebra, Gleichungen, Literatur, Wissenschaften`;
-  return `Klasse ${grade}: Erweiterte Algebra, Trigonometrie, komplexe Analysen`;
+  if (grade === 3) return 'Klasse 3: ZR bis 1000, Einmaleins, schriftliche Addition/Subtraktion, einfache Brüche, cm/m/kg/l';
+  if (grade === 4) return 'Klasse 4: ZR bis 1 Mio, schriftliche Multiplikation/Division, Dezimalzahlen (Geld/Länge), erste Terme, Koordinatensystem';
+  if (grade === 5) return 'Klasse 5: Negative Zahlen, Brüche (Erweitern/Kürzen), Dezimalzahlen, einfache Terme & lineare Gleichungen ax+b=c, Prozent-Grundideen, Dreieck/Viereck-Konstruktionen';
+  if (grade === 6) return 'Klasse 6: Prozent- und Zinsrechnung, Verhältnisse & direkte/indirekte Proportionalität, rationale Zahlen mit Vorzeichen, Terme mit Klammern, Gleichungen mit Brüchen, Kreis (Umfang/Fläche), Prismen (Volumen), Diagramme & Median. KEINE reinen Klasse-2-3-Rechnungen wie „25 − 13" oder „3 · 12".';
+  if (grade === 7) return 'Klasse 7: Zinsrechnung, Termumformungen (Ausklammern, Klammern), lineare Gleichungen mit Brüchen, Zuordnungen/proportional-antiproportional, Zylinder/Prismen, Stochastik (Baumdiagramm 1–2 Stufen)';
+  if (grade === 8) return 'Klasse 8: Lineare Funktionen y=mx+b, LGS (Einsetzen/Gleichsetzen), Ähnlichkeit/Strahlensätze, Kreis & Zylinder, Vierfeldertafel';
+  if (grade === 9) return 'Klasse 9: Pythagoras, quadratische Gleichungen (pq-Formel), quadratische Funktionen, Trigonometrie im rechtwinkligen Dreieck, mehrstufige Baumdiagramme';
+  return 'Klasse 10: Quadratische Funktionen (Scheitel-/Normalform), Exponentialfunktionen (Wachstum), Zinseszins, Bruchterme/-gleichungen, komplexere Trigonometrie & Wahrscheinlichkeit';
 }
 
 function getDifficultyGuidelines(difficulty: string, grade: number): { label: string; description: string } {
@@ -988,9 +992,15 @@ function getTypeSpecificInstructions(questionType: string): string {
 
 function getSubjectContentScope(subject: string, grade: number): string {
   const scopes: Record<string, (g: number) => string> = {
-    'math': (g) => g <= 4
-      ? 'Zahlen, Grundrechenarten, Geometrie, Größen & Messen, Sachaufgaben. Keine Textanalyse, keine Grammatik.'
-      : 'Algebra, Brüche, Dezimalzahlen, Gleichungen, Funktionen, Geometrie, Stochastik. Keine sprachlichen Analysen.',
+    'math': (g) => {
+      if (g <= 4) return 'Zahlen, Grundrechenarten, Geometrie, Größen & Messen, Sachaufgaben. Keine Textanalyse, keine Grammatik.';
+      if (g === 5) return 'Negative Zahlen, Brüche/Dezimalzahlen (Erweitern/Kürzen/Umwandeln), einfache Terme, lineare Gleichungen ax+b=c, erste Prozentrechnung, Dreieck/Viereck-Konstruktion, Lage-/Streuungsmaße. KEINE trivialen Aufgaben aus Klasse 1-3.';
+      if (g === 6) return 'Prozent- & Zinsrechnung (auch Prozentwert/Grundwert/Prozentsatz), Verhältnisse, direkt/indirekt proportionale Zuordnungen, rationale Zahlen (Vorzeichen), Termumformungen mit Klammern, lineare Gleichungen (auch mit Brüchen), Kreisumfang/-fläche, Volumen von Prismen, Diagramminterpretation & Median. FORBIDDEN: reine ZR-100/ZR-1000-Grundrechenarten, Einmaleins, „25 − 13"-Niveau, „3 · 12"-Muster — diese sind Klasse 2-3.';
+      if (g === 7) return 'Zinsrechnung (auch Zinseszins iterativ), Termumformungen, lineare Gleichungen mit Brüchen/Klammern, proportional/antiproportional, Zylinder & Prismen, Stochastik (Baumdiagramm), Strahlensätze (Vorbereitung).';
+      if (g === 8) return 'Lineare Funktionen (Steigung/y-Achsenabschnitt), LGS (Einsetzen/Gleichsetzen/Addition), Ähnlichkeit & Strahlensätze, Kreis & Zylinder, Vierfeldertafel/bedingte Häufigkeiten.';
+      if (g === 9) return 'Pythagoras (Anwendung), quadratische Gleichungen (pq-Formel), quadratische Funktionen (Scheitel/Nullstellen), Sinus/Kosinus/Tangens im rechtwinkligen Dreieck, mehrstufige Baumdiagramme, Wurzeln & Potenzgesetze.';
+      return 'Quadratische Funktionen (Scheitel-/Normalform, Transformationen), Exponentialfunktionen (Wachstum), Zinseszins, Bruchterme & Bruchgleichungen, komplexere Trigonometrie & Wahrscheinlichkeit mit Pfadregeln.';
+    },
     'german': (g) => g <= 4
       ? 'Rechtschreibung, Grammatik (Wortarten, Satzglieder), Lesen & Textverständnis, Wortschatz, Alphabet, Silben. KEINE Rechenaufgaben, KEINE Zahlenrätsel, KEINE Mathematik.'
       : 'Grammatik (Satzglieder, Zeitformen, Konjugation, Deklination), Rechtschreibung, Textanalyse, Literatur, Aufsatz, Wortschatz. KEINE Rechenaufgaben, KEINE Mathematik.',
