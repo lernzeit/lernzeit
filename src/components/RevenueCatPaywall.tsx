@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
 import { trackEvent } from '@/utils/analytics';
 import { getActivePlatform } from '@/services/revenueCat';
+import { Capacitor } from '@capacitor/core';
 
 // Poll the entitlement a few times after a web purchase – the RC webhook
 // pipeline can take a moment to propagate before getCustomerInfo reflects it.
@@ -49,6 +50,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [stripeFallbackLoading, setStripeFallbackLoading] = useState<string | null>(null);
   const rcSupported = isRevenueCatSupported();
+  const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 
   // Fallback: start a Stripe Checkout in an external browser tab when RevenueCat is unreachable.
   const startStripeFallback = async (plan: 'monthly' | 'yearly') => {
@@ -324,30 +326,32 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
               <RefreshCw className="h-4 w-4 mr-2" />
               Erneut versuchen
             </Button>
-            <div className="pt-2 border-t space-y-2">
-              <p className="text-xs text-muted-foreground text-center">
-                Alternativ per Kreditkarte / SEPA bezahlen:
-              </p>
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={() => void startStripeFallback('yearly')}
-                disabled={stripeFallbackLoading !== null}
-              >
-                {stripeFallbackLoading === 'yearly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Jährlich – im Browser bezahlen
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                onClick={() => void startStripeFallback('monthly')}
-                disabled={stripeFallbackLoading !== null}
-              >
-                {stripeFallbackLoading === 'monthly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Monatlich – im Browser bezahlen
-              </Button>
-            </div>
+            {!isIOSNativeApp && (
+              <div className="pt-2 border-t space-y-2">
+                <p className="text-xs text-muted-foreground text-center">
+                  Alternativ per Kreditkarte / SEPA bezahlen:
+                </p>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => void startStripeFallback('yearly')}
+                  disabled={stripeFallbackLoading !== null}
+                >
+                  {stripeFallbackLoading === 'yearly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Jährlich – im Browser bezahlen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => void startStripeFallback('monthly')}
+                  disabled={stripeFallbackLoading !== null}
+                >
+                  {stripeFallbackLoading === 'monthly' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Monatlich – im Browser bezahlen
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

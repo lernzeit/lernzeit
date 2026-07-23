@@ -48,7 +48,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'Wie kündige ich Premium?',
-    a: 'Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten" (Stripe-Kundenportal). Käufe über den App Store kündigst du in den iOS-Einstellungen.',
+    a: 'Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten". In der iOS-App öffnet sich die Apple-Abo-Verwaltung, im Web das Kundenportal.',
   },
   {
     q: 'Wie lösche ich mein Konto und alle Daten?',
@@ -323,8 +323,8 @@ const Support = () => {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground">Wie kündige ich Premium?</h3>
-                  <p>Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten" (Stripe-Kundenportal).
-                  Käufe über den App Store kündigst du in den iOS-Einstellungen.</p>
+                  <p>Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten".
+                  In der iOS-App öffnet sich die Apple-Abo-Verwaltung, im Web das Kundenportal.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground">Wie lösche ich mein Konto und alle Daten?</h3>
