@@ -1111,8 +1111,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
-                  {/* Report Button - only for teen */}
-                  {grade > 4 && !isCorrect && question && (
+                  {/* Report Button - für Klasse 5+, auch bei richtiger Antwort */}
+                  {grade > 4 && question && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1120,7 +1120,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       className="mt-2 w-full text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
                     >
                       <Flag className="w-4 h-4 mr-2" />
-                      Frage melden (Antwort falsch?)
+                      {isCorrect ? 'Frage melden' : 'Frage melden (Antwort falsch?)'}
                     </Button>
                   )}
                   {/* KI-Tutor - only for teen */}
