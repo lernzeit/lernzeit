@@ -14,6 +14,8 @@ import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
+import { RevenueCatPaywall } from '@/components/RevenueCatPaywall';
+import { Capacitor } from '@capacitor/core';
 
 // Lazy-load admin dashboard at module scope so it isn't recreated on every render
 // (recreating React.lazy inside the component caused AdminDashboard to fully
@@ -59,8 +61,26 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
   const [streakReactivationTrigger, setStreakReactivationTrigger] = useState(0);
+  const [parentPaywallOpen, setParentPaywallOpen] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
+
+  const handleParentUpgrade = async () => {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+      setParentPaywallOpen(true);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { price_id: STRIPE_MONTHLY_PRICE_ID },
+      });
+      if (error) throw error;
+      if (data?.url) window.open(data.url, '_blank');
+    } catch {
+      toast({ title: 'Fehler', description: 'Checkout konnte nicht geöffnet werden.', variant: 'destructive' });
+    }
+  };
 
   // Use the existing useChildSettings hook for children
   const { settings: childSettings, loading: childSettingsLoading } = useChildSettings(
@@ -669,17 +689,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   size="sm"
                   variant="default"
                   className="shrink-0"
-                  onClick={async () => {
-                    try {
-                      const { data, error } = await supabase.functions.invoke('create-checkout', {
-                        body: { price_id: STRIPE_MONTHLY_PRICE_ID },
-                      });
-                      if (error) throw error;
-                      if (data?.url) window.open(data.url, '_blank');
-                    } catch (err) {
-                      toast({ title: 'Fehler', description: 'Checkout konnte nicht geöffnet werden.', variant: 'destructive' });
-                    }
-                  }}
+                  onClick={() => void handleParentUpgrade()}
                 >
                   Jetzt upgraden
                 </Button>
@@ -701,17 +711,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   size="sm"
                   variant="default"
                   className="shrink-0"
-                  onClick={async () => {
-                    try {
-                      const { data, error } = await supabase.functions.invoke('create-checkout', {
-                        body: { price_id: STRIPE_MONTHLY_PRICE_ID },
-                      });
-                      if (error) throw error;
-                      if (data?.url) window.open(data.url, '_blank');
-                    } catch (err) {
-                      toast({ title: 'Fehler', description: 'Checkout konnte nicht geöffnet werden.', variant: 'destructive' });
-                    }
-                  }}
+                  onClick={() => void handleParentUpgrade()}
                 >
                   Jetzt Abo abschließen
                 </Button>
@@ -720,6 +720,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           )}
           {/* Parent Dashboard */}
         <ParentDashboard userId={user.id} onSignOut={handleSignOut} />
+        <RevenueCatPaywall open={parentPaywallOpen} onOpenChange={setParentPaywallOpen} />
       </div>
     </div>
   );
