@@ -274,16 +274,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     if (isIOSNativeApp) {
       const url = 'itms-apps://apps.apple.com/account/subscriptions';
       try {
-        if (Capacitor.isNativePlatform()) {
-          const { Browser } = await import('@capacitor/browser').catch(() => ({ Browser: null } as any));
-          if (Browser?.open) {
-            await Browser.open({ url });
-          } else {
-            window.location.href = url;
-          }
-        } else {
-          window.open(url, '_blank');
-        }
+        const { AppLauncher } = await import('@capacitor/app-launcher');
+        await AppLauncher.openUrl({ url });
       } catch {
         window.location.href = url;
       }
