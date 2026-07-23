@@ -34,6 +34,7 @@ import { parentalControlsService } from '@/services/parentalControlsService';
 import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
 import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
 import { ReferralCard } from '@/components/parent/ReferralCard';
+import { RevenueCatPaywall } from '@/components/RevenueCatPaywall';
 import { useRatingPrompt } from '@/hooks/useRatingPrompt';
 import { MessageSquareHeart } from 'lucide-react';
 
@@ -177,6 +178,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const { source: premiumSource } = usePremium();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Echtes (bezahltes) Premium – Trial zählt nicht.
   const isPaidPremium = isPremium && !isTrialing;
@@ -240,6 +242,11 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
+    if (isNativeIOS) {
+      setPaywallOpen(true);
+      return;
+    }
+
     try {
       setCheckoutLoading(true);
       const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
@@ -263,6 +270,25 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleManageSubscription = async () => {
+    if (isNativeIOS) {
+      const url = 'itms-apps://apps.apple.com/account/subscriptions';
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const { Browser } = await import('@capacitor/browser').catch(() => ({ Browser: null } as any));
+          if (Browser?.open) {
+            await Browser.open({ url });
+          } else {
+            window.location.href = url;
+          }
+        } else {
+          window.open(url, '_blank');
+        }
+      } catch {
+        window.location.href = url;
+      }
+      return;
+    }
+
     // If premium was purchased through RevenueCat / an app store (iOS or
     // Android), Apple/Google require that we deep-link to the OS subscription
     // settings instead of opening a web billing portal.
@@ -1261,6 +1287,11 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RevenueCatPaywall
+        open={paywallOpen}
+        onOpenChange={setPaywallOpen}
+      />
     </div>
   );
 }
