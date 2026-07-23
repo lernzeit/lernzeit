@@ -135,6 +135,27 @@ export default defineConfig(({ mode }) => ({
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         },
       }),
+      // Garantiere pro Route korrekte canonical/og:url-Tags, unabhängig davon,
+      // ob react-helmet-async während des Prerenderings die Tags injiziert hat.
+      postProcess(renderedRoute: any) {
+        const site = 'https://lernzeit.app';
+        const canonical = `${site}${renderedRoute.route}`;
+        let html: string = renderedRoute.html || '';
+        // Alle vorhandenen canonical/og:url Tags entfernen
+        html = html.replace(/<link[^>]*rel=["']canonical["'][^>]*>\s*/gi, '');
+        html = html.replace(/<meta[^>]*property=["']og:url["'][^>]*>\s*/gi, '');
+        // Frische Tags direkt vor </head> einfügen
+        const inject =
+          `<link rel="canonical" href="${canonical}" />` +
+          `<meta property="og:url" content="${canonical}" />`;
+        if (/<\/head>/i.test(html)) {
+          html = html.replace(/<\/head>/i, `${inject}</head>`);
+        } else {
+          html = inject + html;
+        }
+        renderedRoute.html = html;
+        return renderedRoute;
+      },
     }) as any),
   ].filter(Boolean),
   resolve: {
