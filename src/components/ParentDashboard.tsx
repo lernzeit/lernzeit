@@ -224,6 +224,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   } = useFamilyLinking();
 
   const { summaries, loading: summariesLoading } = useChildDaySummary(userId, linkedChildren);
+  const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
 
   useEffect(() => {
     if (userId) {
@@ -242,7 +243,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
-    if (isNativeIOS) {
+    if (isIOSNativeApp) {
       setPaywallOpen(true);
       return;
     }
@@ -270,7 +271,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleManageSubscription = async () => {
-    if (isNativeIOS) {
+    if (isIOSNativeApp) {
       const url = 'itms-apps://apps.apple.com/account/subscriptions';
       try {
         if (Capacitor.isNativePlatform()) {
