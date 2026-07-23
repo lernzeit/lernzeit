@@ -204,6 +204,16 @@ serve(async (req) => {
           .slice(0, 20)
       : [];
 
+    // Semantic signatures from the client (fall back to computing from texts)
+    const clientSignatures: string[] = Array.isArray(body.excludeSignatures)
+      ? (body.excludeSignatures as unknown[])
+          .filter((t): t is string => typeof t === 'string')
+          .slice(0, 40)
+      : [];
+    const excludeSignatureSet = new Set<string>(
+      [...clientSignatures, ...excludeTexts.map(questionSignature)].filter(Boolean)
+    );
+
     // Extract optional topicHint for learning plan focus
     const topicHint: string | undefined = typeof body.topicHint === 'string' && body.topicHint.length > 0
       ? (body.topicHint as string).slice(0, 200)
@@ -252,11 +262,16 @@ serve(async (req) => {
         const poolSize = count ?? cachedPool?.length ?? 0;
 
         if (cachedPool && cachedPool.length > 0 && poolSize >= CACHE_MIN_POOL) {
-          // Client-seitig gegen excludeTexts filtern (case-insensitiv)
+          // Server-seitig zusätzlich semantisch (Zahlen → #) filtern, damit
+          // reine Zahlenvarianten derselben Aufgabe nicht wiederholt werden.
           const exclSet = new Set(excludeTexts.map((t) => t.trim().toLowerCase()));
-          const candidates = cachedPool.filter(
-            (q: any) => !exclSet.has(String(q.question_text || '').trim().toLowerCase())
-          );
+          const candidates = cachedPool.filter((q: any) => {
+            const raw = String(q.question_text || '').trim().toLowerCase();
+            if (exclSet.has(raw)) return false;
+            const sig = questionSignature(q.question_text);
+            if (sig && excludeSignatureSet.has(sig)) return false;
+            return true;
+          });
           const pickFrom = candidates.length >= 10 ? candidates : cachedPool;
           // Vollständig zufällige Auswahl aus dem gesamten (gefilterten) Pool
           const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)];
