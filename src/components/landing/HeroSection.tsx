@@ -50,7 +50,7 @@ const HeroSection = () => {
           – wie viel, bestimmen die Eltern.
         </p>
 
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-[400ms] flex flex-col sm:flex-row gap-4 justify-center mb-16">
+        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-500 flex flex-col sm:flex-row gap-4 justify-center mb-16">
           <Button
             onClick={() => navigate('/?auth=true')}
             size="lg"

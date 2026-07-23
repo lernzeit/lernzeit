@@ -14,7 +14,7 @@ const Seo = ({ title, description, path, image }: SeoProps) => {
   const url = `${SITE_URL}${path}`;
   const ogImage = image ?? DEFAULT_OG_IMAGE;
   return (
-    <Helmet>
+    <Helmet prioritizeSeoTags>
       <title>{title}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
