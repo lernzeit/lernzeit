@@ -321,6 +321,7 @@ export const useQuestionPreloader = ({
         console.warn('⏱️ Question generation timed out after', REQUEST_TIMEOUT_MS, 'ms');
       }, REQUEST_TIMEOUT_MS);
 
+      const excludeArr = excludeTexts ? Array.from(excludeTexts).slice(-20) : [];
       const fetchPromise = supabase.functions.invoke('ai-question-generator', {
         body: {
           grade: gradeRef.current,
@@ -328,7 +329,10 @@ export const useQuestionPreloader = ({
           difficulty,
           // Mehr Kontext an die Edge-Function schicken, damit Cache-Filter und
           // KI-Prompt zuverlässig Wiederholungen vermeiden.
-          excludeTexts: excludeTexts ? Array.from(excludeTexts).slice(-20) : [],
+          excludeTexts: excludeArr,
+          // Semantische Signaturen: erkennen Varianten, die sich nur in
+          // Zahlen/Zeichensetzung unterscheiden ("25-13" ≈ "26-14").
+          excludeSignatures: excludeArr.map(questionSignature).filter(Boolean),
           topicHint: topicHintRef.current || undefined
         }
       });
@@ -480,9 +484,10 @@ export const useQuestionPreloader = ({
       return;
     }
     
-    if (firstQuestion) {
-      if (!seenTextsRef.current.has(firstQuestion.questionText)) {
-        seenTextsRef.current.add(firstQuestion.questionText);
+      if (firstQuestion) {
+      const firstSig = questionSignature(firstQuestion.questionText);
+      if (!seenTextsRef.current.has(firstSig)) {
+        seenTextsRef.current.add(firstSig);
         recentTexts.add(firstQuestion.questionText);
       }
       
@@ -516,8 +521,9 @@ export const useQuestionPreloader = ({
               )
               .map(r => r.value as PreloadedQuestion)
               .filter(q => {
-                if (seenTextsRef.current.has(q.questionText)) return false;
-                seenTextsRef.current.add(q.questionText);
+                const sig = questionSignature(q.questionText);
+                if (seenTextsRef.current.has(sig)) return false;
+                seenTextsRef.current.add(sig);
                 recentTexts.add(q.questionText);
                 return true;
               });
