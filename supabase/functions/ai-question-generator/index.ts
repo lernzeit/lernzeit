@@ -24,6 +24,22 @@ interface QuestionRequest {
   difficulty?: ValidDifficulty;
   questionType?: ValidQuestionType;
   excludeTexts?: string[];
+  excludeSignatures?: string[];
+}
+
+/**
+ * Semantic signature: collapses variants that only differ in numbers,
+ * punctuation, whitespace or capitalisation. Kept in sync with
+ * src/utils/questionSignature.ts on the client.
+ */
+function questionSignature(text: unknown): string {
+  if (typeof text !== 'string') return '';
+  return text
+    .toLowerCase()
+    .replace(/\d+(?:[.,]\d+)?(?:\/\d+)?/g, '#')
+    .replace(/[^\p{L}\p{N}#+\-*/=<>×÷·\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // Validation helpers
