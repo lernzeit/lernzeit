@@ -16,6 +16,7 @@ dependencies {
     implementation project(':capacitor-local-notifications')
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-push-notifications')
+    implementation project(':revenuecat-purchases-capacitor')
     implementation project(':capacitor-native-biometric')
     implementation "com.onesignal:OneSignal:5.7.6"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.10"
