@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getDemoQuestions } from '@/data/demoQuestions';
+import { questionSignature } from '@/utils/questionSignature';
 
 export interface PreloadedQuestion {
   id: string;
