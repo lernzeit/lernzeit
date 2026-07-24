@@ -969,8 +969,21 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                             {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                             {!isPremium ? 'Premium aktivieren' : 'Jetzt Abo abschließen'}
                           </Button>
-                          <p className="text-xs text-center text-muted-foreground">
-                            {selectedBillingCycle === 'monthly' ? '2,99 € / Monat' : '29,99 € / Jahr'}
+                          <p className="text-xs text-center text-muted-foreground min-h-[1rem]">
+                            {offeringsLoading ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Preis wird geladen …
+                              </span>
+                            ) : selectedBillingCycle === 'monthly' ? (
+                              rcMonthly?.priceString
+                                ? `${rcMonthly.priceString} / Monat`
+                                : (offeringsError ?? 'Preis derzeit nicht verfügbar')
+                            ) : (
+                              rcAnnual?.priceString
+                                ? `${rcAnnual.priceString} / Jahr`
+                                : (offeringsError ?? 'Preis derzeit nicht verfügbar')
+                            )}
                           </p>
                         </>
                       ) : (
