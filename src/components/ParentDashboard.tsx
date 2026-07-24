@@ -227,6 +227,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const { summaries, loading: summariesLoading } = useChildDaySummary(userId, linkedChildren);
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+  const isNativeApp = Capacitor.isNativePlatform();
 
   useEffect(() => {
     if (userId) {
@@ -245,7 +246,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
-    if (isIOSNativeApp) {
+    // Never route native app users to Stripe checkout – always use the
+    // in-app RevenueCat paywall (Apple + Google policy).
+    if (isNativeApp) {
       setPaywallOpen(true);
       return;
     }

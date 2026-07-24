@@ -66,7 +66,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
   const handleParentUpgrade = async () => {
-    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+    // Never route native app users to Stripe – open the in-app RevenueCat paywall.
+    if (Capacitor.isNativePlatform()) {
       setParentPaywallOpen(true);
       return;
     }

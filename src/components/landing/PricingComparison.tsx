@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Check, X, Crown, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 const features = [
   { name: 'Alle Fächer Klasse 1–10', free: true, premium: true },
@@ -15,6 +16,13 @@ const features = [
 const PricingComparison = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLElement>(null);
+
+  // In the native app (iOS/Android) we must not show web pricing or link to
+  // the Stripe checkout. Purchases go exclusively through the RevenueCat
+  // paywall inside the app (opened from the dashboard after sign-in).
+  if (Capacitor.isNativePlatform()) {
+    return null;
+  }
 
   useEffect(() => {
     const observer = new IntersectionObserver(

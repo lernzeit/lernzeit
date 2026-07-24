@@ -51,6 +51,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const [stripeFallbackLoading, setStripeFallbackLoading] = useState<string | null>(null);
   const rcSupported = isRevenueCatSupported();
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+  const isNativeApp = Capacitor.isNativePlatform();
 
   // Fallback: start a Stripe Checkout in an external browser tab when RevenueCat is unreachable.
   const startStripeFallback = async (plan: 'monthly' | 'yearly') => {
@@ -244,6 +245,25 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   // If RevenueCat is not supported (e.g. Web without a Web Billing key, or Android
   // before the RC Android key is set), show the direct Stripe checkout fallback UI.
   if (!rcSupported) {
+    // On native (iOS/Android) we must not offer a Stripe web checkout –
+    // App Store / Play Store policy requires in-app purchases only.
+    if (isNativeApp) {
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Crown className="h-6 w-6 text-warning" />
+                <DialogTitle>LernZeit Premium</DialogTitle>
+              </div>
+              <DialogDescription>
+                Der Kauf ist momentan nicht verfügbar. Bitte versuchen Sie es später erneut.
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      );
+    }
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -326,7 +346,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
               <RefreshCw className="h-4 w-4 mr-2" />
               Erneut versuchen
             </Button>
-            {!isIOSNativeApp && (
+            {!isNativeApp && (
               <div className="pt-2 border-t space-y-2">
                 <p className="text-xs text-muted-foreground text-center">
                   Alternativ per Kreditkarte / SEPA bezahlen:
