@@ -37,6 +37,7 @@ import { ReferralCard } from '@/components/parent/ReferralCard';
 import { RevenueCatPaywall } from '@/components/RevenueCatPaywall';
 import { useRatingPrompt } from '@/hooks/useRatingPrompt';
 import { MessageSquareHeart } from 'lucide-react';
+import { useOfferings } from '@/hooks/useOfferings';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
