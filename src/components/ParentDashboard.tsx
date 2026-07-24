@@ -37,6 +37,7 @@ import { ReferralCard } from '@/components/parent/ReferralCard';
 import { RevenueCatPaywall } from '@/components/RevenueCatPaywall';
 import { useRatingPrompt } from '@/hooks/useRatingPrompt';
 import { MessageSquareHeart } from 'lucide-react';
+import { useOfferings } from '@/hooks/useOfferings';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
@@ -176,6 +177,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const { isPremium, isTrialing, trialJustExpired, trialDaysLeft, status, currentPeriodEnd } = useSubscription();
   const { source: premiumSource } = usePremium();
+  const { monthly: rcMonthly, annual: rcAnnual, loading: offeringsLoading, error: offeringsError } = useOfferings();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
@@ -225,6 +227,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const { summaries, loading: summariesLoading } = useChildDaySummary(userId, linkedChildren);
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+  const isNativeApp = Capacitor.isNativePlatform();
 
   useEffect(() => {
     if (userId) {
@@ -243,7 +246,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
-    if (isIOSNativeApp) {
+    // Never route native app users to Stripe checkout – always use the
+    // in-app RevenueCat paywall (Apple + Google policy).
+    if (isNativeApp) {
       setPaywallOpen(true);
       return;
     }
@@ -967,8 +972,21 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                             {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                             {!isPremium ? 'Premium aktivieren' : 'Jetzt Abo abschließen'}
                           </Button>
-                          <p className="text-xs text-center text-muted-foreground">
-                            {selectedBillingCycle === 'monthly' ? '2,99 € / Monat' : '29,99 € / Jahr'}
+                          <p className="text-xs text-center text-muted-foreground min-h-[1rem]">
+                            {offeringsLoading ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Preis wird geladen …
+                              </span>
+                            ) : selectedBillingCycle === 'monthly' ? (
+                              rcMonthly?.priceString
+                                ? `${rcMonthly.priceString} / Monat`
+                                : (offeringsError ?? 'Preis derzeit nicht verfügbar')
+                            ) : (
+                              rcAnnual?.priceString
+                                ? `${rcAnnual.priceString} / Jahr`
+                                : (offeringsError ?? 'Preis derzeit nicht verfügbar')
+                            )}
                           </p>
                         </>
                       ) : (

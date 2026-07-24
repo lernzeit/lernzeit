@@ -20,6 +20,44 @@ import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricin
 import { trackEvent } from '@/utils/analytics';
 import { getActivePlatform } from '@/services/revenueCat';
 import { Capacitor } from '@capacitor/core';
+import { Link } from 'react-router-dom';
+
+function SubscriptionTerms({
+  monthly,
+  annual,
+}: {
+  monthly: NormalizedPackage | null;
+  annual: NormalizedPackage | null;
+}) {
+  return (
+    <div className="mt-3 rounded-lg border bg-muted/30 p-3 text-[11px] leading-relaxed text-muted-foreground space-y-2">
+      <p className="font-semibold text-foreground">Abo-Bedingungen</p>
+      <ul className="space-y-1">
+        {annual && (
+          <li>
+            <span className="font-medium text-foreground">LernZeit Premium – Jährlich</span>: {annual.priceString} pro Jahr (automatische Verlängerung).
+          </li>
+        )}
+        {monthly && (
+          <li>
+            <span className="font-medium text-foreground">LernZeit Premium – Monatlich</span>: {monthly.priceString} pro Monat (automatische Verlängerung).
+          </li>
+        )}
+      </ul>
+      <p>
+        Die Zahlung wird bei Kaufbestätigung Ihrem Apple-ID-Konto belastet. Das Abo verlängert sich automatisch, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird. Die Verlängerung erfolgt zum oben genannten Preis. Verwaltung und Kündigung des Abos sind jederzeit in den Einstellungen Ihres Apple-ID-Kontos möglich.
+      </p>
+      <p className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+        <Link to="/nutzungsbedingungen" target="_blank" rel="noopener noreferrer" className="underline text-foreground">
+          Nutzungsbedingungen (EULA)
+        </Link>
+        <Link to="/datenschutz" target="_blank" rel="noopener noreferrer" className="underline text-foreground">
+          Datenschutzerklärung
+        </Link>
+      </p>
+    </div>
+  );
+}
 
 // Poll the entitlement a few times after a web purchase – the RC webhook
 // pipeline can take a moment to propagate before getCustomerInfo reflects it.
@@ -51,6 +89,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   const [stripeFallbackLoading, setStripeFallbackLoading] = useState<string | null>(null);
   const rcSupported = isRevenueCatSupported();
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+  const isNativeApp = Capacitor.isNativePlatform();
 
   // Fallback: start a Stripe Checkout in an external browser tab when RevenueCat is unreachable.
   const startStripeFallback = async (plan: 'monthly' | 'yearly') => {
@@ -244,6 +283,25 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
   // If RevenueCat is not supported (e.g. Web without a Web Billing key, or Android
   // before the RC Android key is set), show the direct Stripe checkout fallback UI.
   if (!rcSupported) {
+    // On native (iOS/Android) we must not offer a Stripe web checkout –
+    // App Store / Play Store policy requires in-app purchases only.
+    if (isNativeApp) {
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Crown className="h-6 w-6 text-warning" />
+                <DialogTitle>LernZeit Premium</DialogTitle>
+              </div>
+              <DialogDescription>
+                Der Kauf ist momentan nicht verfügbar. Bitte versuchen Sie es später erneut.
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      );
+    }
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -326,7 +384,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
               <RefreshCw className="h-4 w-4 mr-2" />
               Erneut versuchen
             </Button>
-            {!isIOSNativeApp && (
+            {!isNativeApp && (
               <div className="pt-2 border-t space-y-2">
                 <p className="text-xs text-muted-foreground text-center">
                   Alternativ per Kreditkarte / SEPA bezahlen:
@@ -427,9 +485,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
             ) : null}
             Käufe wiederherstellen
           </Button>
-          <p className="text-[10px] text-center text-muted-foreground mt-2">
-            Zahlung wird nach Bestätigung dem iTunes-Konto belastet. Abo verlängert sich automatisch, sofern es nicht mindestens 24 Stunden vor Ende des Zeitraums gekündigt wird.
-          </p>
+          <SubscriptionTerms monthly={monthly} annual={annual} />
         </div>
       </DialogContent>
     </Dialog>
