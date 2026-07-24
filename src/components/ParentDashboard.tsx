@@ -177,6 +177,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const { isPremium, isTrialing, trialJustExpired, trialDaysLeft, status, currentPeriodEnd } = useSubscription();
   const { source: premiumSource } = usePremium();
+  const { monthly: rcMonthly, annual: rcAnnual, loading: offeringsLoading, error: offeringsError } = useOfferings();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
