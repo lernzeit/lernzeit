@@ -175,8 +175,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     }
   };
 
-  const { isPremium, isTrialing, trialJustExpired, trialDaysLeft, status, currentPeriodEnd } = useSubscription();
-  const { source: premiumSource } = usePremium();
+  const sub = useSubscription();
+  const { source: premiumSource, isPremium: rcIsPremium } = usePremium();
+  // Auf iOS/Android ist RevenueCat die Wahrheit über den Premium-Status.
+  // Stripe-Daten (Trial, Period-End) gelten dort nicht.
+  const rcActive = premiumSource === 'revenuecat' && rcIsPremium;
+  const isPremium = rcActive || sub.isPremium;
+  const isTrialing = rcActive ? false : sub.isTrialing;
+  const trialJustExpired = rcActive ? false : sub.trialJustExpired;
+  const trialDaysLeft = rcActive ? null : sub.trialDaysLeft;
+  const status = rcActive ? 'active' as const : sub.status;
+  const currentPeriodEnd = rcActive ? null : sub.currentPeriodEnd;
   const { monthly: rcMonthly, annual: rcAnnual, loading: offeringsLoading, error: offeringsError } = useOfferings();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
