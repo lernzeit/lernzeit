@@ -308,15 +308,6 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">📱 So geben Sie Bildschirmzeit frei:</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <div><strong>iPhone/iPad:</strong> Einstellungen → Bildschirmzeit → [Kind] → App-Limits</div>
-            <div><strong>Android:</strong> Family Link App → [Kind] → Gerätezeit → Heute mehr Zeit</div>
-          </div>
-        </div>
-
         {/* Recent Requests History */}
         {recentRequests.length > 0 && (
           <div className="space-y-2">
