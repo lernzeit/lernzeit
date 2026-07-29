@@ -594,28 +594,6 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         </Card>
       )}
 
-      {trialJustExpired && !isPremium && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="py-4 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">Testphase abgelaufen – Einstellungen zurückgesetzt</p>
-                  <p className="text-xs text-muted-foreground">Ihre kostenlose Testphase ist beendet.</p>
-                </div>
-              </div>
-              <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
-                {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
-                Jetzt upgraden
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Empfehlungs-Hinweis im Dashboard. Für Premium-Mitglieder verlinkt der Hinweis
           direkt zum Verschenken-Tab. Für alle anderen öffnet er eine Info-Kachel. */}
       {!referralBannerDismissed && activeTab !== 'referral' && (
