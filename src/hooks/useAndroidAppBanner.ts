@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'lernzeit_android_banner_dismissed';
+const STORAGE_KEY = 'lernzeit_app_banner_dismissed';
 const DISMISS_DAYS = 30;
+
+export type BannerPlatform = 'android' | 'ios';
 
 const MARKETING_ROUTES = new Set([
   '/',
@@ -12,8 +14,8 @@ const MARKETING_ROUTES = new Set([
   '/nutzungsbedingungen',
 ]);
 
-export function useAndroidAppBanner() {
-  const [visible, setVisible] = useState(false);
+export function useAppStoreBanner() {
+  const [platform, setPlatform] = useState<BannerPlatform | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -27,9 +29,14 @@ export function useAndroidAppBanner() {
       if ((window.navigator as any).standalone) return;
 
       const ua = window.navigator.userAgent || '';
-      // Android browser, not Android WebView (which contains "; wv)")
-      if (!/Android/i.test(ua)) return;
-      if (/; wv\)/i.test(ua)) return;
+      const isAndroid = /Android/i.test(ua) && !/; wv\)/i.test(ua);
+      // iPhone/iPad (incl. iPadOS reporting as Mac with touch support)
+      const isIOS =
+        /iPhone|iPad|iPod/i.test(ua) ||
+        (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+
+      const detected: BannerPlatform | null = isAndroid ? 'android' : isIOS ? 'ios' : null;
+      if (!detected) return;
 
       // Only on marketing routes
       if (!MARKETING_ROUTES.has(window.location.pathname)) return;
@@ -42,7 +49,7 @@ export function useAndroidAppBanner() {
       }
 
       // Delay slightly so it doesn't fight LCP
-      const t = window.setTimeout(() => setVisible(true), 600);
+      const t = window.setTimeout(() => setPlatform(detected), 600);
       return () => window.clearTimeout(t);
     } catch {
       /* noop */
@@ -56,8 +63,10 @@ export function useAndroidAppBanner() {
     } catch {
       /* noop */
     }
-    setVisible(false);
+    setPlatform(null);
   };
 
-  return { visible, dismiss };
+  return { platform, visible: platform !== null, dismiss };
 }
+
+export const useAndroidAppBanner = useAppStoreBanner;
