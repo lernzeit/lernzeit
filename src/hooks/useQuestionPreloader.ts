@@ -245,6 +245,7 @@ interface UseQuestionPreloaderOptions {
   topicHint?: string;
   difficultySequence?: ('easy' | 'medium' | 'hard')[];
   demoMode?: boolean;
+  enabled?: boolean;
 }
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
@@ -263,6 +264,7 @@ export const useQuestionPreloader = ({
   topicHint,
   difficultySequence,
   demoMode = false,
+  enabled = true,
 }: UseQuestionPreloaderOptions) => {
   const [questions, setQuestions] = useState<PreloadedQuestion[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -566,23 +568,24 @@ export const useQuestionPreloader = ({
     isLoadingRef.current = false;
   }, []);
 
-  // Start loading on mount - use ref-based approach to avoid re-triggering
+  // Start only after the caller has resolved authentication. Starting while
+  // auth is still loading would briefly classify signed-in users as demo users
+  // and permanently preload the static demo question set.
   const hasStartedRef = useRef(false);
-  
+
   useEffect(() => {
     mountedRef.current = true;
-    
-    if (!hasStartedRef.current) {
+
+    if (enabled && !hasStartedRef.current) {
       hasStartedRef.current = true;
       startPreloading();
     }
-    
+
     return () => {
       mountedRef.current = false;
       cancelLoading();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  // Empty deps: we use refs for grade/subject/totalQuestions so this only runs on mount
+  }, [enabled, startPreloading, cancelLoading]);
 
   return {
     questions,
