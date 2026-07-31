@@ -59,7 +59,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   topicHint,
   mode = 'normal'
 }) => {
-  const { user } = useAuth();
+  const { user, loading: isAuthLoading } = useAuth();
   const { saveSession, isSaving } = useGameSessionSaver();
   const { settings: childSettings } = useChildSettings(user?.id || '');
   const { trackAllAchievements } = useAchievementTracker(user?.id);
@@ -95,7 +95,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     updateDifficulty,
     reload,
     cancelLoading
-  } = useQuestionPreloader({ grade, subject, totalQuestions, topicHint, difficultySequence: adaptiveDifficultySequence, demoMode: !user });
+  } = useQuestionPreloader({
+    grade,
+    subject,
+    totalQuestions,
+    topicHint,
+    difficultySequence: adaptiveDifficultySequence,
+    demoMode: !isAuthLoading && !user,
+    enabled: !isAuthLoading,
+  });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   const [answerRecovered, setAnswerRecovered] = useState(false);
