@@ -11,13 +11,11 @@ const corsHeaders = {
 const GATEWAYS: Record<ProviderId, string> = {
   gemini_direct: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
   openrouter: 'https://openrouter.ai/api/v1/chat/completions',
-  lovable: 'https://ai.gateway.lovable.dev/v1/chat/completions',
 };
 
 function apiKey(p: ProviderId): string | undefined {
   if (p === 'gemini_direct') return Deno.env.get('GEMINI_API_KEY');
-  if (p === 'openrouter') return Deno.env.get('OPENROUTER_API_KEY');
-  return Deno.env.get('LOVABLE_API_KEY');
+  return Deno.env.get('OPENROUTER_API_KEY');
 }
 
 interface Attempt {
@@ -80,12 +78,12 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const model: string = body.model || 'google/gemini-2.5-flash';
+    const model: string = body.model || 'google/gemini-3.5-flash';
     const prompt: string = body.prompt || 'Antworte mit genau einem Wort: "OK".';
     const onlyProvider: ProviderId | undefined = body.provider;
     const providerOrder: ProviderId[] = Array.isArray(body.provider_order) && body.provider_order.length > 0
       ? body.provider_order
-      : ['gemini_direct', 'openrouter', 'lovable'];
+      : ['gemini_direct', 'openrouter'];
 
     const targets: ProviderId[] = onlyProvider ? [onlyProvider] : providerOrder;
     const attempts: Attempt[] = [];

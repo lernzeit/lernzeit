@@ -30,6 +30,10 @@ const USE_CASE_TESTS: Record<string, { system?: string; prompt: string }> = {
     system: 'Du bist ein Lehrer für deutsche Grundschüler. Antworte nur in deutschem JSON.',
     prompt: 'Erstelle eine Mathe-Aufgabe für Klasse 3, Thema "Schriftliche Addition im ZR 1000". Format: {"frage":"...","antwort":"..."}.',
   },
+  question_generator_batch: {
+    system: 'Du bist ein Lehrer für deutsche Schüler. Antworte nur in deutschem JSON.',
+    prompt: 'Erstelle eine Mathe-Aufgabe für Klasse 6, Thema "Prozentrechnung". Format: {"frage":"...","antwort":"..."}.',
+  },
   validate_answer: {
     prompt: 'Frage: "Was ist 7 × 8?" Antwort des Kindes: "fünfundsechzig". Ist das richtig? Antworte mit JSON {"correct":bool,"feedback":"max 12 Wörter, kindgerecht"}.',
   },
