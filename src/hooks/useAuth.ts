@@ -34,14 +34,8 @@ export function useAuth() {
       setLoading(false);
     });
 
-    // Fallback: ensure we don't hang on loading forever
-    const timeoutId = window.setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 3000);
-
     return () => {
       isMounted = false;
-      window.clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, [])

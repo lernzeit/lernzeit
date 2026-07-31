@@ -469,21 +469,31 @@ export const useQuestionPreloader = ({
     const recentTexts = getRecentQuestionTexts();
     const total = totalQuestionsRef.current;
 
-    // Demo-Modus: statisch gebündelte Fragen verwenden, kein Edge-Function-Aufruf.
+    // Demo-Modus: statisch gebündelte Fragen nur für wirklich anonyme Besucher.
+    // A second useAuth instance can resolve later in Chrome/Capacitor than the
+    // parent route. Verify the client session here so an authenticated learner
+    // can never receive the fixed demo pool because of that timing race.
     if (demoMode) {
-      const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
-      if (!signal.aborted && mountedRef.current) {
-        if (demo.length === 0) {
-          setError('Für dieses Fach steht in der Demo aktuell keine Aufgabe bereit. Bitte wähle ein anderes Fach oder registriere dich kostenlos.');
-          setIsInitialLoading(false);
-        } else {
-          setQuestions(demo);
-          setLoadingProgress(demo.length);
-          setIsInitialLoading(false);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const isActuallyAnonymous = !sessionData.session?.user;
+
+      if (isActuallyAnonymous) {
+        const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
+        if (!signal.aborted && mountedRef.current) {
+          if (demo.length === 0) {
+            setError('Für dieses Fach steht in der Demo aktuell keine Aufgabe bereit. Bitte wähle ein anderes Fach oder registriere dich kostenlos.');
+            setIsInitialLoading(false);
+          } else {
+            setQuestions(demo);
+            setLoadingProgress(demo.length);
+            setIsInitialLoading(false);
+          }
         }
+        isLoadingRef.current = false;
+        return;
       }
-      isLoadingRef.current = false;
-      return;
+
+      console.warn('Authenticated session detected; ignoring stale demo mode');
     }
 
     // Use adaptive sequence if provided, otherwise fallback to grade-appropriate default.

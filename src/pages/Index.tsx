@@ -243,7 +243,8 @@ const Index = () => {
             onBack={() => setSelectedCategory(null)}
             totalQuestions={5}
             topicHint={learningPlanTopic || undefined}
-            mode={gameMode} />
+            mode={gameMode}
+            demoMode={!user} />
         </Suspense>
       </ErrorBoundary>);
   }
