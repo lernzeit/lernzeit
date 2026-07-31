@@ -137,13 +137,22 @@ function buildBody(
   const level = thinkingOverride !== undefined ? thinkingOverride : ctx.thinkingLevel;
 
   if (provider === 'gemini_direct') {
-    if (level) body.thinking_config = { thinking_level: level };
-    if (ctx.maxOutputTokens) body.maxOutputTokens = ctx.maxOutputTokens;
-    if (options.thoughtSignatures?.length) body.thought_signatures = options.thoughtSignatures;
+    // OpenAI-compatible Gemini endpoint: Google-specific fields go into extra_body.
+    if (level || options.thoughtSignatures?.length) {
+      const google: Record<string, unknown> = {};
+      if (level) google.thinking_config = { thinking_level: level };
+      if (options.thoughtSignatures?.length) google.thought_signatures = options.thoughtSignatures;
+      body.extra_body = { google };
+    }
+    if (ctx.maxOutputTokens) body.max_tokens = ctx.maxOutputTokens;
   } else {
     if (level) body.reasoning = { effort: openRouterEffort(level) };
     if (ctx.maxOutputTokens) body.max_tokens = ctx.maxOutputTokens;
-    if (ctx.providerRouting) body.provider = ctx.providerRouting;
+    // Provider pinning only applies to models actually served by that provider
+    // (e.g. Groq serves gpt-oss, not Gemini) — otherwise OpenRouter returns 404.
+    if (ctx.providerRouting && !canonicalModel.startsWith('google/')) {
+      body.provider = ctx.providerRouting;
+    }
   }
 
   return body;
