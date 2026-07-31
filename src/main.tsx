@@ -87,6 +87,12 @@ if ('serviceWorker' in navigator && !isNativePlatform()) {
     // never survive a deployment or be replayed by Chrome/PWA.
     if ('caches' in window) {
       window.caches.delete('supabase-cache').catch(() => { /* ignore */ });
+      // Alte Runtime-Caches konnten Supabase-Antworten (Fragen!) enthalten.
+      window.caches.keys().then((keys) => {
+        keys
+          .filter((key) => /supabase|api-cache|question/i.test(key))
+          .forEach((key) => window.caches.delete(key).catch(() => { /* ignore */ }));
+      }).catch(() => { /* ignore */ });
     }
 
     navigator.serviceWorker.register('/sw.js')
