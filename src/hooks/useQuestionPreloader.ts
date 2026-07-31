@@ -472,9 +472,12 @@ export const useQuestionPreloader = ({
 
     console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
 
-    // Load FIRST question
+    // Load FIRST question — Schwierigkeit aus der (adaptiven) Sequenz nutzen,
+    // sonst startet jede Session unabhängig vom Profil mit "medium".
+    const firstDifficulty = difficulties[0] || currentDifficultyRef.current;
+    currentDifficultyRef.current = firstDifficulty;
     const firstQuestion = await generateSingleQuestion(
-      currentDifficultyRef.current,
+      firstDifficulty,
       signal,
       recentTexts
     );

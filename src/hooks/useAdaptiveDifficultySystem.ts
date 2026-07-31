@@ -354,7 +354,7 @@ export function useAdaptiveDifficultySystem(
           strengths: difficultyProfile.strengths,
           weaknesses: difficultyProfile.weaknesses,
           last_updated: new Date().toISOString()
-        });
+        }, { onConflict: 'user_id,category,grade' });
 
       if (error) throw error;
 
@@ -420,7 +420,7 @@ export function useAdaptiveDifficultySystem(
       setLastAdjustment(adjustment);
 
       // Store updated profile in database
-      await (supabase as any)
+      const { error: upsertError } = await (supabase as any)
         .from('user_difficulty_profiles')
         .upsert({
           user_id: userId,
@@ -432,7 +432,11 @@ export function useAdaptiveDifficultySystem(
           strengths: updatedProfile.strengths,
           weaknesses: updatedProfile.weaknesses,
           last_updated: updatedProfile.last_updated.toISOString()
-        });
+        }, { onConflict: 'user_id,category,grade' });
+
+      if (upsertError) {
+        console.error('❌ Failed to persist difficulty profile:', upsertError);
+      }
 
       console.log(`✅ Difficulty adjusted from ${adjustment.previous_level.toFixed(2)} to ${adjustment.new_level.toFixed(2)}`);
       return adjustment;
@@ -472,10 +476,11 @@ export function useAdaptiveDifficultySystem(
     const mediumProb = Math.max(0, 1 - hardProb - easyProb);
     
     const roll = Math.random();
-    if (roll < easyProb) return 'easy';
+    // Ab Klasse 5 ist "easy" fachlich zu banal → auf medium anheben.
+    if (roll < easyProb) return grade >= 5 ? 'medium' : 'easy';
     if (roll < easyProb + mediumProb) return 'medium';
     return 'hard';
-  }, [difficultyProfile]);
+  }, [difficultyProfile, grade]);
 
   // Generate a difficulty sequence for N questions
   const generateDifficultySequence = useCallback((count: number): ('easy' | 'medium' | 'hard')[] => {
