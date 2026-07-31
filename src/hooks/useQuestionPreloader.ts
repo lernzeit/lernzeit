@@ -276,6 +276,11 @@ export const useQuestionPreloader = ({
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentDifficultyRef = useRef(initialDifficulty);
   const mountedRef = useRef(true);
+  // Chrome and Capacitor can restore the persisted Supabase session shortly
+  // after the first unauthenticated render. Remember whether the currently
+  // visible questions came from the static demo pool so they can be discarded
+  // as soon as the authenticated state reaches the component.
+  const loadedDemoRef = useRef(false);
   
   // Session-level deduplication
   const seenTextsRef = useRef<Set<string>>(new Set());
@@ -481,9 +486,11 @@ export const useQuestionPreloader = ({
         const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
         if (!signal.aborted && mountedRef.current) {
           if (demo.length === 0) {
+            loadedDemoRef.current = false;
             setError('Für dieses Fach steht in der Demo aktuell keine Aufgabe bereit. Bitte wähle ein anderes Fach oder registriere dich kostenlos.');
             setIsInitialLoading(false);
           } else {
+            loadedDemoRef.current = true;
             setQuestions(demo);
             setLoadingProgress(demo.length);
             setIsInitialLoading(false);
@@ -495,6 +502,8 @@ export const useQuestionPreloader = ({
 
       console.warn('Authenticated session detected; ignoring stale demo mode');
     }
+
+    loadedDemoRef.current = false;
 
     // Use adaptive sequence if provided, otherwise fallback to grade-appropriate default.
     // Ab Klasse 5 wird „easy" für Klasse-6-Niveau schnell banal → mehr medium/hard.
@@ -617,15 +626,26 @@ export const useQuestionPreloader = ({
     isLoadingRef.current = false;
   }, []);
 
-  // Start only after the caller has resolved authentication. Starting while
-  // auth is still loading would briefly classify signed-in users as demo users
-  // and permanently preload the static demo question set.
+  // Start only after the caller has resolved authentication. If Chrome or a
+  // native WebView reports an anonymous state first and restores the session a
+  // moment later, demoMode changes from true to false. In that case the static
+  // demo questions must be cancelled and replaced immediately; hasStartedRef
+  // alone previously kept the same five demo questions for the whole session.
   const hasStartedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
 
-    if (enabled && !hasStartedRef.current) {
+    const mustReplaceRestoredSessionDemo = enabled && !demoMode && loadedDemoRef.current;
+
+    if (mustReplaceRestoredSessionDemo) {
+      console.warn('Authenticated state restored; replacing static demo questions');
+      abortControllerRef.current?.abort();
+      isLoadingRef.current = false;
+      hasStartedRef.current = true;
+      loadedDemoRef.current = false;
+      startPreloading();
+    } else if (enabled && !hasStartedRef.current) {
       hasStartedRef.current = true;
       startPreloading();
     }
