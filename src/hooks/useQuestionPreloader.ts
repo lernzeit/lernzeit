@@ -720,8 +720,15 @@ export const useQuestionPreloader = ({
   const purgedForSessionRef = useRef(false);
 
   useEffect(() => {
-    const discardDemoAndReload = async () => {
+    const discardDemoAndReload = async (event: string) => {
       const hadDemoInMemory = loadedDemoRef.current;
+      logAuthTransition({
+        event,
+        authenticated: true,
+        demoMode: demoModeRef.current,
+        hadDemoQuestions: hadDemoInMemory,
+        action: hadDemoInMemory ? 'discard_demo_and_reload' : 'purge_only'
+      });
       // Persistiertes Demo-Material immer einmal pro Session bereinigen –
       // auch wenn gerade keine Demo-Frage sichtbar ist, damit nichts über
       // localStorage/IndexedDB/Cache zurückkommt.
@@ -746,14 +753,24 @@ export const useQuestionPreloader = ({
       startPreloadingRef.current();
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) void discardDemoAndReload();
-      else purgedForSessionRef.current = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        void discardDemoAndReload(event);
+      } else {
+        purgedForSessionRef.current = false;
+        logAuthTransition({
+          event,
+          authenticated: false,
+          demoMode: demoModeRef.current,
+          hadDemoQuestions: loadedDemoRef.current,
+          action: 'noop'
+        });
+      }
     });
 
     // Catch a session that was already restored before this listener attached.
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) void discardDemoAndReload();
+      if (data.session?.user) void discardDemoAndReload('SESSION_RESTORED');
     });
 
     return () => subscription.unsubscribe();
