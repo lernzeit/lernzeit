@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { getDemoQuestions } from '@/data/demoQuestions';
 import { questionSignature } from '@/utils/questionSignature';
 import { purgeDemoQuestionStorage } from '@/utils/demoQuestionPurge';
+import {
+  logAuthTransition,
+  logPreloadStart,
+  logQuestionSource,
+  normalizeQuestionSource
+} from '@/utils/questionTelemetry';
 
 export interface PreloadedQuestion {
   id: string;
@@ -319,6 +325,9 @@ export const useQuestionPreloader = ({
     }
   }, []);
 
+  const demoModeRef = useRef(demoMode);
+  demoModeRef.current = demoMode;
+
   const generateSingleQuestion = useCallback(async (
     difficulty: 'easy' | 'medium' | 'hard',
     signal?: AbortSignal,
@@ -421,6 +430,9 @@ export const useQuestionPreloader = ({
       }
       
       const normalizedQuestion = normalizeQuestionPayload(data.question);
+      const telemetrySource = normalizeQuestionSource(
+        data.question?.source ?? (data.question?.id ? 'api' : undefined)
+      );
 
       if (!isQuestionRenderable(normalizedQuestion)) {
         console.warn('⚠️ Discarding unrenderable question payload:', {
@@ -442,6 +454,13 @@ export const useQuestionPreloader = ({
         attemptedExclusions.add(normalizedQuestion.questionText);
         continue;
       }
+
+      logQuestionSource(telemetrySource, normalizedQuestion.questionText, {
+        demoMode: demoModeRef.current,
+        grade: gradeRef.current,
+        subject: subjectRef.current,
+        difficulty
+      });
 
       return normalizedQuestion;
       } catch (err) {
@@ -485,6 +504,23 @@ export const useQuestionPreloader = ({
 
       if (isActuallyAnonymous) {
         const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
+        logPreloadStart({
+          demoMode,
+          authenticated: false,
+          plannedSource: 'demo',
+          grade: gradeRef.current,
+          subject: subjectRef.current,
+          total
+        });
+        demo.forEach((q, index) =>
+          logQuestionSource('demo', q.questionText, {
+            demoMode,
+            authenticated: false,
+            grade: gradeRef.current,
+            subject: subjectRef.current,
+            index
+          })
+        );
         if (!signal.aborted && mountedRef.current) {
           if (demo.length === 0) {
             loadedDemoRef.current = false;
@@ -502,6 +538,13 @@ export const useQuestionPreloader = ({
       }
 
       console.warn('Authenticated session detected; ignoring stale demo mode');
+      logAuthTransition({
+        event: 'stale_demo_mode_ignored',
+        authenticated: true,
+        demoMode,
+        hadDemoQuestions: loadedDemoRef.current,
+        action: 'discard_demo_and_reload'
+      });
     }
 
     loadedDemoRef.current = false;
@@ -515,6 +558,13 @@ export const useQuestionPreloader = ({
       difficultySequenceRef.current || defaultSequence;
 
     console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
+    logPreloadStart({
+      demoMode,
+      plannedSource: 'api',
+      grade: gradeRef.current,
+      subject: subjectRef.current,
+      total
+    });
 
     // Load FIRST question — Schwierigkeit aus der (adaptiven) Sequenz nutzen,
     // sonst startet jede Session unabhängig vom Profil mit "medium".
@@ -670,8 +720,15 @@ export const useQuestionPreloader = ({
   const purgedForSessionRef = useRef(false);
 
   useEffect(() => {
-    const discardDemoAndReload = async () => {
+    const discardDemoAndReload = async (event: string) => {
       const hadDemoInMemory = loadedDemoRef.current;
+      logAuthTransition({
+        event,
+        authenticated: true,
+        demoMode: demoModeRef.current,
+        hadDemoQuestions: hadDemoInMemory,
+        action: hadDemoInMemory ? 'discard_demo_and_reload' : 'purge_only'
+      });
       // Persistiertes Demo-Material immer einmal pro Session bereinigen –
       // auch wenn gerade keine Demo-Frage sichtbar ist, damit nichts über
       // localStorage/IndexedDB/Cache zurückkommt.
@@ -696,14 +753,24 @@ export const useQuestionPreloader = ({
       startPreloadingRef.current();
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) void discardDemoAndReload();
-      else purgedForSessionRef.current = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        void discardDemoAndReload(event);
+      } else {
+        purgedForSessionRef.current = false;
+        logAuthTransition({
+          event,
+          authenticated: false,
+          demoMode: demoModeRef.current,
+          hadDemoQuestions: loadedDemoRef.current,
+          action: 'noop'
+        });
+      }
     });
 
     // Catch a session that was already restored before this listener attached.
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) void discardDemoAndReload();
+      if (data.session?.user) void discardDemoAndReload('SESSION_RESTORED');
     });
 
     return () => subscription.unsubscribe();
