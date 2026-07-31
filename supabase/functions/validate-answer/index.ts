@@ -58,7 +58,7 @@ Antworte NUR mit JSON:
 
     try {
       const { response } = await callAI({
-        model: 'google/gemini-2.5-flash-lite',
+        model: 'google/gemini-3.1-flash-lite',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
       }, controller.signal, 'validate_answer');

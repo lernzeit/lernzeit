@@ -140,7 +140,7 @@ ${extraInfo}
 Erstelle den Plan als JSON-Array mit 5 Tagen.`;
 
     const { response: aiResponse } = await callAI({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

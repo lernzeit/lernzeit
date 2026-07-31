@@ -383,7 +383,7 @@ serve(async (req) => {
     try {
       console.log('🤖 Generating question via callAI (single attempt)');
       const { response, provider } = await callAI({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-3.1-flash-lite',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
@@ -391,7 +391,7 @@ serve(async (req) => {
         temperature: 0.9,
         tools: [questionTool],
         tool_choice: { type: "function", function: { name: "submit_question" } },
-      }, undefined, 'question_generator');
+      }, undefined, 'question_generator_live');
 
       if (response.ok) {
         const result = await response.json();
