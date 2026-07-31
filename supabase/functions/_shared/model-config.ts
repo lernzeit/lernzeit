@@ -6,12 +6,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import type { ProviderId } from './model-catalog.ts';
 
+export type ThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+
 export interface ModelConfig {
   use_case: string;
   primary_model: string;
   fallback_models: Array<{ provider: ProviderId; model: string }>;
   provider_order: ProviderId[];
   temperature: number | null;
+  thinking_level: ThinkingLevel | null;
+  max_output_tokens: number | null;
+  provider_routing: Record<string, unknown> | null;
+  deprecation_date: string | null;
   is_active: boolean;
 }
 
@@ -35,7 +41,7 @@ export async function loadModelConfig(useCase: string): Promise<ModelConfig | nu
   try {
     const { data, error } = await client
       .from('ai_model_config')
-      .select('use_case, primary_model, fallback_models, provider_order, temperature, is_active')
+      .select('use_case, primary_model, fallback_models, provider_order, temperature, thinking_level, max_output_tokens, provider_routing, deprecation_date, is_active')
       .eq('use_case', useCase)
       .maybeSingle();
 
@@ -49,9 +55,13 @@ export async function loadModelConfig(useCase: string): Promise<ModelConfig | nu
       primary_model: data.primary_model,
       fallback_models: Array.isArray(data.fallback_models) ? data.fallback_models : [],
       provider_order: Array.isArray(data.provider_order) && data.provider_order.length > 0
-        ? data.provider_order as ProviderId[]
-        : ['gemini_direct', 'openrouter', 'lovable'],
+        ? (data.provider_order as ProviderId[]).filter((p) => p === 'gemini_direct' || p === 'openrouter')
+        : ['gemini_direct', 'openrouter'],
       temperature: data.temperature,
+      thinking_level: (data.thinking_level ?? null) as ThinkingLevel | null,
+      max_output_tokens: data.max_output_tokens ?? null,
+      provider_routing: (data.provider_routing ?? null) as Record<string, unknown> | null,
+      deprecation_date: data.deprecation_date ?? null,
       is_active: data.is_active,
     };
     cache.set(useCase, { config, expiresAt: Date.now() + CACHE_TTL_MS });
@@ -64,11 +74,17 @@ export async function loadModelConfig(useCase: string): Promise<ModelConfig | nu
 
 export interface MetricEntry {
   use_case: string;
-  provider: ProviderId;
+  provider: ProviderId | 'deterministic';
   model: string;
   status_code: number | null;
   success: boolean;
   latency_ms: number;
+  ttft_ms?: number | null;
+  total_latency_ms?: number | null;
+  thinking_level?: string | null;
+  resolved_provider?: string | null;
+  cache_hit?: boolean;
+  aborted?: boolean;
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
   total_tokens?: number | null;
