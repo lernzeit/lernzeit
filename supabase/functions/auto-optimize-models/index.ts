@@ -17,18 +17,16 @@ const corsHeaders = {
 const GATEWAYS: Record<ProviderId, string> = {
   gemini_direct: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
   openrouter: 'https://openrouter.ai/api/v1/chat/completions',
-  lovable: 'https://ai.gateway.lovable.dev/v1/chat/completions',
 };
 
 function apiKey(p: ProviderId): string | undefined {
   if (p === 'gemini_direct') return Deno.env.get('GEMINI_API_KEY');
-  if (p === 'openrouter') return Deno.env.get('OPENROUTER_API_KEY');
-  return Deno.env.get('LOVABLE_API_KEY');
+  return Deno.env.get('OPENROUTER_API_KEY');
 }
 
 /** Standardized test prompts per use-case, in German. */
 const USE_CASE_TESTS: Record<string, { system?: string; prompt: string }> = {
-  question_generator: {
+  question_generator_live: {
     system: 'Du bist ein Lehrer für deutsche Grundschüler. Antworte nur in deutschem JSON.',
     prompt: 'Erstelle eine Mathe-Aufgabe für Klasse 3, Thema "Schriftliche Addition im ZR 1000". Format: {"frage":"...","antwort":"..."}.',
   },
@@ -134,7 +132,7 @@ Antworte NUR mit JSON: {"scores":[{"index":1,"score":8,"reason":"max 12 Wörter"
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3.5-flash',
         messages: [{ role: 'user', content: judgePrompt }],
         temperature: 0,
         response_format: { type: 'json_object' },
@@ -182,27 +180,22 @@ function candidatesForUseCase(useCase: string): Array<{ model: string; provider:
     list.push({ model, provider });
   };
   const pickProvider = (m: typeof RECOMMENDED_MODELS[number]): ProviderId | null => {
-    // Prefer OpenRouter (user's primary credit pool), then Gemini direct, then Lovable.
-    if (m.openrouter_id) return 'openrouter';
+    // Prefer Gemini direct, then OpenRouter.
     if (m.gemini_id) return 'gemini_direct';
-    if (m.lovable_id) return 'lovable';
+    if (m.openrouter_id) return 'openrouter';
     return null;
   };
 
-  // 1) Always include free OpenRouter (zero cost baseline).
-  push('openrouter/free', 'openrouter');
-
-  // 2) Models explicitly recommended for this use case.
+  // 1) Models explicitly recommended for this use case.
   for (const m of RECOMMENDED_MODELS) {
-    if (m.id === 'openrouter/free') continue;
     if (!m.recommended_for.includes(useCase)) continue;
     const p = pickProvider(m);
     if (p) push(m.id, p);
   }
 
-  // 3) Fill with the cheapest remaining models (avg of in/out price), regardless of provider.
+  // 2) Fill with the cheapest remaining models (avg of in/out price), regardless of provider.
   const remaining = RECOMMENDED_MODELS
-    .filter((m) => m.id !== 'openrouter/free' && !list.some((c) => c.model === m.id))
+    .filter((m) => !list.some((c) => c.model === m.id))
     .map((m) => ({ m, avg: (m.input_price_per_1m + m.output_price_per_1m) / 2 }))
     .sort((a, b) => a.avg - b.avg);
   for (const { m } of remaining) {
@@ -267,10 +260,8 @@ serve(async (req) => {
         let applied = false;
         if (apply && winner && cfg) {
           const newOrder: ProviderId[] = winner.provider === 'openrouter'
-            ? ['openrouter', 'gemini_direct', 'lovable']
-            : winner.provider === 'gemini_direct'
-              ? ['gemini_direct', 'openrouter', 'lovable']
-              : ['lovable', 'openrouter', 'gemini_direct'];
+            ? ['openrouter', 'gemini_direct']
+            : ['gemini_direct', 'openrouter'];
           const { error: upErr } = await supabase.from('ai_model_config').update({
             primary_model: winner.model,
             provider_order: newOrder,
