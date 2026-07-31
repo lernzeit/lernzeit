@@ -244,7 +244,7 @@ const Index = () => {
             totalQuestions={5}
             topicHint={learningPlanTopic || undefined}
             mode={gameMode}
-            demoMode={!user} />
+            demoMode={!user && demoMode} />
         </Suspense>
       </ErrorBoundary>);
   }
