@@ -273,10 +273,10 @@ async function tryProvider(
       }
       if (response.status === 402) {
         exhaustedUntil[provider] = Date.now() + EXHAUSTED_COOLDOWN_MS;
-        console.warn(`⚠️ ${providerLabel(provider)} credits exhausted (402)`);
+        console.warn(`⚠️ ${providerLabel(provider)} credits exhausted (402): ${errText.slice(0, 200)}`);
       } else {
         exhaustedUntil[provider] = Date.now() + ERROR_COOLDOWN_MS;
-        console.warn(`⚠️ ${providerLabel(provider)} error (${response.status})`);
+        console.warn(`⚠️ ${providerLabel(provider)} error (${response.status}): ${errText.slice(0, 400)}`);
       }
       return { ok: false, response, status: response.status, resolvedProvider };
     } catch (err) {
