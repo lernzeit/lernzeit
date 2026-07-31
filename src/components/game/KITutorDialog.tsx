@@ -16,6 +16,16 @@ interface Message {
   content: string;
 }
 
+/** Removes markdown artefacts and leaked reasoning prefixes from model output. */
+function cleanTutorText(text: string): string {
+  return text
+    .replace(/\*\*/g, '')
+    .replace(/^#{1,3}\s/gm, '')
+    .replace(/^\s*\*\s+/gm, '• ')
+    .replace(/^\s*(Drafting text|Thinking|Reasoning)[^\n]*\n?/gim, '')
+    .trim();
+}
+
 interface KITutorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -127,7 +137,9 @@ export function KITutorDialog({
           if (jsonStr === '[DONE]') break;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
+            const delta = parsed.choices?.[0]?.delta;
+            // Ignore reasoning/thought deltas — only render the final answer.
+            const content = typeof delta?.content === 'string' ? delta.content : '';
             if (content) updateAssistant(content);
           } catch {
             buffer = line + '\n' + buffer;
@@ -197,7 +209,7 @@ export function KITutorDialog({
     stopSpeaking();
 
     // Strip markdown/formatting before speaking
-    const cleanText = text.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '').replace(/[*_~`]/g, '');
+    const cleanText = cleanTutorText(text).replace(/[*_~`]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'de-DE';
     const voice = getBestGermanVoice();
@@ -256,7 +268,7 @@ export function KITutorDialog({
                     ? 'bg-primary text-primary-foreground rounded-br-md'
                     : 'bg-muted text-foreground rounded-bl-md'
                 }`}>
-                  <p className="whitespace-pre-wrap">{msg.content.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
+                  <p className="whitespace-pre-wrap">{cleanTutorText(msg.content)}</p>
                   {msg.role === 'assistant' && msg.content && !isLoading && (
                     <button
                       onClick={() => speakText(msg.content)}

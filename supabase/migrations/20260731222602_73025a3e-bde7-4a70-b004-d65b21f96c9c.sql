@@ -1,0 +1,1 @@
+UPDATE public.ai_model_config SET thinking_level = 'minimal', max_output_tokens = 1200 WHERE use_case = 'ai_tutor';
