@@ -27,6 +27,7 @@ import { CacheGroupItem } from './CacheGroupItem';
 import { PromptRulesPanel } from './PromptRulesPanel';
 import { AIModelConfigPanel } from './AIModelConfigPanel';
 import { AIModelMetricsPanel } from './AIModelMetricsPanel';
+import { AILatencyPanel } from './AILatencyPanel';
 import { AIModelPlayground } from './AIModelPlayground';
 import { AIModelOptimizationPanel } from './AIModelOptimizationPanel';
 import { FeedbackInbox } from './FeedbackInbox';
@@ -191,7 +192,7 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-9 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-10 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Übersicht
@@ -211,6 +212,10 @@ export function AdminDashboard() {
             <TabsTrigger value="ai-metrics" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
               Metriken
+            </TabsTrigger>
+            <TabsTrigger value="ai-latency" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
+              Latenz
             </TabsTrigger>
             <TabsTrigger value="ai-playground" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <FlaskConical className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -328,6 +333,9 @@ export function AdminDashboard() {
           </TabsContent>
           <TabsContent value="ai-metrics" className="space-y-4">
             <AIModelMetricsPanel />
+          </TabsContent>
+          <TabsContent value="ai-latency" className="space-y-4">
+            <AILatencyPanel />
           </TabsContent>
           <TabsContent value="ai-playground" className="space-y-4">
             <AIModelPlayground />

@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { RECOMMENDED_MODELS, PROVIDER_LABELS, type ProviderId } from '@/lib/modelCatalog';
-import { Loader2, ArrowUp, ArrowDown, Play, Save, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { RECOMMENDED_MODELS, PROVIDER_LABELS, THINKING_LEVELS, isGemini3, type ProviderId, type ThinkingLevel } from '@/lib/modelCatalog';
+import { Loader2, ArrowUp, ArrowDown, Play, Save, CheckCircle2, XCircle, MinusCircle, AlertTriangle } from 'lucide-react';
 
 interface ConfigRow {
   id: string;
@@ -17,6 +18,10 @@ interface ConfigRow {
   primary_model: string;
   provider_order: ProviderId[];
   temperature: number | null;
+  thinking_level: ThinkingLevel | null;
+  max_output_tokens: number | null;
+  provider_routing: Record<string, unknown> | null;
+  deprecation_date: string | null;
   is_active: boolean;
 }
 
@@ -38,7 +43,27 @@ interface TestResult {
   winner: Attempt | null;
 }
 
-const ALL_PROVIDERS: ProviderId[] = ['gemini_direct', 'openrouter', 'lovable'];
+const ALL_PROVIDERS: ProviderId[] = ['gemini_direct', 'openrouter'];
+
+/** Warnungen für eine Konfiguration ermitteln. */
+function configWarnings(row: ConfigRow): string[] {
+  const w: string[] = [];
+  if (isGemini3(row.primary_model) && row.temperature !== null && row.temperature !== 1) {
+    w.push('Gemini-3-Modelle müssen mit der Standard-Temperatur 1.0 laufen — abweichende Werte werden ignoriert.');
+  }
+  if (!row.max_output_tokens) {
+    w.push('Kein max_output_tokens gesetzt — Antworten können unnötig lang und teuer werden.');
+  }
+  if (row.provider_order.includes('openrouter') && !row.provider_routing) {
+    w.push('Kein Provider-Routing für OpenRouter gesetzt (z. B. { "only": ["groq"] }).');
+  }
+  if (row.deprecation_date) {
+    const days = Math.ceil((new Date(row.deprecation_date).getTime() - Date.now()) / 86400000);
+    if (days <= 0) w.push(`Modell ist seit dem ${new Date(row.deprecation_date).toLocaleDateString('de-DE')} abgekündigt.`);
+    else if (days <= 30) w.push(`Modell wird in ${days} Tagen abgekündigt (${new Date(row.deprecation_date).toLocaleDateString('de-DE')}).`);
+  }
+  return w;
+}
 
 export function AIModelConfigPanel() {
   const [rows, setRows] = useState<ConfigRow[]>([]);
@@ -54,14 +79,15 @@ export function AIModelConfigPanel() {
     setLoading(true);
     const { data, error } = await supabase
       .from('ai_model_config')
-      .select('id, use_case, display_name, primary_model, provider_order, temperature, is_active')
+      .select('id, use_case, display_name, primary_model, provider_order, temperature, thinking_level, max_output_tokens, provider_routing, deprecation_date, is_active')
       .order('display_name');
     if (error) {
       toast({ title: 'Laden fehlgeschlagen', description: error.message, variant: 'destructive' });
     } else {
       setRows((data ?? []).map((r) => ({
         ...r,
-        provider_order: (r.provider_order as ProviderId[]) ?? ['gemini_direct', 'openrouter', 'lovable'],
+        provider_order: ((r.provider_order as ProviderId[]) ?? ['gemini_direct', 'openrouter'])
+          .filter((p) => p === 'gemini_direct' || p === 'openrouter'),
       })) as ConfigRow[]);
     }
     setLoading(false);
@@ -87,6 +113,10 @@ export function AIModelConfigPanel() {
       primary_model: row.primary_model.trim(),
       provider_order: row.provider_order,
       temperature: row.temperature,
+      thinking_level: row.thinking_level,
+      max_output_tokens: row.max_output_tokens,
+      provider_routing: (row.provider_routing ?? null) as unknown as never,
+      deprecation_date: row.deprecation_date,
       is_active: row.is_active,
       updated_at: new Date().toISOString(),
     }).eq('id', row.id);
@@ -124,9 +154,11 @@ export function AIModelConfigPanel() {
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="pt-4 text-xs space-y-1.5">
           <div className="font-semibold text-sm">So funktioniert die Konfiguration:</div>
-          <div>• <b>Primär-Modell</b> = das KI-Modell, das verwendet wird (z.B. <code className="text-[11px]">google/gemini-2.5-flash</code>).</div>
+          <div>• <b>Primär-Modell</b> = das KI-Modell, das verwendet wird (z.B. <code className="text-[11px]">google/gemini-3.5-flash</code>).</div>
           <div>• <b>Provider-Reihenfolge</b> = Über welche API das Modell aufgerufen wird. Plattform 1 wird zuerst probiert; bei Fehler (z.B. 402/Credits) fällt das System auf Plattform 2 zurück.</div>
-          <div>• Beispiel: Modell <code className="text-[11px]">google/gemini-2.5-flash</code> + Reihenfolge <i>OpenRouter → Gemini Direct</i> → Anfrage geht zuerst an OpenRouter; schlägt sie fehl, an Gemini Direct.</div>
+          <div>• Beispiel: Modell <code className="text-[11px]">google/gemini-3.5-flash</code> + Reihenfolge <i>Gemini Direct → OpenRouter</i> → Anfrage geht zuerst an Gemini; schlägt sie fehl, an OpenRouter.</div>
+          <div>• <b>Thinking-Level</b> steuert die Denk-Tiefe (minimal = schnellste Antwort), <b>Max Output Tokens</b> begrenzt die Antwortlänge.</div>
+          <div>• <b>Provider-Routing</b> (JSON) wird an OpenRouter durchgereicht, z. B. <code className="text-[11px]">{'{"only":["groq"],"allow_fallbacks":false}'}</code>.</div>
           <div className="text-muted-foreground pt-1">→ Zum Vergleich verschiedener Modelle für denselben Use-Case: Tab <b>Playground</b>.</div>
         </CardContent>
       </Card>
@@ -206,8 +238,8 @@ export function AIModelConfigPanel() {
                 </div>
               </div>
 
-              {/* Temperatur */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Parameter */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">Temperatur (optional)</label>
                   <Input
@@ -217,7 +249,67 @@ export function AIModelConfigPanel() {
                     placeholder="Default"
                   />
                 </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Thinking-Level</label>
+                  <Select
+                    value={row.thinking_level ?? '__none'}
+                    onValueChange={(v) => update(row.id, { thinking_level: v === '__none' ? null : (v as ThinkingLevel) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Default" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">— Default —</SelectItem>
+                      {THINKING_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Max Output Tokens</label>
+                  <Input
+                    type="number" min="16" max="32768" step="16"
+                    value={row.max_output_tokens ?? ''}
+                    onChange={(e) => update(row.id, { max_output_tokens: e.target.value === '' ? null : Number(e.target.value) })}
+                    placeholder="z. B. 1024"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Abkündigung (Datum)</label>
+                  <Input
+                    type="date"
+                    value={row.deprecation_date ? row.deprecation_date.slice(0, 10) : ''}
+                    onChange={(e) => update(row.id, { deprecation_date: e.target.value === '' ? null : e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground">Provider-Routing (JSON, nur OpenRouter)</label>
+                  <Textarea
+                    rows={2}
+                    className="font-mono text-xs"
+                    defaultValue={row.provider_routing ? JSON.stringify(row.provider_routing) : ''}
+                    placeholder='{"only":["groq"],"allow_fallbacks":false,"data_collection":"deny"}'
+                    onBlur={(e) => {
+                      const raw = e.target.value.trim();
+                      if (raw === '') { update(row.id, { provider_routing: null }); return; }
+                      try {
+                        update(row.id, { provider_routing: JSON.parse(raw) as Record<string, unknown> });
+                      } catch {
+                        toast({ title: 'Ungültiges JSON', description: 'Provider-Routing konnte nicht gelesen werden.', variant: 'destructive' });
+                      }
+                    }}
+                  />
+                </div>
               </div>
+
+              {/* Warnungen */}
+              {configWarnings(row).length > 0 && (
+                <div className="space-y-1 rounded-md border border-amber-500/40 bg-amber-500/10 p-2">
+                  {configWarnings(row).map((w, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2 pt-2 border-t">

@@ -1,3 +1,4 @@
+// ai-tutor: streaming KI-Tutor (Gemini 3.5 Flash → OpenRouter Fallback)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI } from "../_shared/ai-client.ts";
 
@@ -59,14 +60,19 @@ serve(async (req) => {
 
     const systemPrompt = buildSystemPrompt(safeGrade, safeSubject, safeQuestion, safeCorrect, safeUser);
 
+    // Client disconnect → abort the upstream AI request instead of burning tokens.
+    req.signal?.addEventListener('abort', () => {
+      console.warn('⚠️ ai-tutor: client aborted request');
+    }, { once: true });
+
     const { response } = await callAI({
-      model: 'google/gemini-3-flash-preview',
+      model: 'google/gemini-3.5-flash',
       messages: [
         { role: 'system', content: systemPrompt },
         ...safeMessages,
       ],
       stream: true,
-    }, undefined, 'ai_tutor');
+    }, req.signal, 'ai_tutor');
 
     if (!response.ok) {
       if (response.status === 429) {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { callAI } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -301,41 +302,30 @@ function getTypeInstructions(questionType: string): string {
   return instructions[questionType] ?? instructions.MULTIPLE_CHOICE;
 }
 
-// ── Gemini 2.5 Pro API Call ───────────────────────────────────────────────────
+// ── Batch generation via the shared callAI pipeline ─────────────────────────
 
-async function callGemini(systemPrompt: string, userPrompt: string, apiKey: string): Promise<string | null> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-  const body = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-    generationConfig: {
-      temperature: 0.75,
-      topP: 0.9,
-      maxOutputTokens: 1024,
-      responseMimeType: 'application/json',
-    },
-  };
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+async function callGemini(systemPrompt: string, userPrompt: string, _apiKey: string): Promise<string | null> {
+  const { response, provider } = await callAI({
+    model: 'google/gemini-3.5-flash',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.75,
+  }, undefined, 'question_generator_batch');
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error(`Gemini API error ${response.status}:`, errText.substring(0, 300));
+    const errText = await response.text().catch(() => '');
+    console.error(`AI error ${response.status} (${provider}):`, errText.substring(0, 300));
     if (response.status === 429) throw new Error('RATE_LIMIT');
     if (response.status === 403 || response.status === 401) throw new Error('AUTH_ERROR');
     return null;
   }
 
   const result = await response.json();
-  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+  const text = result?.choices?.[0]?.message?.content ?? null;
   if (!text) {
-    const blockReason = result?.candidates?.[0]?.finishReason ?? result?.promptFeedback?.blockReason ?? 'unknown';
-    console.warn('Empty Gemini response. Reason:', blockReason, JSON.stringify(result).substring(0, 300));
+    console.warn('Empty AI response:', JSON.stringify(result).substring(0, 300));
   }
   return text;
 }

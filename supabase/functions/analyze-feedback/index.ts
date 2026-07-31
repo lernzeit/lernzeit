@@ -465,7 +465,7 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
 
   try {
     const { response } = await callAI({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-3.5-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     }, undefined, 'analyze_feedback');
@@ -531,7 +531,7 @@ Antworte NUR mit der kombinierten Regel, ohne Anführungszeichen, ohne Erklärun
 
   try {
     const { response } = await callAI({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-3.5-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
     }, undefined, 'analyze_feedback');

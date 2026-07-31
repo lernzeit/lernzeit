@@ -4,9 +4,11 @@
  *
  * `id` is the canonical identifier used in `ai_model_config.primary_model`.
  * It maps to provider-specific names below.
+ *
+ * Providers: Google (direct) and OpenRouter. The Lovable Gateway has been removed.
  */
 
-export type ProviderId = 'gemini_direct' | 'openrouter' | 'lovable';
+export type ProviderId = 'gemini_direct' | 'openrouter';
 
 export interface ModelInfo {
   id: string;
@@ -15,127 +17,69 @@ export interface ModelInfo {
   // Provider-native model IDs (null = not available on that provider)
   gemini_id: string | null;
   openrouter_id: string | null;
-  lovable_id: string | null;
   input_price_per_1m: number;  // USD
   output_price_per_1m: number; // USD
   supports_tools: boolean;
+  /** Gemini 3 models must run at temperature 1.0 (default). */
+  requires_default_temperature: boolean;
   recommended_for: string[];
 }
 
 export const RECOMMENDED_MODELS: ModelInfo[] = [
-  // ── OpenRouter Auto-Free (routes to best available free model) ────
+  // ── Google Gemini 3 ────────────────────────────────────────
   {
-    id: 'openrouter/free',
-    label: 'OpenRouter Free (Auto)',
-    family: 'other',
-    gemini_id: null,
-    openrouter_id: 'openrouter/auto',
-    lovable_id: null,
-    input_price_per_1m: 0,
-    output_price_per_1m: 0,
-    supports_tools: false,
-    // Always-eligible candidate across every use-case (free).
-    recommended_for: ['validate_answer', 'question_generator', 'validate_question', 'ai_explain', 'ai_tutor', 'analyze_feedback', 'learning_plan'],
-  },
-  // ── Google Gemini ──────────────────────────────────────────
-  {
-    id: 'google/gemini-2.5-flash-lite',
-    label: 'Gemini 2.5 Flash Lite',
+    id: 'google/gemini-3.1-flash-lite',
+    label: 'Gemini 3.1 Flash Lite',
     family: 'google',
-    gemini_id: 'gemini-2.5-flash-lite',
-    openrouter_id: 'google/gemini-2.5-flash-lite',
-    lovable_id: 'google/gemini-2.5-flash-lite',
+    gemini_id: 'gemini-3.1-flash-lite',
+    openrouter_id: 'google/gemini-3.1-flash-lite',
     input_price_per_1m: 0.10,
     output_price_per_1m: 0.40,
     supports_tools: true,
-    recommended_for: ['validate_answer', 'classification'],
+    requires_default_temperature: true,
+    recommended_for: ['question_generator_live', 'validate_answer', 'validate_question', 'ai_explain'],
   },
   {
-    id: 'google/gemini-2.5-flash',
-    label: 'Gemini 2.5 Flash',
+    id: 'google/gemini-3.5-flash',
+    label: 'Gemini 3.5 Flash',
     family: 'google',
-    gemini_id: 'gemini-2.5-flash',
-    openrouter_id: 'google/gemini-2.5-flash',
-    lovable_id: 'google/gemini-2.5-flash',
+    gemini_id: 'gemini-3.5-flash',
+    openrouter_id: 'google/gemini-3.5-flash',
     input_price_per_1m: 0.30,
     output_price_per_1m: 2.50,
     supports_tools: true,
-    recommended_for: ['question_generator', 'ai_explain', 'analyze_feedback'],
-  },
-  {
-    id: 'google/gemini-3-flash-preview',
-    label: 'Gemini 3 Flash (Preview)',
-    family: 'google',
-    gemini_id: 'gemini-2.5-flash',
-    openrouter_id: 'google/gemini-2.5-flash',
-    lovable_id: 'google/gemini-3-flash-preview',
-    input_price_per_1m: 0.30,
-    output_price_per_1m: 2.50,
-    supports_tools: true,
-    recommended_for: ['question_generator', 'ai_tutor', 'ai_explain'],
-  },
-  {
-    id: 'google/gemini-3.1-flash-lite-preview',
-    label: 'Gemini 3.1 Flash Lite (Preview)',
-    family: 'google',
-    gemini_id: null,
-    openrouter_id: null,
-    lovable_id: 'google/gemini-3.1-flash-lite-preview',
-    input_price_per_1m: 0.10,
-    output_price_per_1m: 0.40,
-    supports_tools: true,
-    recommended_for: ['question_generator', 'validate_answer', 'classification'],
-  },
-  {
-    id: 'google/gemini-2.5-pro',
-    label: 'Gemini 2.5 Pro',
-    family: 'google',
-    gemini_id: 'gemini-2.5-pro',
-    openrouter_id: 'google/gemini-2.5-pro',
-    lovable_id: 'google/gemini-2.5-pro',
-    input_price_per_1m: 1.25,
-    output_price_per_1m: 10.00,
-    supports_tools: true,
-    recommended_for: ['analyze_feedback', 'learning_plan'],
+    requires_default_temperature: true,
+    recommended_for: ['question_generator_batch', 'ai_tutor', 'analyze_feedback', 'learning_plan'],
   },
 
-  // ── OpenAI ────────────────────────────────────────────────
+  // ── OpenRouter fallback (pinned to Groq via provider_routing) ──
   {
-    id: 'openai/gpt-4o-mini',
-    label: 'GPT-4o Mini',
+    id: 'openai/gpt-oss-120b',
+    label: 'GPT-OSS 120B (Groq)',
     family: 'openai',
     gemini_id: null,
-    openrouter_id: 'openai/gpt-4o-mini',
-    lovable_id: null,
+    openrouter_id: 'openai/gpt-oss-120b',
     input_price_per_1m: 0.15,
     output_price_per_1m: 0.60,
     supports_tools: true,
-    recommended_for: ['question_generator', 'validate_answer'],
-  },
-  {
-    id: 'openai/gpt-4o',
-    label: 'GPT-4o',
-    family: 'openai',
-    gemini_id: null,
-    openrouter_id: 'openai/gpt-4o',
-    lovable_id: null,
-    input_price_per_1m: 2.50,
-    output_price_per_1m: 10.00,
-    supports_tools: true,
-    recommended_for: ['analyze_feedback', 'learning_plan'],
+    requires_default_temperature: false,
+    recommended_for: [
+      'question_generator_live', 'question_generator_batch', 'ai_explain', 'ai_tutor',
+      'validate_answer', 'validate_question', 'analyze_feedback', 'learning_plan',
+    ],
   },
 
-  // ── Anthropic ─────────────────────────────────────────────
+  // ── Weitere OpenRouter-Modelle ────────────────────────────
   {
     id: 'anthropic/claude-haiku-4',
     label: 'Claude Haiku 4',
     family: 'anthropic',
     gemini_id: null,
     openrouter_id: 'anthropic/claude-haiku-4',
-    lovable_id: null,
     input_price_per_1m: 1.00,
     output_price_per_1m: 5.00,
     supports_tools: true,
+    requires_default_temperature: false,
     recommended_for: ['ai_tutor', 'ai_explain'],
   },
   {
@@ -144,37 +88,23 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     family: 'anthropic',
     gemini_id: null,
     openrouter_id: 'anthropic/claude-sonnet-4',
-    lovable_id: null,
     input_price_per_1m: 3.00,
     output_price_per_1m: 15.00,
     supports_tools: true,
+    requires_default_temperature: false,
     recommended_for: ['analyze_feedback', 'learning_plan'],
   },
-
-  // ── Open / Cheap ─────────────────────────────────────────
   {
     id: 'meta-llama/llama-3.3-70b-instruct',
     label: 'Llama 3.3 70B',
     family: 'meta',
     gemini_id: null,
     openrouter_id: 'meta-llama/llama-3.3-70b-instruct',
-    lovable_id: null,
     input_price_per_1m: 0.13,
     output_price_per_1m: 0.40,
     supports_tools: true,
-    recommended_for: ['question_generator', 'ai_explain'],
-  },
-  {
-    id: 'google/gemma-3-12b-it',
-    label: 'Gemma 3 12B',
-    family: 'google',
-    gemini_id: null,
-    openrouter_id: 'google/gemma-3-12b-it',
-    lovable_id: null,
-    input_price_per_1m: 0.05,
-    output_price_per_1m: 0.10,
-    supports_tools: false,
-    recommended_for: ['validate_answer'],
+    requires_default_temperature: false,
+    recommended_for: ['question_generator_batch', 'ai_explain'],
   },
   {
     id: 'deepseek/deepseek-chat-v3',
@@ -182,11 +112,11 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     family: 'deepseek',
     gemini_id: null,
     openrouter_id: 'deepseek/deepseek-chat',
-    lovable_id: null,
     input_price_per_1m: 0.27,
     output_price_per_1m: 1.10,
     supports_tools: true,
-    recommended_for: ['question_generator', 'analyze_feedback'],
+    requires_default_temperature: false,
+    recommended_for: ['question_generator_batch', 'analyze_feedback'],
   },
   {
     id: 'mistralai/mistral-large',
@@ -194,16 +124,21 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     family: 'mistral',
     gemini_id: null,
     openrouter_id: 'mistralai/mistral-large-2411',
-    lovable_id: null,
     input_price_per_1m: 2.00,
     output_price_per_1m: 6.00,
     supports_tools: true,
+    requires_default_temperature: false,
     recommended_for: ['analyze_feedback'],
   },
 ];
 
 export function getModelInfo(id: string): ModelInfo | null {
   return RECOMMENDED_MODELS.find((m) => m.id === id) ?? null;
+}
+
+/** True for the Gemini 3 family, which must run at the default temperature of 1.0. */
+export function isGemini3(canonicalId: string): boolean {
+  return /^google\/gemini-3/.test(canonicalId);
 }
 
 /**
@@ -216,7 +151,6 @@ export function resolveProviderModel(canonicalId: string, provider: ProviderId):
   switch (provider) {
     case 'gemini_direct': return info.gemini_id ?? canonicalId;
     case 'openrouter':    return info.openrouter_id ?? canonicalId;
-    case 'lovable':       return info.lovable_id ?? canonicalId;
   }
 }
 
@@ -227,7 +161,6 @@ export function isModelAvailableOn(canonicalId: string, provider: ProviderId): b
   switch (provider) {
     case 'gemini_direct': return info.gemini_id !== null;
     case 'openrouter':    return info.openrouter_id !== null;
-    case 'lovable':       return info.lovable_id !== null;
   }
 }
 

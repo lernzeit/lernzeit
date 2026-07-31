@@ -54,7 +54,7 @@ serve(async (req) => {
     const prompt = buildExplanationPrompt(safeQuestion, safeCorrect, safeUser, safeGrade, safeSubject);
 
     const { response } = await callAI({
-      model: 'google/gemini-3-flash-preview',
+      model: 'google/gemini-3.1-flash-lite',
       messages: [
         { role: 'system', content: getSystemPrompt(safeGrade) },
         { role: 'user', content: prompt }

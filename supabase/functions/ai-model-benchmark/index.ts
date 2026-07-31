@@ -11,13 +11,11 @@ const corsHeaders = {
 const GATEWAYS: Record<ProviderId, string> = {
   gemini_direct: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
   openrouter: 'https://openrouter.ai/api/v1/chat/completions',
-  lovable: 'https://ai.gateway.lovable.dev/v1/chat/completions',
 };
 
 function apiKey(p: ProviderId): string | undefined {
   if (p === 'gemini_direct') return Deno.env.get('GEMINI_API_KEY');
-  if (p === 'openrouter') return Deno.env.get('OPENROUTER_API_KEY');
-  return Deno.env.get('LOVABLE_API_KEY');
+  return Deno.env.get('OPENROUTER_API_KEY');
 }
 
 interface Candidate {
@@ -93,7 +91,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in dieser Form:
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3.5-flash',
         messages: [{ role: 'user', content: judgePrompt }],
         temperature: 0,
         response_format: { type: 'json_object' },

@@ -115,10 +115,9 @@ export function AIModelPlayground() {
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => {
     return new Set([
-      'openrouter/free__openrouter',
-      'google/gemma-3-12b-it__openrouter',
-      'google/gemini-2.5-flash-lite__gemini_direct',
-      'google/gemini-2.5-flash__gemini_direct',
+      'google/gemini-3.1-flash-lite__gemini_direct',
+      'google/gemini-3.5-flash__gemini_direct',
+      'openai/gpt-oss-120b__openrouter',
     ]);
   });
 
