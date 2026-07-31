@@ -593,7 +593,8 @@ serve(async (req) => {
               options: tryParseStructuredValue(picked.options),
               hint: picked.hint,
               task: picked.task,
-              createdAt: new Date().toISOString()
+              createdAt: new Date().toISOString(),
+              source: 'cache-fallback'
             }
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' }
@@ -667,7 +668,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      question: enhancedQuestion
+      question: { ...enhancedQuestion, source: 'ai' }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' }
     });
