@@ -88,7 +88,18 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Ein alter Service Worker (mit Supabase-Caching) darf nicht weiterlaufen:
+        // sofort aktivieren, Clients übernehmen und veraltete Caches löschen.
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
+          {
+            // Supabase (Edge Functions, REST, Auth) NIEMALS cachen – sonst
+            // liefert ein alter Worker immer wieder dieselben Fragen aus.
+            urlPattern: /^https:\/\/[a-z0-9-]+\.supabase\.co\/.*/i,
+            handler: 'NetworkOnly'
+          },
           {
             urlPattern: /^https:\/\/api\./i,
             handler: 'NetworkFirst',
