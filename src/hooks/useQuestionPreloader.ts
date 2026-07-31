@@ -252,6 +252,7 @@ const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
 const RECENT_QUESTIONS_MAX = 30;
 const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
+const ALTERNATIVE_ATTEMPTS = 3;
 // Cache-First in der Edge Function macht die meisten Calls zu schnellen DB-Reads,
 // daher können wir die verbleibenden Fragen parallel laden.
 const PARALLEL_BATCH_SIZE = 3;
@@ -317,13 +318,16 @@ export const useQuestionPreloader = ({
     signal?: AbortSignal,
     excludeTexts?: Set<string>
   ): Promise<PreloadedQuestion | null> => {
-    try {
+    const attemptedExclusions = new Set(excludeTexts ?? []);
+
+    for (let attempt = 0; attempt < ALTERNATIVE_ATTEMPTS; attempt++) {
+      try {
       // Add timeout via AbortController
       const timeoutId = setTimeout(() => {
         console.warn('⏱️ Question generation timed out after', REQUEST_TIMEOUT_MS, 'ms');
       }, REQUEST_TIMEOUT_MS);
 
-      const excludeArr = excludeTexts ? Array.from(excludeTexts).slice(-20) : [];
+      const excludeArr = Array.from(attemptedExclusions).slice(-30);
       const fetchPromise = supabase.functions.invoke('ai-question-generator', {
         body: {
           grade: gradeRef.current,
@@ -335,6 +339,8 @@ export const useQuestionPreloader = ({
           // Semantische Signaturen: erkennen Varianten, die sich nur in
           // Zahlen/Zeichensetzung unterscheiden ("25-13" ≈ "26-14").
           excludeSignatures: excludeArr.map(questionSignature).filter(Boolean),
+          // A rejected repeat must not be selected from the cache again.
+          forceFresh: attempt > 0,
           topicHint: topicHintRef.current || undefined
         }
       });
@@ -354,12 +360,12 @@ export const useQuestionPreloader = ({
 
       if (invokeError) {
         console.error('❌ Question generation error:', invokeError);
-        return null;
+        continue;
       }
 
       if (!data?.success) {
         console.error('❌ Question generation failed:', data?.error || 'Unknown error');
-        return null;
+        continue;
       }
 
       console.log('✅ Question generated:', data.question?.questionType, '-', data.question?.questionText?.substring(0, 50));
@@ -415,15 +421,28 @@ export const useQuestionPreloader = ({
           correctAnswer: normalizedQuestion.correctAnswer,
           task: normalizedQuestion.task
         });
-        return null;
+        continue;
+      }
+
+      const candidateSignature = questionSignature(normalizedQuestion.questionText);
+      const excludedSignatures = new Set(
+        Array.from(attemptedExclusions).map(questionSignature).filter(Boolean)
+      );
+      if (candidateSignature && excludedSignatures.has(candidateSignature)) {
+        console.warn('🔁 Repeated question rejected; requesting an alternative:', normalizedQuestion.questionText);
+        attemptedExclusions.add(normalizedQuestion.questionText);
+        continue;
       }
 
       return normalizedQuestion;
-    } catch (err) {
-      if (signal?.aborted) return null;
-      console.error('❌ Question fetch error:', err);
-      return null;
+      } catch (err) {
+        if (signal?.aborted) return null;
+        console.error('❌ Question fetch error:', err);
+      }
     }
+
+    console.error(`❌ No non-repeating question found after ${ALTERNATIVE_ATTEMPTS} attempts`);
+    return null;
   }, []); // No deps - uses refs
 
   const startPreloading = useCallback(async () => {
@@ -489,12 +508,10 @@ export const useQuestionPreloader = ({
       return;
     }
     
-      if (firstQuestion) {
+    if (firstQuestion) {
       const firstSig = questionSignature(firstQuestion.questionText);
-      if (!seenTextsRef.current.has(firstSig)) {
-        seenTextsRef.current.add(firstSig);
-        recentTexts.add(firstQuestion.questionText);
-      }
+      seenTextsRef.current.add(firstSig);
+      recentTexts.add(firstQuestion.questionText);
       
       setQuestions([firstQuestion]);
       setLoadingProgress(1);
@@ -535,6 +552,22 @@ export const useQuestionPreloader = ({
             
             setQuestions(prev => [...prev, ...successfulQuestions]);
             setLoadingProgress(prev => prev + successfulQuestions.length);
+
+            // Parallel requests can still race with the same exclusion snapshot.
+            // Replace every rejected collision immediately with a fresh alternative.
+            const missingCount = batch.length - successfulQuestions.length;
+            for (let replacementIndex = 0; replacementIndex < missingCount; replacementIndex++) {
+              if (signal.aborted || !mountedRef.current) break;
+              const difficulty = difficulties[batch[replacementIndex] ?? batch[0]] || 'medium';
+              const replacement = await generateSingleQuestion(difficulty, signal, recentTexts);
+              if (!replacement) continue;
+              const replacementSig = questionSignature(replacement.questionText);
+              if (!replacementSig || seenTextsRef.current.has(replacementSig)) continue;
+              seenTextsRef.current.add(replacementSig);
+              recentTexts.add(replacement.questionText);
+              setQuestions(prev => [...prev, replacement]);
+              setLoadingProgress(prev => prev + 1);
+            }
           }
         }
       }

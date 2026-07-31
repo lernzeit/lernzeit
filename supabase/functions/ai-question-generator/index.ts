@@ -25,6 +25,7 @@ interface QuestionRequest {
   questionType?: ValidQuestionType;
   excludeTexts?: string[];
   excludeSignatures?: string[];
+  forceFresh?: boolean;
 }
 
 /**
@@ -213,6 +214,7 @@ serve(async (req) => {
     const excludeSignatureSet = new Set<string>(
       [...clientSignatures, ...excludeTexts.map(questionSignature)].filter(Boolean)
     );
+    const forceFresh = body.forceFresh === true;
 
     // Extract optional topicHint for learning plan focus
     const topicHint: string | undefined = typeof body.topicHint === 'string' && body.topicHint.length > 0
@@ -247,7 +249,7 @@ serve(async (req) => {
     const SUPABASE_URL_EARLY = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SRK_EARLY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!topicHint && SUPABASE_URL_EARLY && SUPABASE_SRK_EARLY && Math.random() < CACHE_FIRST_PROBABILITY) {
+    if (!forceFresh && !topicHint && SUPABASE_URL_EARLY && SUPABASE_SRK_EARLY && Math.random() < CACHE_FIRST_PROBABILITY) {
       try {
         const cacheClient = createClient(SUPABASE_URL_EARLY, SUPABASE_SRK_EARLY);
         const { data: cachedPool, count } = await cacheClient
@@ -272,7 +274,12 @@ serve(async (req) => {
             if (sig && excludeSignatureSet.has(sig)) return false;
             return true;
           });
-          const pickFrom = candidates.length >= 10 ? candidates : cachedPool;
+          // Never fall back to excluded rows. A small candidate set is still
+          // safer than serving a question the learner has just seen.
+          const pickFrom = candidates;
+          if (pickFrom.length === 0) {
+            console.log('🔁 Cache-first has no non-repeating candidate; generating fresh');
+          } else {
           // Vollständig zufällige Auswahl aus dem gesamten (gefilterten) Pool
           const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)];
 
@@ -314,6 +321,7 @@ serve(async (req) => {
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
+          }
         }
         console.log(`📉 Cache-first skipped (pool=${poolSize} < ${CACHE_MIN_POOL}), generating fresh`);
       } catch (cacheErr) {
@@ -519,6 +527,15 @@ serve(async (req) => {
         console.warn('⚠️ Empty question_text');
         question = null;
       }
+
+      if (question && rawQuestionText) {
+        const generatedSignature = questionSignature(rawQuestionText);
+        if (generatedSignature && excludeSignatureSet.has(generatedSignature)) {
+          lastError = 'generated repeated question';
+          console.warn(`🔁 AI repeat rejected: ${rawQuestionText.substring(0, 80)}`);
+          question = null;
+        }
+      }
     }
 
     // If AI failed, try serving from cache
@@ -541,9 +558,16 @@ serve(async (req) => {
 
         const { data: cachedQuestions } = await cacheQuery;
         
-        if (cachedQuestions && cachedQuestions.length > 0) {
+        const nonRepeatingCachedQuestions = (cachedQuestions ?? []).filter((cached) => {
+          const text = String(cached.question_text || '').trim().toLowerCase();
+          if (excludeTexts.some((excluded) => excluded.trim().toLowerCase() === text)) return false;
+          const signature = questionSignature(cached.question_text);
+          return !signature || !excludeSignatureSet.has(signature);
+        });
+
+        if (nonRepeatingCachedQuestions.length > 0) {
           // Pick a random one from least-served
-          const picked = cachedQuestions[Math.floor(Math.random() * cachedQuestions.length)];
+          const picked = nonRepeatingCachedQuestions[Math.floor(Math.random() * nonRepeatingCachedQuestions.length)];
           console.log(`✅ Cache fallback: serving cached question ${picked.id}`);
           
           // Update times_served
