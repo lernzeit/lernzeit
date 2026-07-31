@@ -504,6 +504,23 @@ export const useQuestionPreloader = ({
 
       if (isActuallyAnonymous) {
         const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
+        logPreloadStart({
+          demoMode,
+          authenticated: false,
+          plannedSource: 'demo',
+          grade: gradeRef.current,
+          subject: subjectRef.current,
+          total
+        });
+        demo.forEach((q, index) =>
+          logQuestionSource('demo', q.questionText, {
+            demoMode,
+            authenticated: false,
+            grade: gradeRef.current,
+            subject: subjectRef.current,
+            index
+          })
+        );
         if (!signal.aborted && mountedRef.current) {
           if (demo.length === 0) {
             loadedDemoRef.current = false;
@@ -521,6 +538,13 @@ export const useQuestionPreloader = ({
       }
 
       console.warn('Authenticated session detected; ignoring stale demo mode');
+      logAuthTransition({
+        event: 'stale_demo_mode_ignored',
+        authenticated: true,
+        demoMode,
+        hadDemoQuestions: loadedDemoRef.current,
+        action: 'discard_demo_and_reload'
+      });
     }
 
     loadedDemoRef.current = false;
@@ -534,6 +558,13 @@ export const useQuestionPreloader = ({
       difficultySequenceRef.current || defaultSequence;
 
     console.log('🚀 Starting question preload for grade', gradeRef.current, 'subject', subjectRef.current);
+    logPreloadStart({
+      demoMode,
+      plannedSource: 'api',
+      grade: gradeRef.current,
+      subject: subjectRef.current,
+      total
+    });
 
     // Load FIRST question — Schwierigkeit aus der (adaptiven) Sequenz nutzen,
     // sonst startet jede Session unabhängig vom Profil mit "medium".
