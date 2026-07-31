@@ -141,3 +141,14 @@ export const isDemoSubjectSupported = (grade: number, subject: string): boolean 
   const targetGrade = POOL[grade] ? grade : findClosestGrade(grade);
   return !!POOL[targetGrade]?.[subject];
 };
+
+/** Alle Fragetexte des statischen Demo-Pools – für gezieltes Aufräumen im Storage. */
+export const getAllDemoQuestionTexts = (): Set<string> => {
+  const texts = new Set<string>();
+  for (const bySubject of Object.values(POOL)) {
+    for (const list of Object.values(bySubject)) {
+      for (const q of list) texts.add(q.questionText);
+    }
+  }
+  return texts;
+};

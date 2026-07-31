@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getDemoQuestions } from '@/data/demoQuestions';
 import { questionSignature } from '@/utils/questionSignature';
+import { purgeDemoQuestionStorage } from '@/utils/demoQuestionPurge';
 
 export interface PreloadedQuestion {
   id: string;
@@ -666,14 +667,26 @@ export const useQuestionPreloader = ({
     startPreloadingRef.current = startPreloading;
   }, [startPreloading]);
 
+  const purgedForSessionRef = useRef(false);
+
   useEffect(() => {
-    const discardDemoAndReload = () => {
-      if (!loadedDemoRef.current) return;
+    const discardDemoAndReload = async () => {
+      const hadDemoInMemory = loadedDemoRef.current;
+      // Persistiertes Demo-Material immer einmal pro Session bereinigen –
+      // auch wenn gerade keine Demo-Frage sichtbar ist, damit nichts über
+      // localStorage/IndexedDB/Cache zurückkommt.
+      if (!purgedForSessionRef.current) {
+        purgedForSessionRef.current = true;
+        await purgeDemoQuestionStorage();
+      }
+      if (!hadDemoInMemory) return;
+
       console.warn('🔒 Auth guard: discarding demo questions after sign-in');
       abortControllerRef.current?.abort();
       isLoadingRef.current = false;
       loadedDemoRef.current = false;
       hasStartedRef.current = true;
+      seenTextsRef.current = new Set();
       if (mountedRef.current) {
         setQuestions([]);
         setLoadingProgress(0);
@@ -684,12 +697,13 @@ export const useQuestionPreloader = ({
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) discardDemoAndReload();
+      if (session?.user) void discardDemoAndReload();
+      else purgedForSessionRef.current = false;
     });
 
     // Catch a session that was already restored before this listener attached.
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) discardDemoAndReload();
+      if (data.session?.user) void discardDemoAndReload();
     });
 
     return () => subscription.unsubscribe();
