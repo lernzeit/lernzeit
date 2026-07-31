@@ -6,7 +6,7 @@
  * else returns `applicable: false` so the caller can fall back to an LLM check.
  */
 
-import { evaluate } from 'npm:mathjs@13';
+import { evaluate } from 'https://esm.sh/mathjs@13.2.0';
 
 export interface MathValidationResult {
   /** false → deterministic validation not possible, use the LLM fallback. */
