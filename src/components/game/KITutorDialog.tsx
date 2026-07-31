@@ -209,7 +209,7 @@ export function KITutorDialog({
     stopSpeaking();
 
     // Strip markdown/formatting before speaking
-    const cleanText = text.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '').replace(/[*_~`]/g, '');
+    const cleanText = cleanTutorText(text).replace(/[*_~`]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'de-DE';
     const voice = getBestGermanVoice();
@@ -268,7 +268,7 @@ export function KITutorDialog({
                     ? 'bg-primary text-primary-foreground rounded-br-md'
                     : 'bg-muted text-foreground rounded-bl-md'
                 }`}>
-                  <p className="whitespace-pre-wrap">{msg.content.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
+                  <p className="whitespace-pre-wrap">{cleanTutorText(msg.content)}</p>
                   {msg.role === 'assistant' && msg.content && !isLoading && (
                     <button
                       onClick={() => speakText(msg.content)}
