@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI } from "../_shared/ai-client.ts";
+import { validateMath } from "../_shared/math-validator.ts";
+import { logMetric } from "../_shared/model-config.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,8 +55,35 @@ serve(async (req) => {
 
     const validationPrompt = buildValidationPrompt(question, correctAnswer, userAnswer, explanation, grade, subject);
 
+    // ── Deterministische Mathe-Prüfung zuerst (kein LLM nötig) ──
+    const isMath = (subject ?? '').toLowerCase().includes('math');
+    if (isMath) {
+      const started = Date.now();
+      const det = validateMath(question, String(correctAnswer));
+      if (det.applicable) {
+        logMetric({
+          use_case: 'validate_question', provider: 'deterministic', model: 'math-validator',
+          status_code: 200, success: true, latency_ms: Date.now() - started,
+          total_latency_ms: Date.now() - started, cache_hit: true,
+        });
+        const validationResult: ValidationResult = {
+          isValid: det.valid === true,
+          confidence: 1,
+          calculatedAnswer: det.expected ?? null,
+          discrepancies: det.valid ? [] : [`Erwartetes Ergebnis: ${det.expected}`],
+          suggestedCorrection: det.valid ? null : (det.expected ?? null),
+          explanation: `Deterministisch geprüft (${det.reason}).`,
+        };
+        console.log(`🧮 Deterministische Prüfung: ${det.valid ? 'VALID' : 'INVALID'} (${det.reason})`);
+        return new Response(JSON.stringify({
+          success: true, validation: validationResult, templateId, grade, subject, method: 'deterministic',
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      console.log(`ℹ️ Deterministische Prüfung nicht anwendbar (${det.reason}) → LLM-Fallback`);
+    }
+
     const { response } = await callAI({
-      model: 'google/gemini-3-flash-preview',
+      model: 'google/gemini-3.1-flash-lite',
       messages: [
         { role: 'system', content: getSystemPrompt() },
         { role: 'user', content: validationPrompt }
@@ -148,7 +177,8 @@ serve(async (req) => {
       validation: validationResult,
       templateId,
       grade,
-      subject
+      subject,
+      method: 'llm'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
