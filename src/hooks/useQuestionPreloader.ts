@@ -455,8 +455,14 @@ export const useQuestionPreloader = ({
         continue;
       }
 
+      logQuestionSource(telemetrySource, normalizedQuestion.questionText, {
+        demoMode: demoModeRef.current,
+        grade: gradeRef.current,
+        subject: subjectRef.current,
+        difficulty
+      });
+
       return normalizedQuestion;
-      // eslint-disable-next-line no-unreachable
       } catch (err) {
         if (signal?.aborted) return null;
         console.error('❌ Question fetch error:', err);
