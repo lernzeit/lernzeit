@@ -325,6 +325,9 @@ export const useQuestionPreloader = ({
     }
   }, []);
 
+  const demoModeRef = useRef(demoMode);
+  demoModeRef.current = demoMode;
+
   const generateSingleQuestion = useCallback(async (
     difficulty: 'easy' | 'medium' | 'hard',
     signal?: AbortSignal,
@@ -427,6 +430,9 @@ export const useQuestionPreloader = ({
       }
       
       const normalizedQuestion = normalizeQuestionPayload(data.question);
+      const telemetrySource = normalizeQuestionSource(
+        data.question?.source ?? (data.question?.id ? 'api' : undefined)
+      );
 
       if (!isQuestionRenderable(normalizedQuestion)) {
         console.warn('⚠️ Discarding unrenderable question payload:', {
@@ -450,6 +456,7 @@ export const useQuestionPreloader = ({
       }
 
       return normalizedQuestion;
+      // eslint-disable-next-line no-unreachable
       } catch (err) {
         if (signal?.aborted) return null;
         console.error('❌ Question fetch error:', err);
