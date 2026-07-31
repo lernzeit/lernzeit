@@ -56,40 +56,52 @@ export type Database = {
       ai_model_config: {
         Row: {
           created_at: string
+          deprecation_date: string | null
           display_name: string
           fallback_models: Json
           id: string
           is_active: boolean
+          max_output_tokens: number | null
           notes: string | null
           primary_model: string
           provider_order: Json
+          provider_routing: Json | null
           temperature: number | null
+          thinking_level: string | null
           updated_at: string
           use_case: string
         }
         Insert: {
           created_at?: string
+          deprecation_date?: string | null
           display_name: string
           fallback_models?: Json
           id?: string
           is_active?: boolean
+          max_output_tokens?: number | null
           notes?: string | null
           primary_model: string
           provider_order?: Json
+          provider_routing?: Json | null
           temperature?: number | null
+          thinking_level?: string | null
           updated_at?: string
           use_case: string
         }
         Update: {
           created_at?: string
+          deprecation_date?: string | null
           display_name?: string
           fallback_models?: Json
           id?: string
           is_active?: boolean
+          max_output_tokens?: number | null
           notes?: string | null
           primary_model?: string
           provider_order?: Json
+          provider_routing?: Json | null
           temperature?: number | null
+          thinking_level?: string | null
           updated_at?: string
           use_case?: string
         }
@@ -97,6 +109,8 @@ export type Database = {
       }
       ai_model_metrics: {
         Row: {
+          aborted: boolean
+          cache_hit: boolean
           completion_tokens: number | null
           created_at: string
           error_type: string | null
@@ -106,12 +120,18 @@ export type Database = {
           model: string
           prompt_tokens: number | null
           provider: string
+          resolved_provider: string | null
           status_code: number | null
           success: boolean
+          thinking_level: string | null
+          total_latency_ms: number | null
           total_tokens: number | null
+          ttft_ms: number | null
           use_case: string
         }
         Insert: {
+          aborted?: boolean
+          cache_hit?: boolean
           completion_tokens?: number | null
           created_at?: string
           error_type?: string | null
@@ -121,12 +141,18 @@ export type Database = {
           model: string
           prompt_tokens?: number | null
           provider: string
+          resolved_provider?: string | null
           status_code?: number | null
           success?: boolean
+          thinking_level?: string | null
+          total_latency_ms?: number | null
           total_tokens?: number | null
+          ttft_ms?: number | null
           use_case: string
         }
         Update: {
+          aborted?: boolean
+          cache_hit?: boolean
           completion_tokens?: number | null
           created_at?: string
           error_type?: string | null
@@ -136,9 +162,13 @@ export type Database = {
           model?: string
           prompt_tokens?: number | null
           provider?: string
+          resolved_provider?: string | null
           status_code?: number | null
           success?: boolean
+          thinking_level?: string | null
+          total_latency_ms?: number | null
           total_tokens?: number | null
+          ttft_ms?: number | null
           use_case?: string
         }
         Relationships: []
@@ -1464,6 +1494,20 @@ export type Database = {
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       generate_invitation_code: { Args: never; Returns: string }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
+      get_ai_latency_summary: {
+        Args: { p_days?: number }
+        Returns: {
+          abort_rate: number
+          cache_hit_rate: number
+          latency_p50: number
+          latency_p95: number
+          provider: string
+          total_calls: number
+          ttft_p50: number
+          ttft_p95: number
+          use_case: string
+        }[]
+      }
       get_ai_model_metrics_summary: {
         Args: { p_since?: string; p_use_case?: string }
         Returns: {
