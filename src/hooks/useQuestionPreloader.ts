@@ -656,6 +656,45 @@ export const useQuestionPreloader = ({
     };
   }, [enabled, startPreloading, cancelLoading]);
 
+  // Hard auth guard: the demo pool must never survive an anonymous → logged-in
+  // transition. Independently of the `demoMode` prop (which can lag behind in
+  // Chrome/Capacitor), listen directly on the Supabase auth state. As soon as a
+  // real session appears while static demo questions are on screen, abort the
+  // current run, drop the demo questions and reload real ones.
+  const startPreloadingRef = useRef(startPreloading);
+  useEffect(() => {
+    startPreloadingRef.current = startPreloading;
+  }, [startPreloading]);
+
+  useEffect(() => {
+    const discardDemoAndReload = () => {
+      if (!loadedDemoRef.current) return;
+      console.warn('🔒 Auth guard: discarding demo questions after sign-in');
+      abortControllerRef.current?.abort();
+      isLoadingRef.current = false;
+      loadedDemoRef.current = false;
+      hasStartedRef.current = true;
+      if (mountedRef.current) {
+        setQuestions([]);
+        setLoadingProgress(0);
+        setError(null);
+        setIsInitialLoading(true);
+      }
+      startPreloadingRef.current();
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) discardDemoAndReload();
+    });
+
+    // Catch a session that was already restored before this listener attached.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) discardDemoAndReload();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return {
     questions,
     isInitialLoading,
