@@ -26,6 +26,7 @@ interface QuestionRequest {
   excludeTexts?: string[];
   excludeSignatures?: string[];
   forceFresh?: boolean;
+  requestNonce?: string;
 }
 
 /**
@@ -198,18 +199,19 @@ serve(async (req) => {
       });
     }
     
-    // Extract exclude list for deduplication (max 20 texts, validated)
+    // Extract exclude list for deduplication. A longer cross-session history
+    // prevents a small shared cache pool from rotating the same archetypes.
     const excludeTexts: string[] = Array.isArray(body.excludeTexts)
       ? (body.excludeTexts as unknown[])
           .filter((t): t is string => typeof t === 'string')
-          .slice(0, 20)
+          .slice(-100)
       : [];
 
     // Semantic signatures from the client (fall back to computing from texts)
     const clientSignatures: string[] = Array.isArray(body.excludeSignatures)
       ? (body.excludeSignatures as unknown[])
           .filter((t): t is string => typeof t === 'string')
-          .slice(0, 40)
+          .slice(-120)
       : [];
     const excludeSignatureSet = new Set<string>(
       [...clientSignatures, ...excludeTexts.map(questionSignature)].filter(Boolean)
@@ -319,7 +321,7 @@ serve(async (req) => {
               source: 'cache'
             }
           }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' }
           });
           }
         }
@@ -554,7 +556,7 @@ serve(async (req) => {
           .eq('subject', subject)
           .eq('difficulty', difficulty)
           .order('times_served', { ascending: true })
-          .limit(5);
+          .limit(50);
 
         const { data: cachedQuestions } = await cacheQuery;
         
@@ -594,7 +596,7 @@ serve(async (req) => {
               createdAt: new Date().toISOString()
             }
           }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' }
           });
         }
       } catch (cacheErr) {
@@ -667,7 +669,7 @@ serve(async (req) => {
       success: true,
       question: enhancedQuestion
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' }
     });
 
   } catch (error) {

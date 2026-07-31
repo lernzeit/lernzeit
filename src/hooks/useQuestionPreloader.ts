@@ -250,7 +250,7 @@ interface UseQuestionPreloaderOptions {
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
-const RECENT_QUESTIONS_MAX = 30;
+const RECENT_QUESTIONS_MAX = 100;
 const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
 const ALTERNATIVE_ATTEMPTS = 3;
 // Cache-First in der Edge Function macht die meisten Calls zu schnellen DB-Reads,
@@ -327,7 +327,7 @@ export const useQuestionPreloader = ({
         console.warn('⏱️ Question generation timed out after', REQUEST_TIMEOUT_MS, 'ms');
       }, REQUEST_TIMEOUT_MS);
 
-      const excludeArr = Array.from(attemptedExclusions).slice(-30);
+      const excludeArr = Array.from(attemptedExclusions).slice(-100);
       const fetchPromise = supabase.functions.invoke('ai-question-generator', {
         body: {
           grade: gradeRef.current,
@@ -340,7 +340,10 @@ export const useQuestionPreloader = ({
           // Zahlen/Zeichensetzung unterscheiden ("25-13" ≈ "26-14").
           excludeSignatures: excludeArr.map(questionSignature).filter(Boolean),
           // A rejected repeat must not be selected from the cache again.
-          forceFresh: attempt > 0,
+          // Sobald eine Historie existiert, nicht erneut aus dem gemeinsamen
+          // Fragen-Cache bedienen. Dadurch bleiben neue Sessions wirklich neu.
+          forceFresh: attemptedExclusions.size > 0 || attempt > 0,
+          requestNonce: crypto.randomUUID(),
           topicHint: topicHintRef.current || undefined
         }
       });
@@ -512,6 +515,7 @@ export const useQuestionPreloader = ({
       const firstSig = questionSignature(firstQuestion.questionText);
       seenTextsRef.current.add(firstSig);
       recentTexts.add(firstQuestion.questionText);
+      saveRecentQuestionTexts(recentTexts);
       
       setQuestions([firstQuestion]);
       setLoadingProgress(1);
@@ -547,6 +551,7 @@ export const useQuestionPreloader = ({
                 if (seenTextsRef.current.has(sig)) return false;
                 seenTextsRef.current.add(sig);
                 recentTexts.add(q.questionText);
+                saveRecentQuestionTexts(recentTexts);
                 return true;
               });
             
@@ -565,6 +570,7 @@ export const useQuestionPreloader = ({
               if (!replacementSig || seenTextsRef.current.has(replacementSig)) continue;
               seenTextsRef.current.add(replacementSig);
               recentTexts.add(replacement.questionText);
+              saveRecentQuestionTexts(recentTexts);
               setQuestions(prev => [...prev, replacement]);
               setLoadingProgress(prev => prev + 1);
             }
