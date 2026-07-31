@@ -37,6 +37,7 @@ interface LearningGameProps {
   totalQuestions?: number;
   topicHint?: string;
   mode?: 'normal' | 'streak_recovery';
+  demoMode?: boolean;
 }
 
 interface GameStats {
@@ -57,7 +58,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   onBack,
   totalQuestions = 5,
   topicHint,
-  mode = 'normal'
+  mode = 'normal',
+  demoMode = false
 }) => {
   const { user, loading: isAuthLoading } = useAuth();
   const { saveSession, isSaving } = useGameSessionSaver();
@@ -101,8 +103,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     totalQuestions,
     topicHint,
     difficultySequence: adaptiveDifficultySequence,
-    demoMode: !isAuthLoading && !user,
-    enabled: !isAuthLoading,
+    // Index has already resolved auth before it can render a signed-in game.
+    // Do not derive demo mode from this component's second useAuth instance:
+    // on slower Chrome/WebView starts it can briefly report no user and would
+    // otherwise load the bundled five-question demo set.
+    demoMode,
+    enabled: demoMode || Boolean(user) || !isAuthLoading,
   });
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
