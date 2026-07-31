@@ -115,7 +115,7 @@ export function AIModelConfigPanel() {
       temperature: row.temperature,
       thinking_level: row.thinking_level,
       max_output_tokens: row.max_output_tokens,
-      provider_routing: row.provider_routing,
+      provider_routing: (row.provider_routing ?? null) as unknown as never,
       deprecation_date: row.deprecation_date,
       is_active: row.is_active,
       updated_at: new Date().toISOString(),
