@@ -27,7 +27,21 @@ public class MainActivity extends BridgeActivity {
                 Insets bars = insets.getInsets(
                         WindowInsetsCompat.Type.systemBars()
                                 | WindowInsetsCompat.Type.displayCutout());
-                v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+
+                // Die Tastatur muss mit einfliessen: EdgeToEdge.enable() setzt
+                // decorFitsSystemWindows=false, dadurch verkleinert das System das
+                // Fenster ab API 30 nicht mehr selbst, wenn das IME aufgeht
+                // (android:windowSoftInputMode="adjustResize" bleibt wirkungslos).
+                // Ohne diesen Anteil ueberdeckt die Tastatur den Inhalt, statt ihn
+                // zu stauchen - Eingabefelder im unteren Bereich sind dann nicht
+                // mehr erreichbar.
+                Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+
+                v.setPadding(
+                        bars.left,
+                        bars.top,
+                        bars.right,
+                        Math.max(bars.bottom, ime.bottom));
                 return WindowInsetsCompat.CONSUMED;
             });
         }

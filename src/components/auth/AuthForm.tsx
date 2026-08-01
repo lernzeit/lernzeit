@@ -498,8 +498,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     }
   };
 
+  // Kein `overflow-hidden` und kein `items-center` auf dem aeusseren Container:
+  // beides verhindert, dass die Seite scrollt, sobald der Inhalt hoeher ist als
+  // der sichtbare Bereich (z. B. wenn die Tastatur aufgeht). Stattdessen
+  // `flex-col` + `my-auto` am Inhalt: zentriert bei genug Platz, scrollt sauber,
+  // sobald es eng wird. Die animierten Blobs clippt ihr eigener
+  // `absolute inset-0 overflow-hidden`-Container.
   return (
-    <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4 pt-safe-top pb-safe-bottom relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-bg flex flex-col p-4 pt-safe-top pb-safe-bottom relative">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
@@ -507,7 +513,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         <div className="absolute top-1/3 left-1/4 w-20 h-20 bg-accent/30 rounded-full animate-pulse blur-xl" style={{animationDelay: '2s'}}></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-md lg:max-w-lg">
+      <div className="relative z-10 w-full max-w-md lg:max-w-lg mx-auto my-auto">
         {/* Header with logo animation */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-primary to-secondary rounded-3xl mb-4 shadow-lg animate-scale-in">
