@@ -128,6 +128,13 @@ if ('serviceWorker' in navigator && !isNativePlatform() && import.meta.env.PROD)
     setTimeout(registerSW, 3000);
   }
 } else if (isNativePlatform()) {
+  // Auf Native zusätzlich sämtliche Cache-Storage-Einträge löschen, damit kein
+  // veralteter Bundle-/API-Cache im WebView überlebt.
+  if ('caches' in window) {
+    window.caches.keys().then((keys) => {
+      keys.forEach((key) => window.caches.delete(key).catch(() => { /* ignore */ }));
+    }).catch(() => { /* ignore */ });
+  }
   // Unregister any existing service workers on native to prevent caching issues
   navigator.serviceWorker?.getRegistrations?.().then((registrations) => {
     for (const registration of registrations) {
