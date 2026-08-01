@@ -9,6 +9,7 @@ import LegalFooter from '@/components/layout/LegalFooter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
+import { Capacitor } from '@capacitor/core';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
