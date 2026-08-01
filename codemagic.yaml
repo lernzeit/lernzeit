@@ -71,6 +71,12 @@ workflows:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         APP_STORE_APP_ID: "6789603688"
+        # Muss vor jedem Store-Release manuell hochgezaehlt werden (hoeher als
+        # die zuletzt in App Store Connect freigegebene/eingereichte Version).
+        # `ios/` wird bei jedem Build per `npx cap add ios` neu erzeugt, daher
+        # bringt eine Aenderung an MARKETING_VERSION in project.pbxproj nichts -
+        # dieser Wert hier ist die einzige Quelle der Wahrheit.
+        IOS_MARKETING_VERSION: "1.2.4"
       node: 22
       xcode: latest
       cocoapods: default
@@ -270,6 +276,9 @@ workflows:
           NEW_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
           echo "Setting build number to $NEW_BUILD_NUMBER"
           agvtool new-version -all $NEW_BUILD_NUMBER
+
+          echo "Setting marketing version to $IOS_MARKETING_VERSION"
+          agvtool new-marketing-version "$IOS_MARKETING_VERSION"
 
       - name: Verify Sign in with Apple entitlements
         script: |
