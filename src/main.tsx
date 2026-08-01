@@ -80,7 +80,7 @@ const isNativePlatform = () => {
 
 // Only register service worker on web, NOT on native Capacitor
 // Service workers conflict with Capacitor's WebView and can cause white screens
-if ('serviceWorker' in navigator && !isNativePlatform()) {
+if ('serviceWorker' in navigator && !isNativePlatform() && import.meta.env.PROD) {
   const registerSW = () => {
     // A previous PWA version cached Supabase responses for up to one day.
     // Remove that runtime cache explicitly so dynamic question/auth data can
