@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { isSessionRejected } from '@/hooks/useAuth';
 import { User, Settings, LogOut, Baby, Shield, Clock, Award, Trophy, Target, Star, Zap, BookOpen, Crown } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { STRIPE_MONTHLY_PRICE_ID } from '@/config/pricing';
@@ -51,6 +52,7 @@ interface UserProfileProps {
 export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery }: UserProfileProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>();
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -252,12 +254,31 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   }, [user, profile?.role]);
 
   const loadProfile = async () => {
+    setLoadError(null);
+    setLoading(true);
     try {
       // Guard: verify the account still exists before touching profile data.
-      const { data: authUser, error: authError } = await supabase.auth.getUser();
-      if (authError || !authUser?.user) {
+      // Only an explicit server rejection (401/403) signs the user out — a
+      // network hiccup must not destroy the session.
+      const timeoutMarker = Symbol('timeout');
+      const authResult = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<typeof timeoutMarker>((resolve) => setTimeout(() => resolve(timeoutMarker), 5000)),
+      ]);
+
+      if (authResult === timeoutMarker) {
+        setLoadError('Keine Verbindung zum Server. Bitte prüfe deine Internetverbindung.');
+        return;
+      }
+
+      const { data: authUser, error: authError } = authResult;
+      if (authError && isSessionRejected(authError)) {
         await supabase.auth.signOut({ scope: 'local' });
         onSignOut();
+        return;
+      }
+      if (authError || !authUser?.user) {
+        setLoadError('Profil konnte nicht geladen werden. Bitte erneut versuchen.');
         return;
       }
 
@@ -288,10 +309,19 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           .single();
 
         if (createError) {
-          // Most likely the auth account no longer exists (FK violation).
-          console.warn('Profile could not be created, signing out:', createError.message);
-          await supabase.auth.signOut({ scope: 'local' });
-          onSignOut();
+          // Foreign-key violation → the auth account no longer exists.
+          const isForeignKeyViolation =
+            createError.code === '23503' || /foreign key/i.test(createError.message || '');
+
+          if (isForeignKeyViolation) {
+            console.warn('Profile could not be created, signing out:', createError.message);
+            await supabase.auth.signOut({ scope: 'local' });
+            onSignOut();
+            return;
+          }
+
+          console.error('Profile creation failed:', createError.message);
+          setLoadError('Profil konnte nicht angelegt werden. Bitte erneut versuchen.');
           return;
         }
         setProfile(created);
@@ -300,16 +330,15 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
       }
     } catch (error: any) {
       console.error('loadProfile failed:', error);
-      toast({
-        title: "Fehler",
-        description: "Profil konnte nicht geladen werden.",
-        variant: "destructive",
-      });
-      // Never leave the app in a broken logged-in state without a profile.
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch { /* ignore */ }
-      onSignOut();
+      if (isSessionRejected(error)) {
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch { /* ignore */ }
+        onSignOut();
+        return;
+      }
+      // Never leave a blank screen: show a retryable error state instead.
+      setLoadError('Profil konnte nicht geladen werden. Bitte erneut versuchen.');
     } finally {
       setLoading(false);
     }
@@ -386,6 +415,23 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           </CardContent>
         </Card>
         {/* Onboarding won't show while loading */}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-card">
+          <CardContent className="p-8 text-center space-y-4">
+            <p className="font-semibold">Profil nicht verfügbar</p>
+            <p className="text-sm text-muted-foreground">{loadError}</p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => loadProfile()}>Erneut versuchen</Button>
+              <Button variant="ghost" onClick={handleSignOut}>Abmelden</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
