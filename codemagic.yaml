@@ -82,10 +82,13 @@ workflows:
       cocoapods: default
 
     scripts:
-      - name: Remove OneSignal from package.json
-        script: |
-          npm uninstall @onesignal/onesignal-cordova-plugin || true
-
+      # Hinweis: Frueher standen hier `npm uninstall @onesignal/onesignal-cordova-plugin`
+      # Aufrufe. Das Paket heisst `onesignal-cordova-plugin` (ohne Scope), die Zeilen
+      # waren also wirkungslos - und das war ihr Glueck: OneSignal wird fuer
+      # plattformuebergreifende Push-Notifications gebraucht, und
+      # src/hooks/useOneSignal.ts importiert es dynamisch. Eine tatsaechliche
+      # Deinstallation wuerde `npm run build` an genau diesem Import scheitern lassen.
+      # Nicht wieder einbauen.
       - name: Install dependencies
         script: |
           rm -rf node_modules package-lock.json
@@ -101,7 +104,6 @@ workflows:
 
       - name: Prepare and Sync iOS platform
         script: |
-          npm uninstall @onesignal/onesignal-cordova-plugin || true
           echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
           
           rm -rf ios
@@ -145,6 +147,19 @@ workflows:
             echo "Setze ITSAppUsesNonExemptEncryption=false in Info.plist..."
             /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST_PATH" \
               || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST_PATH"
+
+            # 6. Hintergrund-Push fuer OneSignal: ohne UIBackgroundModes/remote-notification
+            # stellt iOS Benachrichtigungen nur zu, solange die App im Vordergrund laeuft.
+            # Muss hier gesetzt werden, weil `rm -rf ios` + `npx cap add ios` die
+            # Info.plist aus dem Repo verwirft und aus der Capacitor-Vorlage neu erzeugt.
+            echo "Setze UIBackgroundModes=remote-notification in Info.plist..."
+            /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$PLIST_PATH" >/dev/null 2>&1 \
+              || /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$PLIST_PATH"
+            /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$PLIST_PATH" | grep -q "remote-notification" \
+              || /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes: string remote-notification" "$PLIST_PATH"
+
+            echo "--- Info.plist: UIBackgroundModes ---"
+            /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$PLIST_PATH"
           fi
 
       # WICHTIG: Der Entitlements-Patch MUSS nach `npx cap sync ios` und VOR `pod install`
