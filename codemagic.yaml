@@ -374,8 +374,17 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
-        submit_to_app_store: false
+        # Kein Umweg ueber TestFlight: der Build geht direkt in die
+        # App-Store-Review. (Der Upload nach App Store Connect passiert immer -
+        # TestFlight-Verteilung an Tester wird hier nur uebersprungen.)
+        submit_to_testflight: false
+        submit_to_app_store: true
+        # AFTER_APPROVAL = geht nach bestandener Review automatisch live.
+        # MANUAL = du druckst den Release-Knopf in App Store Connect selbst.
+        release_type: AFTER_APPROVAL
+        # Haengt eine noch offene Einreichung ab, damit der neue Build ohne
+        # manuelles Zurueckziehen in die Review kann.
+        cancel_previous_submissions: true
 
   # Development Build (für Testing)
   development:
