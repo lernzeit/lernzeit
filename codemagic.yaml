@@ -278,7 +278,22 @@ workflows:
           agvtool new-version -all $NEW_BUILD_NUMBER
 
           echo "Setting marketing version to $IOS_MARKETING_VERSION"
-          agvtool new-marketing-version "$IOS_MARKETING_VERSION"
+          agvtool new-marketing-version "$IOS_MARKETING_VERSION" || true
+
+          # agvtool schreibt je nach Xcode-Version nach Info.plist statt in die
+          # pbxproj. Info.plist enthaelt hier aber $(MARKETING_VERSION), d.h. der
+          # wirksame Wert steht in den Build Settings -> deterministisch nachziehen.
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $IOS_MARKETING_VERSION;/g" App.xcodeproj/project.pbxproj
+
+          # Hart verifizieren, was der Release-Build tatsaechlich aufloest.
+          # Lieber hier abbrechen als 20 Minuten spaeter beim App-Store-Upload.
+          RESOLVED=$(xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -showBuildSettings 2>/dev/null \
+            | awk -F' = ' '/ MARKETING_VERSION = /{print $2; exit}')
+          echo "Aufgeloeste MARKETING_VERSION im Release-Build: '$RESOLVED'"
+          if [ "$RESOLVED" != "$IOS_MARKETING_VERSION" ]; then
+            echo "ERROR: MARKETING_VERSION ist '$RESOLVED', erwartet '$IOS_MARKETING_VERSION'."
+            exit 1
+          fi
 
       - name: Verify Sign in with Apple entitlements
         script: |
