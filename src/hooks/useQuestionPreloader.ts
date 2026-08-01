@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
 import { getDemoQuestions } from '@/data/demoQuestions';
 import { questionSignature } from '@/utils/questionSignature';
 import { purgeDemoQuestionStorage } from '@/utils/demoQuestionPurge';
@@ -498,7 +499,9 @@ export const useQuestionPreloader = ({
     // A second useAuth instance can resolve later in Chrome/Capacitor than the
     // parent route. Verify the client session here so an authenticated learner
     // can never receive the fixed demo pool because of that timing race.
-    if (demoMode) {
+    // Der statische Demo-Pool existiert nur für die Landingpage im Browser.
+    // In der nativen App darf er niemals greifen.
+    if (demoMode && !Capacitor.isNativePlatform()) {
       const { data: sessionData } = await supabase.auth.getSession();
       const isActuallyAnonymous = !sessionData.session?.user;
 

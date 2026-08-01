@@ -2,10 +2,12 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, ArrowRight, GraduationCap, Brain, Clock, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 const HeroSection = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLElement>(null);
+  const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -59,14 +61,16 @@ const HeroSection = () => {
             Jetzt starten
             <ArrowRight className="w-5 h-5 ml-1" />
           </Button>
-          <Button
-            onClick={() => navigate('/?demo=true')}
-            variant="outline"
-            size="lg"
-            className="h-14 px-10 text-lg font-semibold rounded-full border-2 hover:bg-muted/50 transition-all duration-300 hover:scale-105"
-          >
-            Demo ausprobieren
-          </Button>
+          {!isNative && (
+            <Button
+              onClick={() => navigate('/?demo=true')}
+              variant="outline"
+              size="lg"
+              className="h-14 px-10 text-lg font-semibold rounded-full border-2 hover:bg-muted/50 transition-all duration-300 hover:scale-105"
+            >
+              Demo ausprobieren
+            </Button>
+          )}
         </div>
 
         {/* Visual flow with matching icons */}

@@ -9,6 +9,7 @@ import LegalFooter from '@/components/layout/LegalFooter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
+import { Capacitor } from '@capacitor/core';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
@@ -36,7 +37,9 @@ const Index = () => {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isDemoParam = searchParams.get('demo') === 'true';
+  // Demo-Modus gibt es nur im Browser – in der nativen App führt der Weg über
+  // die Registrierung.
+  const isDemoParam = searchParams.get('demo') === 'true' && !Capacitor.isNativePlatform();
   const [demoMode, setDemoMode] = useState<boolean>(isDemoParam);
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -60,7 +63,7 @@ const Index = () => {
     }
     // Handle demo param — enable demo mode but let visitors pick their grade
     if (searchParams.get('demo') === 'true') {
-      setDemoMode(true);
+      if (!Capacitor.isNativePlatform()) setDemoMode(true);
       searchParams.delete('demo');
       setSearchParams(searchParams, { replace: true });
     }
