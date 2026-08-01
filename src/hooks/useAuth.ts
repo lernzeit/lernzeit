@@ -13,7 +13,29 @@ export function useAuth() {
       try {
         const { data } = await supabase.auth.getSession();
         if (!isMounted) return;
-        setUser(data.session?.user ?? null);
+        const session = data.session;
+        if (!session) {
+          setUser(null);
+          return;
+        }
+
+        // Validate the stored session against the auth server. If the account
+        // was deleted (or the token was revoked), sign out and fall back to
+        // the anonymous start page instead of rendering a broken profile.
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (!isMounted) return;
+
+        if (userError || !userData?.user) {
+          console.warn('Stale session detected, signing out:', userError?.message);
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch { /* ignore */ }
+          if (!isMounted) return;
+          setUser(null);
+          return;
+        }
+
+        setUser(userData.user);
       } catch (err) {
         console.warn('Auth init failed, continuing without session:', err);
         if (!isMounted) return;
@@ -28,9 +50,13 @@ export function useAuth() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
-      setUser(session?.user ?? null);
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
+      } else {
+        setUser(session.user ?? null);
+      }
       setLoading(false);
     });
 
