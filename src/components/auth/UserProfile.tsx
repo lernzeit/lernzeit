@@ -253,6 +253,14 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
   const loadProfile = async () => {
     try {
+      // Guard: verify the account still exists before touching profile data.
+      const { data: authUser, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser?.user) {
+        await supabase.auth.signOut({ scope: 'local' });
+        onSignOut();
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -279,17 +287,29 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          // Most likely the auth account no longer exists (FK violation).
+          console.warn('Profile could not be created, signing out:', createError.message);
+          await supabase.auth.signOut({ scope: 'local' });
+          onSignOut();
+          return;
+        }
         setProfile(created);
       } else {
         setProfile(data);
       }
     } catch (error: any) {
+      console.error('loadProfile failed:', error);
       toast({
         title: "Fehler",
         description: "Profil konnte nicht geladen werden.",
         variant: "destructive",
       });
+      // Never leave the app in a broken logged-in state without a profile.
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch { /* ignore */ }
+      onSignOut();
     } finally {
       setLoading(false);
     }
