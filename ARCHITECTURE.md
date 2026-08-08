@@ -2,9 +2,12 @@
 
 ## ✅ Was wurde umgesetzt
 
-### 1. API-Migration auf Lovable AI Gateway
+### 1. API-Migration weg von OpenAI
 - **Vorher:** OpenAI API (Quota überschritten, 429-Fehler)
-- **Jetzt:** Lovable AI Gateway (`google/gemini-3-flash-preview`) - stabil & kostenlos
+- **Jetzt:** Google Gemini direkt, mit OpenRouter als Fallback
+
+Die Provider-Kette ist in `supabase/functions/_shared/ai-client.ts` gekapselt,
+die verfügbaren Modelle in `_shared/model-catalog.ts`.
 
 ### 2. Neue Edge Functions
 
@@ -62,8 +65,8 @@ Diese Edge Functions können später entfernt werden:
      │           │
      ▼           ▼
 ┌─────────────────────┐
-│ Lovable AI Gateway  │
-│ (gemini-3-flash)    │
+│ ai-client (shared)  │
+│ Gemini → OpenRouter │
 └─────────────────────┘
 ```
 

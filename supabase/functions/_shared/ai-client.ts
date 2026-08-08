@@ -5,7 +5,7 @@
  *   - Per-use-case config (model, provider order, temperature, thinking level,
  *     max output tokens, provider routing) is loaded from `ai_model_config`
  *     (60s in-memory cache).
- *   - Provider chain: gemini_direct → openrouter (Lovable Gateway removed).
+ *   - Provider chain: gemini_direct → openrouter.
  *   - Each call is logged to `ai_model_metrics` incl. ttft_ms / total_latency_ms /
  *     resolved_provider / cache_hit / aborted (fire-and-forget).
  *   - Provider is skipped for 5 min after a 402 (credits exhausted) and

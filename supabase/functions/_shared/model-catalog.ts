@@ -5,7 +5,7 @@
  * `id` is the canonical identifier used in `ai_model_config.primary_model`.
  * It maps to provider-specific names below.
  *
- * Providers: Google (direct) and OpenRouter. The Lovable Gateway has been removed.
+ * Providers: Google (direct) and OpenRouter.
  */
 
 export type ProviderId = 'gemini_direct' | 'openrouter';

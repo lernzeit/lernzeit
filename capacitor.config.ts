@@ -4,10 +4,11 @@ const config: CapacitorConfig = {
   appId: 'de.lernzeit.app',
   appName: 'LernZeit',
   webDir: 'dist',
-  // Production configuration - remove server config for store builds
-  // For development with hot reload, uncomment the server block below:
+  // Store-Builds laden ausschliesslich das gebuendelte dist/ - kein server-Block.
+  // Fuer lokale Entwicklung mit Hot Reload den Block einkommentieren und auf die
+  // eigene Dev-Server-Adresse zeigen lassen (z. B. http://192.168.x.x:8080):
   // server: {
-  //   url: 'https://4386b503-9ba8-4312-8a0f-77100fb5c6d8.lovableproject.com?forceHideBadge=true',
+  //   url: 'http://192.168.1.100:8080',
   //   cleartext: true
   // },
   plugins: {

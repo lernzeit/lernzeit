@@ -3,8 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright config for LernZeit auth/onboarding E2E tests.
  *
- * The Lovable sandbox already runs Vite on http://localhost:8080, so we do NOT
- * start our own webServer here. When running locally, `bun dev` must be up.
+ * Es wird bewusst kein eigener webServer gestartet. Der Vite-Dev-Server auf
+ * http://localhost:8080 muss vorher laufen (`bun dev` bzw. `npm run dev`).
  */
 export default defineConfig({
   testDir: './e2e',

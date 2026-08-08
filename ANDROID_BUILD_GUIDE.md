@@ -192,7 +192,7 @@ android/app/src/main/res/
 
 6. **Datenschutzrichtlinie:**
    - URL zu deiner Datenschutzseite angeben
-   - z.B. `https://lernzeit.lovable.app/datenschutz`
+   - z.B. `https://lernzeit.app/datenschutz`
 
 7. **AAB hochladen:**
    - Release → Production → "Neue Release erstellen"

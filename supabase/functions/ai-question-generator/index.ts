@@ -389,7 +389,7 @@ serve(async (req) => {
       }
     };
 
-    // ── SINGLE AI attempt (callAI handles Lovable→Gemini fallback internally) ──
+    // ── SINGLE AI attempt (callAI handles the provider fallback internally) ──
     try {
       console.log('🤖 Generating question via callAI (single attempt)');
       const { response, provider } = await callAI({

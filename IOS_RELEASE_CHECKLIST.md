@@ -11,7 +11,7 @@ Schlanke Schritt-für-Schritt-Anleitung für unsere konkrete Konfiguration. Erg�
 
 ---
 
-## ✅ Phase 1 – In Lovable bereits erledigt
+## ✅ Phase 1 – Im Repo bereits erledigt
 
 - [x] `@capacitor/ios` auf v8 aktualisiert (passend zu @capacitor/core v8)
 - [x] `capacitor.config.ts` iOS-Block gehärtet (scheme, App-Bound Domains, contentMode, iOS-Spinner)
@@ -22,7 +22,7 @@ Schlanke Schritt-für-Schritt-Anleitung für unsere konkrete Konfiguration. Erg�
 
 ## 📦 Phase 1.5 – Lokale ios/-Folder-Erstellung (einmalig, ohne Mac möglich)
 
-Lovable kann den `ios/`-Ordner nicht selbst erzeugen. Auf einem beliebigen Rechner (Linux, Windows, Mac):
+Der `ios/`-Ordner wird nicht eingecheckt geliefert, sondern lokal erzeugt. Auf einem beliebigen Rechner (Linux, Windows, Mac):
 
 ```bash
 git pull

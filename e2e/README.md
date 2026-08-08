@@ -12,7 +12,7 @@ Diese Suite deckt den kompletten Registrierungs- und Login-Flow ab:
 
 ## Voraussetzungen
 
-- Vite-Dev-Server läuft auf `http://localhost:8080` (im Lovable-Sandbox bereits automatisch).
+- Vite-Dev-Server läuft auf `http://localhost:8080` (`npm run dev` bzw. `bun dev`).
 - Test-Accounts existieren in Supabase:
   - Elternteil: `apple.review.parent@lernzeit.app` / `AppleReview!2026`
   - Kind (Username-Login): `applereviewkind` / `AppleReview!2026`

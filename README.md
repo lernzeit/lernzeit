@@ -1,73 +1,103 @@
-# Welcome to your Lovable project
+# LernZeit
 
-## Project info
+Spielerische Lern-App: Kinder verdienen Bildschirmzeit, indem sie Aufgaben lösen.
+Eltern verwalten Zeitkonten, Freigaben und Lernziele.
 
-**URL**: https://lovable.dev/projects/4386b503-9ba8-4312-8a0f-77100fb5c6d8
+Verfügbar als Web-App, Android- und iOS-App aus derselben Codebasis.
 
-## How can I edit this code?
+## Tech-Stack
 
-There are several ways of editing your application.
+| Bereich | Technologie |
+|---|---|
+| Frontend | React, TypeScript, Vite |
+| UI | Tailwind CSS, shadcn/ui |
+| Native | Capacitor (Android + iOS) |
+| Backend | Supabase (Postgres, Auth, Edge Functions) |
+| Zahlungen | Stripe (Web), RevenueCat (Native) |
+| Push | OneSignal, Firebase |
+| KI | Google Gemini (direkt), OpenRouter |
 
-**Use Lovable**
+## Lokale Entwicklung
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4386b503-9ba8-4312-8a0f-77100fb5c6d8) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Voraussetzung: Node.js und npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install --legacy-peer-deps
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Der Dev-Server läuft auf `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Umgebungsvariablen liegen in `.env` (alle `VITE_`-Variablen landen im
+Client-Bundle und sind damit öffentlich).
 
-**Use GitHub Codespaces**
+## Skripte
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+| Befehl | Zweck |
+|---|---|
+| `npm run dev` | Dev-Server mit Hot Reload |
+| `npm run build` | Produktions-Build nach `dist/` |
+| `npm run lint` | ESLint |
+| `npm run preview` | Produktions-Build lokal ausliefern |
+| `npm run test:e2e` | Playwright-E2E-Tests (Dev-Server muss laufen) |
 
-## What technologies are used for this project?
+`npm run build` führt anschließend automatisch `scripts/verify-prerender.mjs` aus.
+Das Skript prüft, dass die Marketing-Routen (`/start`, `/impressum`,
+`/datenschutz`, `/nutzungsbedingungen`, `/konto-loeschen`) als statisches HTML
+vorgerendert wurden — wichtig für Crawler ohne JavaScript.
 
-This project is built with:
+## Native Builds
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Die Apps laden ausschließlich das gebündelte `dist/`. Jede Code-Änderung braucht
+daher einen Build **und** einen Sync, bevor sie nativ sichtbar wird:
 
-## How can I deploy this project?
+```sh
+npm run build
+npx cap sync android    # bzw. ios
+```
 
-Simply open [Lovable](https://lovable.dev/projects/4386b503-9ba8-4312-8a0f-77100fb5c6d8) and click on Share -> Publish.
+Danach in Android Studio bzw. Xcode bauen.
 
-## Can I connect a custom domain to my Lovable project?
+Ohne Plattform-Argument synchronisiert `npx cap sync` beide Plattformen — das
+schlägt fehl, wenn eine davon lokal nicht eingerichtet ist. Die Plattform also
+besser explizit angeben.
 
-Yes, you can!
+**Versionsnummern:**
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Android: `versionCode` und `versionName` in `android/app/build.gradle`
+- iOS: `IOS_MARKETING_VERSION` in `codemagic.yaml` — **nicht** in
+  `project.pbxproj`, siehe unten
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## CI/CD
+
+`codemagic.yaml` definiert die Release-Workflows. Beide werden manuell gestartet;
+der Branch wird dabei in der Codemagic-Oberfläche ausgewählt.
+
+Wichtig zu wissen: Die Workflows löschen `ios/` bzw. `android/` und lassen sie von
+`npx cap add` neu erzeugen. **Alles, was in diesen Ordnern eingecheckt ist, wird
+bei jedem CI-Lauf verworfen.** Native Konfiguration, die den Build überleben soll,
+muss deshalb im Workflow selbst gesetzt werden — dort per PlistBuddy für die
+`Info.plist` und per `agvtool`/`sed` für die Xcode-Build-Settings.
+
+Der iOS-Workflow lädt nach TestFlight hoch. Die Einreichung zur App-Store-Prüfung
+erfolgt anschließend manuell in App Store Connect.
+
+## Verzeichnisse
+
+```
+src/                    React-Anwendung
+  components/           UI-Komponenten
+  hooks/                React Hooks
+  integrations/supabase/ Supabase-Client (einzige Instanz)
+  pages/                Routen
+supabase/
+  functions/            Edge Functions (Deno)
+  migrations/           Datenbank-Migrationen
+android/  ios/          Capacitor-Plattformen (von CI neu erzeugt)
+e2e/                    Playwright-Tests
+```
+
+`src/lib/supabase.ts` ist ein reiner Re-Export von
+`src/integrations/supabase/client.ts`. Es gibt nur eine Client-Instanz — auf
+nativen Plattformen mit Capacitor Preferences als Storage, im Browser mit
+`localStorage`.
