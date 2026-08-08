@@ -1,6 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
+import {
+  answerFormatRule,
+  loadCategoryMix,
+  mentalMathConstraint,
+  pickCategory,
+  theoryInstruction,
+  THEORY_SUBJECTS,
+  type QuestionCategory,
+} from "../_shared/question-prompt.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -244,12 +253,22 @@ serve(async (req) => {
     // damit sich Fragen nicht wiederholen. Wahrscheinlichkeit bewusst niedrig,
     // um mehr frische KI-Fragen zu erzeugen.
     // ─────────────────────────────────────────────────────────────────
-    const CACHE_FIRST_PROBABILITY = 0.35;
+    // Deutlich angehoben: Die serverseitige Deduplizierung unten (exakter Text
+    // UND semantische Signatur) verhindert Wiederholungen zuverlässig, deshalb
+    // ist ein hoher Cache-Anteil unbedenklich — und spart den Großteil der
+    // Generierungskosten.
+    const CACHE_FIRST_PROBABILITY = 0.75;
     const CACHE_MIN_POOL = 40;
     const CACHE_REFILL_THRESHOLD = 60;
 
     const SUPABASE_URL_EARLY = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SRK_EARLY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    // Kategorie einmal pro Anfrage ziehen — sie steuert sowohl die Cache-Auswahl
+    // als auch den Prompt, damit das konfigurierte Verhältnis in beiden Pfaden gilt.
+    const categoryMix = await loadCategoryMix();
+    const category: QuestionCategory = pickCategory(subject, grade, categoryMix);
+    console.log(`🎯 Kategorie: ${category} (${subject}/Klasse ${grade})`);
 
     if (!forceFresh && !topicHint && SUPABASE_URL_EARLY && SUPABASE_SRK_EARLY && Math.random() < CACHE_FIRST_PROBABILITY) {
       try {
@@ -260,6 +279,7 @@ serve(async (req) => {
           .eq('grade', grade)
           .eq('subject', subject)
           .eq('difficulty', difficulty)
+          .eq('category', category)
           .order('times_served', { ascending: true })
           .limit(60);
 
@@ -331,7 +351,7 @@ serve(async (req) => {
       }
     }
 
-    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint);
+    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint, category);
 
     // Load active prompt rules from DB (max 5, most relevant first)
     let rulesBlock = '';
@@ -359,7 +379,7 @@ serve(async (req) => {
       console.warn('Could not load prompt rules:', rulesErr);
     }
 
-    const systemPrompt = getSystemPrompt() + rulesBlock;
+    const systemPrompt = getSystemPrompt(category, subject) + rulesBlock;
 
     let question: any = null;
     let rawType: string | undefined;
@@ -649,6 +669,7 @@ serve(async (req) => {
             difficulty,
             question_text: enhancedQuestion.questionText,
             question_type: enhancedQuestion.questionType,
+            category,
             correct_answer: enhancedQuestion.correctAnswer,
             options: enhancedQuestion.options,
             hint: enhancedQuestion.hint,
@@ -848,12 +869,12 @@ function shuffleArray<T>(items: T[]): T[] {
   return copy;
 }
 
-function getSystemPrompt(): string {
+function getSystemPrompt(category: QuestionCategory, subject: string): string {
   return `Du bist ein erfahrener deutscher Pädagoge. Erstelle altersgerechte Lernfragen auf Deutsch.
 
 REGELN:
 - Altersgerecht, lehrplankonform, eindeutig, pädagogisch wertvoll
-- Mathematik-Antworten: NUR Zahlen, keine Einheiten (z.B. "15", nicht "15 Brötchen")
+${answerFormatRule(category, subject)}
 - Mathematik: Rechne jede Aufgabe Schritt für Schritt durch und prüfe das Ergebnis
 - FREETEXT: Antwort max 1-3 Wörter oder eine Zahl. Längere Antworten → MULTIPLE_CHOICE
 - Vergleichsfragen NUR mit konkreten Zahlen/Daten (keine vagen Vergleiche)
@@ -863,22 +884,33 @@ REGELN:
 }
 
 function buildQuestionPrompt(
-  grade: number, 
-  subject: string, 
-  difficulty: string, 
+  grade: number,
+  subject: string,
+  difficulty: string,
   requestedType?: string,
   excludeTexts?: string[],
-  topicHint?: string
+  topicHint?: string,
+  category: QuestionCategory = 'calculation'
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const gradeGuidelines = getGradeGuidelines(grade);
   const difficultyGuide = getDifficultyGuidelines(difficulty, grade);
-  const questionType = requestedType || selectQuestionType(subject, grade);
-  const typeInstructions = getTypeSpecificInstructions(questionType);
+  const questionType = requestedType || selectQuestionType(subject, grade, category);
+  const typeInstructions = getTypeSpecificInstructions(questionType, category);
 
+  // Kategorie-Block: entweder Theorie-Anweisung oder Kopfrechen-Schranke.
+  // Nur für die rechenlastigen Fächer relevant, sonst leer.
+  let categoryNote = '';
+  if ((THEORY_SUBJECTS as readonly string[]).includes(subject)) {
+    categoryNote = `\n\n${category === 'theory' ? theoryInstruction(subject, grade) : mentalMathConstraint()}`;
+  }
+
+  // Exclude-Liste knapp halten: Der Server filtert den Cache ohnehin über
+  // questionSignature(), der Prompt braucht nur noch einen groben Hinweis.
+  // Vorher 15 Einträge à 80 Zeichen — das waren ~300-400 Tokens pro Anfrage.
   let exclusionNote = '';
   if (excludeTexts && excludeTexts.length > 0) {
-    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten davon, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(0, 15).map(t => `- "${t.substring(0, 80)}"`).join('\n')}\nWähle stattdessen ein deutlich anderes Teilthema, einen anderen Aufgabentyp oder Kontext.`;
+    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(0, 8).map(t => `- "${t.substring(0, 60)}"`).join('\n')}\nWähle ein deutlich anderes Teilthema oder einen anderen Kontext.`;
   }
 
   let topicNote = '';
@@ -902,7 +934,7 @@ ${subjectScope}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
-FRAGETYP: ${questionType}${exclusionNote}${topicNote}${youngLanguageNote}
+FRAGETYP: ${questionType}${categoryNote}${exclusionNote}${topicNote}${youngLanguageNote}
 
 ${typeInstructions}
 
@@ -964,10 +996,19 @@ function getDifficultyGuidelines(difficulty: string, grade: number): { label: st
   return guidelines[difficulty] || guidelines['medium'];
 }
 
-function selectQuestionType(subject: string, grade: number): string {
+function selectQuestionType(subject: string, grade: number, category: QuestionCategory = 'calculation'): string {
   // Vary question types for diversity — all types should appear regularly
   const rand = Math.random();
-  
+
+  // Theoriefragen: SORT scheidet aus (Begriffe haben keine natürliche
+  // Reihenfolge). MATCH passt dagegen besonders gut — Begriff ↔ Definition.
+  if (category === 'theory') {
+    if (rand < 0.40) return 'MULTIPLE_CHOICE';
+    if (rand < 0.70) return 'FREETEXT';
+    if (rand < 0.88) return 'MATCH';
+    return 'FILL_BLANK';
+  }
+
   if (subject === 'math') {
     if (grade <= 4) {
       // Grundschule Mathe: MC, Freitext, Sortieren, Zuordnung
@@ -1008,16 +1049,25 @@ function selectQuestionType(subject: string, grade: number): string {
   return 'FILL_BLANK';
 }
 
-function getTypeSpecificInstructions(questionType: string): string {
+function getTypeSpecificInstructions(questionType: string, category: QuestionCategory = 'calculation'): string {
+  // Die Zahlen-Vorgabe gilt nur für Rechenaufgaben. Bei Theoriefragen würde sie
+  // genau das Gegenteil des Gewollten erzwingen.
+  const mcAnswerRule = category === 'theory'
+    ? 'options: Array mit genau 4 Strings. Fachbegriffe, keine Zahlen'
+    : 'options: Array mit genau 4 Strings. Mathe-Optionen: NUR Zahlen, keine Einheiten';
+  const freetextAnswerRule = category === 'theory'
+    ? 'correct_answer: Fachbegriff (max 1-3 Wörter), KEINE Zahl'
+    : 'correct_answer: Kurze Antwort (max 1-3 Wörter oder Zahl). Mathe: NUR Zahl';
+
   const instructions: Record<string, string> = {
     'MULTIPLE_CHOICE': `MULTIPLE_CHOICE:
 - correct_answer: Index 0-3 der korrekten Option
-- options: Array mit genau 4 Strings. Mathe-Optionen: NUR Zahlen, keine Einheiten
+- ${mcAnswerRule}
 - Plausible Distraktoren, eine eindeutig korrekte Antwort
 - Prüfe: correct_answer zeigt auf die richtige Option!`,
-    
+
     'FREETEXT': `FREETEXT:
-- correct_answer: Kurze Antwort (max 1-3 Wörter oder Zahl). Mathe: NUR Zahl
+- ${freetextAnswerRule}
 - options: null
 - Prüfe Berechnung doppelt!`,
     

@@ -20,11 +20,13 @@ import {
   FlaskConical,
   Sparkles,
   MessageSquareHeart,
-  Gift
+  Gift,
+  Percent
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
 import { PromptRulesPanel } from './PromptRulesPanel';
+import { CategoryMixPanel } from './CategoryMixPanel';
 import { AIModelConfigPanel } from './AIModelConfigPanel';
 import { AIModelMetricsPanel } from './AIModelMetricsPanel';
 import { AILatencyPanel } from './AILatencyPanel';
@@ -205,6 +207,10 @@ export function AdminDashboard() {
               <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
               Regeln
             </TabsTrigger>
+            <TabsTrigger value="category-mix" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Percent className="w-3 h-3 sm:w-4 sm:h-4" />
+              Theorie-Anteil
+            </TabsTrigger>
             <TabsTrigger value="ai-models" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <Cpu className="w-3 h-3 sm:w-4 sm:h-4" />
               KI-Modelle
@@ -327,6 +333,9 @@ export function AdminDashboard() {
           {/* Prompt Rules Tab */}
           <TabsContent value="rules" className="space-y-4">
             <PromptRulesPanel />
+          </TabsContent>
+          <TabsContent value="category-mix" className="space-y-4">
+            <CategoryMixPanel />
           </TabsContent>
           <TabsContent value="ai-models" className="space-y-4">
             <AIModelConfigPanel />

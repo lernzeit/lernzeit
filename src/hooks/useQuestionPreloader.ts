@@ -355,10 +355,16 @@ export const useQuestionPreloader = ({
           // Semantische Signaturen: erkennen Varianten, die sich nur in
           // Zahlen/Zeichensetzung unterscheiden ("25-13" ≈ "26-14").
           excludeSignatures: excludeArr.map(questionSignature).filter(Boolean),
-          // A rejected repeat must not be selected from the cache again.
-          // Sobald eine Historie existiert, nicht erneut aus dem gemeinsamen
-          // Fragen-Cache bedienen. Dadurch bleiben neue Sessions wirklich neu.
-          forceFresh: attemptedExclusions.size > 0 || attempt > 0,
+          // Nur beim echten Wiederholungs-Retry am Cache vorbei generieren.
+          //
+          // Vorher stand hier zusaetzlich `attemptedExclusions.size > 0`, womit ab
+          // der zweiten Frage jeder Sitzung jede Frage frisch erzeugt wurde — der
+          // vorproduzierte Cache lief praktisch leer mit. Das ist unnoetig: Die
+          // Edge Function filtert den Pool serverseitig gegen excludeTexts UND
+          // gegen semantische Signaturen, erkennt also auch reine Zahlenvarianten
+          // ("25-13" ~ "26-14"). Findet sie keinen freien Kandidaten, generiert
+          // sie von sich aus frisch.
+          forceFresh: attempt > 0,
           requestNonce: crypto.randomUUID(),
           topicHint: topicHintRef.current || undefined
         }

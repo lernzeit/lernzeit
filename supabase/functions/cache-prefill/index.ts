@@ -1,6 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
+import {
+  answerFormatRule,
+  loadCategoryMix,
+  mentalMathConstraint,
+  pickCategory,
+  theoryInstruction,
+  THEORY_SUBJECTS,
+  type QuestionCategory,
+} from "../_shared/question-prompt.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -176,8 +185,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getQuestionType(subject: string, slotIndex: number): string {
-  const rotation = TYPE_ROTATION[subject] ?? TYPE_ROTATION.default;
+/** Typen, die für Theoriefragen taugen — SORT fällt weg, Begriffe haben keine Reihenfolge. */
+const THEORY_TYPE_ROTATION = ['MULTIPLE_CHOICE', 'FREETEXT', 'MATCH', 'MULTIPLE_CHOICE', 'FILL_BLANK'];
+
+function getQuestionType(subject: string, slotIndex: number, category: QuestionCategory = 'calculation'): string {
+  const rotation = category === 'theory'
+    ? THEORY_TYPE_ROTATION
+    : (TYPE_ROTATION[subject] ?? TYPE_ROTATION.default);
   return rotation[slotIndex % rotation.length];
 }
 
@@ -201,7 +215,8 @@ function getAgeContext(grade: number): string {
 
 // ── Prompt Builder ────────────────────────────────────────────────────────────
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(category: QuestionCategory = 'calculation', subject = ''): string {
+  const answerRule = answerFormatRule(category, subject);
   return `Du bist ein erfahrener deutscher Schulpädagoge und Aufgabenentwickler.
 Du erstellst lehrplangerechte, pädagogisch hochwertige Lernaufgaben für deutsche Schüler.
 
@@ -210,7 +225,7 @@ DEINE QUALITÄTSSTANDARDS:
 - Fachlich korrekt – überprüfe deine eigenen Antworten vor der Ausgabe
 - Sprachlich klar, eindeutig und motivierend formuliert
 - Aufgabenvielfalt: verschiedene kognitive Anforderungsbereiche (AFB I: Reproduzieren, AFB II: Zusammenhänge herstellen, AFB III: Reflektieren)
-- Wähle eigenständig ein konkretes, abwechslungsreiches Unterthema aus den gegebenen Domänen
+- Wähle eigenständig ein konkretes, abwechslungsreiches Unterthema aus den gegebenen Domänen${answerRule ? `\n${answerRule}` : ''}
 - Antwort NUR als gültiges JSON-Objekt, ohne Markdown, ohne Erklärungen außerhalb des JSON`;
 }
 
@@ -219,6 +234,7 @@ function buildQuestionPrompt(
   subject: string,
   difficulty: 'easy' | 'medium' | 'hard',
   questionType: string,
+  category: QuestionCategory = 'calculation',
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const ageContext = getAgeContext(grade);
@@ -233,6 +249,11 @@ function buildQuestionPrompt(
 
   const typeInstructions = getTypeInstructions(questionType);
 
+  // Kategorie-Block nur für die rechenlastigen Fächer; alle übrigen bleiben unverändert.
+  const categoryNote = (THEORY_SUBJECTS as readonly string[]).includes(subject)
+    ? `\n${category === 'theory' ? theoryInstruction(subject, grade) : mentalMathConstraint()}\n`
+    : '';
+
   return `Erstelle eine Lernaufgabe für folgende Kombination:
 
 KLASSENSTUFE: ${ageContext}
@@ -246,7 +267,7 @@ ${domainsHint}
 ALTERSHINWEIS: ${domainInfo.ageHints}
 
 Wichtig: Das gewählte Unterthema muss exakt zur Klassenstufe ${grade} passen. Wähle ein möglichst abwechslungsreiches Thema, das nicht zu generisch ist.
-
+${categoryNote}
 ${typeInstructions}
 
 QUALITÄTSPRÜFUNG (vor der Ausgabe selbst durchführen):
@@ -549,7 +570,10 @@ serve(async (req) => {
   }
 
   // ── Step 3: Generate questions with rate-limit-safe delays ───────────────
-  const systemPrompt = buildSystemPrompt() + rulesBlock;
+  // Der Theorie-Anteil wird einmal geladen und pro Frage gezogen, damit der
+  // vorproduzierte Pool dasselbe Verhältnis hat wie der Live-Pfad. Ohne das
+  // würde der Cache-First-Zugriff für Theoriefragen dauerhaft ins Leere laufen.
+  const categoryMix = await loadCategoryMix();
   let generated = 0;
   let failed = 0;
   const results: { grade: number; subject: string; type: string; status: string }[] = [];
@@ -561,19 +585,21 @@ serve(async (req) => {
     const { grade, subject } = target;
 
     const slotIndex = generated;
-    const questionType = getQuestionType(subject, slotIndex);
+    const category = pickCategory(subject, grade, categoryMix);
+    const questionType = getQuestionType(subject, slotIndex, category);
     const difficulty = getDifficulty(slotIndex);
 
     const cacheKey = `${grade}-${subject}`;
     const existingTexts = existingQuestionsMap.get(cacheKey) ?? [];
-    const excludeSample = existingTexts.slice(-15);
+    const excludeSample = existingTexts.slice(-8);
 
-    console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | Existing: ${existingTexts.length}`);
+    console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | ${category} | Existing: ${existingTexts.length}`);
 
     try {
-      let userPrompt = buildQuestionPrompt(grade, subject, difficulty, questionType);
+      const systemPrompt = buildSystemPrompt(category, subject) + rulesBlock;
+      let userPrompt = buildQuestionPrompt(grade, subject, difficulty, questionType, category);
       if (excludeSample.length > 0) {
-        userPrompt += `\n\nWICHTIG – Diese Fragen existieren bereits. Erstelle eine VÖLLIG ANDERE Frage:\n${excludeSample.map(t => `- "${t.substring(0, 80)}"`).join('\n')}`;
+        userPrompt += `\n\nWICHTIG – Diese Fragen existieren bereits. Erstelle eine VÖLLIG ANDERE Frage:\n${excludeSample.map(t => `- "${t.substring(0, 60)}"`).join('\n')}`;
       }
 
       const rawJson = await callGemini(systemPrompt, userPrompt, GEMINI_API_KEY);
@@ -603,7 +629,7 @@ serve(async (req) => {
       }
 
       // ── Save to cache ──
-      const { error: insertErr } = await adminClient.from('ai_question_cache').insert(validated);
+      const { error: insertErr } = await adminClient.from('ai_question_cache').insert({ ...validated, category });
       if (insertErr) {
         console.error('Cache insert error:', insertErr.message);
         failed++;
