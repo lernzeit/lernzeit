@@ -9,7 +9,6 @@
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>de</string>
-		<string>en</string>
 	</array>
 	<key>CFBundleDisplayName</key>
         <string>LernZeit</string>
