@@ -27,6 +27,7 @@ import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
 import { PromptRulesPanel } from './PromptRulesPanel';
 import { CategoryMixPanel } from './CategoryMixPanel';
+import { CacheQualityPanel } from './CacheQualityPanel';
 import { AIModelConfigPanel } from './AIModelConfigPanel';
 import { AIModelMetricsPanel } from './AIModelMetricsPanel';
 import { AILatencyPanel } from './AILatencyPanel';
@@ -329,6 +330,7 @@ export function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            <CacheQualityPanel />
           </TabsContent>
           {/* Prompt Rules Tab */}
           <TabsContent value="rules" className="space-y-4">

@@ -10,6 +10,12 @@ import {
   THEORY_SUBJECTS,
   type QuestionCategory,
 } from "../_shared/question-prompt.ts";
+import { checkBudget, makeDeadline, pace } from "../_shared/job-budget.ts";
+
+/** Tagesbudget der Vorproduktion. Bewusst niedrig — siehe _shared/job-budget.ts. */
+const PREFILL_MAX_PER_DAY = 90;
+/** Hintergrundjob: kostenlose Modelle brauchen regelmaessig mehr als 12s. */
+const PREFILL_TIMEOUT_MS = 60_000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -326,13 +332,18 @@ function getTypeInstructions(questionType: string): string {
 // ── Batch generation via the shared callAI pipeline ─────────────────────────
 
 async function callGemini(systemPrompt: string, userPrompt: string, _apiKey: string): Promise<string | null> {
+  // Das tatsaechliche Modell kommt aus ai_model_config (use_case
+  // question_generator_batch) und ist dort auf ein kostenloses OpenRouter-Modell
+  // gestellt. Der Wert hier ist nur der Fallback, falls keine Konfiguration
+  // geladen werden kann. Der Funktionsname ist historisch.
   const { response, provider } = await callAI({
-    model: 'google/gemini-3.5-flash',
+    model: 'qwen/qwen-2.5-72b-instruct:free',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
     temperature: 0.75,
+    timeoutMs: PREFILL_TIMEOUT_MS,
   }, undefined, 'question_generator_batch');
 
   if (!response.ok) {
@@ -574,12 +585,43 @@ serve(async (req) => {
   // vorproduzierte Pool dasselbe Verhältnis hat wie der Live-Pfad. Ohne das
   // würde der Cache-First-Zugriff für Theoriefragen dauerhaft ins Leere laufen.
   const categoryMix = await loadCategoryMix();
+
+  // ── Kostensperre vor dem ersten Aufruf ──
+  // Bei erschoepftem Tagesbudget beendet sich der Lauf sofort. Weil der
+  // Zeitpunkt dieses Jobs unerheblich ist, holt der naechste Lauf es nach.
+  const budget = await checkBudget('question_generator_batch', PREFILL_MAX_PER_DAY);
+  if (!budget.canProceed) {
+    console.log(`[prefill] Tagesbudget ausgeschoepft (${budget.usedToday}/${PREFILL_MAX_PER_DAY}) — Lauf uebersprungen`);
+    return new Response(
+      JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: 'daily_budget_exhausted',
+        generated: 0,
+        budget,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const withinDeadline = makeDeadline();
+  let lastCallAt = 0;
+  let budgetLeft = budget.remaining;
+
   let generated = 0;
   let failed = 0;
   const results: { grade: number; subject: string; type: string; status: string }[] = [];
 
   for (let i = 0; i < Math.min(maxQuestions, targets.length * 3); i++) {
     if (generated >= maxQuestions) break;
+    if (budgetLeft <= 0) {
+      console.log('[prefill] Tagesbudget waehrend des Laufs erreicht');
+      break;
+    }
+    if (!withinDeadline()) {
+      console.log('[prefill] Zeitbudget erreicht, sauberer Abbruch vor dem Idle-Limit');
+      break;
+    }
 
     const target = targets[i % targets.length];
     const { grade, subject } = target;
@@ -602,6 +644,9 @@ serve(async (req) => {
         userPrompt += `\n\nWICHTIG – Diese Fragen existieren bereits. Erstelle eine VÖLLIG ANDERE Frage:\n${excludeSample.map(t => `- "${t.substring(0, 60)}"`).join('\n')}`;
       }
 
+      // 20 Anfragen/Minute bei kostenlosen Modellen -> 3s Mindestabstand.
+      lastCallAt = await pace(lastCallAt);
+      budgetLeft--;
       const rawJson = await callGemini(systemPrompt, userPrompt, GEMINI_API_KEY);
 
       if (!rawJson) {

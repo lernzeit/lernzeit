@@ -280,6 +280,9 @@ serve(async (req) => {
           .eq('subject', subject)
           .eq('difficulty', difficulty)
           .eq('category', category)
+          // Von der Qualitaetspruefung aussortierte Fragen bleiben in der
+          // Tabelle, duerfen aber nicht mehr ausgeliefert werden.
+          .eq('is_active', true)
           .order('times_served', { ascending: true })
           .limit(60);
 
@@ -575,6 +578,7 @@ serve(async (req) => {
           .eq('grade', grade)
           .eq('subject', subject)
           .eq('difficulty', difficulty)
+          .eq('is_active', true)
           .order('times_served', { ascending: true })
           .limit(50);
 

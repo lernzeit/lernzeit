@@ -19,6 +19,10 @@ const GEMINI_GATEWAY = 'https://generativelanguage.googleapis.com/v1beta/openai/
 const OPENROUTER_GATEWAY = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Hard per-attempt timeout. After this we abort and try the next model.
+//
+// 12s ist auf den Live-Pfad zugeschnitten, bei dem ein Kind auf die Frage
+// wartet. Hintergrundjobs duerfen laenger warten und setzen `timeoutMs`
+// selbst — kostenlose Modelle brauchen regelmaessig mehr als 12 Sekunden.
 const PER_ATTEMPT_TIMEOUT_MS = 12_000;
 
 const EXHAUSTED_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
@@ -39,6 +43,12 @@ export interface AiRequestOptions {
   thoughtSignatures?: string[];
   /** Marks the response as served from cache for metrics purposes. */
   cacheHit?: boolean;
+  /**
+   * Overrides the per-attempt timeout. Ohne Angabe gilt PER_ATTEMPT_TIMEOUT_MS
+   * (12s, auf den Live-Pfad zugeschnitten). Nur Hintergrundjobs setzen hier
+   * einen hoeheren Wert.
+   */
+  timeoutMs?: number;
 }
 
 export interface AiCallResult {
@@ -178,8 +188,9 @@ async function tryProvider(
     const start = Date.now();
     console.log(`${providerLabel(provider)} trying model: ${nativeModel} (use_case=${useCase}, thinking=${thinkingOverride !== undefined ? thinkingOverride : ctx.thinkingLevel ?? 'default'})`);
 
+    const attemptTimeoutMs = options.timeoutMs ?? PER_ATTEMPT_TIMEOUT_MS;
     const timeoutCtrl = new AbortController();
-    const timeoutId = setTimeout(() => timeoutCtrl.abort(), PER_ATTEMPT_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => timeoutCtrl.abort(), attemptTimeoutMs);
     const onOuterAbort = () => timeoutCtrl.abort();
     if (signal) signal.addEventListener('abort', onOuterAbort, { once: true });
 
@@ -306,7 +317,7 @@ async function tryProvider(
       });
       // If the caller's outer signal aborted, propagate up.
       if (outerAborted) throw err;
-      console.warn(`⚠️ ${providerLabel(provider)} ${isTimeout ? `timeout after ${PER_ATTEMPT_TIMEOUT_MS}ms` : 'unreachable'} (${nativeModel})`);
+      console.warn(`⚠️ ${providerLabel(provider)} ${isTimeout ? `timeout after ${attemptTimeoutMs}ms` : 'unreachable'} (${nativeModel})`);
       return { ok: false };
     }
   };

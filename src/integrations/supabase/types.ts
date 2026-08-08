@@ -227,6 +227,11 @@ export type Database = {
           grade: number
           hint: string | null
           id: string
+          is_active: boolean
+          quality_checked_at: string | null
+          quality_issues: string | null
+          quality_model: string | null
+          quality_status: string | null
           last_served_at: string | null
           options: Json | null
           question_text: string
@@ -243,6 +248,11 @@ export type Database = {
           grade: number
           hint?: string | null
           id?: string
+          is_active?: boolean
+          quality_checked_at?: string | null
+          quality_issues?: string | null
+          quality_model?: string | null
+          quality_status?: string | null
           last_served_at?: string | null
           options?: Json | null
           question_text: string
@@ -259,6 +269,11 @@ export type Database = {
           grade?: number
           hint?: string | null
           id?: string
+          is_active?: boolean
+          quality_checked_at?: string | null
+          quality_issues?: string | null
+          quality_model?: string | null
+          quality_status?: string | null
           last_served_at?: string | null
           options?: Json | null
           question_text?: string
