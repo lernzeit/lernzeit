@@ -277,14 +277,14 @@ const Index = () => {
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "LernZeit",
-          url: "https://lernzeit.lovable.app",
+          url: "https://lernzeit.app",
           description: "Spielerische Lern-App: Kinder verdienen Bildschirmzeit durch das Lösen von Aufgaben."
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
           name: "LernZeit",
-          url: "https://lernzeit.lovable.app"
+          url: "https://lernzeit.app"
         })}</script>
       </Helmet>
       {/* Animated background elements */}

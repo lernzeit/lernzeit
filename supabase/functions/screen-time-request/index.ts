@@ -628,7 +628,7 @@ async function sendParentNotification(
     }
 
     const parentEmail = parentUser.user.email;
-    const appUrl = 'https://lernzeit.lovable.app';
+    const appUrl = 'https://lernzeit.app';
     const approvalLink = `${appUrl}?action=approve_request&request_id=${requestId}`;
 
     const emailSubject = `📱 ${childName} möchte Bildschirmzeit`;

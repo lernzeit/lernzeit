@@ -17,7 +17,7 @@ const ALLOWED_ORIGINS = [
   "https://www.lernzeit.app",
   "https://lernzeit.lovable.app",
 ];
-const DEFAULT_ORIGIN = "https://lernzeit.lovable.app";
+const DEFAULT_ORIGIN = "https://lernzeit.app";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
