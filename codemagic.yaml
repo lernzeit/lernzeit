@@ -160,6 +160,28 @@ workflows:
 
             echo "--- Info.plist: UIBackgroundModes ---"
             /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$PLIST_PATH"
+
+            # 7. Sprache: Capacitor generiert CFBundleDevelopmentRegion=en. Steht die
+            # Geraetesprache nicht in CFBundleLocalizations, faellt iOS fuer alle
+            # app-bezogenen System-Dialoge (Berechtigungen, Sign in with Apple,
+            # Teilen-Sheet) auf die Development Region zurueck - auf einem deutschen
+            # Geraet erscheinen sie dann englisch. de als Region plus de/en als
+            # unterstuetzte Sprachen behebt das.
+            echo "Setze CFBundleDevelopmentRegion=de und CFBundleLocalizations=[de,en]..."
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDevelopmentRegion de" "$PLIST_PATH" \
+              || /usr/libexec/PlistBuddy -c "Add :CFBundleDevelopmentRegion string de" "$PLIST_PATH"
+
+            /usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$PLIST_PATH" >/dev/null 2>&1 \
+              || /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "$PLIST_PATH"
+            for LANG_CODE in de en; do
+              /usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$PLIST_PATH" 2>/dev/null \
+                | grep -qE "^[[:space:]]*${LANG_CODE}[[:space:]]*$" \
+                || /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations: string ${LANG_CODE}" "$PLIST_PATH"
+            done
+
+            echo "--- Info.plist: Sprache ---"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleDevelopmentRegion" "$PLIST_PATH"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$PLIST_PATH"
           fi
 
       # WICHTIG: Der Entitlements-Patch MUSS nach `npx cap sync ios` und VOR `pod install`
