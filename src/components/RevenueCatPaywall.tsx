@@ -21,6 +21,7 @@ import { trackEvent } from '@/utils/analytics';
 import { getActivePlatform } from '@/services/revenueCat';
 import { Capacitor } from '@capacitor/core';
 import { Link } from 'react-router-dom';
+import { openStripeUrl, stripeUrlLeavesPage } from '@/utils/checkoutRedirect';
 
 type BillingPlatform = 'ios' | 'android' | 'web';
 
@@ -161,12 +162,14 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       if (error) throw error;
       const url: string | undefined = data?.url;
       if (!url) throw new Error('Checkout konnte nicht gestartet werden.');
-      // Open in the system browser so Stripe Checkout works even inside the app WebView.
-      window.open(url, '_blank');
-      toast({
-        title: 'Checkout geöffnet',
-        description: 'Schließen Sie den Kauf im Browser ab – der Status wird beim nächsten App-Wechsel aktualisiert.',
-      });
+      // Im Web Weiterleitung im selben Tab (Popup-Blocker), nativ im Systembrowser.
+      if (!stripeUrlLeavesPage()) {
+        toast({
+          title: 'Checkout geöffnet',
+          description: 'Schließen Sie den Kauf im Browser ab – der Status wird beim nächsten App-Wechsel aktualisiert.',
+        });
+      }
+      openStripeUrl(url);
     } catch (err: any) {
       trackEvent('paywall_stripe_fallback_failed', { plan, message: err?.message ?? 'unknown' });
       setActionError(

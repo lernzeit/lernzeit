@@ -41,6 +41,7 @@ import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 import { StreakFireCard } from '@/components/StreakFireCard';
+import { openStripeUrl } from '@/utils/checkoutRedirect';
 
 interface UserProfileProps {
   user: any;
@@ -79,7 +80,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
         body: { price_id: STRIPE_MONTHLY_PRICE_ID },
       });
       if (error) throw error;
-      if (data?.url) window.open(data.url, '_blank');
+      if (data?.url) openStripeUrl(data.url);
     } catch {
       toast({ title: 'Fehler', description: 'Checkout konnte nicht geöffnet werden.', variant: 'destructive' });
     }

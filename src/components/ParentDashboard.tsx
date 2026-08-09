@@ -38,6 +38,7 @@ import { RevenueCatPaywall } from '@/components/RevenueCatPaywall';
 import { useRatingPrompt } from '@/hooks/useRatingPrompt';
 import { MessageSquareHeart } from 'lucide-react';
 import { useOfferings } from '@/hooks/useOfferings';
+import { openStripeUrl } from '@/utils/checkoutRedirect';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
@@ -272,7 +273,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         body: { price_id: priceId },
       });
       if (error) throw error;
-      if (data?.url) window.open(data.url, '_blank');
+      if (data?.url) openStripeUrl(data.url);
     } catch (err) {
       toast({
         title: 'Fehler',
@@ -330,7 +331,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       setPortalLoading(true);
       const { data, error } = await supabase.functions.invoke('customer-portal');
       if (error) throw error;
-      if (data?.url) window.open(data.url, '_blank');
+      if (data?.url) openStripeUrl(data.url);
     } catch {
       toast({ title: 'Fehler', description: 'Portal konnte nicht geöffnet werden.', variant: 'destructive' });
     } finally {
