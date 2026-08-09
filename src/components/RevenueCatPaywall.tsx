@@ -22,6 +22,59 @@ import { getActivePlatform } from '@/services/revenueCat';
 import { Capacitor } from '@capacitor/core';
 import { Link } from 'react-router-dom';
 
+type BillingPlatform = 'ios' | 'android' | 'web';
+
+/**
+ * Wer die Zahlung abwickelt — und wo der Nutzer folglich kündigen kann.
+ *
+ * Bewusst nicht über getActivePlatform() aus dem RevenueCat-Service: Der Wert
+ * steht dort erst nach der Initialisierung zur Verfügung und ist bis dahin
+ * null. Die Abo-Bedingungen dürfen aber nie unbestimmt oder falsch erscheinen.
+ */
+function billingPlatform(): BillingPlatform {
+  try {
+    if (!Capacitor.isNativePlatform()) return 'web';
+    return Capacitor.getPlatform() === 'ios' ? 'ios' : 'android';
+  } catch {
+    return 'web';
+  }
+}
+
+/**
+ * Der Text stand fest auf Apple formuliert im Paywall und erschien dadurch auch
+ * im Web — und hätte auf Android ebenso gegolten, sobald dort gekauft werden
+ * kann. Beides ist schlicht unzutreffend: Es wird kein Apple-ID-Konto belastet,
+ * und eine Kündigung ist in den Apple-Einstellungen dort nicht auffindbar.
+ *
+ * Google prüft in der Play-Freigabe die Angaben zu Abrechnung und Kündigung.
+ * Unabhängig davon führt eine falsche Kündigungsangabe Nutzer ins Leere, die
+ * ihr Abo beenden wollen.
+ */
+const BILLING_TERMS: Record<BillingPlatform, { charge: string; renewal: string; manage: string }> = {
+  ios: {
+    charge: 'Die Zahlung wird bei Kaufbestätigung Ihrem Apple-ID-Konto belastet.',
+    renewal:
+      'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird.',
+    manage:
+      'Verwaltung und Kündigung des Abos sind jederzeit in den Einstellungen Ihres Apple-ID-Kontos möglich.',
+  },
+  android: {
+    charge: 'Die Zahlung wird bei Kaufbestätigung über Ihr Google-Play-Konto abgerechnet.',
+    renewal:
+      'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird.',
+    manage:
+      'Verwaltung und Kündigung des Abos sind jederzeit im Google Play Store unter „Konto → Zahlungen und Abos → Abos“ möglich.',
+  },
+  web: {
+    charge:
+      'Die Zahlung wird bei Kaufbestätigung über das von Ihnen gewählte Zahlungsmittel abgerechnet.',
+    renewal:
+      'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht vor Ende des aktuellen Abrechnungszeitraums gekündigt wird.',
+    manage:
+      'Verwaltung und Kündigung des Abos sind jederzeit im Eltern-Dashboard über „Abo verwalten“ möglich.',
+  },
+};
+
 function SubscriptionTerms({
   monthly,
   annual,
@@ -29,6 +82,7 @@ function SubscriptionTerms({
   monthly: NormalizedPackage | null;
   annual: NormalizedPackage | null;
 }) {
+  const terms = BILLING_TERMS[billingPlatform()];
   return (
     <div className="mt-3 rounded-lg border bg-muted/30 p-3 text-[11px] leading-relaxed text-muted-foreground space-y-2">
       <p className="font-semibold text-foreground">Abo-Bedingungen</p>
@@ -45,7 +99,7 @@ function SubscriptionTerms({
         )}
       </ul>
       <p>
-        Die Zahlung wird bei Kaufbestätigung Ihrem Apple-ID-Konto belastet. Das Abo verlängert sich automatisch, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird. Die Verlängerung erfolgt zum oben genannten Preis. Verwaltung und Kündigung des Abos sind jederzeit in den Einstellungen Ihres Apple-ID-Kontos möglich.
+        {terms.charge} {terms.renewal} {terms.manage}
       </p>
       <p className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
         <Link to="/nutzungsbedingungen" target="_blank" rel="noopener noreferrer" className="underline text-foreground">
