@@ -8,7 +8,7 @@
 -- Die Werte sind im Admin-Dashboard editierbar; die Edge Functions lesen sie
 -- mit kurzem In-Memory-Cache.
 
-CREATE TABLE public.question_category_mix (
+CREATE TABLE IF NOT EXISTS public.question_category_mix (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   subject text NOT NULL,
   grade integer NOT NULL CHECK (grade BETWEEN 1 AND 10),
@@ -26,17 +26,20 @@ COMMENT ON COLUMN public.question_category_mix.theory_percentage IS
 -- RLS nach dem Muster von prompt_rules
 ALTER TABLE public.question_category_mix ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can read category mix" ON public.question_category_mix;
 CREATE POLICY "Authenticated users can read category mix"
   ON public.question_category_mix FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "Service role manages category mix" ON public.question_category_mix;
 CREATE POLICY "Service role manages category mix"
   ON public.question_category_mix FOR ALL
   TO service_role
   USING (true)
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Admins can manage category mix" ON public.question_category_mix;
 CREATE POLICY "Admins can manage category mix"
   ON public.question_category_mix FOR ALL
   TO authenticated
@@ -75,7 +78,8 @@ INSERT INTO public.question_category_mix (subject, grade, theory_percentage) VAL
   ('chemistry', 7, 35),
   ('chemistry', 8, 40),
   ('chemistry', 9, 40),
-  ('chemistry', 10, 45);
+  ('chemistry', 10, 45)
+ON CONFLICT (subject, grade) DO NOTHING;
 
 -- updated_at automatisch pflegen
 CREATE OR REPLACE FUNCTION public.touch_question_category_mix()
@@ -90,6 +94,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS question_category_mix_touch ON public.question_category_mix;
 CREATE TRIGGER question_category_mix_touch
   BEFORE UPDATE ON public.question_category_mix
   FOR EACH ROW

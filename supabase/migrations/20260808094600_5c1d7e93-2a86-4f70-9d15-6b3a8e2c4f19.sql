@@ -5,13 +5,15 @@
 -- Fragen greifen; aus dem Cache kaeme weiterhin eine zufaellige Mischung.
 
 ALTER TABLE public.ai_question_cache
-  ADD COLUMN category text NOT NULL DEFAULT 'calculation';
+  ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'calculation';
 
 COMMENT ON COLUMN public.ai_question_cache.category IS
   'calculation = Rechenaufgabe, theory = Fachbegriff/Definition.';
 
 -- Bestandszeilen sind durchweg Rechenaufgaben und behalten den Default.
 
+ALTER TABLE public.ai_question_cache
+  DROP CONSTRAINT IF EXISTS ai_question_cache_category_check;
 ALTER TABLE public.ai_question_cache
   ADD CONSTRAINT ai_question_cache_category_check
   CHECK (category IN ('calculation', 'theory'));

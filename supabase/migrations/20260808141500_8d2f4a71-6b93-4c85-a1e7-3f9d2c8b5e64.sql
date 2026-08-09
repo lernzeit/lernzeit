@@ -7,12 +7,14 @@
 -- Fehlurteil des Pruefmodells korrigierbar bleibt.
 
 ALTER TABLE public.ai_question_cache
-  ADD COLUMN is_active boolean NOT NULL DEFAULT true,
-  ADD COLUMN quality_checked_at timestamptz,
-  ADD COLUMN quality_status text,
-  ADD COLUMN quality_issues text,
-  ADD COLUMN quality_model text;
+  ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS quality_checked_at timestamptz,
+  ADD COLUMN IF NOT EXISTS quality_status text,
+  ADD COLUMN IF NOT EXISTS quality_issues text,
+  ADD COLUMN IF NOT EXISTS quality_model text;
 
+ALTER TABLE public.ai_question_cache
+  DROP CONSTRAINT IF EXISTS ai_question_cache_quality_status_check;
 ALTER TABLE public.ai_question_cache
   ADD CONSTRAINT ai_question_cache_quality_status_check
   CHECK (quality_status IS NULL OR quality_status IN ('ok', 'failed'));
@@ -28,10 +30,10 @@ COMMENT ON COLUMN public.ai_question_cache.quality_model IS
 
 -- Pruefreihenfolge: ungeprueft zuerst, danach am laengsten nicht geprueft.
 -- NULLS FIRST bildet genau das im Index ab.
-CREATE INDEX idx_aqc_quality_queue
+CREATE INDEX IF NOT EXISTS idx_aqc_quality_queue
   ON public.ai_question_cache (quality_checked_at NULLS FIRST);
 
 -- Der Auslieferungspfad filtert kuenftig zusaetzlich auf is_active.
 DROP INDEX IF EXISTS idx_ai_question_cache_lookup;
-CREATE INDEX idx_ai_question_cache_lookup
+CREATE INDEX IF NOT EXISTS idx_ai_question_cache_lookup
   ON public.ai_question_cache (grade, subject, difficulty, category, is_active, times_served);
