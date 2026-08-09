@@ -331,12 +331,27 @@ function getTypeInstructions(questionType: string): string {
 
 // ── Batch generation via the shared callAI pipeline ─────────────────────────
 
-async function callGemini(systemPrompt: string, userPrompt: string, _apiKey: string): Promise<string | null> {
+/**
+ * `diagnostics` sammelt den Grund eines Fehlschlags. Ohne das erscheint jeder
+ * Fehler nur als `empty_response` — egal ob das Modell nicht existiert, das
+ * Kontingent erschoepft ist oder wirklich leerer Text kam.
+ */
+async function callGemini(
+  systemPrompt: string,
+  userPrompt: string,
+  _apiKey: string,
+  diagnostics: string[] = [],
+): Promise<string | null> {
+  const note = (msg: string) => {
+    console.warn(`[prefill] ${msg}`);
+    if (diagnostics.length < 5) diagnostics.push(msg);
+  };
+
   // Das tatsaechliche Modell kommt aus ai_model_config (use_case
   // question_generator_batch) und ist dort auf ein kostenloses OpenRouter-Modell
   // gestellt. Der Wert hier ist nur der Fallback, falls keine Konfiguration
   // geladen werden kann. Der Funktionsname ist historisch.
-  const { response, provider } = await callAI({
+  const { response, provider, model } = await callAI({
     model: 'qwen/qwen-2.5-72b-instruct:free',
     messages: [
       { role: 'system', content: systemPrompt },
@@ -348,7 +363,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, _apiKey: str
 
   if (!response.ok) {
     const errText = await response.text().catch(() => '');
-    console.error(`AI error ${response.status} (${provider}):`, errText.substring(0, 300));
+    note(`HTTP ${response.status} von ${model} (${provider}): ${errText.substring(0, 300)}`);
     if (response.status === 429) throw new Error('RATE_LIMIT');
     if (response.status === 403 || response.status === 401) throw new Error('AUTH_ERROR');
     return null;
@@ -357,7 +372,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, _apiKey: str
   const result = await response.json();
   const text = result?.choices?.[0]?.message?.content ?? null;
   if (!text) {
-    console.warn('Empty AI response:', JSON.stringify(result).substring(0, 300));
+    note(`Leere Antwort von ${model}: ${JSON.stringify(result).substring(0, 300)}`);
   }
   return text;
 }
@@ -611,6 +626,8 @@ serve(async (req) => {
   let generated = 0;
   let failed = 0;
   const results: { grade: number; subject: string; type: string; status: string }[] = [];
+  // Gruende fuer Fehlschlaege, damit ein leerer Lauf diagnostizierbar ist.
+  const diagnostics: string[] = [];
 
   for (let i = 0; i < Math.min(maxQuestions, targets.length * 3); i++) {
     if (generated >= maxQuestions) break;
@@ -647,7 +664,7 @@ serve(async (req) => {
       // 20 Anfragen/Minute bei kostenlosen Modellen -> 3s Mindestabstand.
       lastCallAt = await pace(lastCallAt);
       budgetLeft--;
-      const rawJson = await callGemini(systemPrompt, userPrompt, GEMINI_API_KEY);
+      const rawJson = await callGemini(systemPrompt, userPrompt, GEMINI_API_KEY, diagnostics);
 
       if (!rawJson) {
         console.warn('Empty response from Gemini');
@@ -707,6 +724,7 @@ serve(async (req) => {
     failed,
     targetsFound: targets.length,
     results,
+    diagnostics,
     timestamp: new Date().toISOString(),
   };
 

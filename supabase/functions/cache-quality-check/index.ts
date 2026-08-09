@@ -47,8 +47,20 @@ const DEFAULT_MAX_CHECKS = 20;
 const LLM_TIMEOUT_MS = 60_000;
 
 
-/** Stufe 2 — LLM-Urteil. Gibt null zurück, wenn keine Bewertung möglich war. */
-async function llmVerdict(q: CachedQuestion): Promise<Verdict | null> {
+/**
+ * Stufe 2 — LLM-Urteil. Gibt null zurück, wenn keine Bewertung möglich war.
+ *
+ * `diagnostics` sammelt den Grund des Scheiterns. Ohne das ist von aussen nicht
+ * unterscheidbar, ob das Modell nicht existiert, das Kontingent erschoepft ist
+ * oder schlicht leerer Text zurueckkam — genau diese Unterscheidung hat beim
+ * ersten Testlauf gefehlt.
+ */
+async function llmVerdict(q: CachedQuestion, diagnostics: string[]): Promise<Verdict | null> {
+  const note = (msg: string) => {
+    console.warn(`[quality] ${msg}`);
+    if (diagnostics.length < 5) diagnostics.push(msg);
+  };
+
   let response: Response;
   let model: string;
   try {
@@ -64,13 +76,13 @@ async function llmVerdict(q: CachedQuestion): Promise<Verdict | null> {
     response = result.response;
     model = result.model;
   } catch (err) {
-    console.warn(`[quality] Aufruf fehlgeschlagen fuer ${q.id}:`, err);
+    note(`Aufruf fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    console.warn(`[quality] HTTP ${response.status} fuer ${q.id}: ${body.substring(0, 200)}`);
+    note(`HTTP ${response.status} von ${model}: ${body.substring(0, 300)}`);
     // 429 bedeutet Kontingent erschoepft — der Aufrufer beendet den Lauf.
     if (response.status === 429) throw new Error('RATE_LIMIT');
     return null;
@@ -78,9 +90,16 @@ async function llmVerdict(q: CachedQuestion): Promise<Verdict | null> {
 
   const payload = await response.json().catch(() => null);
   const text: string | null = payload?.choices?.[0]?.message?.content ?? null;
-  if (!text) return null;
+  if (!text) {
+    // Leerer Text bei HTTP 200 ist der verwirrendste Fall: Modell erreichbar,
+    // liefert aber nichts. Rohantwort mitgeben, damit die Ursache sichtbar wird.
+    note(`Leere Antwort von ${model}: ${JSON.stringify(payload).substring(0, 300)}`);
+    return null;
+  }
 
-  return parseVerdict(text, model);
+  const verdict = parseVerdict(text, model);
+  if (!verdict) note(`Antwort nicht als JSON lesbar (${model}): ${text.substring(0, 200)}`);
+  return verdict;
 }
 
 Deno.serve(async (req) => {
@@ -111,6 +130,10 @@ Deno.serve(async (req) => {
     skipped_no_verdict: 0,
     stopped_reason: 'completed' as string,
   };
+
+  // Gruende fuer nicht zustande gekommene Urteile, damit ein Fehlschlag von
+  // aussen diagnostizierbar ist statt nur als Zahl zu erscheinen.
+  const diagnostics: string[] = [];
 
   // ── Kostensperre vor allem anderen ──
   const budget = await checkBudget(USE_CASE, maxPerDay);
@@ -160,7 +183,7 @@ Deno.serve(async (req) => {
       }
       lastCallAt = await pace(lastCallAt);
       try {
-        verdict = await llmVerdict(row);
+        verdict = await llmVerdict(row, diagnostics);
       } catch (err) {
         if (err instanceof Error && err.message === 'RATE_LIMIT') {
           stats.stopped_reason = 'rate_limited';
@@ -210,7 +233,7 @@ Deno.serve(async (req) => {
   console.log('[quality] Lauf beendet:', JSON.stringify(stats));
 
   return new Response(
-    JSON.stringify({ success: true, ...stats, budget_before: budget }),
+    JSON.stringify({ success: true, ...stats, diagnostics, budget_before: budget }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
   );
 });
