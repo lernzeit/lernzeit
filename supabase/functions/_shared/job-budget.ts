@@ -18,8 +18,18 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-/** Mindestabstand zwischen zwei LLM-Aufrufen: 20/min entspricht 3 s. */
-export const MIN_CALL_SPACING_MS = 3_000;
+/**
+ * Mindestabstand zwischen zwei LLM-Aufrufen.
+ *
+ * Stand urspruenglich auf 3000 ms, weil die kostenlosen OpenRouter-Modelle bei
+ * 20 Anfragen/Minute gedeckelt sind. Seit beide Jobs auf Gemini laufen, gilt
+ * diese Grenze nicht mehr - die 3 Sekunden waren dadurch die Hauptbremse: Bei
+ * 2526 ungeprueften Fragen haette ein erster Durchlauf ueber 40 Tage gedauert.
+ *
+ * 250 ms bleibt hoeflich gegenueber dem Anbieter, ist aber in der Praxis nicht
+ * die bindende Groesse - die Antwortzeit des Modells dominiert ohnehin.
+ */
+export const MIN_CALL_SPACING_MS = 250;
 
 export interface BudgetState {
   /** Wie viele Aufrufe dieser use_case heute schon hatte. */

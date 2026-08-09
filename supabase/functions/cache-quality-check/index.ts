@@ -39,9 +39,18 @@ const corsHeaders = {
 
 const USE_CASE = 'quality_check';
 
-/** Bewusst niedrig: ~130 Aufrufe/Tag gesamt bei 1000 verfuegbaren. */
-const DEFAULT_MAX_PER_DAY = 80;
-const DEFAULT_MAX_CHECKS = 20;
+/**
+ * Tagesbudget. War auf 80 ausgelegt, als das Gratis-Kontingent von OpenRouter
+ * (1000/Tag) zwischen beiden Jobs geteilt werden musste. Auf Gemini gilt diese
+ * Grenze nicht mehr, und bei 2526 ungeprueften Fragen haetten 80/Tag ueber
+ * einen Monat gebraucht - solange blieben fehlerhafte Fragen im Umlauf.
+ *
+ * 600/Tag kosten bei gemini-3.1-flash-lite rund 1 USD pro Monat und raeumen den
+ * Rueckstand in etwa vier Tagen ab. Danach faellt der Verbrauch von selbst,
+ * weil nur noch neue Fragen und turnusmaessige Nachpruefungen anfallen.
+ */
+const DEFAULT_MAX_PER_DAY = 600;
+const DEFAULT_MAX_CHECKS = 50;
 
 /** Hintergrundjob — kostenlose Modelle brauchen regelmaessig mehr als 12s. */
 const LLM_TIMEOUT_MS = 60_000;
@@ -120,7 +129,9 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-  const maxChecks = Math.min(Number(body.maxChecks) || DEFAULT_MAX_CHECKS, 60);
+  // Obergrenze 200: Das Zeitbudget von 120s begrenzt einen Lauf ohnehin frueher,
+  // die Zahl verhindert nur eine unsinnig grosse Abfrage.
+  const maxChecks = Math.min(Number(body.maxChecks) || DEFAULT_MAX_CHECKS, 200);
   const maxPerDay = Number(body.maxPerDay) || DEFAULT_MAX_PER_DAY;
 
   const stats = {
