@@ -86,7 +86,15 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
+        // Der Service Worker beantwortet sonst JEDE Navigation aus dem Cache mit
+        // index.html. Für /.well-known/* ist das irreführend: Ein Aufruf von
+        // /.well-known/assetlinks.json landete dadurch auf der 404-Seite der App,
+        // obwohl der Server die Datei korrekt ausliefert — und liess einen
+        // funktionierenden Deep-Link-Aufbau kaputt aussehen.
+        //
+        // Google und Apple lesen diese Dateien serverseitig und waren nie
+        // betroffen; die Ausnahme dient der Nachpruefbarkeit im Browser.
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/\.well-known\//],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Ein alter Service Worker (mit Supabase-Caching) darf nicht weiterlaufen:
         // sofort aktivieren, Clients übernehmen und veraltete Caches löschen.
