@@ -569,7 +569,10 @@ const REFERRAL_VARIANTS = [
   },
   {
     title: "💡 Neu: Empfehlungs-Programm",
-    message: "Im Eltern-Dashboard findest du jetzt den Reiter „Verschenken". Lade Freunde ein und spare Monate.",
+    // Schliessendes Anfuehrungszeichen muss das typografische " sein. Ein
+    // gerades " beendet hier den String und macht die ganze Datei unparsbar —
+    // send-push liess sich deshalb nicht deployen.
+    message: "Im Eltern-Dashboard findest du jetzt den Reiter „Verschenken“. Lade Freunde ein und spare Monate.",
   },
   {
     title: "🌟 Premium verschenken & verdienen",

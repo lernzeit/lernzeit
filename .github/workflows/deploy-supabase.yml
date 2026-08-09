@@ -51,6 +51,27 @@ jobs:
           find supabase/functions -mindepth 1 -maxdepth 1 -type d \
             ! -name '_shared' -printf '  %f\n' | sort
 
+      # Faengt Syntaxfehler VOR dem Deployment ab. Anlass: send-push war seit
+      # Juli nicht deploybar, weil ein deutsches Anfuehrungszeichen mit einem
+      # geraden " geschlossen wurde und den String vorzeitig beendete. Ohne
+      # diese Stufe faellt so etwas erst beim Ausrollen auf — oder gar nicht.
+      - name: Syntax pruefen
+        run: |
+          set -uo pipefail
+          broken=""
+          for f in supabase/functions/*/index.ts supabase/functions/_shared/*.ts; do
+            [ -f "$f" ] || continue
+            if ! npx --yes esbuild@0.25 "$f" --format=esm --outfile=/dev/null >/dev/null 2>/tmp/err; then
+              echo "::error file=$f::$(head -3 /tmp/err | tr '\n' ' ')"
+              broken="$broken $f"
+            fi
+          done
+          if [ -n "$broken" ]; then
+            echo "::error::Syntaxfehler — Deployment abgebrochen:$broken"
+            exit 1
+          fi
+          echo "Alle Dateien syntaktisch in Ordnung."
+
       - name: Deployen
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
