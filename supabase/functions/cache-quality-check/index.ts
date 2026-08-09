@@ -65,7 +65,9 @@ async function llmVerdict(q: CachedQuestion, diagnostics: string[]): Promise<Ver
   let model: string;
   try {
     const result = await callAI({
-      model: 'deepseek/deepseek-chat-v3-0324:free',
+      // Greift nur, wenn ai_model_config nicht geladen werden kann. Das
+      // tatsaechliche Modell steht dort unter use_case 'quality_check'.
+      model: 'google/gemini-3.1-flash-lite',
       messages: [
         { role: 'system', content: buildSystemPrompt() },
         { role: 'user', content: buildUserPrompt(q) },

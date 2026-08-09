@@ -41,6 +41,10 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.cache-cleanup]
     verify_jwt = false
+  # Wird per Cron mit Service-Role-Bearer aufgerufen und prueft den Schluessel
+  # selbst im Header. Supabases JWT-Pruefung wuerde den Aufruf vorher abweisen.
+  [functions.cache-quality-check]
+    verify_jwt = false
   [functions.delete-account]
     verify_jwt = false
   [functions.check-referral-activation]

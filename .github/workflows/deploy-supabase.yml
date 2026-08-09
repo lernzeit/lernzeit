@@ -1,0 +1,104 @@
+name: Supabase Deployment
+
+# Rollt Edge Functions automatisch aus, sobald sich etwas an ihnen aendert.
+# Damit ist das Deployment unabhaengig von Lovable-Credits.
+#
+# ── Einmalige Einrichtung ──────────────────────────────────────────────────
+# Unter GitHub → Settings → Secrets and variables → Actions anlegen:
+#
+#   SUPABASE_ACCESS_TOKEN   Persoenliches Zugriffstoken, zu erstellen unter
+#                           https://supabase.com/dashboard/account/tokens
+#
+#   SUPABASE_DB_PASSWORD    Nur noetig, wenn du auch Migrationen ueber diesen
+#                           Workflow anwenden willst (Job "migrations", der
+#                           ausschliesslich manuell startet). Zu finden unter
+#                           Project Settings → Database → Database password.
+#
+# Die Projekt-Referenz steht offen im Repository (u. a. in .env und in den
+# Cron-Migrationen) und ist kein Geheimnis — deshalb hier direkt eingetragen.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-supabase.yml'
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: 'Auch Datenbank-Migrationen anwenden (db push)'
+        type: boolean
+        default: false
+
+env:
+  SUPABASE_PROJECT_REF: fsmgynpdfxkaiiuguqyr
+
+jobs:
+  functions:
+    name: Edge Functions ausrollen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Funktionen auflisten
+        run: |
+          echo "Gefundene Edge Functions:"
+          # _shared enthaelt nur gemeinsame Module, keine eigenstaendige Funktion
+          find supabase/functions -mindepth 1 -maxdepth 1 -type d \
+            ! -name '_shared' -printf '  %f\n' | sort
+
+      - name: Deployen
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          failed=""
+          for dir in $(find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name '_shared' | sort); do
+            name=$(basename "$dir")
+            echo "::group::$name"
+            # Bewusst OHNE --no-verify-jwt: Die JWT-Pruefung wird pro Funktion in
+            # supabase/config.toml festgelegt. Ein pauschales Flag auf der
+            # Kommandozeile wuerde sie auch bei nutzerbezogenen Funktionen wie
+            # delete-account aushebeln.
+            if supabase functions deploy "$name" \
+                 --project-ref "$SUPABASE_PROJECT_REF"; then
+              echo "OK: $name"
+            else
+              echo "FEHLGESCHLAGEN: $name"
+              failed="$failed $name"
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ -n "$failed" ]; then
+            echo "::error::Deployment fehlgeschlagen fuer:$failed"
+            exit 1
+          fi
+          echo "Alle Funktionen erfolgreich ausgerollt."
+
+  migrations:
+    name: Migrationen anwenden
+    # Laeuft bewusst NICHT automatisch bei jedem Push: Ein fehlgeschlagenes
+    # db push mitten in einem Deployment ist schwerer zu beheben als ein
+    # bewusst angestossener Lauf.
+    if: github.event_name == 'workflow_dispatch' && inputs.run_migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Mit dem Projekt verbinden und pushen
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          supabase db push

@@ -37,7 +37,7 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     output_price_per_1m: 0.40,
     supports_tools: true,
     requires_default_temperature: true,
-    recommended_for: ['question_generator_live', 'validate_answer', 'validate_question', 'ai_explain'],
+    recommended_for: ['question_generator_live', 'validate_answer', 'validate_question', 'ai_explain', 'quality_check'],
   },
   {
     id: 'google/gemini-3.5-flash',
@@ -131,73 +131,8 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     recommended_for: ['analyze_feedback'],
   },
 
-  // ── Kostenlose OpenRouter-Modelle ─────────────────────────
-  //
-  // Ausschliesslich fuer Hintergrundjobs (question_generator_batch,
-  // quality_check). Nichts, worauf ein Kind wartet, darf hierauf laufen —
-  // die Modelle sind langsam und hart rate-limitiert (20/min, 1000/Tag).
-  //
-  // WICHTIG: provider_routing {"only":["groq"]} darf bei diesen Modellen NICHT
-  // gesetzt sein — Groq liefert die :free-Varianten nicht aus.
-  //
-  // Die Liste ist eine Vorauswahl, keine Festlegung. Unbekannte Modell-IDs
-  // laufen ueber resolveProviderModel() unveraendert durch, d.h. im
-  // Admin-Dashboard laesst sich jede beliebige :free-ID eintragen. Das ist
-  // wichtig, weil OpenRouter sein kostenloses Angebot haeufig umstellt.
-  {
-    id: 'deepseek/deepseek-r1:free',
-    label: 'DeepSeek R1 (kostenlos)',
-    family: 'deepseek',
-    gemini_id: null,
-    openrouter_id: 'deepseek/deepseek-r1:free',
-    input_price_per_1m: 0,
-    output_price_per_1m: 0,
-    supports_tools: false,
-    requires_default_temperature: false,
-    recommended_for: ['quality_check'],
-  },
-  {
-    id: 'deepseek/deepseek-chat-v3-0324:free',
-    label: 'DeepSeek V3 (kostenlos)',
-    family: 'deepseek',
-    gemini_id: null,
-    openrouter_id: 'deepseek/deepseek-chat-v3-0324:free',
-    input_price_per_1m: 0,
-    output_price_per_1m: 0,
-    supports_tools: true,
-    requires_default_temperature: false,
-    recommended_for: ['question_generator_batch', 'quality_check'],
-  },
-  {
-    id: 'qwen/qwen-2.5-72b-instruct:free',
-    label: 'Qwen 2.5 72B (kostenlos)',
-    family: 'other',
-    gemini_id: null,
-    openrouter_id: 'qwen/qwen-2.5-72b-instruct:free',
-    input_price_per_1m: 0,
-    output_price_per_1m: 0,
-    supports_tools: true,
-    requires_default_temperature: false,
-    recommended_for: ['question_generator_batch', 'quality_check'],
-  },
-  {
-    id: 'meta-llama/llama-3.3-70b-instruct:free',
-    label: 'Llama 3.3 70B (kostenlos)',
-    family: 'meta',
-    gemini_id: null,
-    openrouter_id: 'meta-llama/llama-3.3-70b-instruct:free',
-    input_price_per_1m: 0,
-    output_price_per_1m: 0,
-    supports_tools: true,
-    requires_default_temperature: false,
-    recommended_for: ['question_generator_batch'],
-  },
 ];
 
-/** True fuer kostenlose OpenRouter-Varianten. */
-export function isFreeModel(canonicalId: string): boolean {
-  return canonicalId.endsWith(':free');
-}
 
 export function getModelInfo(id: string): ModelInfo | null {
   return RECOMMENDED_MODELS.find((m) => m.id === id) ?? null;
