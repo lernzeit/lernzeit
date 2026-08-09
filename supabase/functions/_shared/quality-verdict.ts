@@ -104,7 +104,10 @@ export function buildUserPrompt(q: CachedQuestion): string {
     : `PRÜFAUFTRAG (Rechenaufgabe):
 1. Rechne die Aufgabe selbst und vergleiche mit der angegebenen Antwort.
 2. Ist die Aufgabe für Klasse ${q.grade} angemessen?
-3. Ist sie eindeutig gestellt und im Kopf lösbar?`;
+3. EIN SCHRITT? Beanstande die Aufgabe, wenn ein Zwischenergebnis berechnet und
+   danach weiterverwendet werden muss (z. B. erst multiplizieren, dann das
+   Ergebnis abziehen). Solche Aufgaben sind im Kopf nicht zumutbar.
+4. Ist sie eindeutig gestellt?`;
 
   return `FACH: ${q.subject}
 KLASSE: ${q.grade}

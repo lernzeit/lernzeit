@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
 import {
+  answerableFromMemoryRule,
   answerFormatRule,
   loadCategoryMix,
   mentalMathConstraint,
@@ -230,7 +231,8 @@ DEINE QUALITÄTSSTANDARDS:
 - Lehrplankonform und altersgerecht für die angegebene Klassenstufe
 - Fachlich korrekt – überprüfe deine eigenen Antworten vor der Ausgabe
 - Sprachlich klar, eindeutig und motivierend formuliert
-- Aufgabenvielfalt: verschiedene kognitive Anforderungsbereiche (AFB I: Reproduzieren, AFB II: Zusammenhänge herstellen, AFB III: Reflektieren)
+${answerableFromMemoryRule()}
+- Themenvielfalt statt Aufgabenverschachtelung: variiere das Unterthema, nicht die Anzahl der Denkschritte
 - Wähle eigenständig ein konkretes, abwechslungsreiches Unterthema aus den gegebenen Domänen${answerRule ? `\n${answerRule}` : ''}
 - Antwort NUR als gültiges JSON-Objekt, ohne Markdown, ohne Erklärungen außerhalb des JSON`;
 }
@@ -244,10 +246,14 @@ function buildQuestionPrompt(
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const ageContext = getAgeContext(grade);
+  // Bewusst NICHT die AFB-Systematik: AFB III ("Problemlösen, Reflektieren") ist
+  // per Definition mehrschrittig und hat genau die Aufgaben erzeugt, die den
+  // Spielfluss zerstoeren. Schwierigkeit skaliert hier ueber Zahlenraum und
+  // Begriffstiefe, die Schrittzahl bleibt konstant bei eins.
   const difficultyLabel = {
-    easy:   'AFB I (Grundwissen, Reproduzieren)',
-    medium: 'AFB II (Anwenden, Verknüpfen)',
-    hard:   'AFB III (Problemlösen, Reflektieren)',
+    easy:   'sicheres Grundwissen, kleine Zahlen — ein Schritt',
+    medium: 'typisches Klassenniveau, gewohnter Zahlenraum — ein Schritt',
+    hard:   'oberer Zahlenraum der Klasse oder anspruchsvollerer Fachbegriff — weiterhin ein Schritt',
   }[difficulty];
 
   const domainInfo = SUBJECT_DOMAINS[subject];

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
 import {
+  answerableFromMemoryRule,
   answerFormatRule,
   loadCategoryMix,
   mentalMathConstraint,
@@ -878,8 +879,9 @@ function getSystemPrompt(category: QuestionCategory, subject: string): string {
 
 REGELN:
 - Altersgerecht, lehrplankonform, eindeutig, pädagogisch wertvoll
+${answerableFromMemoryRule()}
 ${answerFormatRule(category, subject)}
-- Mathematik: Rechne jede Aufgabe Schritt für Schritt durch und prüfe das Ergebnis
+- Mathematik: Prüfe dein Ergebnis selbst nach, bevor du antwortest (die Aufgabe für das Kind bleibt einschrittig)
 - FREETEXT: Antwort max 1-3 Wörter oder eine Zahl. Längere Antworten → MULTIPLE_CHOICE
 - Vergleichsfragen NUR mit konkreten Zahlen/Daten (keine vagen Vergleiche)
 - Keine Tautologien (Antwort darf nicht in der Frage stehen)
@@ -972,8 +974,11 @@ function getSubjectGerman(subject: string): string {
 function getGradeGuidelines(grade: number): string {
   if (grade === 1) return 'Klasse 1: ZR bis 20, max 10 Wörter, einfache Alltagssprache';
   if (grade === 2) return 'Klasse 2: ZR bis 100, max 12 Wörter, einfache Sprache';
-  if (grade === 3) return 'Klasse 3: ZR bis 1000, Einmaleins, schriftliche Addition/Subtraktion, einfache Brüche, cm/m/kg/l';
-  if (grade === 4) return 'Klasse 4: ZR bis 1 Mio, schriftliche Multiplikation/Division, Dezimalzahlen (Geld/Länge), erste Terme, Koordinatensystem';
+  // Kein "schriftliches" Rechnen in den Vorgaben: Das bezeichnet per Definition
+  // das Rechnen auf Papier und stand damit im Widerspruch zum Kopfrechen-Ziel.
+  // Die Inhalte bleiben, nur in der kopfrechen-tauglichen Auspraegung.
+  if (grade === 3) return 'Klasse 3: ZR bis 1000, Einmaleins und Kernaufgaben, Addition/Subtraktion mit glatten Zahlen, einfache Brüche, cm/m/kg/l';
+  if (grade === 4) return 'Klasse 4: ZR bis 1 Mio, Multiplikation/Division mit glatten Zahlen, Dezimalzahlen (Geld/Länge), erste Terme, Koordinatensystem';
   if (grade === 5) return 'Klasse 5: Negative Zahlen, Brüche (Erweitern/Kürzen), Dezimalzahlen, einfache Terme & lineare Gleichungen ax+b=c, Prozent-Grundideen, Dreieck/Viereck-Konstruktionen';
   if (grade === 6) return 'Klasse 6: Prozent- und Zinsrechnung, Verhältnisse & direkte/indirekte Proportionalität, rationale Zahlen mit Vorzeichen, Terme mit Klammern, Gleichungen mit Brüchen, Kreis (Umfang/Fläche), Prismen (Volumen), Diagramme & Median. KEINE reinen Klasse-2-3-Rechnungen wie „25 − 13" oder „3 · 12".';
   if (grade === 7) return 'Klasse 7: Zinsrechnung, Termumformungen (Ausklammern, Klammern), lineare Gleichungen mit Brüchen, Zuordnungen/proportional-antiproportional, Zylinder/Prismen, Stochastik (Baumdiagramm 1–2 Stufen)';
@@ -982,19 +987,29 @@ function getGradeGuidelines(grade: number): string {
   return 'Klasse 10: Quadratische Funktionen (Scheitel-/Normalform), Exponentialfunktionen (Wachstum), Zinseszins, Bruchterme/-gleichungen, komplexere Trigonometrie & Wahrscheinlichkeit';
 }
 
+/**
+ * Schwierigkeit skaliert ueber Zahlenraum und Begriffstiefe — NIEMALS ueber die
+ * Anzahl der Denkschritte.
+ *
+ * Vorher stand hier bei 'hard' woertlich "mehrschrittige Probleme" und bei
+ * 'medium' "Verknuepfung von Konzepten". Das hat die KI angewiesen, genau die
+ * mehrstufigen Aufgaben zu bauen, die den Spielfluss zerstoeren: erst
+ * multiplizieren, dann das Zwischenergebnis weiterverrechnen. Fuer eine App,
+ * die Bildschirmzeit fuers Loesen vergibt, ist das kontraproduktiv.
+ */
 function getDifficultyGuidelines(difficulty: string, grade: number): { label: string; description: string } {
   const guidelines: Record<string, { label: string; description: string }> = {
     'easy': {
       label: 'leichte',
-      description: `Grundlegendes Verständnis, direkte Anwendung von Konzepten für Klasse ${grade}`
+      description: `Sicheres Grundwissen der Klasse ${grade}, kleine Zahlen. Ein Schritt.`
     },
     'medium': {
       label: 'mittelschwere',
-      description: `Anwendung und Verknüpfung von Konzepten, typisches Klassenniveau ${grade}`
+      description: `Typisches Niveau der Klasse ${grade}, gewohnter Zahlenraum. Ein Schritt.`
     },
     'hard': {
       label: 'schwere',
-      description: `Kritisches Denken, mehrschrittige Probleme, erweiterte Konzepte für Klasse ${grade}`
+      description: `Oberer Zahlenraum der Klasse ${grade} ODER ein anspruchsvollerer Fachbegriff — aber weiterhin EIN Schritt, keine Zwischenergebnisse.`
     }
   };
   return guidelines[difficulty] || guidelines['medium'];

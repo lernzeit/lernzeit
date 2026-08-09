@@ -186,9 +186,29 @@ Beispiel: ${band.example}`;
  * sollen ohne Papier lösbar bleiben.
  */
 export function mentalMathConstraint(): string {
-  return `KOPFRECHNEN: Die Aufgabe muss ohne Papier lösbar sein. Glatte Zahlen,
-überschaubare Zwischenergebnisse, Ergebnis ganzzahlig oder einfache Dezimalzahl.
-Keine mehrstelligen schriftlichen Divisionen, keine unhandlichen Brüche.`;
+  // Das Gegenbeispiel steht bewusst drin: Sprachmodelle halten sich an eine
+  // konkrete Negativvorlage deutlich zuverlässiger als an eine abstrakte Regel.
+  // Genau dieses Muster (erst multiplizieren, dann das Ergebnis weiterverrechnen)
+  // war in Klasse 3 der Regelfall.
+  return `EIN RECHENSCHRITT – zwingend:
+Genau EINE Rechenoperation. KEIN Zwischenergebnis, das weiterverwendet wird.
+FALSCH: "Rechne 6 · 7 und ziehe das Ergebnis von 50 ab." (zwei Schritte)
+FALSCH: "Ein Karton hat 4 Reihen zu 6 Stück. Wie viele bleiben, wenn 9 fehlen?"
+RICHTIG: "Was ist 6 · 7?"
+RICHTIG: "Ein Karton hat 4 Reihen zu 6 Stück. Wie viele sind es?"
+Zahlen aus dem sicheren Kopfrechenbereich der Klasse, Ergebnis ganzzahlig.`;
+}
+
+/**
+ * Gilt für ALLE Fächer, nicht nur die rechenlastigen.
+ *
+ * Eine Geschichtsfrage nach einer entlegenen Jahreszahl oder eine
+ * Geografiefrage nach einer Flusslänge ist genauso demotivierend wie eine
+ * mehrschrittige Rechenaufgabe: Sie ist ohne Nachschlagen nicht beantwortbar.
+ * Steht im System-Prompt, gilt damit für jede Anfrage.
+ */
+export function answerableFromMemoryRule(): string {
+  return '- SOFORT beantwortbar aus dem Unterrichtswissen der Klassenstufe: ein Denkschritt, kein Nachschlagen, keine Nebenrechnung';
 }
 
 /**
