@@ -220,18 +220,12 @@ export type Database = {
       }
       ai_question_cache: {
         Row: {
-          category: string
           correct_answer: Json
           created_at: string
           difficulty: string
           grade: number
           hint: string | null
           id: string
-          is_active: boolean
-          quality_checked_at: string | null
-          quality_issues: string | null
-          quality_model: string | null
-          quality_status: string | null
           last_served_at: string | null
           options: Json | null
           question_text: string
@@ -241,18 +235,12 @@ export type Database = {
           times_served: number
         }
         Insert: {
-          category?: string
           correct_answer: Json
           created_at?: string
           difficulty: string
           grade: number
           hint?: string | null
           id?: string
-          is_active?: boolean
-          quality_checked_at?: string | null
-          quality_issues?: string | null
-          quality_model?: string | null
-          quality_status?: string | null
           last_served_at?: string | null
           options?: Json | null
           question_text: string
@@ -262,18 +250,12 @@ export type Database = {
           times_served?: number
         }
         Update: {
-          category?: string
           correct_answer?: Json
           created_at?: string
           difficulty?: string
           grade?: number
           hint?: string | null
           id?: string
-          is_active?: boolean
-          quality_checked_at?: string | null
-          quality_issues?: string | null
-          quality_model?: string | null
-          quality_status?: string | null
           last_served_at?: string | null
           options?: Json | null
           question_text?: string
@@ -1026,30 +1008,6 @@ export type Database = {
           player_id?: string
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      question_category_mix: {
-        Row: {
-          grade: number
-          id: string
-          subject: string
-          theory_percentage: number
-          updated_at: string
-        }
-        Insert: {
-          grade: number
-          id?: string
-          subject: string
-          theory_percentage?: number
-          updated_at?: string
-        }
-        Update: {
-          grade?: number
-          id?: string
-          subject?: string
-          theory_percentage?: number
-          updated_at?: string
         }
         Relationships: []
       }
