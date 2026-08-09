@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "de.lernzeit.app",
       "sha256_cert_fingerprints": [
-        "E5:8E:D1:B2:CB:E4:40:1B:EC:B6:DE:53:BA:7B:2D:C6:5F:74:3A:C9:32:7A:5D:FA:8F:AB:76:4F:2E:2E:7A:37"
+        "E5:8E:D1:B2:CB:E4:40:1B:EC:B6:DE:53:BA:7B:2D:C6:5F:74:3A:C9:32:7A:5D:FA:8F:AB:76:4F:2E:2E:7A:37",
+        "99:DF:49:CA:A1:F9:13:71:F1:61:82:14:D5:09:E2:43:1B:50:B3:E9:7E:2A:E6:27:1F:D8:89:78:57:08:19:40"
       ]
     }
   }
