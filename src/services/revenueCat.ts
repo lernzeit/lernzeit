@@ -1,9 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 
 const IOS_API_KEY = 'appl_zkfprSgXsfzzfCAUsdTWTCbhgir';
-// Android key not yet configured. When available, set here to enable RevenueCat
-// on Android as well. If empty, Android falls back to Stripe via usePremium.
-const ANDROID_API_KEY = '';
+// Öffentlicher SDK-Schlüssel der Play-Store-App (RevenueCat → API keys).
+// Solange er leer war, meldete isRevenueCatSupported() auf Android false und der
+// Paywall zeigte "Der Kauf ist momentan nicht verfügbar" — Android-Nutzer
+// konnten überhaupt nichts kaufen.
+const ANDROID_API_KEY = 'goog_zHnUVzRJrXkiggPgdfptlBsxuPA';
 // RevenueCat Web Billing (Stripe) public API key. Starts with `rcb_`.
 // Configure in RevenueCat Dashboard → Project Settings → API Keys → Web Billing.
 // When empty, the web paywall uses the legacy Stripe direct checkout fallback.
