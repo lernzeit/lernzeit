@@ -379,10 +379,33 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               },
             });
             if (!error && data?.accepted) {
-              console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.reason})`);
+              console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.verdict}: ${data.reason})`);
               correct = true;
-              // Show spelling hint when AI accepted despite typo
-              setSpellingHint(freeTextCorrect);
+
+              if (data.statedAnswerWrong) {
+                // Die hinterlegte Antwort wurde widerlegt, nicht die des Kindes.
+                // Der Rechtschreib-Hinweis darf hier NICHT erscheinen — er würde
+                // die falsche Musterlösung als "richtige Schreibweise" ausgeben.
+                setAnswerRecovered(true);
+                toast.success('Deine Antwort war doch richtig! Wird als korrekt gewertet. 🎉', {
+                  description: 'Wir haben die Frage automatisch zur Prüfung markiert.',
+                });
+                reportQuestion({
+                  reason: 'wrong_answer',
+                  details: `Auto-verified beim Absenden: Nutzerantwort "${userTextAnswer.trim()}" war korrekt, System-Antwort "${freeTextCorrect}" wurde widerlegt (verdict=${data.verdict}, geprüfte Antwort="${data.verifiedCorrectAnswer ?? '?'}").`,
+                  question: question.questionText,
+                  statedAnswer: freeTextCorrect,
+                  userAnswer: userTextAnswer.trim(),
+                  grade,
+                  subject,
+                  templateId: question.id,
+                });
+                markReviewReported(question.questionText);
+              } else {
+                // Tippfehler oder Synonym: hinterlegte Antwort stimmt, also ist
+                // der Hinweis auf die korrekte Schreibweise sinnvoll.
+                setSpellingHint(freeTextCorrect);
+              }
             }
           } catch (e) {
             console.warn('AI recheck failed, using local result:', e);

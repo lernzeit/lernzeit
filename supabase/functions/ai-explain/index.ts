@@ -14,6 +14,27 @@ interface ExplanationRequest {
   subject: string;
 }
 
+/**
+ * Protokolliert das Urteil in `answer_verdicts`.
+ *
+ * Fehler hierbei dürfen die Erklärung nie beeinflussen — sie werden nur
+ * geloggt. Der Aufruf läuft im Hintergrund, damit das Kind nicht auf das
+ * Protokoll wartet.
+ */
+async function recordVerdict(row: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL');
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !key) return;
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+    const sb = createClient(url, key, { auth: { persistSession: false } });
+    const { error } = await sb.from('answer_verdicts').insert(row);
+    if (error) console.warn('[ai-explain] Urteil nicht protokolliert:', error.message);
+  } catch (err) {
+    console.warn('[ai-explain] Urteil nicht protokolliert:', err);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -53,7 +74,7 @@ serve(async (req) => {
 
     const prompt = buildExplanationPrompt(safeQuestion, safeCorrect, safeUser, safeGrade, safeSubject);
 
-    const { response } = await callAI({
+    const { response, model } = await callAI({
       model: 'google/gemini-3.1-flash-lite',
       messages: [
         { role: 'system', content: getSystemPrompt(safeGrade) },
@@ -98,6 +119,27 @@ serve(async (req) => {
     const verifiedCorrectAnswer = parsed.verifiedCorrectAnswer || safeCorrect;
 
     console.log(`✅ Explanation generated (${explanation.length} chars, verdict=${verdict})`);
+
+    // Urteil protokollieren. Bis 08/2026 verschwand es spurlos: Ob im Einzelfall
+    // "user_correct" oder "stated_correct" entschieden wurde, war nachträglich
+    // nicht feststellbar — und damit auch nicht, warum eine richtige Antwort
+    // trotzdem als falsch stehen blieb. Der Erklärtext selbst bleibt unberührt.
+    const bgVerdict = recordVerdict({
+      source: 'ai_explain',
+      decided_by: parsed.verdict ? 'llm' : 'unparsed',
+      verdict,
+      accepted: verdict === 'user_correct' || verdict === 'both_correct',
+      model: model ?? null,
+      grade: safeGrade,
+      subject: safeSubject,
+      question_text: safeQuestion,
+      stated_answer: safeCorrect,
+      user_answer: safeUser ?? null,
+      verified_correct_answer: verifiedCorrectAnswer,
+      reason: explanation.substring(0, 300),
+    });
+    (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: PromiseLike<unknown>) => void } })
+      .EdgeRuntime?.waitUntil(bgVerdict);
 
     return new Response(JSON.stringify({
       success: true,

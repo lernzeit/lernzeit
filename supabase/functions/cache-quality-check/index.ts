@@ -162,10 +162,21 @@ Deno.serve(async (req) => {
   const withinDeadline = makeDeadline();
 
   // Ungeprueft zuerst, danach am laengsten nicht geprueft.
+  //
+  // Zweites Sortierkriterium `times_served` absteigend: Bisher stand bei allen
+  // ungeprueften Zeilen NULL in quality_checked_at, die Reihenfolge unter ihnen
+  // war damit unbestimmt - welche 50 ein Lauf erwischte, war Zufall. Eine Frage
+  // mit falscher Musterloesung konnte so wochenlang ausgeliefert werden, obwohl
+  // der Job taeglich lief.
+  //
+  // Haeufig ausgelieferte Fragen richten den groessten Schaden an und gehoeren
+  // deshalb zuerst geprueft. Der Index idx_aqc_quality_queue_served bildet genau
+  // diese Reihenfolge ab.
   const { data: queue, error: queueErr } = await supabase
     .from('ai_question_cache')
     .select('id, grade, subject, question_text, question_type, category, correct_answer, options')
     .order('quality_checked_at', { ascending: true, nullsFirst: true })
+    .order('times_served', { ascending: false })
     .limit(maxChecks);
 
   if (queueErr) {

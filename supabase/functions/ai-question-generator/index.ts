@@ -94,6 +94,26 @@ function getSafeErrorMessage(error: Error): string {
   return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
 
+/**
+ * Bevorzugt Fragen, die die Qualitaetspruefung bestanden haben.
+ *
+ * Hintergrund: Durchgefallene Fragen werden auf is_active = false gesetzt und
+ * dadurch ausgeschlossen. Ungeprueft ist aber nicht gesperrt - eine Frage wird
+ * ausgeliefert, bis der Pruefjob sie irgendwann erreicht. Bei rund 1500 noch
+ * ungeprueften Fragen und einer Ausschussquote von 16 % waren damit dauerhaft
+ * mehrere hundert fehlerhafte Aufgaben im Umlauf. Genau so kam die Aufgabe
+ * "Addiere 450 und 230 ..." mit der falschen Musterloesung 158 zu einem Kind.
+ *
+ * Ungeprueftes wird nicht verworfen, sondern nur nachgeordnet: Solange
+ * geprueftes Material vorhanden ist, wird daraus gewaehlt. Sonst wuerde der
+ * Pool einbrechen und es gaebe gar keine Fragen mehr.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function preferQualityChecked(pool: any[]): any[] {
+  const checked = pool.filter((q) => q?.quality_status === 'ok');
+  return checked.length > 0 ? checked : pool;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -302,7 +322,7 @@ serve(async (req) => {
           });
           // Never fall back to excluded rows. A small candidate set is still
           // safer than serving a question the learner has just seen.
-          const pickFrom = candidates;
+          const pickFrom = preferQualityChecked(candidates);
           if (pickFrom.length === 0) {
             console.log('🔁 Cache-first has no non-repeating candidate; generating fresh');
           } else {
@@ -593,8 +613,9 @@ serve(async (req) => {
         });
 
         if (nonRepeatingCachedQuestions.length > 0) {
-          // Pick a random one from least-served
-          const picked = nonRepeatingCachedQuestions[Math.floor(Math.random() * nonRepeatingCachedQuestions.length)];
+          // Pick a random one from least-served, geprueftes Material zuerst
+          const fallbackPool = preferQualityChecked(nonRepeatingCachedQuestions);
+          const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
           console.log(`✅ Cache fallback: serving cached question ${picked.id}`);
           
           // Update times_served
