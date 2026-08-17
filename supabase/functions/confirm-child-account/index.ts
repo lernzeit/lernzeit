@@ -11,48 +11,92 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Require authenticated parent caller
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const sbAnon = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    );
-    const { data: authData, error: authErr } = await sbAnon.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-    if (authErr || !authData?.user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    const { email, password, name, grade, username, invitationCode } = await req.json();
+
+    // ── Berechtigung ─────────────────────────────────────────────────────────
+    //
+    // Es gibt zwei legitime Aufrufer, und bis 08/2026 war nur einer davon
+    // vorgesehen:
+    //
+    //   1. Ein angemeldeter Elternteil legt ein Kinderkonto an.
+    //   2. Ein Kind registriert sich selbst mit dem Einladungscode der Eltern
+    //      ("Ohne E-Mail registrieren"). Dabei ist NIEMAND angemeldet.
+    //
+    // Fall 2 scheiterte zwangslaeufig: functions.invoke schickt ohne Sitzung den
+    // anonymen Projektschluessel als Bearer, getUser() findet dazu keinen Nutzer,
+    // und die Funktion antwortete "Unauthorized". Der gesamte Registrierungsweg
+    // ohne E-Mail war damit unbenutzbar - fuer das Kind sah es aus, als sei es
+    // selbst schuld.
+    //
+    // Der Einladungscode ist die Berechtigung fuer Fall 2: Er stammt vom
+    // Elternteil, ist einmalig verwendbar und laeuft ab. Dieselbe Annahme trifft
+    // die bestehende RPC claim_invitation_code bereits.
+    let authorized = false;
+
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const sbAnon = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!
       );
+      const { data: authData } = await sbAnon.auth.getUser(
+        authHeader.replace("Bearer ", "")
+      );
+      if (authData?.user) {
+        const { data: callerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("role")
+          .eq("id", authData.user.id)
+          .maybeSingle();
+        if (!callerProfile || callerProfile.role !== "parent") {
+          // Angemeldet, aber kein Elternteil: bewusst abweisen statt auf den
+          // Code-Weg zurueckzufallen.
+          return new Response(
+            JSON.stringify({ error: "Forbidden" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        authorized = true;
+      }
     }
 
-    // Verify caller is a parent
-    const { data: callerProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", authData.user.id)
-      .maybeSingle();
-    if (!callerProfile || callerProfile.role !== "parent") {
-      return new Response(
-        JSON.stringify({ error: "Forbidden" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (!authorized) {
+      const code = typeof invitationCode === "string" ? invitationCode.trim() : "";
+      if (!/^\d{6}$/.test(code)) {
+        return new Response(
+          JSON.stringify({ error: "Bitte gib den 6-stelligen Einladungscode deiner Eltern ein." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    const { email, password, name, grade, username } = await req.json();
+      const { data: codeRow } = await supabaseAdmin
+        .from("invitation_codes")
+        .select("id, expires_at, is_used")
+        .eq("code", code)
+        .maybeSingle();
+
+      const codeValid =
+        !!codeRow &&
+        codeRow.is_used !== true &&
+        !!codeRow.expires_at &&
+        new Date(codeRow.expires_at).getTime() > Date.now();
+
+      if (!codeValid) {
+        console.warn("[confirm-child-account] Einladungscode abgelehnt");
+        return new Response(
+          JSON.stringify({
+            error: "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte lass dir von deinen Eltern einen neuen geben.",
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      authorized = true;
+    }
 
     // Validate required fields
     if (!email || !password || !username) {

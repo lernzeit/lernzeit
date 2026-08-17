@@ -398,7 +398,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         const pseudoEmail = generatePseudoEmail(username);
 
-        // Create child account via edge function (admin API, auto-confirmed)
+        // Create child account via edge function (admin API, auto-confirmed).
+        // Der Einladungscode muss mit: Hier ist niemand angemeldet, er ist die
+        // einzige Berechtigung, die das Kind vorweisen kann. Ohne ihn antwortete
+        // die Funktion mit "Unauthorized" — der ganze Weg war unbenutzbar.
         const { data: createData, error: createError } = await supabase.functions.invoke('confirm-child-account', {
           body: {
             email: pseudoEmail,
@@ -407,6 +410,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             role: 'child',
             grade,
             username: username.toLowerCase(),
+            invitationCode,
           },
         });
 
