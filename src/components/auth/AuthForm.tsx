@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,6 +92,69 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     isEnabled: isCaptchaEnabled,
   } = useTurnstile('turnstile-container');
 
+  /**
+   * Merkt sich, dass eine Anmeldung über Google oder Apple die Seite verlassen
+   * hat. Nur dann darf der Ladezustand beim Zurückkommen zurückgesetzt werden —
+   * bei einer laufenden Anmeldung per E-Mail wäre das falsch.
+   */
+  const oauthRedirectPending = useRef(false);
+
+  /**
+   * Setzt den Ladezustand zurück, wenn der Nutzer nach einem abgebrochenen oder
+   * fehlgeschlagenen OAuth-Versuch zum Anmeldebildschirm zurückkehrt.
+   *
+   * handleGoogleSignIn und handleAppleSignIn setzen `loading` auf true und
+   * leiten dann weiter; ein Zurücksetzen gibt es dort nur im Fehlerfall, weil
+   * die Seite im Erfolgsfall ohnehin verlassen wird. Kehrt der Nutzer aber
+   * zurück, OHNE dass die Seite neu geladen wird — Safari stellt sie aus dem
+   * bfcache wieder her, die native App kommt aus dem Hintergrund —, montiert
+   * React nicht neu. `loading` bleibt auf true stehen, alle Knöpfe bleiben
+   * deaktiviert und zeigen nur noch einen Spinner. Für den Nutzer sieht das
+   * aus, als sei der Anmeldebildschirm abgestürzt.
+   */
+  useEffect(() => {
+    const clearIfReturning = () => {
+      if (!oauthRedirectPending.current) return;
+      oauthRedirectPending.current = false;
+      setLoading(false);
+    };
+
+    // persisted === true bedeutet: aus dem bfcache wiederhergestellt, also
+    // ohne Neuaufbau des JavaScript-Zustands.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) clearIfReturning();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') clearIfReturning();
+    };
+
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // In der nativen App löst die Rückkehr aus dem Systembrowser nicht
+    // zuverlässig visibilitychange aus.
+    let removeNativeListener: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) return;
+        const { App } = await import('@capacitor/app');
+        const handle = await App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) clearIfReturning();
+        });
+        removeNativeListener = () => {
+          try { handle.remove(); } catch { /* ignore */ }
+        };
+      } catch { /* ignore */ }
+    })();
+
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      removeNativeListener?.();
+    };
+  }, []);
+
   // Detect referral code from URL (?ref=XXXXXX) or localStorage
   useEffect(() => {
     try {
@@ -164,6 +227,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     setLoading(true);
     try {
       // Role/grade/referral will be captured AFTER OAuth via GoogleRoleSelection.
+      // Ab hier verlässt der Nutzer die Seite — beim Zurückkommen muss der
+      // Ladezustand aufgelöst werden, sonst bleibt der Bildschirm gesperrt.
+      oauthRedirectPending.current = true;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -173,6 +239,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
       if (error) throw error;
     } catch (error: any) {
+      oauthRedirectPending.current = false;
       toast({
         title: "Fehler bei Google-Anmeldung",
         description: translateError(error.message),
@@ -226,6 +293,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         throw nativeErr;
       }
 
+      // Web-Weiterleitung (nicht der native iOS-Dialog oben): Der Nutzer
+      // verlässt die Seite, deshalb wie bei Google markieren.
+      oauthRedirectPending.current = true;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
@@ -234,6 +304,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
       if (error) throw error;
     } catch (error: any) {
+      oauthRedirectPending.current = false;
       console.error('[Apple Sign-In] failed:', error);
       toast({
         title: "Fehler bei Apple-Anmeldung",
