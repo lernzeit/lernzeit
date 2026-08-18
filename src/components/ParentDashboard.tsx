@@ -256,6 +256,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
+    trackFireAndForget('checkout_started', { plan, channel: isNativeApp ? 'revenuecat' : 'stripe' });
     // Never route native app users to Stripe checkout – always use the
     // in-app RevenueCat paywall (Apple + Google policy).
     if (isNativeApp) {

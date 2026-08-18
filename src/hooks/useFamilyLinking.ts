@@ -109,6 +109,8 @@ export function useFamilyLinking() {
 
       if (insertError) throw insertError;
 
+      trackFireAndForget('invitation_code_created', {});
+
       toast({
         title: "Einladungscode erstellt!",
         description: `Code: ${newCode} (30 Min gültig)`,
