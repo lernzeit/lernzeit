@@ -1,54 +1,39 @@
-## Ziel
+# Landingpage /start & Einstieg überarbeiten
 
-Besucher auf einem Android-Gerät (mobiler Browser) bekommen einen dezenten, professionellen Hinweis, dass es LernZeit auch als native Android-App im Play Store gibt — mit direktem Link zum Store-Listing.
+## Vorabprüfung (Antworten auf deine drei Fragen)
 
-## Warum kein QR-Code
+**1. Zahlungsdaten bei der Registrierung?** Nein. Der Trigger `on_profile_created_trial` legt beim Anlegen des Profils automatisch ein Abo mit Status `trialing` und `trial_end = now() + 28 Tage` an. Es wird weder Stripe noch RevenueCat angefasst. Die Aussage "4 Wochen kostenlos, keine Zahlungsdaten nötig" ist also korrekt und darf so beworben werden.
 
-QR-Codes ergeben nur Sinn auf Desktop/Print — der Nutzer schaut das Handy ja bereits an, mit dem er installieren würde. Ein direkter „Im Play Store öffnen"-Button ist ein Tap statt Kamera-App + Scan. Deshalb: Smart App Banner statt QR.
+**2. KI-Lernpläne produktiv?** Ja. Tabelle `learning_plans` + Edge Function `generate-learning-plan` + UI `LearningPlanGenerator` sind live und im Eltern-Dashboard eingebunden (Premium-gated). Aktuell sind erst 3 Pläne von 1 Elternteil erzeugt worden – funktionsfähig, aber wenig genutzt.
 
-## UX-Muster: Smart App Banner (analog iOS Smart App Banner)
+**3. Bleiben Premium-Einstellungen nach Trial-Ende erhalten?** Ja. `child_settings` und `child_subject_visibility` werden nie gelöscht oder zurückgesetzt; nach Trial-Ende sind die Felder in `ChildSettingsEditor` nur noch `disabled`. Die gespeicherten Werte bleiben in der DB und werden bei einem Upgrade sofort wieder wirksam. **Aber:** In der gesperrten Ansicht sind die Werte hinter dem `PremiumFeature`-Overlay auf 40 % Deckkraft kaum lesbar – das wird angepasst.
 
-Schmaler, sticky Banner am oberen Rand — nicht als modaler Interstitial, weil:
+## Was umgesetzt wird
 
-- Google straft Full-Screen App-Install-Interstitials in Search Rankings ab.
-- Nutzer, die die Website bewusst öffnen, sollen nicht blockiert werden.
+### 1. Hero & Einstieg (`HeroSection.tsx`)
+- Zusatzzeile unter dem Subtext: "4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig."
+- "Demo ausprobieren" wird visuell klar sekundär (Ghost-Style statt gleichwertigem Outline-Button).
 
-Muster erfolgreicher Apps (Spotify, Reddit, Medium):
+### 2. Demo mit echten Aufgaben
+- Neue Security-Definer-RPC `get_demo_questions(p_grade, p_subject, p_limit)`, die zufällige, qualitätsgeprüfte Fragen aus `ai_question_cache` liefert (nur Frage-Felder, kein Tabellenzugriff für `anon`).
+- `useQuestionPreloader` zieht im Demo-Modus zuerst über diese RPC; der statische Pool aus `demoQuestions.ts` bleibt als Fallback, wenn die RPC leer/fehlerhaft ist.
+- Auth-Guards, `demoMode`-Ableitung und Native-Sperre bleiben unverändert.
 
-- App-Icon links, kurzer Text mittig, Primär-CTA rechts, Schließen-„×" ganz links.
-- Persistente Dismissal (localStorage) für z. B. 30 Tage — nicht bei jedem Reload nerven.
-- Nur einmal pro Session animiert einblenden (Slide-in nach ~600 ms), danach ohne Animation.
+### 3. Übergang nach der Demo (`GameCompletionScreen.tsx` + `LearningGame.tsx`)
+- Neuer Prop `demoMode`: Statt "Weiter" erscheint ein Abschlussblock "So sieht es für dein Kind aus" mit den beiden Schritten (Eltern-Konto anlegen → Kind per Code verbinden) und primärem CTA "Kostenlos registrieren" (Tracking `landing_cta_click`, position `demo_end`).
 
-## Trigger-Bedingungen (alle müssen zutreffen)
+### 4. Setup-Erklärung auf der Landingpage
+- Neue Komponente `SetupSteps.tsx` ("So richtest du es in 3 Minuten ein"): 1) Eltern-Konto anlegen, 2) Kind-Konto per Einladungscode verbinden, 3) Belohnung pro Fach festlegen. Wird in `Start.tsx` zwischen USP und Preisen eingehängt.
 
-1. `navigator.userAgent` enthält `Android` UND nicht `wv` (WebView) — verhindert Banner in der bereits installierten App.
-2. Nicht im Capacitor-Kontext (`window.Capacitor?.isNativePlatform()` = false).
-3. Kein `display-mode: standalone` (installierte PWA).
-4. Kein Dismissal-Flag in `localStorage` (Key `lernzeit_android_banner_dismissed` mit Ablauf 30 Tage).
-5. Route ist eine öffentliche Marketing-Route (`/`, `/start`, `/support`, `/impressum`, `/datenschutz`, `/nutzungsbedingungen`) — nicht während einer aktiven Lernsession oder im eingeloggten Dashboard, um Ablenkung zu vermeiden.
+### 5. Ehrlichkeitsblock (`Start.tsx`)
+- Kurzer Abschnitt "Was heute noch nicht geht" (z. B. keine automatische Sperre des Geräts durch LernZeit – Freigabe erfolgt durch die Eltern; Fächerabdeckung je nach Klasse unterschiedlich tief). Sachlich, ohne Nennung fremder Betriebssystem-Marken.
 
-## Komponenten & Dateien
+### 6. Feature-Kommunikation: KI-Lernplan statt KI-Tutor
+- In `PricingComparison.tsx` und `USPSection.tsx` wird "KI-Tutor Erklärungen" durch "KI-Lernplan zur Klassenarbeit" ersetzt bzw. ergänzt; Trial-Hinweiszeile über den Preiskarten.
+- Preise (2,99 € / 29,99 €) und die Native-Weiche bleiben unangetastet.
 
-- **Neu:** `src/components/AndroidAppBanner.tsx` — die Bannerkomponente selbst. Nutzt Design-Tokens (`bg-card`, `border-border`, `text-primary`), das bestehende Book-Icon-Motiv aus dem Hero und Tailwind-Klassen (`fixed top-0 inset-x-0 z-50`, `pt-safe-top`). Inline SVG des Google-Play-Logos im CTA-Button.
-- **Neu:** `src/hooks/useAndroidAppBanner.ts` — kapselt Erkennung, Dismissal und Persistenz.
-- **Update:** `src/App.tsx` — Banner global mountet, aber die Komponente entscheidet selbst per Hook, ob sie rendert (kein Layout-Shift, wenn sie schwiegt).
-- **Update:** `index.html` — optionales `<meta name="google-play-app" content="app-id=de.lernzeit.app">` als semantisches Signal für Chrome/Google.
+### 7. Paywall zeigt gespeicherte Werte (`PremiumGate.tsx`)
+- `PremiumFeature`-Overlay wird lesbarer (höhere Deckkraft des Inhalts, Overlay nur als Karte am unteren Rand), damit Eltern nach Trial-Ende ihre gespeicherten Einstellungen weiterhin sehen. Zusatztext: "Deine Einstellungen bleiben gespeichert."
 
-## Copy (Deutsch)
-
-- Headline: „LernZeit-App für Android"
-- Sub: „Schneller starten. App immer dabei."
-- CTA-Button: „Im Play Store öffnen" → `https://play.google.com/store/apps/details?id=de.lernzeit.app&utm_source=web_banner`
-- Dismissal: „×" mit `aria-label="Hinweis schließen"`
-
-## Verhalten
-
-- Slide-in-Animation via Tailwind `animate-slide-down` (Keyframe ggf. neu in `tailwind.config.ts` / `index.css`).
-- CTA öffnet in neuem Tab (`target="_blank" rel="noopener"`), damit die Website-Session erhalten bleibt.
-- `utm_source=web_banner` (statt `emea_Med`), damit du in der Play Console die Herkunft „Web-Banner" sauber tracken kannst.
-- Banner respektiert `prefers-reduced-motion` (kein Slide-in bei Reduce-Motion).
-
-## Nicht Teil dieses Plans
-
-- iOS Smart App Banner (App Store) — kann analog nachgezogen werden, wenn iOS-Version live ist.
-- Serverseitiges Prerendering-Rendering des Banners (bewusst nur clientseitig, damit Prerender-Snapshots sauber bleiben und der Banner nur für echte Android-Nutzer erscheint).
+## Nicht angefasst
+`useAuth.ts`, `nativeStorageAdapter.ts`, Session-/Auth-Logik, Android-Konfiguration, Preislogik, RevenueCat/Stripe-Flows.
