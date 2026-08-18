@@ -1016,6 +1016,8 @@ export type Database = {
           grade: number | null
           id: string
           is_founding_family: boolean
+          last_platform: string | null
+          last_platform_at: string | null
           last_rating_prompt_at: string | null
           learning_reminder_hour: number
           name: string | null
@@ -1036,6 +1038,8 @@ export type Database = {
           grade?: number | null
           id: string
           is_founding_family?: boolean
+          last_platform?: string | null
+          last_platform_at?: string | null
           last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
@@ -1056,6 +1060,8 @@ export type Database = {
           grade?: number | null
           id?: string
           is_founding_family?: boolean
+          last_platform?: string | null
+          last_platform_at?: string | null
           last_rating_prompt_at?: string | null
           learning_reminder_hour?: number
           name?: string | null
@@ -1682,6 +1688,13 @@ export type Database = {
           total_questions: number
         }[]
       }
+      get_children_platforms: {
+        Args: never
+        Returns: {
+          child_id: string
+          platform: string
+        }[]
+      }
       get_demo_questions: {
         Args: { p_grade: number; p_limit?: number; p_subject: string }
         Returns: {
@@ -1705,6 +1718,11 @@ export type Database = {
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
       link_referral: { Args: { p_code: string }; Returns: Json }
+      set_child_platform: {
+        Args: { p_child_id: string; p_platform: string }
+        Returns: undefined
+      }
+      set_own_platform: { Args: { p_platform: string }; Returns: undefined }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {
