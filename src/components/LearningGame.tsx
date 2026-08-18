@@ -451,6 +451,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
     setIsCorrect(correct);
     setHasAnswered(true);
+
+    if (demoMode) {
+      trackFireAndForget('demo_question_answered', { correct });
+    }
     
     // PAUSE timer when question is answered
     pauseTimer();
@@ -661,6 +665,19 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         if (result.success) {
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
+
+          // Erste abgeschlossene Lernsession dieses Nutzers?
+          try {
+            const { count } = await supabase
+              .from('game_sessions')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', user.id);
+            if (count === 1) {
+              trackFireAndForget('first_learning_session', { subject, grade });
+            }
+          } catch {
+            /* Tracking darf die Session nie blockieren */
+          }
           if (!isStreakRecovery || score >= 3) {
             await (supabase as any).from('user_streak_states').upsert({
               user_id: user.id,
