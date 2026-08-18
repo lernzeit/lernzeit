@@ -1682,6 +1682,19 @@ export type Database = {
           total_questions: number
         }[]
       }
+      get_demo_questions: {
+        Args: { p_grade: number; p_limit?: number; p_subject: string }
+        Returns: {
+          correct_answer: Json
+          difficulty: string
+          grade: number
+          hint: string
+          options: Json
+          question_text: string
+          question_type: string
+          subject: string
+        }[]
+      }
       get_email_by_username: { Args: { p_username: string }; Returns: string }
       has_role: {
         Args: {
