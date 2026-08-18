@@ -284,6 +284,60 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          anonymous_id: string | null
+          created_at: string
+          event_name: string
+          gclid: string | null
+          id: string
+          page_path: string | null
+          platform: string | null
+          properties: Json
+          referrer: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          anonymous_id?: string | null
+          created_at?: string
+          event_name: string
+          gclid?: string | null
+          id?: string
+          page_path?: string | null
+          platform?: string | null
+          properties?: Json
+          referrer?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          anonymous_id?: string | null
+          created_at?: string
+          event_name?: string
+          gclid?: string | null
+          id?: string
+          page_path?: string | null
+          platform?: string | null
+          properties?: Json
+          referrer?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       answer_verdicts: {
         Row: {
           accepted: boolean
