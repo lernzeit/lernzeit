@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import HeroSection from '@/components/landing/HeroSection';
 import HowItWorks from '@/components/landing/HowItWorks';
 import USPSection from '@/components/landing/USPSection';
@@ -14,6 +15,15 @@ import { trackFireAndForget } from '@/lib/analytics';
 
 const Start = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Einladungslink der Eltern (/start?code=123456) → direkt zur Kind-Registrierung
+  useEffect(() => {
+    const code = (searchParams.get('code') || '').replace(/\D/g, '').slice(0, 6);
+    if (code.length === 6) {
+      navigate(`/?auth=true&code=${code}`, { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   return (
     <main className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">

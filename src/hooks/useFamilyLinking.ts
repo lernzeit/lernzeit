@@ -92,7 +92,9 @@ export function useFamilyLinking() {
       
       const newCode = data;
       const expiresAt = new Date();
-      expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30 minutes expiry
+      // Einladungscodes sind 7 Tage gültig – Eltern registrieren sich oft, wenn
+      // das Kindergerät nicht in Reichweite ist.
+      expiresAt.setDate(expiresAt.getDate() + 7);
 
       // Insert the code into the database with consent timestamp
       const insertData: any = {
@@ -114,7 +116,7 @@ export function useFamilyLinking() {
 
       toast({
         title: "Einladungscode erstellt!",
-        description: `Code: ${newCode} (30 Min gültig)`,
+        description: `Code: ${newCode} (7 Tage gültig)`,
       });
 
       await loadFamilyData(parentId);
@@ -250,6 +252,38 @@ export function useFamilyLinking() {
     }
   };
 
+  // Offenen (noch nicht eingelösten) Code zurückziehen
+  const revokeInvitationCode = async (parentId: string, codeId: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('invitation_codes')
+        .delete()
+        .eq('id', codeId)
+        .eq('parent_id', parentId)
+        .eq('is_used', false);
+
+      if (error) throw error;
+
+      toast({
+        title: "Code zurückgezogen",
+        description: "Der Einladungscode ist nicht mehr gültig.",
+      });
+
+      await loadFamilyData(parentId);
+      return true;
+    } catch {
+      toast({
+        title: "Fehler",
+        description: "Code konnte nicht zurückgezogen werden.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Clean up expired codes
   const cleanupExpiredCodes = async () => {
     try {
@@ -272,5 +306,6 @@ export function useFamilyLinking() {
     generateInvitationCode,
     useInvitationCode,
     removeChildLink,
+    revokeInvitationCode,
   };
 }

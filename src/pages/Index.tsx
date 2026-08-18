@@ -50,7 +50,9 @@ const Index = () => {
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showAuth, setShowAuth] = useState(searchParams.get('auth') === 'true');
+  const [showAuth, setShowAuth] = useState(
+    searchParams.get('auth') === 'true' || !!searchParams.get('code'),
+  );
 
   // Detect checkout success redirect
   useEffect(() => {

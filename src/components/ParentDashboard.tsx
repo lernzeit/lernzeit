@@ -22,7 +22,7 @@ import { trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple, Gift
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple, Gift, Share2
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -42,6 +42,8 @@ import { useRatingPrompt } from '@/hooks/useRatingPrompt';
 import { MessageSquareHeart } from 'lucide-react';
 import { useOfferings } from '@/hooks/useOfferings';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
+import { OnboardingNextStepCard } from '@/components/parent/OnboardingNextStepCard';
+import { shareInviteLink, buildInviteLink } from '@/lib/inviteLink';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
 // Vier Quadranten in den Google-Markenfarben + dunkle Schnur.
@@ -87,6 +89,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>('requests');
   const [accountOpen, setAccountOpen] = useState(false);
   const tabsRef = React.useRef<HTMLDivElement>(null);
+  const inviteRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [referralBannerDismissed, setReferralBannerDismissed] = useState<boolean>(() => {
@@ -199,6 +202,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     loadFamilyData,
     generateInvitationCode,
     removeChildLink,
+    revokeInvitationCode,
   } = useFamilyLinking();
 
   const { summaries, loading: summariesLoading } = useChildDaySummary(userId, linkedChildren);
@@ -353,6 +357,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     toast({ title: "Code kopiert!", description: "Der Einladungscode wurde in die Zwischenablage kopiert." });
   };
 
+  const handleShareInvite = async (code: string) => {
+    const { method } = await shareInviteLink(code);
+    if (method === 'clipboard') {
+      toast({ title: "Link kopiert!", description: buildInviteLink(code) });
+    } else if (method === 'failed') {
+      toast({ title: "Teilen nicht möglich", description: "Bitte den Code manuell weitergeben.", variant: "destructive" });
+    }
+  };
+
+  const handleRevokeCode = async (codeId: string) => {
+    await revokeInvitationCode(userId, codeId);
+  };
+
+  const goToInviteSection = () => {
+    setActiveTab('children');
+    setTimeout(() => inviteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+  };
+
   const handleRemoveChild = async (childId: string) => {
     const success = await removeChildLink(userId, childId);
     if (success) loadFamilyData(userId);
@@ -400,7 +422,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     if (diffMs <= 0) return 'Abgelaufen';
     const diffMin = Math.floor(diffMs / 60000);
     if (diffMin < 60) return `${diffMin} Min`;
-    return `${Math.floor(diffMin / 60)}h ${diffMin % 60}min`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 48) return `${diffH}h ${diffMin % 60}min`;
+    return `noch ${Math.floor(diffH / 24)} Tage`;
   };
 
   const activeCodes = invitationCodes.filter(code => !code.is_used && new Date(code.expires_at) > new Date());
@@ -480,6 +504,15 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </Button>
         </div>
       </div>
+
+      {/* Nächster Schritt beim Onboarding – bleibt, bis der Schritt erledigt ist */}
+      <OnboardingNextStepCard
+        parentId={userId}
+        linkedChildren={linkedChildren}
+        activeCodes={activeCodes}
+        onCreateCode={goToInviteSection}
+        onShowCode={goToInviteSection}
+      />
 
       {totalPendingRequests > 0 && (
         <Card className="border-destructive bg-destructive/10 shadow-lg animate-pulse-subtle">
@@ -784,14 +817,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           )}
 
           {/* Kind einladen – unter den verknüpften Kindern */}
-          <Card>
+          <Card ref={inviteRef}>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Key className="h-4 w-4 text-primary" />
                 Weiteres Kind einladen
               </CardTitle>
               <CardDescription className="text-xs">
-                Erstelle einen Einladungscode, den dein Kind in der App eingeben kann.
+                Erstelle einen Einladungslink, den dein Kind auf dem eigenen Handy öffnet. Der Link ist 7 Tage gültig – der Code funktioniert auch manuell.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -825,17 +858,29 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               </Button>
               {activeCodes.length > 0 && (
                 <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground">Aktive Codes:</p>
+                  <p className="text-xs font-medium text-muted-foreground">Aktive Einladungen:</p>
                   {activeCodes.map((code) => (
-                    <div key={code.id} className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2">
-                      <div>
-                        <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
-                        <span className="text-xs text-muted-foreground ml-2">
-                          ({formatTimeRemaining(code.expires_at)})
-                        </span>
+                    <div key={code.id} className="bg-muted/50 rounded-md px-3 py-2 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({formatTimeRemaining(code.expires_at)})
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code kopieren" onClick={() => copyToClipboard(code.code)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code zurückziehen" onClick={() => handleRevokeCode(code.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(code.code)}>
-                        <Copy className="h-3.5 w-3.5" />
+                      <p className="text-[11px] text-muted-foreground break-all">{buildInviteLink(code.code)}</p>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => handleShareInvite(code.code)}>
+                        <Share2 className="h-3.5 w-3.5 mr-2" />
+                        Link teilen
                       </Button>
                     </div>
                   ))}
