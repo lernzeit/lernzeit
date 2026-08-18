@@ -16,6 +16,13 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { usePremium } from '@/hooks/usePremium';
 import { supabase } from '@/lib/supabase';
+import { trackFireAndForget } from '@/lib/analytics';
+
+/** Leitet aus der RevenueCat-Package-Kennung den Plan ab. */
+function planFromPackage(identifier: string, productIdentifier?: string): 'monthly' | 'yearly' {
+  const haystack = `${identifier} ${productIdentifier ?? ''}`.toLowerCase();
+  return haystack.includes('annual') || haystack.includes('year') ? 'yearly' : 'monthly';
+}
 import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
 import { trackEvent } from '@/utils/analytics';
 import { getActivePlatform } from '@/services/revenueCat';
@@ -151,6 +158,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     setStripeFallbackLoading(plan);
     setActionError(null);
     trackEvent('paywall_stripe_fallback_started', { plan });
+    trackFireAndForget('checkout_started', { plan, channel: 'stripe_fallback' });
     try {
       const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
       if (!priceId || !priceId.startsWith('price_')) {
@@ -246,6 +254,10 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       price: pkg.priceString,
       platform,
     });
+    trackFireAndForget('checkout_started', {
+      plan: planFromPackage(pkg.identifier, pkg.productIdentifier),
+      channel: 'revenuecat',
+    });
     try {
       const outcome = await rcPurchasePackage(pkg, { customerEmail: user?.email ?? undefined });
       if (outcome.userCancelled) {
@@ -267,6 +279,10 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
           platform,
         });
         trackEvent('entitlement_activated', { source: platform === 'web' ? 'revenuecat_web' : 'revenuecat_native' });
+        trackFireAndForget('subscription_purchased', {
+          plan: planFromPackage(pkg.identifier, pkg.productIdentifier),
+          channel: 'revenuecat',
+        });
         toast({ title: 'Willkommen bei Premium!', description: 'Alle Funktionen sind jetzt freigeschaltet.' });
         onPurchased?.();
         onOpenChange(false);
