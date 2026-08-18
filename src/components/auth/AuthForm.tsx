@@ -402,10 +402,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           return;
         }
 
-        if (!invitationCode || invitationCode.length !== 6) {
+        if (invitationCode && invitationCode.length !== 6) {
           toast({
-            title: 'Einladungscode fehlt',
-            description: 'Bitte gib den 6-stelligen Code deiner Eltern ein.',
+            title: 'Einladungscode unvollständig',
+            description: 'Der Code hat 6 Ziffern. Lass ihn leer, wenn du dich später verbinden möchtest.',
             variant: 'destructive',
           });
           setLoading(false);
@@ -426,9 +426,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const pseudoEmail = generatePseudoEmail(username);
 
         // Create child account via edge function (admin API, auto-confirmed).
-        // Der Einladungscode muss mit: Hier ist niemand angemeldet, er ist die
-        // einzige Berechtigung, die das Kind vorweisen kann. Ohne ihn antwortete
-        // die Funktion mit "Unauthorized" — der ganze Weg war unbenutzbar.
+        // Der Einladungscode ist optional: Ein Kind darf sich auch ohne Eltern
+        // registrieren und ueben; die Verknuepfung kann spaeter erfolgen.
         const { data: createData, error: createError } = await supabase.functions.invoke('confirm-child-account', {
           body: {
             email: pseudoEmail,
@@ -437,7 +436,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             role: 'child',
             grade,
             username: username.toLowerCase(),
-            invitationCode,
+            invitationCode: invitationCode || undefined,
           },
         });
 
@@ -472,18 +471,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         if (signInError) throw signInError;
 
-        // Claim invitation code to link with parent
-        try {
-          await supabase.rpc('claim_invitation_code', {
-            code_to_claim: invitationCode,
-            claiming_child_id: userId,
-          });
-        } catch (claimErr) {
-          console.warn('Code claim failed:', claimErr);
-          toast({
-            title: 'Hinweis',
-            description: 'Dein Konto wurde erstellt, aber der Einladungscode konnte nicht eingelöst werden. Du kannst ihn später in den Einstellungen eingeben.',
-          });
+        // Claim invitation code to link with parent (nur wenn ein Code vorliegt)
+        if (invitationCode) {
+          try {
+            await supabase.rpc('claim_invitation_code', {
+              code_to_claim: invitationCode,
+              claiming_child_id: userId,
+            });
+          } catch (claimErr) {
+            console.warn('Code claim failed:', claimErr);
+            toast({
+              title: 'Hinweis',
+              description: 'Dein Konto wurde erstellt, aber der Einladungscode konnte nicht eingelöst werden. Du kannst ihn später in den Einstellungen eingeben.',
+            });
+          }
         }
 
         toast({
@@ -492,7 +493,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         });
 
         trackFireAndForget('sign_up_completed', { role: 'child', method: 'username' });
-        trackFireAndForget('invitation_code_redeemed', {});
+        if (invitationCode) {
+          trackFireAndForget('invitation_code_redeemed', {});
+        } else {
+          trackFireAndForget('child_registered_without_code', { method: 'username' });
+        }
 
         onAuthSuccess();
         return;
@@ -832,9 +837,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         <Heart className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <div className="font-semibold">Ich bin Kind und habe einen Code</div>
+                        <div className="font-semibold">Ich bin Kind</div>
                         <div className="text-xs text-muted-foreground">
-                          Mit dem Einladungscode der Eltern anmelden und Zeit verdienen
+                          Üben und Zeit verdienen – mit den Eltern verbinden geht auch später
                         </div>
                       </div>
                     </button>
@@ -935,7 +940,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         className="w-full text-sm text-primary hover:underline flex items-center justify-center gap-2 py-2"
                       >
                         <KeyRound className="w-4 h-4" />
-                        {childNoEmail ? 'Mit E-Mail registrieren' : 'Ohne E-Mail registrieren (mit Eltern-Code)'}
+                        {childNoEmail ? 'Mit E-Mail registrieren' : 'Ohne E-Mail registrieren (nur Benutzername)'}
                       </button>
                     </div>
                   )}
@@ -961,7 +966,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="invitation-code" className="text-sm font-medium">Einladungscode der Eltern</Label>
+                        <Label htmlFor="invitation-code" className="text-sm font-medium">
+                          Einladungscode der Eltern <span className="text-muted-foreground font-normal">(optional)</span>
+                        </Label>
                         <div className="relative">
                           <KeyRound className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -969,13 +976,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             type="text"
                             value={invitationCode}
                             onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            required
                             placeholder="6-stelliger Code"
                             maxLength={6}
                             className="pl-10 h-12 border-2 focus:border-primary transition-colors text-center text-lg tracking-widest font-mono"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">Frage deine Eltern nach dem Code</p>
+                        <p className="text-xs text-muted-foreground">
+                          Hast du einen Einladungscode von deinen Eltern? Dann trag ihn hier ein.
+                          Ohne Code kannst du trotzdem loslegen und dich später verbinden.
+                        </p>
                       </div>
 
                       <div className="space-y-2">

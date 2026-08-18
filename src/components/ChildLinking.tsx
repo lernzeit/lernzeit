@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { UserPlus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { trackFireAndForget } from '@/lib/analytics';
 
 interface ChildLinkingProps {
   userId: string;
@@ -29,6 +30,7 @@ export function ChildLinking({ userId, onLinked }: ChildLinkingProps) {
     console.log('✅ Linking result:', success);
     
     if (success) {
+      trackFireAndForget('child_linked_later', {});
       setIsLinked(true);
       setInvitationCode('');
       onLinked?.();
