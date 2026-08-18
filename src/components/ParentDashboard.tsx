@@ -716,6 +716,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="px-4 pb-4 space-y-6 border-t pt-4">
+                          <div>
+                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                              <Clock className="h-4 w-4 text-primary" />
+                              Bildschirmzeit freigeben
+                            </h3>
+                            <ChildParentalControlButton
+                              childName={child.name || 'Kind'}
+                              platform={childPlatforms[child.id] ?? null}
+                              onPlatformSelected={(p) => setChildPlatform(child.id, p)}
+                            />
+                          </div>
                           <ChildSettingsEditor 
                             childId={child.id}
                             childName={child.name || 'Kind'}
