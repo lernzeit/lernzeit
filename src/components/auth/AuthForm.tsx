@@ -67,7 +67,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'parent' | 'child'>('child');
+  // Bewusst KEIN Standardwert: Eltern, die schnell durchklicken, landeten
+  // sonst weiter im Kind-Modus. Die Rolle muss aktiv gewählt werden.
+  const [role, setRole] = useState<'parent' | 'child' | null>(null);
   const [grade, setGrade] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -368,6 +370,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const tokenToUse = await resolveCaptchaToken();
       if (tokenToUse === null) { setLoading(false); return; }
+
+      if (role !== 'parent' && role !== 'child') {
+        toast({
+          title: 'Bitte zuerst auswählen',
+          description: 'Wähle aus, ob du Elternteil oder Kind bist.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
 
       // Child without email registration
       if (role === 'child' && childNoEmail) {
