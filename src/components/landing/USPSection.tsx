@@ -18,9 +18,9 @@ const usps = [
   },
   {
     icon: Brain,
-    title: 'KI-Tutor',
-    description: 'Falsche Antworten werden kindgerecht erklärt.',
-    back: 'Der KI-Tutor gibt Schritt-für-Schritt-Erklärungen und liest sie jüngeren Kindern sogar vor – so lernen alle dazu.',
+    title: 'KI-Lernplan für Klassenarbeiten',
+    description: 'Gezielte Vorbereitung auf den nächsten Test.',
+    back: 'Eltern geben Fach, Thema und Termin an – LernZeit erstellt daraus einen Übungsplan, dessen Aufgaben direkt im Spiel des Kindes auftauchen.',
     color: 'bg-accent/10 text-accent',
   },
   {

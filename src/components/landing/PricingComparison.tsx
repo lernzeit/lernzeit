@@ -8,7 +8,8 @@ import { trackFireAndForget } from '@/lib/analytics';
 const features = [
   { name: 'Alle Fächer Klasse 1–10', free: true, premium: true },
   { name: 'Bildschirmzeit verdienen', free: true, premium: true },
-  { name: 'KI-Tutor Erklärungen', free: false, premium: true },
+  { name: 'KI-Lernplan für Klassenarbeiten', free: false, premium: true },
+  { name: 'Schwerpunktfächer festlegen', free: false, premium: true },
   { name: 'Belohnung pro Fach anpassen', free: false, premium: true },
   { name: 'Individuelle Zeitlimits', free: false, premium: true },
   { name: 'Erweiterte Lernanalyse', free: false, premium: true },
@@ -50,6 +51,9 @@ const PricingComparison = () => {
           <p className="text-muted-foreground mt-4 text-lg max-w-xl mx-auto">
             Nach der Anmeldung stehen dir 4 Wochen lang alle Premium-Funktionen kostenlos zur Verfügung.
           </p>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig.
+          </p>
         </div>
 
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid sm:grid-cols-2 gap-6">
@@ -89,7 +93,7 @@ const PricingComparison = () => {
               4 Wochen gratis
             </div>
             <h3 className="text-xl font-bold mb-1">Premium</h3>
-            <p className="text-muted-foreground text-sm mb-6">Volle Kontrolle & KI-Tutor</p>
+            <p className="text-muted-foreground text-sm mb-6">Volle Kontrolle über Zeit und Fächer</p>
             <div className="mb-8">
               <div className="text-4xl font-extrabold">2,99 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
               <div className="mt-1 text-sm text-muted-foreground">oder <span className="font-semibold text-foreground">29,99 € /Jahr</span> <span className="text-xs">(spare ~16 %)</span></div>

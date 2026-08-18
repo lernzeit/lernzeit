@@ -5,6 +5,8 @@ import HeroSection from '@/components/landing/HeroSection';
 import HowItWorks from '@/components/landing/HowItWorks';
 import USPSection from '@/components/landing/USPSection';
 import TargetAudience from '@/components/landing/TargetAudience';
+import SetupSteps from '@/components/landing/SetupSteps';
+import HonestyBlock from '@/components/landing/HonestyBlock';
 import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
@@ -24,7 +26,9 @@ const Start = () => {
       <TargetAudience />
       <HowItWorks />
       <USPSection />
+      <SetupSteps />
       <PricingComparison />
+      <HonestyBlock />
 
       {/* Footer CTA */}
       <section className="py-24 px-4 text-center relative overflow-hidden">
