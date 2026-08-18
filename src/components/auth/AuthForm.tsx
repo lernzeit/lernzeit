@@ -402,10 +402,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           return;
         }
 
-        if (!invitationCode || invitationCode.length !== 6) {
+        if (invitationCode && invitationCode.length !== 6) {
           toast({
-            title: 'Einladungscode fehlt',
-            description: 'Bitte gib den 6-stelligen Code deiner Eltern ein.',
+            title: 'Einladungscode unvollständig',
+            description: 'Der Code hat 6 Ziffern. Lass ihn leer, wenn du dich später verbinden möchtest.',
             variant: 'destructive',
           });
           setLoading(false);
@@ -426,9 +426,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         const pseudoEmail = generatePseudoEmail(username);
 
         // Create child account via edge function (admin API, auto-confirmed).
-        // Der Einladungscode muss mit: Hier ist niemand angemeldet, er ist die
-        // einzige Berechtigung, die das Kind vorweisen kann. Ohne ihn antwortete
-        // die Funktion mit "Unauthorized" — der ganze Weg war unbenutzbar.
+        // Der Einladungscode ist optional: Ein Kind darf sich auch ohne Eltern
+        // registrieren und ueben; die Verknuepfung kann spaeter erfolgen.
         const { data: createData, error: createError } = await supabase.functions.invoke('confirm-child-account', {
           body: {
             email: pseudoEmail,
@@ -437,7 +436,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             role: 'child',
             grade,
             username: username.toLowerCase(),
-            invitationCode,
+            invitationCode: invitationCode || undefined,
           },
         });
 
@@ -472,18 +471,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         if (signInError) throw signInError;
 
-        // Claim invitation code to link with parent
-        try {
-          await supabase.rpc('claim_invitation_code', {
-            code_to_claim: invitationCode,
-            claiming_child_id: userId,
-          });
-        } catch (claimErr) {
-          console.warn('Code claim failed:', claimErr);
-          toast({
-            title: 'Hinweis',
-            description: 'Dein Konto wurde erstellt, aber der Einladungscode konnte nicht eingelöst werden. Du kannst ihn später in den Einstellungen eingeben.',
-          });
+        // Claim invitation code to link with parent (nur wenn ein Code vorliegt)
+        if (invitationCode) {
+          try {
+            await supabase.rpc('claim_invitation_code', {
+              code_to_claim: invitationCode,
+              claiming_child_id: userId,
+            });
+          } catch (claimErr) {
+            console.warn('Code claim failed:', claimErr);
+            toast({
+              title: 'Hinweis',
+              description: 'Dein Konto wurde erstellt, aber der Einladungscode konnte nicht eingelöst werden. Du kannst ihn später in den Einstellungen eingeben.',
+            });
+          }
         }
 
         toast({
@@ -492,7 +493,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         });
 
         trackFireAndForget('sign_up_completed', { role: 'child', method: 'username' });
-        trackFireAndForget('invitation_code_redeemed', {});
+        if (invitationCode) {
+          trackFireAndForget('invitation_code_redeemed', {});
+        } else {
+          trackFireAndForget('child_registered_without_code', { method: 'username' });
+        }
 
         onAuthSuccess();
         return;

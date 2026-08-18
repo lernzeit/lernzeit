@@ -65,11 +65,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!authorized) {
-      const code = typeof invitationCode === "string" ? invitationCode.trim() : "";
+    // Der Einladungscode ist seit 2026 optional: Ein Kind darf sich auch ohne
+    // Eltern registrieren und ueben. Die Verknuepfung erfolgt spaeter ueber
+    // claim_invitation_code. Wird ein Code mitgeschickt, muss er gueltig sein.
+    const code =
+      typeof invitationCode === "string" ? invitationCode.trim() : "";
+
+    if (!authorized && code) {
       if (!/^\d{6}$/.test(code)) {
         return new Response(
-          JSON.stringify({ error: "Bitte gib den 6-stelligen Einladungscode deiner Eltern ein." }),
+          JSON.stringify({ error: "Der Einladungscode besteht aus 6 Ziffern." }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
