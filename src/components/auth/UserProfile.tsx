@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { STRIPE_MONTHLY_PRICE_ID } from '@/config/pricing';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ParentDashboard } from '@/components/ParentDashboard';
 import { ChildLinking } from '@/components/ChildLinking';
+import { ChildLinkPromptCard } from '@/components/child/ChildLinkPromptCard';
 import { ChildSettingsMenu } from '@/components/ChildSettingsMenu';
 import { RevenueCatPaywall } from '@/components/RevenueCatPaywall';
 import { Capacitor } from '@capacitor/core';
@@ -64,6 +65,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
   const [streakReactivationTrigger, setStreakReactivationTrigger] = useState(0);
+  const childLinkingRef = useRef<HTMLDivElement | null>(null);
   const [parentPaywallOpen, setParentPaywallOpen] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
@@ -646,6 +648,15 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           )}
 
           {/* Stats & Quick Actions */}
+          {!hasParentLink && !checkingParentLink && profile?.role === 'child' && (
+            <ChildLinkPromptCard
+              totalMinutes={totalTimeEarned}
+              onConnect={() =>
+                childLinkingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            />
+          )}
+
           {(profile?.grade || 5) <= 4 ? (
             /* Young mode: 3 simple cards with labels (Minuten, Spiele, Streak) */
             <div className="grid grid-cols-3 gap-3">
@@ -713,13 +724,15 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
           {/* Parent Linking - only show if no parent link exists */}
           {!hasParentLink && !checkingParentLink && profile?.role === 'child' && (
-            <ChildLinking 
-              userId={user.id} 
-              onLinked={() => {
-                loadProfile();
-                checkParentLink();
-              }} 
-            />
+            <div ref={childLinkingRef}>
+              <ChildLinking
+                userId={user.id}
+                onLinked={() => {
+                  loadProfile();
+                  checkParentLink();
+                }}
+              />
+            </div>
           )}
 
           {/* Fun Motivation - only for teen */}
