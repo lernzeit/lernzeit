@@ -3,6 +3,7 @@ import { Check, X, Crown, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
+import { trackFireAndForget } from '@/lib/analytics';
 
 const features = [
   { name: 'Alle Fächer Klasse 1–10', free: true, premium: true },
@@ -70,7 +71,10 @@ const PricingComparison = () => {
               ))}
             </ul>
             <Button
-              onClick={() => navigate('/?auth=true')}
+              onClick={() => {
+                trackFireAndForget('landing_cta_click', { position: 'pricing_free' });
+                navigate('/?auth=true');
+              }}
               variant="outline"
               className="w-full mt-8 h-12 rounded-full font-semibold"
             >
@@ -99,7 +103,10 @@ const PricingComparison = () => {
               ))}
             </ul>
             <Button
-              onClick={() => navigate('/?auth=true')}
+              onClick={() => {
+                trackFireAndForget('landing_cta_click', { position: 'pricing_premium' });
+                navigate('/?auth=true');
+              }}
               className="w-full mt-8 h-12 rounded-full font-semibold"
             >
               Jetzt testen
