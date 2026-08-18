@@ -3,7 +3,6 @@ import { Info } from 'lucide-react';
 const points = [
   'Die verdiente Zeit gibst du heute noch selbst in Family Link beziehungsweise Bildschirmzeit frei. Die automatische Übergabe ist für beide Plattformen in Arbeit.',
   'Die Aufgaben erzeugt eine KI passend zu Fach und Klassenstufe. In der Anfangsphase kann eine Frage danebenliegen – dafür gibt es die Feedback-Funktion in der App.',
-  'Auf dem iPhone läuft LernZeit derzeit im Browser. Die native App ist bei Apple in Prüfung.',
 ];
 
 const HonestyBlock = () => (
