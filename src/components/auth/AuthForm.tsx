@@ -832,9 +832,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         <Heart className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <div className="font-semibold">Ich bin Kind und habe einen Code</div>
+                        <div className="font-semibold">Ich bin Kind</div>
                         <div className="text-xs text-muted-foreground">
-                          Mit dem Einladungscode der Eltern anmelden und Zeit verdienen
+                          Üben und Zeit verdienen – mit den Eltern verbinden geht auch später
                         </div>
                       </div>
                     </button>
@@ -935,7 +935,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         className="w-full text-sm text-primary hover:underline flex items-center justify-center gap-2 py-2"
                       >
                         <KeyRound className="w-4 h-4" />
-                        {childNoEmail ? 'Mit E-Mail registrieren' : 'Ohne E-Mail registrieren (mit Eltern-Code)'}
+                        {childNoEmail ? 'Mit E-Mail registrieren' : 'Ohne E-Mail registrieren (nur Benutzername)'}
                       </button>
                     </div>
                   )}
@@ -961,7 +961,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="invitation-code" className="text-sm font-medium">Einladungscode der Eltern</Label>
+                        <Label htmlFor="invitation-code" className="text-sm font-medium">
+                          Einladungscode der Eltern <span className="text-muted-foreground font-normal">(optional)</span>
+                        </Label>
                         <div className="relative">
                           <KeyRound className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                           <Input
@@ -969,13 +971,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             type="text"
                             value={invitationCode}
                             onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            required
                             placeholder="6-stelliger Code"
                             maxLength={6}
                             className="pl-10 h-12 border-2 focus:border-primary transition-colors text-center text-lg tracking-widest font-mono"
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">Frage deine Eltern nach dem Code</p>
+                        <p className="text-xs text-muted-foreground">
+                          Hast du einen Einladungscode von deinen Eltern? Dann trag ihn hier ein.
+                          Ohne Code kannst du trotzdem loslegen und dich später verbinden.
+                        </p>
                       </div>
 
                       <div className="space-y-2">
