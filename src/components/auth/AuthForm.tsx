@@ -1098,7 +1098,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     )}
                   </Button>
                 </form>
-
+                </>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
