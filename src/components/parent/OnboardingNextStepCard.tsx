@@ -124,6 +124,10 @@ export function OnboardingNextStepCard({
                   Schicke {childName} diesen Link. Er oder sie öffnet ihn auf dem eigenen Handy und meldet sich damit an.
                   Der Link ist 7 Tage gültig.
                 </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Hat {childName} schon ein eigenes Konto? Dann reicht der Code: {childName} gibt ihn im eigenen
+                  Profil unter „Mit Eltern verknüpfen" ein — eine neue Registrierung ist nicht nötig.
+                </p>
                 <div className="flex flex-wrap gap-2 mt-3">
                   <Button size="sm" onClick={handleShare} disabled={sharing || !code}>
                     {sharing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Share2 className="h-4 w-4 mr-2" />}
