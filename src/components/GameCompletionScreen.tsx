@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trophy, Clock, Target, Award, Star, Gift } from 'lucide-react';
+import { Trophy, Clock, Target, Award, Star, Gift, UserPlus, KeyRound, ArrowRight } from 'lucide-react';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -14,6 +14,9 @@ interface GameCompletionScreenProps {
   isStreakRecovery?: boolean;
   recoverySuccess?: boolean;
   onContinue: () => void;
+  /** Demo auf der Landingpage: statt "Weiter" folgt der Registrierungs-Hinweis. */
+  demoMode?: boolean;
+  onDemoSignUp?: () => void;
 }
 
 export function GameCompletionScreen({
@@ -26,7 +29,9 @@ export function GameCompletionScreen({
   grade = 5,
   isStreakRecovery = false,
   recoverySuccess = false,
-  onContinue
+  onContinue,
+  demoMode = false,
+  onDemoSignUp
 }: GameCompletionScreenProps) {
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
@@ -45,6 +50,69 @@ export function GameCompletionScreen({
   };
 
   const celebrationLevel = getCelebrationLevel();
+
+  // === DEMO MODE: Übergang zur Registrierung ===
+  if (demoMode) {
+    return (
+      <div className="w-full max-w-xl mx-auto space-y-4 px-2 pb-safe-bottom">
+        <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
+          <CardContent className="p-6 sm:p-8">
+            <div className="text-5xl mb-3">🎯</div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">
+              {score} von {totalQuestions} richtig
+            </h1>
+            <p className="text-muted-foreground">
+              Das war die Demo. In der echten App wird daraus Bildschirmzeit für dein Kind.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6 space-y-5">
+            <h2 className="font-bold text-lg">So sieht es für dein Kind aus</h2>
+            <div className="flex gap-3">
+              <div className="w-10 h-10 shrink-0 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-medium text-sm">1. Eltern-Konto anlegen</div>
+                <p className="text-sm text-muted-foreground">
+                  4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-10 h-10 shrink-0 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-medium text-sm">2. Kind per Code verbinden</div>
+                <p className="text-sm text-muted-foreground">
+                  Dein Kind meldet sich mit deinem 6-stelligen Einladungscode an und legt sofort los.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={onDemoSignUp ?? onContinue}
+              size="lg"
+              className="w-full text-lg py-6"
+            >
+              Kostenlos registrieren
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            <button
+              type="button"
+              onClick={onContinue}
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              Weiter ausprobieren
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // === YOUNG MODE (Klasse 1-4): super simple ===
   if (isYoung) {

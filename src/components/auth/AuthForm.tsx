@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { trackFireAndForget } from '@/lib/analytics';
@@ -67,7 +66,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'parent' | 'child'>('child');
+  // Bewusst KEIN Standardwert: Eltern, die schnell durchklicken, landeten
+  // sonst weiter im Kind-Modus. Die Rolle muss aktiv gewählt werden.
+  const [role, setRole] = useState<'parent' | 'child' | null>(null);
   const [grade, setGrade] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -368,6 +369,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     try {
       const tokenToUse = await resolveCaptchaToken();
       if (tokenToUse === null) { setLoading(false); return; }
+
+      if (role !== 'parent' && role !== 'child') {
+        toast({
+          title: 'Bitte zuerst auswählen',
+          description: 'Wähle aus, ob du Elternteil oder Kind bist.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
 
       // Child without email registration
       if (role === 'child' && childNoEmail) {
@@ -779,11 +790,61 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-5 animate-fade-in">
+                {role === null ? (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="text-center mb-2">
+                      <h3 className="text-lg font-semibold">Wer legt hier ein Konto an?</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Bitte wähle aus – danach zeigen wir dir die passenden Felder.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setRole('parent'); setChildNoEmail(false); }}
+                      className="w-full flex items-center gap-4 p-5 border-2 border-border rounded-2xl text-left transition-all duration-200 hover:border-primary hover:bg-primary/5"
+                    >
+                      <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                        <Shield className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">Ich bin Elternteil</div>
+                        <div className="text-xs text-muted-foreground">
+                          Konto anlegen, Kind verbinden und Belohnungen festlegen
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole('child')}
+                      className="w-full flex items-center gap-4 p-5 border-2 border-border rounded-2xl text-left transition-all duration-200 hover:border-primary hover:bg-primary/5"
+                    >
+                      <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <Heart className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">Ich bin Kind und habe einen Code</div>
+                        <div className="text-xs text-muted-foreground">
+                          Mit dem Einladungscode der Eltern anmelden und Zeit verdienen
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                ) : (
+                <>
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold">Konto erstellen</h3>
                   <p className="text-sm text-muted-foreground">
-                    Kinder lernen spielend, Eltern behalten den Überblick
+                    {role === 'parent'
+                      ? 'Eltern-Konto – 4 Wochen alle Funktionen kostenlos'
+                      : 'Kinder-Konto – lernen und Bildschirmzeit verdienen'}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setRole(null)}
+                    className="mt-2 text-xs text-primary hover:underline"
+                  >
+                    Rolle ändern
+                  </button>
                 </div>
 
                 {/* Social sign-up (fast path) — shown above the manual form */}
@@ -837,38 +898,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Ich bin ein...</Label>
-                    <RadioGroup value={role} onValueChange={(value) => { setRole(value as 'parent' | 'child'); if (value === 'parent') setChildNoEmail(false); }}>
-                      <div className="space-y-2">
-                        <div className={`flex items-center space-x-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 ${role === 'child' ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/50'}`}>
-                          <RadioGroupItem value="child" id="child" className="border-2" />
-                          <Label htmlFor="child" className="flex items-center gap-3 cursor-pointer flex-1">
-                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                              <Heart className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <div className="font-medium">Kind</div>
-                              <div className="text-xs text-muted-foreground">Lerne und verdiene Handyzeit</div>
-                            </div>
-                          </Label>
-                        </div>
-                        <div className={`flex items-center space-x-3 p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:scale-105 ${role === 'parent' ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/50'}`}>
-                          <RadioGroupItem value="parent" id="parent" className="border-2" />
-                          <Label htmlFor="parent" className="flex items-center gap-3 cursor-pointer flex-1">
-                            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                              <Shield className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <div className="font-medium">Elternteil</div>
-                              <div className="text-xs text-muted-foreground">Verwalte die Lernzeit deiner Kinder</div>
-                            </div>
-                          </Label>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
                   {role === 'child' && (
                     <div className="space-y-2 animate-fade-in">
                       <Label htmlFor="grade" className="text-sm font-medium">Klassenstufe</Label>
@@ -1068,7 +1097,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     )}
                   </Button>
                 </form>
-
+                </>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>

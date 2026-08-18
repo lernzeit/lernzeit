@@ -818,6 +818,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             isStreakRecovery={isStreakRecovery}
             recoverySuccess={score >= 3}
           onContinue={handleCompletionContinue}
+          demoMode={demoMode}
+          onDemoSignUp={() => {
+            trackFireAndForget('landing_cta_click', { position: 'demo_end' });
+            window.location.assign('/?auth=true');
+          }}
         />
         
         {/* Achievement Popup */}

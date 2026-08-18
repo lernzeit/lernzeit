@@ -330,6 +330,38 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
   return (
     <div className="space-y-4">
+      {/* Nach Trial-Ende: gespeicherte Werte im Klartext gegenüberstellen */}
+      {!hasPremiumAccess && (() => {
+        const changed = SUBJECTS
+          .filter(s => settings[`${s.key}_seconds_per_task` as keyof ChildSettings] !== 30)
+          .map(s => {
+            const sec = settings[`${s.key}_seconds_per_task` as keyof ChildSettings] as number;
+            const label = sec % 60 === 0
+              ? `${sec / 60} ${sec === 60 ? 'Minute' : 'Minuten'}`
+              : `${sec} Sekunden`;
+            return `${s.name} auf ${label}`;
+          });
+        if (changed.length === 0) return null;
+        const list = changed.length === 1
+          ? changed[0]
+          : `${changed.slice(0, -1).join(', ')} und ${changed[changed.length - 1]}`;
+        return (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Crown className="h-4 w-4 text-primary" />
+                Deine Premium-Einstellungen sind pausiert
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Du hattest {list} pro Aufgabe eingestellt. Jetzt gilt wieder für alle Fächer der
+                Standard: 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten am Tag.
+                Deine Einstellungen bleiben gespeichert und gelten sofort wieder, wenn du Premium aktivierst.
+              </p>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Grade Management */}
       <Card>
         <CardHeader className="pb-3">
