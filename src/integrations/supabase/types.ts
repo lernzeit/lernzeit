@@ -284,6 +284,57 @@ export type Database = {
         }
         Relationships: []
       }
+      answer_verdicts: {
+        Row: {
+          accepted: boolean
+          created_at: string
+          decided_by: string
+          grade: number | null
+          id: string
+          model: string | null
+          question_text: string
+          reason: string | null
+          source: string
+          stated_answer: string | null
+          subject: string | null
+          user_answer: string | null
+          verdict: string
+          verified_correct_answer: string | null
+        }
+        Insert: {
+          accepted: boolean
+          created_at?: string
+          decided_by: string
+          grade?: number | null
+          id?: string
+          model?: string | null
+          question_text: string
+          reason?: string | null
+          source: string
+          stated_answer?: string | null
+          subject?: string | null
+          user_answer?: string | null
+          verdict: string
+          verified_correct_answer?: string | null
+        }
+        Update: {
+          accepted?: boolean
+          created_at?: string
+          decided_by?: string
+          grade?: number | null
+          id?: string
+          model?: string | null
+          question_text?: string
+          reason?: string | null
+          source?: string
+          stated_answer?: string | null
+          subject?: string | null
+          user_answer?: string | null
+          verdict?: string
+          verified_correct_answer?: string | null
+        }
+        Relationships: []
+      }
       child_settings: {
         Row: {
           biology_seconds_per_task: number
