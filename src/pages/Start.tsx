@@ -8,6 +8,7 @@ import TargetAudience from '@/components/landing/TargetAudience';
 import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
+import { trackFireAndForget } from '@/lib/analytics';
 
 const Start = () => {
   const navigate = useNavigate();
@@ -36,7 +37,10 @@ const Start = () => {
             Melde dich an und teste alle Funktionen – die ersten 4 Wochen sind kostenlos.
           </p>
           <Button
-            onClick={() => navigate('/?auth=true')}
+            onClick={() => {
+              trackFireAndForget('landing_cta_click', { position: 'footer' });
+              navigate('/?auth=true');
+            }}
             size="lg"
             className="h-14 px-10 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >

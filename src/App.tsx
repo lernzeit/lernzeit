@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import AndroidAppBanner from "./components/AndroidAppBanner";
+import AnalyticsTracker from "./components/AnalyticsTracker";
 
 // Lazy load pages - not needed on initial load
 const Start = lazy(() => import("./pages/Start"));
@@ -28,6 +29,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AnalyticsTracker />
         <AndroidAppBanner />
         <Routes>
           <Route path="/" element={<Index />} />

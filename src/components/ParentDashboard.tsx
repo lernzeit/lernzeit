@@ -18,6 +18,7 @@ import { usePremium } from '@/hooks/usePremium';
 import { getActivePlatform } from '@/services/revenueCat';
 import { Capacitor } from '@capacitor/core';
 import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
+import { trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
@@ -256,6 +257,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
+    trackFireAndForget('checkout_started', { plan, channel: isNativeApp ? 'revenuecat' : 'stripe' });
     // Never route native app users to Stripe checkout – always use the
     // in-app RevenueCat paywall (Apple + Google policy).
     if (isNativeApp) {

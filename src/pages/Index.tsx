@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
 import { Capacitor } from '@capacitor/core';
+import { trackFireAndForget } from '@/lib/analytics';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
@@ -54,6 +55,10 @@ const Index = () => {
   // Detect checkout success redirect
   useEffect(() => {
     if (searchParams.get('checkout') === 'success') {
+      trackFireAndForget('subscription_purchased', {
+        plan: searchParams.get('plan') === 'yearly' ? 'yearly' : 'monthly',
+        channel: 'stripe',
+      });
       toast.success('Premium aktiviert! 🎉', {
         description: 'Dein LernZeit Premium Abo ist jetzt aktiv. Viel Spaß mit allen Funktionen!',
         duration: 6000

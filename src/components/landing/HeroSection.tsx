@@ -3,6 +3,7 @@ import { BookOpen, ArrowRight, GraduationCap, Brain, Clock, ShieldCheck } from '
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { trackFireAndForget } from '@/lib/analytics';
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -54,7 +55,10 @@ const HeroSection = () => {
 
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-500 flex flex-col sm:flex-row gap-4 justify-center mb-16">
           <Button
-            onClick={() => navigate('/?auth=true')}
+            onClick={() => {
+              trackFireAndForget('landing_cta_click', { position: 'hero' });
+              navigate('/?auth=true');
+            }}
             size="lg"
             className="h-14 px-10 text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
           >
@@ -63,7 +67,10 @@ const HeroSection = () => {
           </Button>
           {!isNative && (
             <Button
-              onClick={() => navigate('/?demo=true')}
+              onClick={() => {
+                trackFireAndForget('demo_started', { position: 'hero' });
+                navigate('/?demo=true');
+              }}
               variant="outline"
               size="lg"
               className="h-14 px-10 text-lg font-semibold rounded-full border-2 hover:bg-muted/50 transition-all duration-300 hover:scale-105"

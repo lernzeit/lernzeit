@@ -284,6 +284,111 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_events: {
+        Row: {
+          anonymous_id: string | null
+          created_at: string
+          event_name: string
+          gclid: string | null
+          id: string
+          page_path: string | null
+          platform: string | null
+          properties: Json
+          referrer: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          anonymous_id?: string | null
+          created_at?: string
+          event_name: string
+          gclid?: string | null
+          id?: string
+          page_path?: string | null
+          platform?: string | null
+          properties?: Json
+          referrer?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          anonymous_id?: string | null
+          created_at?: string
+          event_name?: string
+          gclid?: string | null
+          id?: string
+          page_path?: string | null
+          platform?: string | null
+          properties?: Json
+          referrer?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
+      answer_verdicts: {
+        Row: {
+          accepted: boolean
+          created_at: string
+          decided_by: string
+          grade: number | null
+          id: string
+          model: string | null
+          question_text: string
+          reason: string | null
+          source: string
+          stated_answer: string | null
+          subject: string | null
+          user_answer: string | null
+          verdict: string
+          verified_correct_answer: string | null
+        }
+        Insert: {
+          accepted: boolean
+          created_at?: string
+          decided_by: string
+          grade?: number | null
+          id?: string
+          model?: string | null
+          question_text: string
+          reason?: string | null
+          source: string
+          stated_answer?: string | null
+          subject?: string | null
+          user_answer?: string | null
+          verdict: string
+          verified_correct_answer?: string | null
+        }
+        Update: {
+          accepted?: boolean
+          created_at?: string
+          decided_by?: string
+          grade?: number | null
+          id?: string
+          model?: string | null
+          question_text?: string
+          reason?: string | null
+          source?: string
+          stated_answer?: string | null
+          subject?: string | null
+          user_answer?: string | null
+          verdict?: string
+          verified_correct_answer?: string | null
+        }
+        Relationships: []
+      }
       child_settings: {
         Row: {
           biology_seconds_per_task: number
