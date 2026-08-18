@@ -85,6 +85,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [referralCode, setReferralCode] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Registrierungsformular geöffnet (Signup ist der Standard-Tab)
+  useEffect(() => {
+    trackFireAndForget('sign_up_started', {});
+  }, []);
   const {
     status: captchaStatus,
     errorCode: captchaErrorCode,
