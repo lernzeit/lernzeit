@@ -53,6 +53,10 @@ const HeroSection = () => {
           – wie viel, bestimmen die Eltern.
         </p>
 
+        <p className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-300 -mt-8 mb-12 text-sm sm:text-base font-medium text-foreground">
+          4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig.
+        </p>
+
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-500 flex flex-col sm:flex-row gap-4 justify-center mb-16">
           <Button
             onClick={() => {
@@ -71,9 +75,9 @@ const HeroSection = () => {
                 trackFireAndForget('demo_started', { position: 'hero' });
                 navigate('/?demo=true');
               }}
-              variant="outline"
+              variant="ghost"
               size="lg"
-              className="h-14 px-10 text-lg font-semibold rounded-full border-2 hover:bg-muted/50 transition-all duration-300 hover:scale-105"
+              className="h-14 px-8 text-base font-medium rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-300"
             >
               Demo ausprobieren
             </Button>

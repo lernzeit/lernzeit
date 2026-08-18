@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
-import { getDemoQuestions } from '@/data/demoQuestions';
+import { fetchDemoQuestions } from '@/data/demoQuestionSource';
 import { questionSignature } from '@/utils/questionSignature';
 import { purgeDemoQuestionStorage } from '@/utils/demoQuestionPurge';
 import {
@@ -512,11 +512,15 @@ export const useQuestionPreloader = ({
       const isActuallyAnonymous = !sessionData.session?.user;
 
       if (isActuallyAnonymous) {
-        const demo = getDemoQuestions(gradeRef.current, subjectRef.current, total);
+        const { questions: demo, source: demoSource } = await fetchDemoQuestions(
+          gradeRef.current,
+          subjectRef.current,
+          total
+        );
         logPreloadStart({
           demoMode,
           authenticated: false,
-          plannedSource: 'demo',
+          plannedSource: demoSource === 'cache' ? 'demo-cache' : 'demo-static',
           grade: gradeRef.current,
           subject: subjectRef.current,
           total
