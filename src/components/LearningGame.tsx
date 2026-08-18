@@ -821,7 +821,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           demoMode={demoMode}
           onDemoSignUp={() => {
             trackFireAndForget('landing_cta_click', { position: 'demo_end' });
-            navigate('/?auth=true');
+            window.location.assign('/?auth=true');
           }}
         />
         
