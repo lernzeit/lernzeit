@@ -218,12 +218,16 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       // Cron runs hourly. Each user picks their own preferred hour
       // (Europe/Berlin local time) for the daily summary / reminder.
       const berlinHour = getBerlinHour();
-      const [parents, children, referral] = await Promise.all([
+      const [parents, children, referral, linkReminders] = await Promise.all([
         sendDailyParentSummaries(berlinHour),
         sendChildLearningReminders(berlinHour),
         sendReferralAnnouncements(berlinHour),
+        sendParentLinkReminders(),
       ]);
-      return { berlinHour, parents, children, referral };
+      return { berlinHour, parents, children, referral, linkReminders };
+    }
+    case "parent_link_reminder": {
+      return sendParentLinkReminders();
     }
     case "parent_daily_summary": {
       // Manual trigger: send to all parents whose preferred hour matches now (or all if forced)
@@ -659,3 +663,66 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+/**
+ * Erinnert Eltern, die sich registriert haben, aber noch kein Kind verknüpft
+ * haben. Maximal zwei Erinnerungen: nach 24 h (Stufe 1) und nach 72 h (Stufe 2).
+ * Ohne Push-Token passiert nichts – die Dashboard-Karte übernimmt dann.
+ */
+async function sendParentLinkReminders() {
+  const now = Date.now();
+  const results: Record<string, number> = { stage1: 0, stage2: 0, skipped: 0 };
+
+  const { data: parents } = await supabase
+    .from("profiles")
+    .select("id, created_at")
+    .eq("role", "parent")
+    .gte("created_at", new Date(now - 14 * 86400_000).toISOString())
+    .lte("created_at", new Date(now - 24 * 3600_000).toISOString());
+
+  if (!parents?.length) return results;
+
+  const parentIds = parents.map((p) => p.id);
+
+  const [{ data: links }, { data: reminders }] = await Promise.all([
+    supabase.from("parent_child_relationships").select("parent_id").in("parent_id", parentIds),
+    supabase.from("parent_link_reminders").select("user_id, stage").in("user_id", parentIds),
+  ]);
+
+  const linked = new Set((links ?? []).map((l) => l.parent_id));
+  const sent = new Set((reminders ?? []).map((r) => `${r.user_id}:${r.stage}`));
+
+  for (const parent of parents) {
+    if (linked.has(parent.id)) continue;
+
+    const ageHours = (now - new Date(parent.created_at as string).getTime()) / 3600_000;
+    let stage: 1 | 2 | null = null;
+    if (ageHours >= 72) stage = 2;
+    else if (ageHours >= 24) stage = 1;
+    if (!stage) continue;
+    if (sent.has(`${parent.id}:${stage}`)) continue;
+    // Stufe 2 nur, wenn Stufe 1 schon raus ist (sonst zwei Pushes kurz hintereinander)
+    if (stage === 2 && !sent.has(`${parent.id}:1`)) {
+      // Stufe 1 nachholen, falls noch nicht versendet
+      stage = 1;
+      if (sent.has(`${parent.id}:1`)) continue;
+    }
+
+    const res = await sendOneSignalPush({
+      userIds: [parent.id],
+      title: "Noch ein Schritt: Kind verbinden",
+      message: "Dein Kind ist noch nicht verbunden. Schick den Einladungslink – dauert eine Minute.",
+      data: { type: "parent_link_reminder", stage },
+    }) as { skipped?: boolean };
+
+    if (res && (res as { skipped?: boolean }).skipped) {
+      results.skipped++;
+      continue;
+    }
+
+    await supabase.from("parent_link_reminders").insert({ user_id: parent.id, stage });
+    results[`stage${stage}`]++;
+  }
+
+  return results;
+}

@@ -117,6 +117,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
     userId: user?.id,
     appId: import.meta.env.VITE_ONESIGNAL_APP_ID || '',
     enabled: profile?.role === 'child' || profile?.role === 'parent',
+    // Eltern werden erst beim Teilen des Einladungslinks gefragt (besserer Kontext).
+    autoPrompt: profile?.role !== 'parent',
   });
 
   // Check for parent-child relationship

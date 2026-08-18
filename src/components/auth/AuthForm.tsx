@@ -164,6 +164,16 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
   // Detect referral code from URL (?ref=XXXXXX) or localStorage
   useEffect(() => {
+    // Einladungslink der Eltern: ?code=123456 → direkt Kind-Registrierung
+    try {
+      const invite = new URL(window.location.href).searchParams.get('code');
+      const digits = (invite || '').replace(/\D/g, '').slice(0, 6);
+      if (digits.length === 6) {
+        setInvitationCode(digits);
+        setRole('child');
+        setChildNoEmail(true);
+      }
+    } catch { /* noop */ }
     try {
       const url = new URL(window.location.href);
       const fromUrl = url.searchParams.get('ref');

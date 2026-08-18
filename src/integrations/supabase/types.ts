@@ -779,7 +779,7 @@ export type Database = {
           code: string
           consent_given_at?: string | null
           created_at?: string | null
-          expires_at: string
+          expires_at?: string
           id?: string
           is_used?: boolean | null
           parent_id: string
@@ -974,6 +974,27 @@ export type Database = {
           platform?: string | null
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parent_link_reminders: {
+        Row: {
+          id: string
+          sent_at: string
+          stage: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          sent_at?: string
+          stage: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          sent_at?: string
+          stage?: number
           user_id?: string
         }
         Relationships: []

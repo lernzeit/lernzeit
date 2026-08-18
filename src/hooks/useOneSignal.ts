@@ -6,6 +6,26 @@ interface UseOneSignalOptions {
   userId?: string;
   enabled?: boolean;
   appId: string;
+  /**
+   * Wenn false, wird die Push-Erlaubnis NICHT beim Start abgefragt.
+   * Für Eltern fragen wir sie erst beim Teilen des Einladungslinks ab.
+   */
+  autoPrompt?: boolean;
+}
+
+let oneSignalRef: any = null;
+
+/**
+ * Fragt die Push-Erlaubnis zum passenden Zeitpunkt ab (z. B. beim Teilen des
+ * Einladungslinks). No-op auf Web bzw. wenn OneSignal nicht initialisiert ist.
+ */
+export async function requestPushPermissionNow(): Promise<void> {
+  try {
+    if (!Capacitor.isNativePlatform()) return;
+    await oneSignalRef?.Notifications?.requestPermission?.(true);
+  } catch (e) {
+    console.warn("requestPushPermissionNow failed", e);
+  }
 }
 
 /**
@@ -13,7 +33,7 @@ interface UseOneSignalOptions {
  * the device's player ID against the authenticated user. On web this hook
  * is a no-op — push notifications there are handled by usePushNotifications.
  */
-export function useOneSignal({ userId, enabled = true, appId }: UseOneSignalOptions) {
+export function useOneSignal({ userId, enabled = true, appId, autoPrompt = true }: UseOneSignalOptions) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -36,9 +56,12 @@ export function useOneSignal({ userId, enabled = true, appId }: UseOneSignalOpti
         }
 
         OneSignal.initialize(appId);
+        oneSignalRef = OneSignal;
 
-        // Request notification permission (Android 13+)
-        OneSignal.Notifications.requestPermission(true);
+        // Push-Erlaubnis nur abfragen, wenn der Nutzen bereits erkennbar ist.
+        if (autoPrompt) {
+          OneSignal.Notifications.requestPermission(true);
+        }
 
         // Login user → external_id
         OneSignal.login(userId);
@@ -78,5 +101,5 @@ export function useOneSignal({ userId, enabled = true, appId }: UseOneSignalOpti
     return () => {
       cancelled = true;
     };
-  }, [enabled, userId, appId]);
+  }, [enabled, userId, appId, autoPrompt]);
 }
