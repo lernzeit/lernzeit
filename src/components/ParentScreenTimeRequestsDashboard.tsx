@@ -9,6 +9,9 @@ import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle, Ba
 import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
 import { useToast } from '@/hooks/use-toast';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { useChildPlatforms } from '@/hooks/useChildPlatforms';
+import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
+import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 
 interface ParentScreenTimeRequestsDashboardProps {
@@ -23,6 +26,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
+  const [askPlatformOpen, setAskPlatformOpen] = useState(false);
   
   const { requests, loading, respondToRequest, refreshRequests } = useScreenTimeRequests('parent');
   const { toast } = useToast();
@@ -34,9 +38,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
     }
   }, [refreshTrigger, refreshRequests]);
 
-  const platform = parentalControlsService.getPlatform();
-  const isNative = parentalControlsService.isNativePlatform();
-  const appName = parentalControlsService.getParentalControlAppName();
+  const { platforms: childPlatforms, setChildPlatform } = useChildPlatforms();
 
   // Fetch child names for all unique child_ids in requests
   useEffect(() => {
@@ -57,6 +59,12 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
   }, [requests]);
 
   const getChildName = (childId: string) => childNames[childId] || 'Kind';
+
+  const pendingChildId = pendingApprovalRequest?.child_id ?? null;
+  const pendingChildName = pendingChildId ? getChildName(pendingChildId) : 'Kind';
+  const pendingChildPlatform = pendingChildId ? (childPlatforms[pendingChildId] ?? null) : null;
+  // Ziel richtet sich nach der Plattform des KINDES (bestehende Logik im Service)
+  const target = parentalControlsService.getTargetForChild(pendingChildPlatform, pendingChildName);
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 5);
@@ -79,9 +87,16 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
       const result = await respondToRequest(reqId, 'approved');
 
       if (result.success) {
-        // Then try to open the parental control app
-        if (openApp && isNative) {
-          const openResult = await parentalControlsService.openParentalControlApp(reqMinutes);
+        trackFireAndForget('screen_time_approved', {
+          minutes: reqMinutes,
+          platform_combo: parentalControlsService.getPlatformCombo(pendingChildPlatform),
+          jump_target: target.kind,
+          jumped: openApp && target.canOpen,
+        });
+
+        // Then try to open the parental control app for THIS child's platform
+        if (openApp && target.canOpen) {
+          const openResult = await parentalControlsService.openForChild(pendingChildPlatform, reqMinutes);
 
           toast({
             title: "Anfrage genehmigt! ✅",
@@ -90,7 +105,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
         } else {
           toast({
             title: "Anfrage genehmigt! ✅",
-            description: `Bitte vergeben Sie ${reqMinutes} Minuten Bildschirmzeit in ${appName}.`,
+            description: `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
           });
         }
 
