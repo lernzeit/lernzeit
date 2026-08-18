@@ -520,7 +520,7 @@ export const useQuestionPreloader = ({
         logPreloadStart({
           demoMode,
           authenticated: false,
-          plannedSource: demoSource === 'cache' ? 'demo-cache' : 'demo-static',
+          plannedSource: demoSource === 'cache' ? 'pool' : 'demo',
           grade: gradeRef.current,
           subject: subjectRef.current,
           total
