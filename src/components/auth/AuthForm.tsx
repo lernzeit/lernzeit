@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
@@ -358,6 +359,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    trackFireAndForget('sign_up_started', { role });
 
     try {
       const tokenToUse = await resolveCaptchaToken();
@@ -464,6 +466,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           description: `Dein Konto wurde erstellt. Merke dir deinen Benutzernamen: ${username.toLowerCase()}`,
         });
 
+        trackFireAndForget('sign_up_completed', { role: 'child', method: 'username' });
+        trackFireAndForget('invitation_code_redeemed', {});
+
         onAuthSuccess();
         return;
       }
@@ -509,6 +514,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
 
       if (error) throw error;
+      trackFireAndForget('sign_up_completed', { role, method: 'email' });
       if (role === 'parent' && effectiveReferral) {
         localStorage.removeItem('lernzeit_referral_code');
       }
