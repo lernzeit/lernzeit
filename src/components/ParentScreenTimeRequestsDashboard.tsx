@@ -9,6 +9,9 @@ import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle, Ba
 import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
 import { useToast } from '@/hooks/use-toast';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { useChildPlatforms } from '@/hooks/useChildPlatforms';
+import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
+import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 
 interface ParentScreenTimeRequestsDashboardProps {
@@ -23,6 +26,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [pendingApprovalRequest, setPendingApprovalRequest] = useState<ScreenTimeRequest | null>(null);
   const [childNames, setChildNames] = useState<Record<string, string>>({});
+  const [askPlatformOpen, setAskPlatformOpen] = useState(false);
   
   const { requests, loading, respondToRequest, refreshRequests } = useScreenTimeRequests('parent');
   const { toast } = useToast();
@@ -34,9 +38,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
     }
   }, [refreshTrigger, refreshRequests]);
 
-  const platform = parentalControlsService.getPlatform();
-  const isNative = parentalControlsService.isNativePlatform();
-  const appName = parentalControlsService.getParentalControlAppName();
+  const { platforms: childPlatforms, setChildPlatform } = useChildPlatforms();
 
   // Fetch child names for all unique child_ids in requests
   useEffect(() => {
@@ -57,6 +59,12 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
   }, [requests]);
 
   const getChildName = (childId: string) => childNames[childId] || 'Kind';
+
+  const pendingChildId = pendingApprovalRequest?.child_id ?? null;
+  const pendingChildName = pendingChildId ? getChildName(pendingChildId) : 'Kind';
+  const pendingChildPlatform = pendingChildId ? (childPlatforms[pendingChildId] ?? null) : null;
+  // Ziel richtet sich nach der Plattform des KINDES (bestehende Logik im Service)
+  const target = parentalControlsService.getTargetForChild(pendingChildPlatform, pendingChildName);
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 5);
@@ -79,9 +87,16 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
       const result = await respondToRequest(reqId, 'approved');
 
       if (result.success) {
-        // Then try to open the parental control app
-        if (openApp && isNative) {
-          const openResult = await parentalControlsService.openParentalControlApp(reqMinutes);
+        trackFireAndForget('screen_time_approved', {
+          minutes: reqMinutes,
+          platform_combo: parentalControlsService.getPlatformCombo(pendingChildPlatform),
+          jump_target: target.kind,
+          jumped: openApp && target.canOpen,
+        });
+
+        // Then try to open the parental control app for THIS child's platform
+        if (openApp && target.canOpen) {
+          const openResult = await parentalControlsService.openForChild(pendingChildPlatform, reqMinutes);
 
           toast({
             title: "Anfrage genehmigt! ✅",
@@ -90,7 +105,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
         } else {
           toast({
             title: "Anfrage genehmigt! ✅",
-            description: `Bitte vergeben Sie ${reqMinutes} Minuten Bildschirmzeit in ${appName}.`,
+            description: `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
           });
         }
 
@@ -352,10 +367,28 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                 </p>
               </div>
               
-              {isNative ? (
+              {target.kind === 'manual' ? (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Möchten Sie {appName} öffnen, um die Bildschirmzeit direkt freizugeben?
+                    Wir wissen noch nicht, welches Gerät {pendingChildName} nutzt. Bitte einmalig angeben,
+                    damit wir dich zur richtigen Stelle bringen.
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={() => setAskPlatformOpen(true)}>
+                    Gerät von {pendingChildName} angeben
+                  </Button>
+                  <Button
+                    onClick={() => handleApproveAndOpen(false)}
+                    disabled={respondingId === pendingApprovalRequest?.id}
+                    className="w-full bg-green-500 hover:bg-green-600"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Nur genehmigen (später freigeben)
+                  </Button>
+                </div>
+              ) : target.canOpen ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Möchtest du {target.appName} öffnen, um die Bildschirmzeit direkt freizugeben?
                   </p>
                   
                   <div className="flex flex-col gap-2">
@@ -365,7 +398,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                       className="bg-green-500 hover:bg-green-600"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
-                      Genehmigen & {appName} öffnen
+                      Genehmigen & {target.appName} öffnen
                     </Button>
                     
                     <Button
@@ -377,22 +410,12 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                     </Button>
                   </div>
                   
-                  <p className="text-xs text-gray-500">
-                    {platform === 'android' 
-                      ? 'In Family Link: [Kind] → Gerätezeit → Heute mehr Zeit'
-                      : 'In Bildschirmzeit: [Kind] → App-Limits → Zeit gewähren'}
-                  </p>
+                  <p className="text-xs text-gray-500">{target.hint}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
-                    Nach der Genehmigung müssen Sie die Bildschirmzeit manuell in Ihrer Kindersicherungs-App freigeben.
-                  </p>
-                  
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                    <div className="font-medium mb-1">So geben Sie Zeit frei:</div>
-                    <div>• <strong>Android:</strong> Family Link → [Kind] → Gerätezeit → Heute mehr Zeit</div>
-                    <div>• <strong>iPhone:</strong> Einstellungen → Bildschirmzeit → [Kind] → App-Limits</div>
+                    {target.hint}
                   </div>
                   
                   <Button
@@ -415,6 +438,13 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
           )}
         </DialogContent>
       </Dialog>
+
+      <ChildPlatformDialog
+        open={askPlatformOpen}
+        onOpenChange={setAskPlatformOpen}
+        childName={pendingChildName}
+        onSelect={(p) => { if (pendingChildId) setChildPlatform(pendingChildId, p); }}
+      />
     </Card>
   );
 }

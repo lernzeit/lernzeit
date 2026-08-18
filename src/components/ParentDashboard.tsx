@@ -32,6 +32,8 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { useChildPlatforms } from '@/hooks/useChildPlatforms';
+import { ChildParentalControlButton } from '@/components/ChildParentalControlButton';
 import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
 import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
 import { ReferralCard } from '@/components/parent/ReferralCard';
@@ -125,33 +127,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   }, []);
   
   const { toast } = useToast();
-  const isNativeAndroid =
-    parentalControlsService.isNativePlatform() &&
-    parentalControlsService.getPlatform() === 'android';
-  const isNativeIOS =
-    parentalControlsService.isNativePlatform() &&
-    parentalControlsService.getPlatform() === 'ios';
-
-  const handleOpenFamilyLink = async () => {
-    // Check installation first to avoid silently jumping to the Play Store.
-    const installed = await parentalControlsService.isParentalControlAppInstalled();
-    if (!installed) {
-      setFamilyLinkInstallOpen(true);
-      return;
-    }
-    const result = await parentalControlsService.openParentalControlApp();
-    if (!result.success) {
-      if (result.notInstalled) {
-        setFamilyLinkInstallOpen(true);
-        return;
-      }
-      toast({
-       title: 'Google Family Link konnte nicht geöffnet werden',
-        description: result.message,
-        variant: 'destructive',
-      });
-    }
-  };
+  const { platforms: childPlatforms, setChildPlatform } = useChildPlatforms();
 
   const handleInstallFamilyLink = async () => {
     try {
@@ -161,17 +137,6 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       toast({
         title: 'Fehler',
         description: 'Play Store konnte nicht geöffnet werden.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleOpenScreenTime = async () => {
-    const result = await parentalControlsService.openParentalControlApp();
-    if (!result.success) {
-      toast({
-        title: 'Bildschirmzeit konnte nicht geöffnet werden',
-        description: result.message,
         variant: 'destructive',
       });
     }
@@ -477,30 +442,6 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {isNativeAndroid && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOpenFamilyLink}
-                aria-label="Google Family Link öffnen"
-                className="px-2 sm:px-3"
-              >
-                <KiteIcon className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Family Link</span>
-              </Button>
-            )}
-            {isNativeIOS && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOpenScreenTime}
-                aria-label="iOS Bildschirmzeit öffnen"
-                className="px-2 sm:px-3"
-              >
-                <Apple className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Bildschirmzeit</span>
-              </Button>
-            )}
             <Button
               variant="outline"
               size="sm"
@@ -775,6 +716,17 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="px-4 pb-4 space-y-6 border-t pt-4">
+                          <div>
+                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                              <Clock className="h-4 w-4 text-primary" />
+                              Bildschirmzeit freigeben
+                            </h3>
+                            <ChildParentalControlButton
+                              childName={child.name || 'Kind'}
+                              platform={childPlatforms[child.id] ?? null}
+                              onPlatformSelected={(p) => setChildPlatform(child.id, p)}
+                            />
+                          </div>
                           <ChildSettingsEditor 
                             childId={child.id}
                             childName={child.name || 'Kind'}
