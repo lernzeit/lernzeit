@@ -438,6 +438,13 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
           )}
         </DialogContent>
       </Dialog>
+
+      <ChildPlatformDialog
+        open={askPlatformOpen}
+        onOpenChange={setAskPlatformOpen}
+        childName={pendingChildName}
+        onSelect={(p) => { if (pendingChildId) setChildPlatform(pendingChildId, p); }}
+      />
     </Card>
   );
 }
