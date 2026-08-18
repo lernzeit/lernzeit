@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { trackFireAndForget } from '@/lib/analytics';
 
 interface InvitationCode {
   id: string;
@@ -193,6 +194,8 @@ export function useFamilyLinking() {
 
       // Reload family data to update UI
       await loadFamilyData(result.parent_id);
+
+      trackFireAndForget('invitation_code_redeemed', {});
 
       return true;
 
