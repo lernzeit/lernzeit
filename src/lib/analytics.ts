@@ -21,6 +21,8 @@ export type AnalyticsEventName =
   | 'sign_up_completed'
   | 'invitation_code_created'
   | 'invitation_code_redeemed'
+  | 'invite_link_shared'
+  | 'onboarding_step_viewed'
   | 'child_linked'
   | 'first_learning_session'
   | 'screen_time_requested'
