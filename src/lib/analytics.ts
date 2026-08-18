@@ -228,11 +228,11 @@ export async function track(
       userId = null;
     }
 
-    const { error } = await supabase.from('analytics_events').insert({
+    const payload: Record<string, unknown> = {
       event_name: eventName,
       user_id: userId,
       anonymous_id: anonymousId,
-      properties: properties as Record<string, unknown>,
+      properties,
       utm_source: attribution.utm_source ?? null,
       utm_medium: attribution.utm_medium ?? null,
       utm_campaign: attribution.utm_campaign ?? null,
@@ -242,7 +242,9 @@ export async function track(
       referrer: attribution.referrer ?? null,
       page_path: pagePath,
       platform,
-    });
+    };
+
+    const { error } = await (supabase as any).from('analytics_events').insert(payload);
 
     if (error && import.meta.env?.DEV) {
       console.warn('[analytics] insert failed', error.message);
