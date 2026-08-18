@@ -359,7 +359,6 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    trackFireAndForget('sign_up_started', { role });
 
     try {
       const tokenToUse = await resolveCaptchaToken();
