@@ -32,6 +32,8 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { ChildPasswordReset } from '@/components/ChildPasswordReset';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { useChildPlatforms } from '@/hooks/useChildPlatforms';
+import { ChildParentalControlButton } from '@/components/ChildParentalControlButton';
 import { ParentFeedbackDialog } from '@/components/parent/ParentFeedbackDialog';
 import { RatingPromptDialog } from '@/components/parent/RatingPromptDialog';
 import { ReferralCard } from '@/components/parent/ReferralCard';
