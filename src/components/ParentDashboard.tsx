@@ -125,33 +125,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   }, []);
   
   const { toast } = useToast();
-  const isNativeAndroid =
-    parentalControlsService.isNativePlatform() &&
-    parentalControlsService.getPlatform() === 'android';
-  const isNativeIOS =
-    parentalControlsService.isNativePlatform() &&
-    parentalControlsService.getPlatform() === 'ios';
-
-  const handleOpenFamilyLink = async () => {
-    // Check installation first to avoid silently jumping to the Play Store.
-    const installed = await parentalControlsService.isParentalControlAppInstalled();
-    if (!installed) {
-      setFamilyLinkInstallOpen(true);
-      return;
-    }
-    const result = await parentalControlsService.openParentalControlApp();
-    if (!result.success) {
-      if (result.notInstalled) {
-        setFamilyLinkInstallOpen(true);
-        return;
-      }
-      toast({
-       title: 'Google Family Link konnte nicht geöffnet werden',
-        description: result.message,
-        variant: 'destructive',
-      });
-    }
-  };
+  const { platforms: childPlatforms, setChildPlatform } = useChildPlatforms();
 
   const handleInstallFamilyLink = async () => {
     try {
@@ -161,17 +135,6 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       toast({
         title: 'Fehler',
         description: 'Play Store konnte nicht geöffnet werden.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleOpenScreenTime = async () => {
-    const result = await parentalControlsService.openParentalControlApp();
-    if (!result.success) {
-      toast({
-        title: 'Bildschirmzeit konnte nicht geöffnet werden',
-        description: result.message,
         variant: 'destructive',
       });
     }
