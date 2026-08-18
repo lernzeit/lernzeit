@@ -367,10 +367,28 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                 </p>
               </div>
               
-              {isNative ? (
+              {target.kind === 'manual' ? (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Möchten Sie {appName} öffnen, um die Bildschirmzeit direkt freizugeben?
+                    Wir wissen noch nicht, welches Gerät {pendingChildName} nutzt. Bitte einmalig angeben,
+                    damit wir dich zur richtigen Stelle bringen.
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={() => setAskPlatformOpen(true)}>
+                    Gerät von {pendingChildName} angeben
+                  </Button>
+                  <Button
+                    onClick={() => handleApproveAndOpen(false)}
+                    disabled={respondingId === pendingApprovalRequest?.id}
+                    className="w-full bg-green-500 hover:bg-green-600"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Nur genehmigen (später freigeben)
+                  </Button>
+                </div>
+              ) : target.canOpen ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Möchtest du {target.appName} öffnen, um die Bildschirmzeit direkt freizugeben?
                   </p>
                   
                   <div className="flex flex-col gap-2">
@@ -380,7 +398,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                       className="bg-green-500 hover:bg-green-600"
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />
-                      Genehmigen & {appName} öffnen
+                      Genehmigen & {target.appName} öffnen
                     </Button>
                     
                     <Button
@@ -392,22 +410,12 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                     </Button>
                   </div>
                   
-                  <p className="text-xs text-gray-500">
-                    {platform === 'android' 
-                      ? 'In Family Link: [Kind] → Gerätezeit → Heute mehr Zeit'
-                      : 'In Bildschirmzeit: [Kind] → App-Limits → Zeit gewähren'}
-                  </p>
+                  <p className="text-xs text-gray-500">{target.hint}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
-                    Nach der Genehmigung müssen Sie die Bildschirmzeit manuell in Ihrer Kindersicherungs-App freigeben.
-                  </p>
-                  
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                    <div className="font-medium mb-1">So geben Sie Zeit frei:</div>
-                    <div>• <strong>Android:</strong> Family Link → [Kind] → Gerätezeit → Heute mehr Zeit</div>
-                    <div>• <strong>iPhone:</strong> Einstellungen → Bildschirmzeit → [Kind] → App-Limits</div>
+                    {target.hint}
                   </div>
                   
                   <Button
