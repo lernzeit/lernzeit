@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { enforceSignupLimit } from "../_shared/signup-limit.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,27 +19,27 @@ Deno.serve(async (req) => {
 
     const { email, password, name, grade, username, invitationCode } = await req.json();
 
-    // ── Berechtigung ─────────────────────────────────────────────────────────
+    // ── Wer darf hier Konten anlegen? ────────────────────────────────────────
     //
-    // Es gibt zwei legitime Aufrufer, und bis 08/2026 war nur einer davon
-    // vorgesehen:
+    // Zwei Aufrufer sind vorgesehen:
     //
     //   1. Ein angemeldeter Elternteil legt ein Kinderkonto an.
-    //   2. Ein Kind registriert sich selbst mit dem Einladungscode der Eltern
-    //      ("Ohne E-Mail registrieren"). Dabei ist NIEMAND angemeldet.
+    //   2. Ein Kind registriert sich selbst — ohne E-Mail-Adresse und seit
+    //      08/2026 ausdruecklich auch ohne Einladungscode.
     //
-    // Fall 2 scheiterte zwangslaeufig: functions.invoke schickt ohne Sitzung den
-    // anonymen Projektschluessel als Bearer, getUser() findet dazu keinen Nutzer,
-    // und die Funktion antwortete "Unauthorized". Der gesamte Registrierungsweg
-    // ohne E-Mail war damit unbenutzbar - fuer das Kind sah es aus, als sei es
-    // selbst schuld.
+    // Fall 2 hat damit KEINE Berechtigung mehr, die sich pruefen liesse. Das ist
+    // so gewollt, hat aber eine Folge: Diese Funktion legt Konten ueber die
+    // Admin-API mit email_confirm=true an und umgeht damit die Ratenbegrenzung
+    // von Supabase Auth. Ohne eigene Bremse erzeugt sie Konten fuer jeden, der
+    // den oeffentlichen anon-Schluessel kennt — und der steckt in jedem
+    // ausgelieferten App-Bundle.
     //
-    // Der Einladungscode ist die Berechtigung fuer Fall 2: Er stammt vom
-    // Elternteil, ist einmalig verwendbar und laeuft ab. Dieselbe Annahme trifft
-    // die bestehende RPC claim_invitation_code bereits.
-    let authorized = false;
-
+    // Deshalb: Ein angemeldeter Elternteil kommt unbegrenzt durch, alle anderen
+    // gegen ein Kontingent je Herkunft und Stunde. Ein mitgeschickter Code muss
+    // weiterhin stimmen — er ist jetzt ein Nachweis, keine Voraussetzung.
     const authHeader = req.headers.get("Authorization");
+    let isParent = false;
+
     if (authHeader?.startsWith("Bearer ")) {
       const sbAnon = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -54,28 +55,25 @@ Deno.serve(async (req) => {
           .eq("id", authData.user.id)
           .maybeSingle();
         if (!callerProfile || callerProfile.role !== "parent") {
-          // Angemeldet, aber kein Elternteil: bewusst abweisen statt auf den
-          // Code-Weg zurueckzufallen.
+          // Angemeldet, aber kein Elternteil: bewusst abweisen.
           return new Response(
             JSON.stringify({ error: "Forbidden" }),
             { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        authorized = true;
+        isParent = true;
       }
     }
 
-    // Der Einladungscode ist seit 2026 optional: Ein Kind darf sich auch ohne
-    // Eltern registrieren und ueben. Die Verknuepfung erfolgt spaeter ueber
-    // claim_invitation_code. Wird ein Code mitgeschickt, muss er gueltig sein.
-    const code =
-      typeof invitationCode === "string" ? invitationCode.trim() : "";
+    // Ein Code ist optional. Wird einer mitgeschickt, muss er stimmen — sonst
+    // scheitert das Kind spaeter beim Verknuepfen und versteht nicht, warum.
+    const code = typeof invitationCode === "string" ? invitationCode.trim() : "";
 
-    if (!authorized && code) {
+    if (code) {
       if (!/^\d{6}$/.test(code)) {
         return new Response(
           JSON.stringify({ error: "Der Einladungscode besteht aus 6 Ziffern." }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -97,10 +95,15 @@ Deno.serve(async (req) => {
           JSON.stringify({
             error: "Dieser Einladungscode ist ungültig oder abgelaufen. Bitte lass dir von deinen Eltern einen neuen geben.",
           }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      authorized = true;
+    }
+
+    // Missbrauchsbremse — greift nur bei anonymen Aufrufen.
+    if (!isParent) {
+      const blocked = await enforceSignupLimit(supabaseAdmin, req, corsHeaders);
+      if (blocked) return blocked;
     }
 
     // Validate required fields
