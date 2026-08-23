@@ -17,7 +17,12 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { usePremium } from '@/hooks/usePremium';
 import { getActivePlatform } from '@/services/revenueCat';
 import { Capacitor } from '@capacitor/core';
-import { STRIPE_MONTHLY_PRICE_ID, STRIPE_YEARLY_PRICE_ID } from '@/config/pricing';
+import {
+  STRIPE_MONTHLY_PRICE_ID,
+  STRIPE_YEARLY_PRICE_ID,
+  STRIPE_MONTHLY_PRICE_LABEL,
+  STRIPE_YEARLY_PRICE_LABEL,
+} from '@/config/pricing';
 import { trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
@@ -960,7 +965,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                             {!isPremium ? 'Premium aktivieren' : 'Jetzt Abo abschließen'}
                           </Button>
                           <p className="text-xs text-center text-muted-foreground min-h-[1rem]">
-                            {offeringsLoading ? (
+                            {/* Der Preis muss aus derselben Quelle stammen wie
+                                die Belastung: nativ RevenueCat (Store-Preis,
+                                inkl. Landeswaehrung), im Web Stripe. */}
+                            {!isNativeApp ? (
+                              selectedBillingCycle === 'monthly'
+                                ? `${STRIPE_MONTHLY_PRICE_LABEL} / Monat`
+                                : `${STRIPE_YEARLY_PRICE_LABEL} / Jahr`
+                            ) : offeringsLoading ? (
                               <span className="inline-flex items-center gap-1">
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 Preis wird geladen …

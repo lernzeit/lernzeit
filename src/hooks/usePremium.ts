@@ -20,8 +20,17 @@ export interface PremiumState {
 }
 
 /**
- * Unified premium check. On iOS native, prefers RevenueCat entitlement.
- * On web/Android, falls back to Stripe subscription (useSubscription).
+ * Vereinheitlichte Premium-Pruefung.
+ *
+ * Nativ (iOS und Android) ist RevenueCat die Wahrheit — dort laeuft der Kauf
+ * ueber den jeweiligen Store. Im Web wird ueber Stripe abgerechnet, deshalb
+ * entscheidet dort useSubscription.
+ *
+ * Achtung beim Weiterverwenden: Meldet RevenueCat kein aktives Recht, liefert
+ * dieser Hook auf nativen Geraeten isPremium=false — auch waehrend der vier
+ * kostenlosen Wochen, denn die Probezeit steht in der Datenbank und nicht in
+ * RevenueCat. Wer beides braucht, muss wie im ParentDashboard zusaetzlich
+ * useSubscription heranziehen.
  */
 export function usePremium(): PremiumState {
   const { user } = useAuth();

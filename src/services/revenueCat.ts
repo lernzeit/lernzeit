@@ -10,6 +10,16 @@ const ANDROID_API_KEY = 'goog_zHnUVzRJrXkiggPgdfptlBsxuPA';
 // Configure in RevenueCat Dashboard → Project Settings → API Keys → Web Billing.
 // When empty, the web paywall uses the legacy Stripe direct checkout fallback.
 const WEB_API_KEY = 'rcb_sb_JnGknqcExsrNbPQbXDLpxdEev';
+// Das Praefix `rcb_sb_` kennzeichnet einen SANDBOX-Schluessel. Ein solcher
+// Schluessel liefert Testpreise und nimmt kein echtes Geld an. Im Web laeuft
+// die Abrechnung ohnehin ueber Stripe Checkout, nicht ueber RevenueCat —
+// deshalb gilt ein Sandbox-Schluessel ausserhalb der Entwicklung als NICHT
+// konfiguriert. Sonst meldet isRevenueCatSupported() im Web true, das Web-SDK
+// startet gegen ein Testprojekt, und die Oberflaeche zeigt Preise aus einer
+// anderen Quelle als die, die belastet wird.
+// Sobald ein produktiver rcb_-Schluessel eingetragen ist, greift die Sperre
+// von selbst nicht mehr.
+const WEB_KEY_USABLE = !!WEB_API_KEY && (!WEB_API_KEY.startsWith('rcb_sb_') || !!import.meta.env?.DEV);
 export const PREMIUM_ENTITLEMENT_ID = 'premium';
 
 export type RCPlatform = 'ios' | 'android' | 'web';
@@ -36,8 +46,8 @@ let webPurchasesInstance: any = null;
 export function isRevenueCatSupported(): boolean {
   try {
     if (!Capacitor.isNativePlatform()) {
-      // Web is supported when a Web Billing key is configured.
-      return !!WEB_API_KEY;
+      // Web is supported when a usable (non-sandbox) Web Billing key is set.
+      return WEB_KEY_USABLE;
     }
     const p = Capacitor.getPlatform();
     if (p === 'ios') return !!IOS_API_KEY;
