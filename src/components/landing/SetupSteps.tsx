@@ -1,21 +1,24 @@
 import { useEffect, useRef } from 'react';
-import { UserPlus, KeyRound, SlidersHorizontal } from 'lucide-react';
+import { UserPlus, Share2, Smartphone } from 'lucide-react';
 
+// Die Einrichtung besteht aus ZWEI Konten – deinem und dem deines Kindes.
+// Genau das stand bisher nirgends auf der Seite, und genau daran ist ein Teil
+// der Eltern haengengeblieben: neun von sechzehn haben nie ein Kind verknuepft.
 const steps = [
   {
     icon: UserPlus,
-    title: 'Eltern-Konto anlegen',
-    text: 'Registriere dich in unter einer Minute – 4 Wochen alle Funktionen kostenlos, keine Zahlungsdaten nötig.',
+    title: 'Du legst dein Elternkonto an',
+    text: 'Registrierung in unter einer Minute – 4 Wochen alle Funktionen kostenlos, keine Zahlungsdaten nötig.',
   },
   {
-    icon: KeyRound,
-    title: 'Kind per Code verbinden',
-    text: 'Du erzeugst einen 6-stelligen Einladungscode. Dein Kind gibt ihn bei der Anmeldung ein – fertig verknüpft.',
+    icon: Share2,
+    title: 'Du legst ein Kinderprofil an',
+    text: 'Mit Klassenstufe – danach bekommst du einen Einladungslink, den du deinem Kind schickst.',
   },
   {
-    icon: SlidersHorizontal,
-    title: 'Belohnung festlegen',
-    text: 'Lege pro Fach fest, wie viele Sekunden eine richtige Aufgabe wert ist, und setze das Tageslimit.',
+    icon: Smartphone,
+    title: 'Dein Kind meldet sich damit an',
+    text: 'Über den Link, auf seinem eigenen Gerät. Fertig verknüpft, ohne dass du etwas abtippen musst.',
   },
 ];
 
@@ -59,6 +62,11 @@ const SetupSteps = () => {
             </li>
           ))}
         </ol>
+
+        <p className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-300 mt-8 text-center text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          Dein Kind kann die App auch auf deinem Gerät nutzen. Der Sinn der verdienten
+          Bildschirmzeit entfaltet sich aber erst, wenn es ein eigenes Gerät hat.
+        </p>
       </div>
 
       <style>{`

@@ -17,6 +17,7 @@ export type AnalyticsEventName =
   | 'landing_cta_click'
   | 'demo_started'
   | 'demo_question_answered'
+  | 'demo_completed_cta_click'
   | 'sign_up_started'
   | 'sign_up_completed'
   | 'invitation_code_created'

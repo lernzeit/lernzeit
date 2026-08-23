@@ -820,7 +820,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           onContinue={handleCompletionContinue}
           demoMode={demoMode}
           onDemoSignUp={() => {
-            trackFireAndForget('landing_cta_click', { position: 'demo_end' });
+            // Eigenes Ereignis statt landing_cta_click: Der Absprung aus der
+            // fertig gespielten Demo ist die aussagekraeftigste Stelle der
+            // Landingpage und soll sich getrennt auswerten lassen.
+            trackFireAndForget('demo_completed_cta_click', { score, totalQuestions });
             window.location.assign('/?auth=true');
           }}
         />
