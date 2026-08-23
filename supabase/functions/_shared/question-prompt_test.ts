@@ -74,6 +74,16 @@ Deno.test('Antwortregel kippt mit der Kategorie', () => {
   assertEquals(answerFormatRule('calculation', 'german'), '');
 });
 
-Deno.test('Kopfrechen-Block ist gesetzt', () => {
-  assert(mentalMathConstraint().includes('ohne Papier'));
+Deno.test('Kopfrechen-Block verbietet Zwischenergebnisse', () => {
+  // Frueher wurde hier auf die Wendung "ohne Papier" geprueft. Die stand bis
+  // a87accf im Text und ist seitdem weg — die Pruefung lief also ins Leere,
+  // ohne dass jemand es merkte. Geprueft wird jetzt die Zusage selbst statt
+  // einer Formulierung: genau ein Rechenschritt, kein Zwischenergebnis, und
+  // ein Gegenbeispiel, an dem sich Sprachmodelle nachweislich besser
+  // orientieren als an der abstrakten Regel.
+  const text = mentalMathConstraint();
+  assert(text.includes('EIN RECHENSCHRITT'), 'Ein-Schritt-Regel fehlt');
+  assert(/KEIN Zwischenergebnis/i.test(text), 'Verbot von Zwischenergebnissen fehlt');
+  assert(text.includes('FALSCH:'), 'Gegenbeispiel fehlt');
+  assert(text.includes('RICHTIG:'), 'Positivbeispiel fehlt');
 });

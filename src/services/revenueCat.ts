@@ -6,19 +6,17 @@ const IOS_API_KEY = 'appl_zkfprSgXsfzzfCAUsdTWTCbhgir';
 // Paywall zeigte "Der Kauf ist momentan nicht verfügbar" — Android-Nutzer
 // konnten überhaupt nichts kaufen.
 const ANDROID_API_KEY = 'goog_zHnUVzRJrXkiggPgdfptlBsxuPA';
-// RevenueCat Web Billing (Stripe) public API key. Starts with `rcb_`.
-// Configure in RevenueCat Dashboard → Project Settings → API Keys → Web Billing.
-// When empty, the web paywall uses the legacy Stripe direct checkout fallback.
-const WEB_API_KEY = 'rcb_sb_JnGknqcExsrNbPQbXDLpxdEev';
-// Das Praefix `rcb_sb_` kennzeichnet einen SANDBOX-Schluessel. Ein solcher
-// Schluessel liefert Testpreise und nimmt kein echtes Geld an. Im Web laeuft
-// die Abrechnung ohnehin ueber Stripe Checkout, nicht ueber RevenueCat —
-// deshalb gilt ein Sandbox-Schluessel ausserhalb der Entwicklung als NICHT
-// konfiguriert. Sonst meldet isRevenueCatSupported() im Web true, das Web-SDK
-// startet gegen ein Testprojekt, und die Oberflaeche zeigt Preise aus einer
-// anderen Quelle als die, die belastet wird.
-// Sobald ein produktiver rcb_-Schluessel eingetragen ist, greift die Sperre
-// von selbst nicht mehr.
+// RevenueCat Web Billing wird NICHT eingesetzt (Entscheidung vom 23.08.2026):
+// Im Web laeuft die Abrechnung ueber Stripe Checkout. Der Schluessel bleibt
+// deshalb leer, womit isRevenueCatSupported() im Web false meldet und
+// usePremium dort auf useSubscription (Stripe) zurueckfaellt.
+//
+// Zuvor stand hier ein Schluessel mit dem Praefix `rcb_sb_` — das kennzeichnet
+// ein SANDBOX-Projekt. Der lieferte Testpreise, die im Dashboard neben einer
+// echten Stripe-Belastung angezeigt wurden. Deshalb gilt ein Sandbox-
+// Schluessel ausserhalb der Entwicklung weiterhin als nicht konfiguriert,
+// falls doch einmal einer eingetragen wird.
+const WEB_API_KEY: string = '';
 const WEB_KEY_USABLE = !!WEB_API_KEY && (!WEB_API_KEY.startsWith('rcb_sb_') || !!import.meta.env?.DEV);
 export const PREMIUM_ENTITLEMENT_ID = 'premium';
 

@@ -10,6 +10,13 @@
 import { assertEquals, assertNotEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { SIGNUP_LIMIT_PER_HOUR, enforceSignupLimit, originHash } from './signup-limit.ts';
 
+// originHash faellt ohne Schluessel auf "unbekannt" zurueck — dann waeren alle
+// Hashes gleich und die Pruefung auf Unterscheidbarkeit liefe ins Leere. Der
+// Test setzt deshalb selbst einen, statt sich auf die Umgebung zu verlassen.
+if (!Deno.env.get('SIGNUP_RATELIMIT_SALT') && !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+  Deno.env.set('SIGNUP_RATELIMIT_SALT', 'testschluessel-nur-fuer-diesen-lauf');
+}
+
 const cors = { 'Access-Control-Allow-Origin': '*' };
 
 const reqMit = (ip: string) =>
