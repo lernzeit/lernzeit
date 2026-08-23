@@ -315,25 +315,38 @@ async function sendDailyParentSummaries(berlinHour: number, force = false) {
     if (!rel.parent_id || !rel.child_id) continue;
     if (!force && !parentIds.has(rel.parent_id)) continue;
 
-    const { data: sessions } = await supabase
-      .from("learning_sessions")
-      .select("correct_answers, total_questions, time_earned")
-      .eq("user_id", rel.child_id)
-      .gte("session_date", `${today}T00:00:00.000Z`)
-      .lte("session_date", `${today}T23:59:59.999Z`);
+    // Gespielte Runden stehen seit 08/2025 in game_sessions. learning_sessions
+    // bleibt fuer die Altdaten in der Abfrage, wird aber nicht mehr beschrieben.
+    const [legacyRes, gameRes] = await Promise.all([
+      supabase
+        .from("learning_sessions")
+        .select("correct_answers, total_questions, time_earned")
+        .eq("user_id", rel.child_id)
+        .gte("session_date", `${today}T00:00:00.000Z`)
+        .lte("session_date", `${today}T23:59:59.999Z`),
+      supabase
+        .from("game_sessions")
+        .select("correct_answers, total_questions, time_earned")
+        .eq("user_id", rel.child_id)
+        .gte("session_date", `${today}T00:00:00.000Z`)
+        .lte("session_date", `${today}T23:59:59.999Z`),
+    ]);
+    const sessions = [...(legacyRes.data ?? []), ...(gameRes.data ?? [])];
 
-    const totalQuestions = (sessions ?? []).reduce(
+    const totalQuestions = sessions.reduce(
       (sum, s) => sum + (s.total_questions || 0),
       0,
     );
-    const correctAnswers = (sessions ?? []).reduce(
+    const correctAnswers = sessions.reduce(
       (sum, s) => sum + (s.correct_answers || 0),
       0,
     );
-    const timeEarned = (sessions ?? []).reduce(
+    // time_earned steht in Sekunden — die Meldung nennt Minuten.
+    const earnedSeconds = sessions.reduce(
       (sum, s) => sum + (s.time_earned || 0),
       0,
     );
+    const timeEarned = Math.round(earnedSeconds / 60);
 
     if (totalQuestions === 0) continue;
 

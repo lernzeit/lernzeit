@@ -22,15 +22,18 @@ async function processReferee(supabase: any, refereeId: string) {
     const ageDays =
       (Date.now() - new Date(ref.created_at).getTime()) / 86400000;
 
-    const { data: sessions } = await supabase
-      .from("learning_sessions")
-      .select("correct_answers")
-      .eq("user_id", refereeId);
-    const totalCorrect = (sessions ?? []).reduce(
+    // Runden liegen seit 08/2025 in game_sessions; learning_sessions wird nicht
+    // mehr beschrieben, bleibt aber wegen der Altdaten in der Auswertung.
+    const [legacySessions, gameSessions] = await Promise.all([
+      supabase.from("learning_sessions").select("correct_answers").eq("user_id", refereeId),
+      supabase.from("game_sessions").select("correct_answers").eq("user_id", refereeId),
+    ]);
+    const sessions = [...(legacySessions.data ?? []), ...(gameSessions.data ?? [])];
+    const totalCorrect = sessions.reduce(
       (s: number, r: any) => s + (r.correct_answers || 0),
       0,
     );
-    const sessionCount = sessions?.length ?? 0;
+    const sessionCount = sessions.length;
 
     const activated =
       (ageDays >= 7 && sessionCount >= 1) || totalCorrect >= 20;

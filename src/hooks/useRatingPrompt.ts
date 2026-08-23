@@ -69,11 +69,19 @@ export function useRatingPrompt(userId: string | null | undefined, role: string 
             .eq('parent_id', userId);
           const childIds = (rel ?? []).map((r) => r.child_id).filter(Boolean) as string[];
           if (childIds.length === 0) return;
-          const { count: c } = await supabase
-            .from('learning_sessions')
-            .select('id', { count: 'exact', head: true })
-            .in('user_id', childIds);
-          count = c ?? 0;
+          // game_sessions ist die aktive Tabelle; learning_sessions haelt nur
+          // noch Altdaten aus 2025 und wird nicht mehr beschrieben.
+          const [legacyRes, gameRes] = await Promise.all([
+            supabase
+              .from('learning_sessions')
+              .select('id', { count: 'exact', head: true })
+              .in('user_id', childIds),
+            supabase
+              .from('game_sessions')
+              .select('id', { count: 'exact', head: true })
+              .in('user_id', childIds),
+          ]);
+          count = (legacyRes.count ?? 0) + (gameRes.count ?? 0);
           localStorage.setItem(
             LS_SESSIONS_CACHE_KEY,
             JSON.stringify({ count, cachedAt: Date.now() } satisfies SessionsCache),
