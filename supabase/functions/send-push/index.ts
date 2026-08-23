@@ -218,13 +218,19 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       // Cron runs hourly. Each user picks their own preferred hour
       // (Europe/Berlin local time) for the daily summary / reminder.
       const berlinHour = getBerlinHour();
-      const [parents, children, referral, linkReminders] = await Promise.all([
+      //
+      // sendReferralAnnouncements laeuft hier bewusst NICHT mit. Es ist eine
+      // einmalige, nicht zuruecknehmbare Werbe-Nachricht an jeden Elternteil,
+      // und der stuendliche Auftrag hat sie wegen eines Schluesselfehlers noch
+      // nie ausgeloest. Sie soll bewusst ausgeloest werden statt beim Beheben
+      // dieses Fehlers nebenbei rauszugehen — dafuer gibt es unveraendert das
+      // Ereignis "referral_announce".
+      const [parents, children, linkReminders] = await Promise.all([
         sendDailyParentSummaries(berlinHour),
         sendChildLearningReminders(berlinHour),
-        sendReferralAnnouncements(berlinHour),
         sendParentLinkReminders(),
       ]);
-      return { berlinHour, parents, children, referral, linkReminders };
+      return { berlinHour, parents, children, linkReminders };
     }
     case "parent_link_reminder": {
       return sendParentLinkReminders();
