@@ -35,7 +35,7 @@ export function useStreak(userId?: string): StreakState {
       const [learningSessionsRes, gameSessionsRes, storedStateRes] = await Promise.all([
         supabase.from('learning_sessions').select('session_date').eq('user_id', userId).order('session_date', { ascending: false }).limit(400),
         supabase.from('game_sessions').select('session_date').eq('user_id', userId).order('session_date', { ascending: false }).limit(400),
-        (supabase as any).from('user_streak_states').select('streak_value, last_activity_date, status').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_streak_states').select('streak_value, last_activity_date, status').eq('user_id', userId).maybeSingle(),
       ]);
 
       const allDates = new Set<string>();
@@ -79,7 +79,7 @@ export function useStreak(userId?: string): StreakState {
       setInactiveDays(inactive);
       setLastActivityDate(mostRecentDate);
 
-      await (supabase as any).from('user_streak_states').upsert({
+      await supabase.from('user_streak_states').upsert({
         user_id: userId,
         streak_value: visibleStreak,
         status: visibleStatus,

@@ -680,7 +680,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             /* Tracking darf die Session nie blockieren */
           }
           if (!isStreakRecovery || score >= 3) {
-            await (supabase as any).from('user_streak_states').upsert({
+            await supabase.from('user_streak_states').upsert({
               user_id: user.id,
               streak_value: currentInactiveDays >= 3 ? 1 : Math.max((streakBeforeSession.current ?? 0), 1),
               status: 'active',

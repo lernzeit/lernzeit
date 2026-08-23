@@ -8,9 +8,12 @@
  * - Funktioniert auf Web und nativ (Capacitor), `platform` wird korrekt gesetzt
  */
 import { supabase } from '@/lib/supabase';
+import type { Database, Json } from '@/integrations/supabase/types';
 import { Capacitor } from '@capacitor/core';
 
 export type AnalyticsProperties = Record<string, string | number | boolean | null | undefined>;
+
+type AnalyticsEventInsert = Database['public']['Tables']['analytics_events']['Insert'];
 
 export type AnalyticsEventName =
   | 'page_view'
@@ -231,11 +234,13 @@ export async function track(
       userId = null;
     }
 
-    const payload: Record<string, unknown> = {
+    const payload: AnalyticsEventInsert = {
       event_name: eventName,
       user_id: userId,
       anonymous_id: anonymousId,
-      properties,
+      // AnalyticsProperties laesst undefined zu, jsonb nicht — undefined
+      // verschwindet beim Serialisieren ohnehin.
+      properties: properties as Json,
       utm_source: attribution.utm_source ?? null,
       utm_medium: attribution.utm_medium ?? null,
       utm_campaign: attribution.utm_campaign ?? null,
@@ -247,7 +252,7 @@ export async function track(
       platform,
     };
 
-    const { error } = await (supabase as any).from('analytics_events').insert(payload);
+    const { error } = await supabase.from('analytics_events').insert(payload);
 
     if (error && import.meta.env?.DEV) {
       console.warn('[analytics] insert failed', error.message);

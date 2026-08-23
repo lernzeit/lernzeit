@@ -91,7 +91,7 @@ export function useAdaptiveDifficultySystem(
     }
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('user_difficulty_profiles')
         .select('*')
         .eq('user_id', userId)
@@ -420,7 +420,7 @@ export function useAdaptiveDifficultySystem(
       setLastAdjustment(adjustment);
 
       // Store updated profile in database
-      const { error: upsertError } = await (supabase as any)
+      const { error: upsertError } = await supabase
         .from('user_difficulty_profiles')
         .upsert({
           user_id: userId,

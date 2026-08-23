@@ -12,13 +12,13 @@ const steps = [
   },
   {
     icon: Share2,
-    title: 'Du legst ein Kinderprofil an',
-    text: 'Mit Klassenstufe – danach bekommst du einen Einladungslink, den du deinem Kind schickst.',
+    title: 'Du lädst dein Kind ein',
+    text: 'Du erzeugst eine Einladung und schickst sie als Link – oder liest den 6-stelligen Code vor. Beides ist dasselbe, nur anders verpackt.',
   },
   {
     icon: Smartphone,
     title: 'Dein Kind meldet sich damit an',
-    text: 'Über den Link, auf seinem eigenen Gerät. Fertig verknüpft, ohne dass du etwas abtippen musst.',
+    text: 'Mit Klassenstufe, auf seinem eigenen Gerät – danach seid ihr verknüpft. Geht auch andersherum: erst anmelden, später verbinden.',
   },
 ];
 
