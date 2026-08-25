@@ -7,8 +7,13 @@ android {
         applicationId "de.lernzeit.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 14
-        versionName "1.2.3"
+        // Android wird lokal in Android Studio gebaut — diese beiden Zeilen
+        // sind die Wahrheit und werden von nichts automatisch hochgezaehlt.
+        // Vor jeder Veroeffentlichung: versionCode erhoehen (die Play Console
+        // weist eine bereits verwendete Nummer ab) und versionName mit
+        // IOS_MARKETING_VERSION in codemagic.yaml gleichziehen.
+        versionCode 15
+        versionName "1.2.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
