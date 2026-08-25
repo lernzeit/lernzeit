@@ -1,5 +1,31 @@
 workflows:
   # Android Release Build
+  #
+  # ACHTUNG — dieser Workflow ist derzeit NICHT einsatzbereit. Android wird
+  # lokal in Android Studio gebaut (Stand 23.08.2026); dieser Zweig ist eine
+  # Altlast und wurde seit den Android-Anpassungen im Repo nicht mehr
+  # nachgezogen. Wer ihn startet, bekommt eine andere App als die im Repo:
+  #
+  #   1. "rm -rf android" + "npx cap add android" verwerfen das committete
+  #      Verzeichnis (56 versionierte Dateien) und erzeugen es aus der
+  #      Capacitor-Vorlage neu. Damit sind weg:
+  #        - der App-Links-Intent-Filter (autoVerify, lernzeit.app und
+  #          www.lernzeit.app) — die assetlinks.json wirkt dann nicht mehr
+  #        - google-services.json (Firebase/Push)
+  #        - proguard-rules.pro (der Release-Build laeuft mit
+  #          minifyEnabled true ohne die Keep-Regeln)
+  #        - styles.xml ohne ActionBar und die <queries> fuer den Play Store
+  #        - versionCode/versionName aus app/build.gradle
+  #
+  #   2. Der Schritt "Set Android version" ist wirkungslos: "./gradlew -P..."
+  #      enthaelt keinen Task, und app/build.gradle liest die Properties gar
+  #      nicht aus (dort stehen feste Literale, kein hasProperty). Der
+  #      eigentliche Build laeuft anschliessend ohne diese Flags.
+  #
+  # Der iOS-Zweig macht dasselbe "rm -rf ios", spielt danach aber Podfile,
+  # Icons, Entitlements und Version gezielt wieder ein UND prueft das Ergebnis.
+  # Genau dieses Wiedereinspielen und Pruefen fehlt hier. Vor der ersten
+  # Nutzung nach dem iOS-Vorbild nachbauen — oder den Zweig entfernen.
   android-release:
     name: Android Release
     max_build_duration: 60
