@@ -56,7 +56,7 @@ export function StreakFireCard({ streak, status, inactiveDays, loading, reactiva
 
           <div className="space-y-4 text-sm text-muted-foreground">
             {isRecoverable ? (
-              <p>Löse 3 Aufgaben richtig, um dein Lernfeuer wieder zu entfachen. Diese Streak-Session gibt keine Bildschirmzeit-Minuten.</p>
+              <p>Spiel eine Runde zu Ende, um dein Lernfeuer wieder zu entfachen – richtig oder falsch spielt keine Rolle. Diese Streak-Session gibt keine Bildschirmzeit-Minuten.</p>
             ) : inactiveDays >= 3 ? (
               <p>Das Feuer ist zu lange aus. Starte eine normale Lernsession, um einen neuen Streak zu beginnen.</p>
             ) : (

@@ -113,7 +113,8 @@ const Index = () => {
 
   const handleGameComplete = (stats: {correct: number;total: number;timeSpent: number;earnedMinutes: number;subject: string;}) => {
     // Show completion toast
-    if (user && gameMode === 'streak_recovery' && stats.correct >= 3) {
+    // Die abgeschlossene Runde rettet das Feuer, nicht die Trefferquote.
+    if (user && gameMode === 'streak_recovery') {
       sessionStorage.setItem('lernzeit_streak_reactivated', user.id);
     }
 

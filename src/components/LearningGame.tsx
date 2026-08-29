@@ -679,15 +679,27 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           } catch {
             /* Tracking darf die Session nie blockieren */
           }
-          if (!isStreakRecovery || score >= 3) {
-            await supabase.from('user_streak_states').upsert({
-              user_id: user.id,
-              streak_value: currentInactiveDays >= 3 ? 1 : Math.max((streakBeforeSession.current ?? 0), 1),
-              status: 'active',
-              last_activity_date: new Date().toISOString().split('T')[0],
-              last_reactivated_at: new Date().toISOString(),
-            }, { onConflict: 'user_id' });
-          }
+          // Der Streak haengt an der abgeschlossenen Runde, nicht an der Anzahl
+          // richtiger Antworten. Wer sich hinsetzt und eine Runde durchspielt,
+          // hat an diesem Tag gelernt — auch wenn vieles daneben ging. Frueher
+          // verlangte die Rettungssession drei richtige Antworten; genau das
+          // hat Kinder an schwachen Tagen zusaetzlich bestraft.
+          const zuletztHeute = currentInactiveDays === 0;
+          const vorher = streakBeforeSession.current ?? 0;
+          const neuerStreak =
+            currentInactiveDays >= 3
+              ? 1                       // zu lange aus: neu anfangen
+              : zuletztHeute
+                ? Math.max(vorher, 1)   // heute schon gespielt: nicht doppelt zaehlen
+                : vorher + 1;             // erste Runde des Tages: einen hoch
+
+          await supabase.from('user_streak_states').upsert({
+            user_id: user.id,
+            streak_value: neuerStreak,
+            status: 'active',
+            last_activity_date: new Date().toISOString().split('T')[0],
+            last_reactivated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
           
           // Track ALL achievements after session is saved
           try {
@@ -816,7 +828,6 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
           grade={grade}
             isStreakRecovery={isStreakRecovery}
-            recoverySuccess={score >= 3}
           onContinue={handleCompletionContinue}
           demoMode={demoMode}
           onDemoSignUp={() => {

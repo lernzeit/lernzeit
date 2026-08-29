@@ -12,7 +12,6 @@ interface GameCompletionScreenProps {
   perfectSessionBonus?: number;
   grade?: number;
   isStreakRecovery?: boolean;
-  recoverySuccess?: boolean;
   onContinue: () => void;
   /** Demo auf der Landingpage: statt "Weiter" folgt der Registrierungs-Hinweis. */
   demoMode?: boolean;
@@ -28,7 +27,6 @@ export function GameCompletionScreen({
   perfectSessionBonus = 0,
   grade = 5,
   isStreakRecovery = false,
-  recoverySuccess = false,
   onContinue,
   demoMode = false,
   onDemoSignUp
@@ -127,7 +125,7 @@ export function GameCompletionScreen({
       okay: 'Gut gemacht!'
     };
 
-    const title = isStreakRecovery ? (recoverySuccess ? 'Feuer gerettet!' : 'Versuch es nochmal!') : youngTitles[celebrationLevel];
+    const title = isStreakRecovery ? 'Feuer gerettet!' : youngTitles[celebrationLevel];
     return (
       <div className="w-full max-w-xl mx-auto space-y-4 px-2 pb-safe-bottom">
         <Card className="text-center bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
@@ -166,7 +164,7 @@ export function GameCompletionScreen({
               size="lg" 
               className="w-full text-lg sm:text-xl py-5 sm:py-7 bg-primary hover:bg-primary/90"
             >
-              {recoverySuccess ? '🔥 Weiter!' : '🎉 Weiter!'}
+              {isStreakRecovery ? '🔥 Weiter!' : '🎉 Weiter!'}
             </Button>
           </CardContent>
         </Card>
@@ -202,10 +200,10 @@ export function GameCompletionScreen({
             {celebrationEmojis[celebrationLevel]}
           </div>
           <h1 className="text-3xl font-bold text-primary mb-2">
-            {isStreakRecovery ? (recoverySuccess ? 'Lernfeuer entfacht!' : 'Noch nicht geschafft') : celebrationTitles[celebrationLevel]}
+            {isStreakRecovery ? 'Lernfeuer entfacht!' : celebrationTitles[celebrationLevel]}
           </h1>
           <p className="text-muted-foreground">
-            {isStreakRecovery ? (recoverySuccess ? 'Dein Streak ist wieder aktiv. Es wurden keine Minuten vergeben.' : 'Löse beim nächsten Versuch 3 Aufgaben richtig.') : celebrationMessages[celebrationLevel]}
+            {isStreakRecovery ? 'Dein Streak ist wieder aktiv. Es wurden keine Minuten vergeben.' : celebrationMessages[celebrationLevel]}
           </p>
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mt-4">
             <Award className="w-4 h-4" />
@@ -279,7 +277,7 @@ export function GameCompletionScreen({
           {isStreakRecovery ? 'Zurück zum Dashboard' : `${earnedMinutes} Min. Bildschirmzeit erhalten!`}
         </Button>
         <div className="text-center text-sm text-muted-foreground">
-          {isStreakRecovery ? 'Dein Lernfeuer zählt wieder, wenn du 3 Aufgaben richtig hattest.' : 'Deine Zeit wurde hinzugefügt! 📱✨'}
+          {isStreakRecovery ? 'Dein Lernfeuer brennt wieder.' : 'Deine Zeit wurde hinzugefügt! 📱✨'}
         </div>
       </div>
     </div>
