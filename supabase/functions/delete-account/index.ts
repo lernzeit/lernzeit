@@ -99,6 +99,11 @@ serve(async (req) => {
       { table: "parent_child_relationships", conditions: [{ col: "parent_id", val: userId }, { col: "child_id", val: userId }] },
       { table: "subscriptions", conditions: [{ col: "user_id", val: userId }] },
       { table: "user_roles", conditions: [{ col: "user_id", val: userId }] },
+      // push_tokens haelt die OneSignal-player_id des Geraets. Bleibt die Zeile
+      // stehen, kann das Geraet weiter Benachrichtigungen zu einem geloeschten
+      // Konto bekommen — das Gegenteil dessen, was "Konto loeschen" verspricht.
+      { table: "push_tokens", conditions: [{ col: "user_id", val: userId }] },
+      { table: "user_streak_states", conditions: [{ col: "user_id", val: userId }] },
       { table: "profiles", conditions: [{ col: "id", val: userId }] },
     ];
 
