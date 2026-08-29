@@ -80,6 +80,17 @@ function toBase(value: number, unit: string | null): { value: number; dim: strin
 export function normalizeExpression(input: string): string {
   return input
     .replace(/[−–—]/g, '-')
+    // Ausgeschriebene Rechenwoerter. Ohne sie faellt schon "Was ist 3 mal 4?"
+    // durch die deterministische Pruefung und landet beim Modell — genau die
+    // Klasse Aufgabe, bei der Nachrechnen verlaesslicher und kostenlos ist.
+    // Nur zwischen zwei Ziffern ersetzt, damit "drei Mal so viel" oder
+    // "durch die Mitte" nicht faelschlich zu einem Term werden.
+    // "geteilt durch" muss vor "durch" stehen.
+    .replace(/(\d)\s*geteilt\s+durch\s*(?=\d)/gi, '$1/')
+    .replace(/(\d)\s*durch\s*(?=\d)/gi, '$1/')
+    .replace(/(\d)\s*mal\s*(?=\d)/gi, '$1*')
+    .replace(/(\d)\s*plus\s*(?=\d)/gi, '$1+')
+    .replace(/(\d)\s*minus\s*(?=\d)/gi, '$1-')
     .replace(/[·×✕x]/g, '*')
     .replace(/[÷:]/g, '/')
     .replace(/(\d)\s*,\s*(\d)/g, '$1.$2')

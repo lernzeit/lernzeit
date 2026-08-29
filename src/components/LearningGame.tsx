@@ -343,12 +343,28 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
     let correct = false;
 
+    // Fuer die unabhaengige Nachpruefung nach dem switch: Beide Antworten als
+    // Text, egal welcher Fragetyp. Die Edge Function validate-answer arbeitet
+    // rein auf Zeichenketten, deshalb genuegt eine lesbare Darstellung.
+    let statedAnswerText = '';
+    let userAnswerText = '';
+    // Der Rechtschreib-Hinweis ergibt nur bei getippten Antworten Sinn.
+    let answerIsTyped = false;
+    // Hat das Kind ueberhaupt etwas eingegeben? Reicht nicht ueber die Laenge
+    // von userAnswerText zu bestimmen: Bei leeren Luecken bleiben die
+    // Trennzeichen stehen (", ") und das saehe nach einer Antwort aus.
+    let hasUserInput = false;
+
     switch (question.questionType) {
       case 'MULTIPLE_CHOICE':
         const resolvedCorrect = resolveCorrectAnswerText(question);
         correct = shouldUseTextFallbackForMultipleChoice
           ? userTextAnswer.toLowerCase().trim() === resolvedCorrect.toLowerCase().trim()
           : selectedOption === resolvedCorrect;
+        statedAnswerText = resolvedCorrect;
+        userAnswerText = shouldUseTextFallbackForMultipleChoice ? userTextAnswer : selectedOption;
+        answerIsTyped = shouldUseTextFallbackForMultipleChoice;
+        hasUserInput = userAnswerText.trim().length > 0;
         break;
 
       case 'FREETEXT':
@@ -365,55 +381,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         correct = userVal === correctVal 
           || alternatives.includes(userVal)
           || (userNum !== '' && correctNum !== '' && userNum === correctNum);
-        
-        // AI recheck: if local check says wrong, ask AI to verify
-        if (!correct && userVal.length > 0) {
-          try {
-            setIsValidatingAnswer(true);
-            const { data, error } = await supabase.functions.invoke('validate-answer', {
-              body: {
-                question: question.questionText,
-                correctAnswer: freeTextCorrect,
-                userAnswer: userTextAnswer.trim(),
-                grade,
-                subject,
-              },
-            });
-            if (!error && data?.accepted) {
-              console.log(`✅ AI recheck accepted: "${userTextAnswer}" (${data.verdict}: ${data.reason})`);
-              correct = true;
-
-              if (data.statedAnswerWrong) {
-                // Die hinterlegte Antwort wurde widerlegt, nicht die des Kindes.
-                // Der Rechtschreib-Hinweis darf hier NICHT erscheinen — er würde
-                // die falsche Musterlösung als "richtige Schreibweise" ausgeben.
-                setAnswerRecovered(true);
-                toast.success('Deine Antwort war doch richtig! Wird als korrekt gewertet. 🎉', {
-                  description: 'Wir haben die Frage automatisch zur Prüfung markiert.',
-                });
-                reportQuestion({
-                  reason: 'wrong_answer',
-                  details: `Auto-verified beim Absenden: Nutzerantwort "${userTextAnswer.trim()}" war korrekt, System-Antwort "${freeTextCorrect}" wurde widerlegt (verdict=${data.verdict}, geprüfte Antwort="${data.verifiedCorrectAnswer ?? '?'}").`,
-                  question: question.questionText,
-                  statedAnswer: freeTextCorrect,
-                  userAnswer: userTextAnswer.trim(),
-                  grade,
-                  subject,
-                  templateId: question.id,
-                });
-                markReviewReported(question.questionText);
-              } else {
-                // Tippfehler oder Synonym: hinterlegte Antwort stimmt, also ist
-                // der Hinweis auf die korrekte Schreibweise sinnvoll.
-                setSpellingHint(freeTextCorrect);
-              }
-            }
-          } catch (e) {
-            console.warn('AI recheck failed, using local result:', e);
-          } finally {
-            setIsValidatingAnswer(false);
-          }
-        }
+        statedAnswerText = freeTextCorrect;
+        userAnswerText = userTextAnswer;
+        answerIsTyped = true;
+        hasUserInput = userTextAnswer.trim().length > 0;
         break;
 
       case 'SORT':
@@ -422,6 +393,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           ? question.correctAnswer
           : question.correctAnswer?.order || [];
         correct = JSON.stringify(sortOrder) === JSON.stringify(sortCorrect);
+        statedAnswerText = (sortCorrect as string[]).join(' → ');
+        userAnswerText = sortOrder.join(' → ');
+        hasUserInput = sortOrder.length > 0;
         break;
 
       case 'MATCH':
@@ -429,9 +403,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         const ca = question.correctAnswer;
         if (ca?.pairs && Array.isArray(ca.pairs)) {
           correct = ca.pairs.every(([left, right]: [string, string]) => matches[left] === right);
+          statedAnswerText = ca.pairs.map(([l, r]: [string, string]) => `${l} = ${r}`).join(', ');
         } else if (ca && typeof ca === 'object' && !Array.isArray(ca)) {
           correct = Object.entries(ca).every(([left, right]) => matches[left] === String(right));
+          statedAnswerText = Object.entries(ca).map(([l, r]) => `${l} = ${r}`).join(', ');
         }
+        userAnswerText = Object.entries(matches).map(([l, r]) => `${l} = ${r}`).join(', ');
+        hasUserInput = Object.keys(matches).length > 0;
         break;
 
       case 'DRAG_DROP':
@@ -439,6 +417,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         correct = Object.entries(correctPlacements).every(([category, items]) =>
           JSON.stringify((dragDropPlacements[category] || []).sort()) === JSON.stringify((items as string[]).sort())
         );
+        statedAnswerText = Object.entries(correctPlacements)
+          .map(([k, v]) => `${k}: ${(v as string[]).join(', ')}`).join(' | ');
+        userAnswerText = Object.entries(dragDropPlacements)
+          .map(([k, v]) => `${k}: ${v.join(', ')}`).join(' | ');
+        hasUserInput = Object.values(dragDropPlacements).some((v) => v.length > 0);
         break;
 
       case 'FILL_BLANK':
@@ -447,7 +430,74 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         correct = fillBlanks.every((answer, i) => 
           answer.toLowerCase().trim() === String(correctBlanks[i] || '').toLowerCase().trim()
         );
+        statedAnswerText = (correctBlanks as unknown[]).map(String).join(', ');
+        userAnswerText = fillBlanks.join(', ');
+        answerIsTyped = true;
+        hasUserInput = fillBlanks.some((b) => b.trim().length > 0);
         break;
+    }
+
+    // Unabhaengige Nachpruefung — fuer JEDEN Fragetyp.
+    //
+    // Bis 08/2026 lief sie ausschliesslich im FREETEXT-Zweig. Das deckte 872
+    // der 2598 aktiven Fragen ab; MULTIPLE_CHOICE, FILL_BLANK, SORT und MATCH
+    // hatten gar keine. Genau dort schlug es zu: Bei "Der Term 3 * (4 + x)
+    // kann durch Ausklammern in die Form ___ + 3 * x gebracht werden"
+    // (FILL_BLANK) stand 15 im Cache, richtig sind 12. Das Kind rechnete
+    // richtig, bekam "Nicht ganz" — und erfuhr das Gegenteil erst, wenn es auf
+    // "Erklaerung" tippte. Wer direkt weiterklickt, bleibt mit dem falschen
+    // Ergebnis zurueck und gibt der App die Schuld.
+    //
+    // Die Pruefung laeuft nur bei lokal abgelehnter Antwort, kostet also nichts,
+    // solange richtig geantwortet wird. Die erste Stufe in validate-answer
+    // rechnet ohne Modell nach.
+    if (!correct && hasUserInput) {
+      try {
+        setIsValidatingAnswer(true);
+        const { data, error } = await supabase.functions.invoke('validate-answer', {
+          body: {
+            question: question.questionText,
+            correctAnswer: statedAnswerText,
+            userAnswer: userAnswerText.trim(),
+            grade,
+            subject,
+          },
+        });
+        if (!error && data?.accepted) {
+          console.log(`✅ AI recheck accepted: "${userAnswerText}" (${data.verdict}: ${data.reason})`);
+          correct = true;
+
+          if (data.statedAnswerWrong) {
+            // Die hinterlegte Antwort wurde widerlegt, nicht die des Kindes.
+            // Der Rechtschreib-Hinweis darf hier NICHT erscheinen — er wuerde
+            // die falsche Musterloesung als "richtige Schreibweise" ausgeben.
+            setAnswerRecovered(true);
+            toast.success('Deine Antwort war doch richtig! Wird als korrekt gewertet. 🎉', {
+              description: 'Wir haben die Frage automatisch zur Prüfung markiert.',
+            });
+            reportQuestion({
+              reason: 'wrong_answer',
+              details: `Auto-verified beim Absenden (${question.questionType}): Nutzerantwort "${userAnswerText.trim()}" war korrekt, System-Antwort "${statedAnswerText}" wurde widerlegt (verdict=${data.verdict}, geprüfte Antwort="${data.verifiedCorrectAnswer ?? '?'}").`,
+              question: question.questionText,
+              statedAnswer: statedAnswerText,
+              userAnswer: userAnswerText.trim(),
+              grade,
+              subject,
+              templateId: question.id,
+            });
+            markReviewReported(question.questionText);
+          } else if (answerIsTyped) {
+            // Tippfehler oder Synonym: hinterlegte Antwort stimmt, also ist der
+            // Hinweis auf die korrekte Schreibweise sinnvoll. Bei Auswahl-,
+            // Sortier- und Zuordnungsaufgaben gibt es nichts zu buchstabieren.
+            setSpellingHint(statedAnswerText);
+          }
+        }
+      } catch (e) {
+        console.warn('AI recheck failed, using local result:', e);
+      } finally {
+        setIsValidatingAnswer(false);
+      }
     }
 
     setIsCorrect(correct);
