@@ -94,3 +94,33 @@ Deno.test('Rechenwoerter nur zwischen Ziffern', () => {
     false,
   );
 });
+
+// ── Doppeldeutige Zeichen: ":" und "x" ─────────────────────────────────────
+// Beide wurden frueher unbedingt zu "/" bzw. "*". Bei "Aufgabe 3: 4 + 5"
+// ergab das 5,75 statt 9 — ein FALSCHES deterministisches Urteil, und das geht
+// dem Modell vor. Ein Kind mit der richtigen Antwort waere abgewiesen worden.
+
+Deno.test('Doppelpunkt nur zwischen Ziffern als Division', () => {
+  // Weiterhin Division, Ziffern auf beiden Seiten:
+  assertEquals(validateMath('Berechne 144 : 12', '12').valid, true);
+  // Aufzaehlungs-Doppelpunkt darf keine Division erzeugen:
+  const r = validateMath('Aufgabe 3: 4 + 5. Wie lautet das Ergebnis?', '9');
+  assertEquals(r.valid, true);
+  assertEquals(r.expected, '9');
+  assertEquals(validateMath('Klasse 5: Was ist 20 - 8?', '12').expected, '12');
+});
+
+Deno.test('x nur zwischen Ziffern als Malzeichen', () => {
+  assertEquals(validateMath('Berechne 3 x 4', '12').valid, true);
+  assertEquals(validateMath('Berechne 3 x 4', '15').valid, false);
+});
+
+Deno.test('Aufgaben mit Variablen sind nicht deterministisch pruefbar', () => {
+  // Der Ausdruck waere nur ein Bruchstueck — hier muss das Modell ran.
+  assertEquals(
+    validateMath('Der Term 3 * (4 + x) kann durch Ausklammern in die Form ___ + 3 * x gebracht werden', '15').applicable,
+    false,
+  );
+  assertEquals(validateMath('Berechne 2 x 3 + x für x = 4', '10').applicable, false);
+  assertEquals(validateMath('Löse die Gleichung 4 · x = 60 nach x auf.', '15').applicable, false);
+});

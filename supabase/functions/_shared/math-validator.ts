@@ -91,14 +91,29 @@ export function normalizeExpression(input: string): string {
     .replace(/(\d)\s*mal\s*(?=\d)/gi, '$1*')
     .replace(/(\d)\s*plus\s*(?=\d)/gi, '$1+')
     .replace(/(\d)\s*minus\s*(?=\d)/gi, '$1-')
-    .replace(/[·×✕x]/g, '*')
-    .replace(/[÷:]/g, '/')
+    // · × ÷ sind eindeutig Rechenzeichen und werden immer ersetzt.
+    .replace(/[·×✕]/g, '*')
+    .replace(/÷/g, '/')
+    // "x" und ":" dagegen NUR zwischen zwei Ziffern. Frueher wurden sie
+    // unbedingt ersetzt, mit zwei Folgen:
+    //   "Aufgabe 3: 4 + 5" wurde zu "Aufgabe 3/ 4 + 5" und ergab 5,75 statt 9
+    //   — ein falsches deterministisches Urteil, das dem Modell vorgeht.
+    //   "3 * (4 + x)" wurde zu "3 * (4 + *)" und damit unlesbar.
+    .replace(/(\d)\s*x\s*(?=\d)/gi, '$1*')
+    // Beim Doppelpunkt entscheidet das Leerzeichen DAVOR: "144 : 12" ist eine
+    // Division, "Aufgabe 3: 4 + 5" eine Aufzaehlung. Fehlt das Leerzeichen,
+    // bleibt der Doppelpunkt stehen und der Ausdruck beginnt erst dahinter.
+    .replace(/(\d)\s+:\s*(?=\d)/g, '$1/')
     .replace(/(\d)\s*,\s*(\d)/g, '$1.$2')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-const EXPRESSION_RE = /(-?\d+(?:[.,]\d+)?(?:\s*[+\-*/·×÷:]\s*\(?-?\d+(?:[.,]\d+)?\)?)+)/;
+// Kein ":" in der Zeichenklasse: Eine echte Division ist zu diesem Zeitpunkt
+// bereits zu "/" normalisiert. Bliebe ":" hier drin, wuerde der Ausdruck in
+// "Aufgabe 3: 4 + 5" bei der 3 beginnen — safeEvaluate lehnte das zwar ab,
+// aber damit ginge auch die auswertbare Rechnung "4 + 5" verloren.
+const EXPRESSION_RE = /(-?\d+(?:[.,]\d+)?(?:\s*[+\-*/·×÷]\s*\(?-?\d+(?:[.,]\d+)?\)?)+)/;
 
 function safeEvaluate(expr: string): number | null {
   if (!/^[\d\s().,+\-*/]+$/.test(expr)) return null;
@@ -176,6 +191,15 @@ export function validateMath(question: string, statedAnswer: string): MathValida
   }
 
   // ── 4) Rechenausdruck: "12 + 7", "Berechne 3 · 4 + 2" ──
+  //
+  // Vorher eine Sperre: Steht in der Aufgabe noch eine Variable, ist ein
+  // gefundener Ausdruck nur ein Bruchstueck einer algebraischen Aussage.
+  // "Berechne 2 x 3 + x fuer x = 4" enthaelt "2*3", das Ergebnis ist aber 10
+  // und nicht 6. Solche Aufgaben gehoeren zum Modell, nicht zum Taschenrechner.
+  if (/(^|[^A-Za-zÄÖÜäöüß])[xy]([^A-Za-zÄÖÜäöüß]|$)/.test(q)) {
+    return NOT_APPLICABLE('contains_variable');
+  }
+
   const expr = q.match(EXPRESSION_RE);
   if (expr) {
     const value = safeEvaluate(expr[1]);
