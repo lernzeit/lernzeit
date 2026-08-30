@@ -236,6 +236,11 @@ workflows:
           		<string>applinks:lernzeit.app</string>
           		<string>webcredentials:lernzeit.app</string>
           	</array>
+          	<!-- Family Controls: ohne diesen Eintrag darf die App weder sperren
+          	     noch entsperren. Muss zum Provisioning-Profil passen, sonst
+          	     scheitert die Signierung. -->
+          	<key>com.apple.developer.family-controls</key>
+          	<true/>
           </dict>
           </plist>
           EOF
