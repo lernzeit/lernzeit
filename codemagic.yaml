@@ -103,6 +103,12 @@ workflows:
         # bringt eine Aenderung an MARKETING_VERSION in project.pbxproj nichts -
         # dieser Wert hier ist die einzige Quelle der Wahrheit.
         IOS_MARKETING_VERSION: "1.2.5"
+        # Schaltet die Werkbank fuer die Geraetesperre in den Kind-
+        # Einstellungen frei. NUR fuer Testbuilds — vor einer Store-
+        # Veroeffentlichung entfernen. Ohne diese Variable ist die Oberflaeche
+        # unsichtbar; wer die Sperre selbst aufheben kann, fuer den ist sie
+        # keine.
+        VITE_SCREENTIME_UI: "1"
       node: 22
       xcode: latest
       cocoapods: default

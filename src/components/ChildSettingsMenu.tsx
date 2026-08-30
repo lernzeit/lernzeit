@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
+import { ScreenTimeTestPanel } from '@/components/screenTime/ScreenTimeTestPanel';
 import { ScreenTimeRequestWidget } from '@/components/ScreenTimeRequestWidget';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -372,6 +373,14 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
             <>
               <ScreenTimeWidget />
               <ScreenTimeRequestWidget userId={user.id} role="child" />
+              {/*
+                Werkbank fuer die Geraetesperre, absichtlich hinter einer
+                Build-Variablen. Sie waere sonst fuer jedes Kind erreichbar —
+                und wer die Sperre selbst aufheben kann, fuer den ist sie keine.
+                Zum Erproben in codemagic.yaml VITE_SCREENTIME_UI: "1" setzen,
+                vor einer Store-Veroeffentlichung wieder entfernen.
+              */}
+              {import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
             </>
           )}
           
