@@ -405,6 +405,9 @@ export type Database = {
           parent_id: string
           physics_seconds_per_task: number
           science_seconds_per_task: number
+          screen_time_auto_release: boolean
+          screen_time_managed: boolean
+          screen_time_unlock_mode: string
           updated_at: string
           weekday_max_minutes: number
           weekend_max_minutes: number
@@ -424,6 +427,9 @@ export type Database = {
           parent_id: string
           physics_seconds_per_task?: number
           science_seconds_per_task?: number
+          screen_time_auto_release?: boolean
+          screen_time_managed?: boolean
+          screen_time_unlock_mode?: string
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
@@ -443,6 +449,9 @@ export type Database = {
           parent_id?: string
           physics_seconds_per_task?: number
           science_seconds_per_task?: number
+          screen_time_auto_release?: boolean
+          screen_time_managed?: boolean
+          screen_time_unlock_mode?: string
           updated_at?: string
           weekday_max_minutes?: number
           weekend_max_minutes?: number
@@ -1394,6 +1403,47 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      screen_time_unlocks: {
+        Row: {
+          child_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          minutes: number
+          request_id: string | null
+          source: string
+          starts_at: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          minutes: number
+          request_id?: string | null
+          source: string
+          starts_at?: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          minutes?: number
+          request_id?: string | null
+          source?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screen_time_unlocks_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "screen_time_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
