@@ -21,6 +21,22 @@
  * Der Server erfaehrt deshalb auch im Modus 'selected' nie, welche App das
  * Kind gewaehlt hat. Diese Schnittstelle gibt niemals einen Token oder einen
  * App-Namen an die Web-Seite zurueck — nur Anzahlen und Zustaende.
+ *
+ * ── Zwei Bedingungen an den Aufrufer ─────────────────────────────────────
+ *
+ * 1. ELTERNSCHUTZ: pickShieldedApps() und stopManaging() duerfen NUR nach
+ *    einer Anmeldung als Elternteil erreichbar sein. Apple verlangt die
+ *    Bildschirmzeit-Kennung ausschliesslich beim ERSTEN Zustimmen, danach nie
+ *    wieder. Waere der Auswahldialog frei zugaenglich, koennte das Kind auf
+ *    seinem eigenen Geraet einfach alle Apps abwaehlen — die Sperre waere
+ *    eine Empfehlung.
+ *
+ * 2. GERAETEUHR: Wann eine Freigabe endet, entscheidet das Geraet. Dessen Uhr
+ *    laesst sich verstellen. Das ist technisch nicht sauber loesbar (Apples
+ *    eigene Bildschirmzeit hat dieselbe Schwaeche) und wird deshalb als
+ *    bekannte Grenze festgehalten, nicht verschwiegen. Fuer die Abrechnung
+ *    gilt die Serverzeit in screen_time_unlocks, fuer die Durchsetzung das
+ *    Geraet.
  */
 
 /** Was die Familie mit der verdienten Zeit anfangen darf. */
@@ -35,7 +51,7 @@ export type AuthorizationState =
   | 'notDetermined'
   /** Ein Elternteil hat zugestimmt — nur dann darf gesperrt werden. */
   | 'approved'
-  /** Abgelehnt oder spaeter entzogen. */
+  /** Abgelehnt oder spaeter in den Systemeinstellungen entzogen. */
   | 'denied';
 
 export interface ScreenTimeAvailability {
@@ -51,12 +67,41 @@ export interface ScreenTimeAvailability {
 
 export interface ShieldStatus {
   authorization: AuthorizationState;
-  /** Wie viele Apps aktuell gesperrt sind. Nie WELCHE. */
+  /**
+   * true, solange LernZeit auf diesem Geraet ueberhaupt sperrt. false nach
+   * stopManaging() oder bevor je eingerichtet wurde.
+   */
+  managing: boolean;
+  /** Wie viele Apps die Sperrliste umfasst. Nie WELCHE. */
   shieldedCount: number;
-  /** true, solange eine Freigabe laeuft. */
-  unlocked: boolean;
+  /**
+   * Wie viele davon gerade freigegeben sind. 0 heisst: alles zu.
+   *
+   * Bewusst eine Zahl statt eines Ja/Nein: Im Modus 'selected' ist genau eine
+   * App offen und der Rest gesperrt. Ein blosses "entsperrt: ja" haette diesen
+   * Zustand nicht abbilden koennen.
+   */
+  releasedCount: number;
   /** Ende der laufenden Freigabe, ISO-8601. null, wenn keine laeuft. */
-  unlockedUntil: string | null;
+  releasedUntil: string | null;
+}
+
+export interface ReleaseResult extends ShieldStatus {
+  /**
+   * true, wenn das Kind den Auswahldialog abgebrochen hat (nur im Modus
+   * 'selected' moeglich).
+   *
+   * Der Aufrufer MUSS das auswerten: Bei cancelled darf die verdiente Zeit
+   * NICHT abgebucht werden. Sonst verliert das Kind Minuten, die es sich
+   * erarbeitet hat, und bekommt dafuer nichts — der sicherste Weg, jemanden
+   * aus der App zu vertreiben.
+   */
+  cancelled: boolean;
+  /**
+   * Minuten, die durch diesen Aufruf tatsaechlich gutgeschrieben wurden.
+   * 0 bei Abbruch. Bei einer Verlaengerung nur der neue Anteil.
+   */
+  grantedMinutes: number;
 }
 
 export interface ScreenTimePlugin {
@@ -73,6 +118,8 @@ export interface ScreenTimePlugin {
    * Oeffnet Apples FamilyActivityPicker. Die Auswahl wird auf dem Geraet
    * gespeichert; zurueck kommt nur, wie viele Apps es geworden sind.
    * Abbruch durch den Nutzer ist kein Fehler: cancelled = true.
+   *
+   * NUR fuer Eltern erreichbar machen — siehe Bedingung 1 oben.
    */
   pickShieldedApps(): Promise<{ shieldedCount: number; cancelled: boolean }>;
 
@@ -88,11 +135,34 @@ export interface ScreenTimePlugin {
    *                   nativ ueber der gespeicherten Liste, damit Name und
    *                   Symbol angezeigt werden koennen, ohne dass unser Code
    *                   die Identitaet erfaehrt.
+   *
+   * VERLAENGERT eine laufende Freigabe, ersetzt sie nicht. Wer waehrend einer
+   * laufenden Freigabe weiterlernt, bekommt die neuen Minuten hinten
+   * angehaengt. Der umgekehrte Fall — neue Zeit loescht die alte — waere aus
+   * Sicht des Kindes eine Bestrafung fuers Weiterlernen.
+   *
+   * Im Modus 'selected' bei laufender Freigabe wird NICHT erneut gefragt; die
+   * Verlaengerung gilt der bereits gewaehlten App.
    */
-  releaseFor(options: { minutes: number; mode: UnlockMode }): Promise<ShieldStatus>;
+  releaseFor(options: { minutes: number; mode: UnlockMode }): Promise<ReleaseResult>;
 
-  /** Setzt die Sperre sofort zurueck, etwa wenn die Eltern abbrechen. */
+  /**
+   * Beendet eine laufende Freigabe sofort und sperrt wieder — etwa wenn die
+   * Eltern abbrechen. Die Sperrliste bleibt bestehen.
+   */
   restoreShield(): Promise<ShieldStatus>;
+
+  /**
+   * Der Notausstieg: hebt die Sperre vollstaendig auf und vergisst die
+   * Auswahl. Danach sperrt LernZeit auf diesem Geraet nichts mehr.
+   *
+   * Muss es geben. Eine Familie, die sich nicht selbst befreien kann, wenn
+   * das Geraet wechselt oder etwas schiefgeht, ist ein Support-Fall und eine
+   * schlechte Bewertung. Apple fragt in der Pruefung ausdruecklich danach.
+   *
+   * NUR fuer Eltern erreichbar machen — siehe Bedingung 1 oben.
+   */
+  stopManaging(): Promise<ShieldStatus>;
 
   getStatus(): Promise<ShieldStatus>;
 }
@@ -108,7 +178,8 @@ export const UNAVAILABLE: ScreenTimeAvailability = {
 
 export const EMPTY_STATUS: ShieldStatus = {
   authorization: 'notDetermined',
+  managing: false,
   shieldedCount: 0,
-  unlocked: false,
-  unlockedUntil: null,
+  releasedCount: 0,
+  releasedUntil: null,
 };
