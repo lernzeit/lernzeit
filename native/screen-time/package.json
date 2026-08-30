@@ -1,0 +1,19 @@
+{
+  "name": "lernzeit-screen-time",
+  "version": "0.1.0",
+  "description": "Bildschirmzeit-Sperre ueber Apples Family Controls. Nur iOS.",
+  "license": "UNLICENSED",
+  "private": true,
+  "files": [
+    "ios/Sources",
+    "LernzeitScreenTime.podspec"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}
