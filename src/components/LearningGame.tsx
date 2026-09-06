@@ -542,7 +542,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
       // Add to spaced repetition review queue
       if (question) {
-        addToReviewQueue(question);
+        addToReviewQueue(question, grade);
       }
     }
   };

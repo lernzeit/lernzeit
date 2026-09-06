@@ -67,7 +67,17 @@ export function useReviewQueue(userId?: string) {
    * Add a wrongly answered question to the review queue.
    * Skips if question text already exists (dedup).
    */
-  const addToQueue = useCallback(async (question: PreloadedQuestion) => {
+  /**
+   * `childGrade` ist die Klasse des KINDES, nicht die der Frage.
+   *
+   * Seit die Fragen frueh im Schuljahr aus der vorigen Klassenstufe kommen
+   * (siehe _shared/school-year.ts), laufen beide auseinander: Eine Frage kann
+   * Klasse 6 tragen, waehrend das Kind in Klasse 7 ist. Geschrieben wurde
+   * hier frueher question.grade, gelesen wird in fetchDueQuestions mit der
+   * Klasse des Kindes — die Zeile waere also eingetragen und nie wieder
+   * gefunden worden. Die Wiederholung haette still aufgehoert zu wirken.
+   */
+  const addToQueue = useCallback(async (question: PreloadedQuestion, childGrade: number) => {
     if (!userId) return;
 
     try {
@@ -99,7 +109,7 @@ export function useReviewQueue(userId?: string) {
         question_type: question.questionType,
         options: question.options || null,
         subject: question.subject,
-        grade: question.grade,
+        grade: childGrade,
         hint: question.hint || null,
         next_review_at: new Date(Date.now() + REVIEW_INTERVALS_HOURS[0] * 3600_000).toISOString(),
       });

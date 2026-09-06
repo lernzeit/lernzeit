@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
+import { effectiveGrade, schoolYearHint } from "../_shared/school-year.ts";
 import {
   answerableFromMemoryRule,
   answerFormatRule,
@@ -229,6 +230,21 @@ serve(async (req) => {
       });
     }
     
+    // ── Aus welchem Jahrgangsstoff wird gezogen? ────────────────────────
+    //
+    // `grade` ist und bleibt die Klasse des Kindes — daran haengen die
+    // Faecherfreigaben oben und die Sprachvorgaben. `sourceGrade` bestimmt
+    // dagegen den STOFF, und frueh im Schuljahr ueberwiegt der der vorigen
+    // Klasse. Ohne das bekommt ein Siebtklaesser am ersten Schultag
+    // Zinsrechnung: Lehrplan der 7, unterrichtet wird sie im Fruehjahr.
+    //
+    // Die Untergrenze des Fachs wird dabei nicht unterschritten. Sonst
+    // entstuenden Physikfragen fuer Klasse 4, wo es das Fach nicht gibt.
+    const sourceGrade = Math.max(
+      effectiveGrade(grade),
+      constraint?.min ?? 1,
+    ) as ValidGrade;
+
     // Extract exclude list for deduplication. A longer cross-session history
     // prevents a small shared cache pool from rotating the same archetypes.
     const excludeTexts: string[] = Array.isArray(body.excludeTexts)
@@ -288,7 +304,7 @@ serve(async (req) => {
     // Kategorie einmal pro Anfrage ziehen — sie steuert sowohl die Cache-Auswahl
     // als auch den Prompt, damit das konfigurierte Verhältnis in beiden Pfaden gilt.
     const categoryMix = await loadCategoryMix();
-    const category: QuestionCategory = pickCategory(subject, grade, categoryMix);
+    const category: QuestionCategory = pickCategory(subject, sourceGrade, categoryMix);
     console.log(`🎯 Kategorie: ${category} (${subject}/Klasse ${grade})`);
 
     if (!forceFresh && !topicHint && SUPABASE_URL_EARLY && SUPABASE_SRK_EARLY && Math.random() < CACHE_FIRST_PROBABILITY) {
@@ -297,7 +313,7 @@ serve(async (req) => {
         const { data: cachedPool, count } = await cacheClient
           .from('ai_question_cache')
           .select('*', { count: 'exact' })
-          .eq('grade', grade)
+          .eq('grade', sourceGrade)
           .eq('subject', subject)
           .eq('difficulty', difficulty)
           .eq('category', category)
@@ -375,7 +391,11 @@ serve(async (req) => {
       }
     }
 
-    const prompt = buildQuestionPrompt(grade, subject, difficulty, questionType, excludeTexts, topicHint, category);
+    // Der Lernstands-Hinweis gilt nur, wenn ohnehin die aktuelle Klasse
+    // gezogen wurde. Bei der Vorklasse ist deren Jahresstoff vollstaendig
+    // unterrichtet — ihn dort einzuschraenken waere falsch.
+    const lernstand = sourceGrade === grade ? schoolYearHint(grade) : '';
+    const prompt = buildQuestionPrompt(sourceGrade, subject, difficulty, questionType, excludeTexts, topicHint, category, lernstand);
 
     // Load active prompt rules from DB (max 5, most relevant first)
     let rulesBlock = '';
@@ -596,7 +616,7 @@ serve(async (req) => {
         let cacheQuery = cacheClient
           .from('ai_question_cache')
           .select('*')
-          .eq('grade', grade)
+          .eq('grade', sourceGrade)
           .eq('subject', subject)
           .eq('difficulty', difficulty)
           .eq('is_active', true)
@@ -666,7 +686,10 @@ serve(async (req) => {
 
     const enhancedQuestion = {
       id: crypto.randomUUID(),
-      grade,
+      // Der Stoff-Jahrgang, nicht die Klasse des Kindes: Sonst laege eine
+      // Klasse-6-Frage unter Klasse 7 im Cache und waere dort fuer immer
+      // falsch einsortiert.
+      grade: sourceGrade,
       subject,
       difficulty,
       questionText: rawQuestionText,
@@ -690,7 +713,7 @@ serve(async (req) => {
         try {
           const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
           await adminClient.from('ai_question_cache').insert({
-            grade,
+            grade: sourceGrade,
             subject,
             difficulty,
             question_text: enhancedQuestion.questionText,
@@ -917,7 +940,8 @@ function buildQuestionPrompt(
   requestedType?: string,
   excludeTexts?: string[],
   topicHint?: string,
-  category: QuestionCategory = 'calculation'
+  category: QuestionCategory = 'calculation',
+  lernstandHinweis = ''
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const gradeGuidelines = getGradeGuidelines(grade);
@@ -961,7 +985,7 @@ ${subjectScope}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}
-FRAGETYP: ${questionType}${categoryNote}${exclusionNote}${topicNote}${youngLanguageNote}
+FRAGETYP: ${questionType}${categoryNote}${exclusionNote}${topicNote}${youngLanguageNote}${lernstandHinweis}
 
 ${typeInstructions}
 
