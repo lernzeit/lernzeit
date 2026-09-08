@@ -202,7 +202,7 @@ oder heute im Code nachgesehen. Andere Versprechen gibt es nicht.
 |---|---|---|
 | V1 | Kinder verdienen Bildschirmzeit durch richtige Antworten | Faktenprüfung 3 |
 | V2 | Standard 30 Sekunden je richtiger Aufgabe, von Eltern je Fach änderbar | Faktenprüfung 3 |
-| V3 | 30 Tage kostenlos testen, keine Zahlungsdaten nötig | Faktenprüfung 1; 77 von 78 Abo-Zeilen ohne Stripe-Kunden-ID |
+| V3 | 4 Wochen kostenlos testen, keine Zahlungsdaten nötig | Faktenprüfung 1; 77 von 78 Abo-Zeilen ohne Stripe-Kunden-ID |
 | V4 | 2,99 € im Monat oder 29,99 € im Jahr | Faktenprüfung 5 |
 | V5 | Beliebig viele Kinderprofile | Faktenprüfung 8 |
 | V6 | Alle Fächer der jeweiligen Klassenstufe, Klasse 1 bis 10 | Faktenprüfung 8 |
@@ -210,10 +210,13 @@ oder heute im Code nachgesehen. Andere Versprechen gibt es nicht.
 | V8 | Verknüpfung von Eltern und Kind über einen Einladungscode, 7 Tage gültig, einmalig | Faktenprüfung 2 |
 | V9 | Aufgaben passend zur Klassenstufe und zum Schuljahresfortschritt | `_shared/school-year.ts`, ausgeliefert 08.09.2026 |
 
-**Zu V3 — Wortlaut ist Pflicht.** Es heißt **„30 Tage"**, nicht „4 Wochen".
-Die Datenbank vergibt `interval '30 days'`. „4 Wochen" wäre zugleich falsch
-*und* eine Untertreibung. Dass in der App an acht Stellen „4 Wochen" steht,
-ist ein Produktfehler und in Abschnitt 12 als solcher aufgeführt.
+**Zu V3 — Wortlaut ist Pflicht.** Es heißt **„4 Wochen"**, überall gleich.
+Die Datenbank vergibt tatsächlich 30 Tage; die gerundete Zahl verspricht also
+zwei Tage *weniger*, als geliefert wird. In dieser Richtung ist die Abweichung
+unproblematisch, und die Entscheidung dafür ist bewusst gefallen
+(Faktenprüfung 1). Entscheidend ist nur, dass Anzeige und Zielseite dieselbe
+Zahl nennen — Google gleicht das ab. Also nirgends „30 Tage" schreiben, auch
+nicht, weil es großzügiger klingt.
 
 **Zu V6 — Wortlaut ist Pflicht.** Es heißt **„alle Fächer der jeweiligen
 Klassenstufe"**, nicht „alle Fächer". Chemie gibt es ab Klasse 7, Physik ab
@@ -239,9 +242,12 @@ wird nicht veröffentlicht — auch nicht, wenn er besser konvertiert.
    ausgeliefert. Kein Text darf das Gegenteil andeuten, auch nicht durch
    Auslassung. Die Landingpage sagt es heute schon offen
    (`HonestyBlock.tsx`) — dabei bleibt es.
-2. **Keine Tagesobergrenze als Zahl.** „Höchstens 30 Minuten am Tag" ist
-   werktags richtig und am Wochenende falsch (Faktenprüfung 4, 60 Minuten).
-   Solange der Widerspruch im Produkt steht, kommt die Zahl in keine Anzeige.
+2. **Keine Tagesobergrenze als Zahl.** Die Standardwerte stimmen — werktags
+   30 Minuten, am Wochenende 60, in Testphase und Premium anpassbar
+   (Faktenprüfung 4). In eine Anzeige gehören sie trotzdem nicht: In 30
+   Zeichen ohne den Zusatz „Standard, anpassbar" liest sich „höchstens 30
+   Minuten" wie eine Produktgrenze. Beworben wird, **dass** Eltern die Grenze
+   setzen, nicht welche.
 3. **Keine Superlative.** Kein „die einzige App", „die erste", „die beste".
    Nicht belegbar.
 4. **Keine Lernerfolgs-Behauptungen.** Kein „bessere Noten", „X % mehr
@@ -307,14 +313,29 @@ Ausrufezeichen in einer Überschrift.
 
 ## 9. Kanäle
 
-**Phase 1: Google Suche, ausschließlich.** Wer „bildschirmzeit kind regeln"
-sucht, hat den Bedarf bereits formuliert. Bei 250 € im Monat ist gesuchte
-Nachfrage die einzige Ausspielung, die genug verwertbare Daten je Euro
-erzeugt.
+**Google und Meta sind beide vorgesehen.** Die Datenschutzerklärung wird
+deshalb von Anfang an für **beide** Plattformen gefasst, nicht erst
+nachträglich für Meta erweitert. Eine Datenschutzerklärung zweimal ändern zu
+lassen, kostet mehr als sie einmal richtig zu schreiben.
 
-**Nicht in Phase 1:** Meta, Display, YouTube, Performance Max. Meta wurde im
-vereinbarten Zuschnitt ausdrücklich zurückgestellt. Performance Max ist bei
-diesem Budget ungeeignet, weil es die Ausspielung verschleiert — man zahlt
+**Wo das erste Geld hingeht: Google Suche.** Wer „bildschirmzeit kind regeln"
+sucht, hat den Bedarf bereits formuliert. Bei 250 € im Monat ist gesuchte
+Nachfrage die Ausspielung mit den meisten verwertbaren Daten je Euro. Meta
+zeigt Anzeigen Leuten, die gerade nicht suchen — das braucht mehr Budget,
+bevor überhaupt etwas erkennbar wird.
+
+**Empfehlung zur Reihenfolge, nicht zum Ausschluss:** erst Google allein
+laufen lassen, bis Abschnitt 13 Zahlen geliefert hat. Meta danach, mit dem
+dann bekannten Kosten-je-Anmeldung als Vergleichsmaßstab. Beides gleichzeitig
+bei 250 € führt dazu, dass keiner der beiden Kanäle genug Daten für eine
+Aussage sammelt.
+
+**In keinem Fall:** App-Install-Kampagnen. Sie bräuchten Werbe-SDKs in der
+nativen App und würden genau die Zusagen brechen, die heute halten
+(Faktenprüfung 12). Der Trichter beginnt auf der Website.
+
+**Ebenfalls nicht:** Display, YouTube, Performance Max. Performance Max ist
+bei diesem Budget ungeeignet, weil es die Ausspielung verschleiert — man zahlt
 und lernt nichts.
 
 **App-Store-Optimierung** ist kein bezahlter Kanal und läuft unabhängig
@@ -337,7 +358,7 @@ Zeichen, Beschreibungen höchstens 90.
 | Bildschirmzeit verdienen | 24 | V1 |
 | Lernen statt Diskutieren | 24 | Abschnitt 2 |
 | Aufgaben lösen, Zeit sammeln | 28 | V1 |
-| 30 Tage kostenlos testen | 24 | V3 |
+| 4 Wochen kostenlos testen | 25 | V3 |
 | Ohne Zahlungsdaten starten | 26 | V3 |
 | 2,99 € im Monat | 15 | V4 |
 | Eltern legen die Regeln fest | 28 | V2 |
@@ -351,7 +372,7 @@ Zeichen, Beschreibungen höchstens 90.
 |---|---|
 | Dein Kind löst Schulaufgaben und verdient sich Bildschirmzeit. Du legst fest, wie viel. | 87 |
 | Pro richtiger Antwort gibt es Zeit. Standard sind 30 Sekunden, änderbar für jedes Fach. | 87 |
-| 30 Tage alle Funktionen kostenlos. Keine Zahlungsdaten nötig. Danach 2,99 € im Monat. | 85 |
+| 4 Wochen alle Funktionen kostenlos. Keine Zahlungsdaten nötig. Danach 2,99 € im Monat. | 86 |
 | Aufgaben passend zur Klassenstufe, Klasse 1 bis 10. Daten auf Servern in der EU. | 80 |
 
 ### Der Satz, der auf die Landingpage gehört, nicht in die Anzeige
@@ -371,15 +392,19 @@ bevor der erste Euro fließt.
 Ziel ist `/` mit dem bestehenden Landing-Aufbau. Zwei Bedingungen sind vor
 der ersten Schaltung zu erfüllen:
 
-1. **Der Widerspruch „4 Wochen" gegen „30 Tage" ist aufzulösen** (Abschnitt
-   12). Eine Anzeige, die 30 Tage verspricht, und eine Seite, die 4 Wochen
-   sagt, ist nicht nur unsauber — sie kostet Vertrauen genau an der Stelle,
-   an der es entsteht.
-2. **Die Datenschutzerklärung ist zu überarbeiten** (Faktenprüfung 12). Sie
-   sagt heute wörtlich, es seien keine Werbe-SDKs eingebunden und es würden
-   keine Daten zu Werbezwecken an Dritte weitergegeben. Google-Ads-Conversions
-   sind genau das Gegenteil. **Das ist der harte Blocker vor jedem
-   Budget.**
+1. **Die Datenschutzerklärung ist an vier Stellen zu präzisieren**
+   (Faktenprüfung 12, Entwurf in `docs/datenschutz-entwurf.md`). Es geht
+   nicht um die Werbefreiheit in der App — die bleibt wörtlich stehen und
+   bleibt wahr. Betroffen sind der ATT- und Tracking-Satz, die Cookie-Zusage,
+   die Dienstleisterliste und ein fehlendes Wort in der Kinder-Aufzählung.
+   **Das ist der Blocker vor jedem Budget** — nicht wegen des Umfangs,
+   sondern weil eine veröffentlichte Zusage nicht rückwirkend gebrochen
+   werden kann.
+2. **Ein Einwilligungsbanner muss stehen, bevor der erste Werbe-Tag lädt.**
+   Ohne Einwilligung darf kein Google- oder Meta-Tag ausgeführt werden, und
+   ohne Consent Mode v2 nimmt Google die Conversions in der EU ohnehin nicht
+   an. Das ist keine Kür, sondern die Voraussetzung dafür, dass die Messung
+   überhaupt funktioniert.
 
 ---
 
@@ -388,16 +413,20 @@ der ersten Schaltung zu erfüllen:
 Diese Punkte sind vor der ersten Schaltung zu entscheiden. Sie kommen aus der
 Faktenprüfung und sind hier mit dem konkret nötigen Schritt versehen.
 
-| # | Widerspruch | Nötiger Schritt |
-|---|---|---|
-| W1 | App sagt „4 Wochen", Datenbank gibt 30 Tage | Acht Textstellen auf „30 Tage" ändern: `AuthForm.tsx:853`, `SetupSteps.tsx:11`, `HeroSection.tsx:57`, `PricingComparison.tsx:52/55/93`, `GameCompletionScreen.tsx:78`, `Index.tsx:397/406`, `Start.tsx:51` |
-| W2 | „Höchstens 30 Minuten am Tag", am Wochenende sind es 60 | Entweder Text ändern (`ChildSettingsEditor.tsx:357`, `OnboardingNextStepCard.tsx:149`) oder Standard vereinheitlichen |
-| W3 | Datenschutzerklärung schließt Werbe-Tracking aus | Neu fassen, juristisch prüfen lassen — vor dem ersten Euro |
-| W4 | Store-Stände nicht überprüfbar (Netzwerksperre der Arbeitsumgebung) | Beide Store-Seiten selbst aufrufen, Version notieren |
-| W5 | Stripe-Beträge nicht gegengelesen (kein Stripe-Zugang in dieser Umgebung) | Einmal im Stripe-Konto prüfen, ob 2,99 € und 29,99 € hinterlegt sind |
+| # | Punkt | Nötiger Schritt | Art |
+|---|---|---|---|
+| W1 | Datenschutzerklärung deckt seitenübergreifendes Werbe-Tracking nicht ab | Vier Stellen neu fassen, juristisch prüfen lassen. Entwurf liegt in `docs/datenschutz-entwurf.md` | **Blocker** |
+| W2 | Kein Einwilligungsbanner vorhanden | CMP einbinden, Consent Mode v2 verdrahten, vor jedem Werbe-Tag | **Blocker** |
+| W3 | Store-Stände nicht überprüfbar (Netzsperre der Arbeitsumgebung) | Beide Store-Seiten selbst aufrufen, Version notieren | Kontrolle durch dich |
+| W4 | Stripe-Beträge nicht gegengelesen (kein Stripe-Zugang in dieser Umgebung) | Im Stripe-Konto prüfen, ob 2,99 € und 29,99 € hinterlegt sind | Kontrolle durch dich |
+| W5 | „Höchstens 30 Minuten am Tag" nennt den Wochenend-Standard nicht | Zwei Textstellen ergänzen: `ChildSettingsEditor.tsx:357`, `OnboardingNextStepCard.tsx:149` | optional, kosmetisch |
 
-W1 bis W3 sind Voraussetzung. W4 und W5 sind Kontrollen, die du selbst
-durchführen musst.
+W1 und W2 sind Voraussetzung. W3 und W4 sind Kontrollen, an die ich technisch
+nicht herankomme. W5 ist ein Vorschlag, keine Baustelle.
+
+**Nicht mehr auf dieser Liste:** die Testphasen-Formulierung. „4 Wochen"
+bleibt bewusst stehen (Faktenprüfung 1) und wird in der Werbung genauso
+verwendet.
 
 ---
 
