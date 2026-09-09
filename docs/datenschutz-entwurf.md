@@ -82,7 +82,9 @@ Zusage für Kinder bleibt vollständig.
 > fragt unter iOS daher auch keine „App Tracking Transparency"-Erlaubnis (ATT)
 > ab. Auf unserer Website lernzeit.app setzen wir — **nur mit Ihrer
 > Einwilligung** — Reichweiten- und Werbemessung ein; Einzelheiten in § 8a.
-> Für angemeldete Kinderkonten findet diese Messung nicht statt.
+> Für Kinderkonten findet diese Messung nicht statt: Wählt jemand bei der
+> Registrierung „Ich bin Kind" oder ist ein Kinderkonto angemeldet, werden
+> keine Daten an Werbeplattformen übermittelt.
 
 **Begründung:** Dies ist die einzige Stelle, an der die heutige Zusage
 tatsächlich bricht. Ein Google-Ads-Tag ist eine seitenübergreifende
@@ -234,6 +236,10 @@ Diese Punkte kann ich nicht beantworten. Sie gehören in die Prüfung:
    eine Datenschutz-Folgenabschätzung nötig, weil das Angebot Kinder betrifft?
 6. Sind Auftragsverarbeitungs- beziehungsweise Joint-Controller-Verträge mit
    Google und Meta abzuschließen, und wer schließt sie?
+7. Ein Kind kann lernzeit.app besuchen, ohne angemeldet zu sein — für die
+   Messung ist es dann ein anonymer Besucher wie jeder andere, weil sich vor
+   der Anmeldung technisch niemand unterscheiden lässt. Genügt das bei einem
+   Angebot, das sich auch an Kinder richtet? Siehe Abschnitt 7.
 
 ---
 
@@ -254,37 +260,43 @@ Schritt 5 vor Schritt 3 wäre der Verstoß selbst.
 
 ---
 
-## 7. Ein Befund, der diesen Entwurf betrifft
+## 7. Kinder auf der Website — entschieden und umgesetzt
 
-Beim Prüfen des eigenen Entwurfs ist mir aufgefallen, dass ich beinahe einen
-Satz hineingeschrieben hätte, der nicht stimmt. Er lautete: „Kinder nutzen die
-Website nicht: Der Kinderbereich ist ausschließlich über die App erreichbar."
+Beim Prüfen des Entwurfs war aufgefallen, dass die Trennung „App für Kinder,
+Website für Eltern" nicht trägt: In `src/components/auth/AuthForm.tsx:831`
+steht die Schaltfläche „Ich bin Kind" ohne jede Bedingung. Ein Kind kann sich
+über lernzeit.app registrieren und anmelden.
 
-**Das ist falsch.** In `src/components/auth/AuthForm.tsx:831–845` steht die
-Schaltfläche „Ich bin Kind" ohne jede Bedingung. Sie erscheint im Web genauso
-wie in der App. Ein Kind kann sich über lernzeit.app registrieren und anmelden.
-Der Satz ist aus dem Entwurf entfernt.
+**Entscheidung vom 09.09.2026:** Der Anmeldeweg bleibt, wie er ist — er ist
+gewollt (siehe Positionierung, Abschnitt 7.1: Kinder probieren die App aus und
+bitten danach die Eltern um Verknüpfung). Stattdessen wird die **Messung**
+ausgeschlossen.
 
-**Warum das mehr ist als ein Textfehler.** Die ganze Trennung aus Abschnitt 1
-— hier die App für Kinder, dort die Website für Eltern — ist nicht so sauber,
-wie sie sein müsste. Ein Werbe-Tag auf lernzeit.app kann grundsätzlich laden,
-während ein Kind angemeldet ist.
+**Umgesetzt in `src/lib/analytics.ts`:**
 
-**Drei Wege, in der Reihenfolge, in der ich sie empfehlen würde:**
+| | |
+|---|---|
+| Wo die Sperre sitzt | In `track()` — der einzigen Funktion, die nach `window.dataLayer` schreibt, und der dataLayer ist der einzige Weg zu GA4 und Google Ads. |
+| Wann sie greift | Wenn das Ereignis `role: 'child'` trägt (schon bei der Registrierung, bevor ein Profil existiert) **oder** die angemeldete Person ein Kinderprofil hat. |
+| Was bei Unklarheit passiert | Gesperrt. Eine verlorene Conversion kostet Messgenauigkeit; ein gemeldetes Kind kostet eine Zusage. |
+| Kontowechsel | Der Merkposten hängt an der Nutzer-ID. Meldet sich nach einem Kind ein Elternteil im selben Browser an, wird neu ermittelt statt fälschlich gesperrt. |
+| Nachprüfbar | `node scripts/test-analytics-audience.mjs` — acht Fälle, alle bestanden am 09.09.2026 |
 
-1. **Kinder-Registrierung im Web ausblenden**, Kinderkonten nur noch in der
-   nativen App anlegen. Dann stimmt die Trennung wirklich, und der ursprüngliche
-   Satz wäre richtig. Das ist ein kleiner Eingriff im Code, aber er ändert einen
-   Anmeldeweg — deine Entscheidung, nicht meine.
-2. **Werbe-Tags abschalten, sobald eine Kinder-Sitzung aktiv ist.** Technisch
-   machbar, aber es bleibt eine Regel im Code statt einer Eigenschaft des
-   Aufbaus. Wer sie später versehentlich entfernt, merkt es nicht.
-3. **So lassen und im Text offenlegen.** Am ehrlichsten und am wenigsten
-   belastbar — es hieße, dass Werbemessung auf Seiten stattfinden kann, die
-   auch Kinder sehen. Bei einem Angebot für Kinder ist das die Variante, die
-   eine Aufsichtsbehörde am kritischsten sehen dürfte.
+**Warum die Sperre in `track()` sitzt und nicht beim Aufrufer:** Eine Regel,
+die an dreißig Aufrufstellen eingehalten werden muss, wird irgendwann
+gebrochen — von jemandem, der sie nicht kennt. An einer Stelle, durch die
+alles hindurchmuss, kann sie nicht vergessen werden.
 
-**Diese Frage gehört mit in die anwaltliche Prüfung** und ist als Nummer 7
-zu den Fragen in Abschnitt 5 hinzuzurechnen. Sie ist der einzige Punkt in
-diesem Entwurf, der eine Produktentscheidung erzwingt statt nur eine
-Formulierung.
+**Was bleibt und bewusst bleibt:** Ereignisse von Kindern werden weiterhin in
+`analytics_events` (Supabase, EU) geschrieben. Das ist erste Partei — die
+Daten verlassen die eigene Infrastruktur nicht. Ohne sie gäbe es keinen
+eigenen Funnel-Bericht, weil Verknüpfung und erste Lernsitzung nun einmal auf
+der Kinderseite stattfinden. Wenn auch das entfallen soll, ist es eine
+Zeile — dann fehlen aber Z5 und Z6 aus der Positionierung.
+
+**Ein Rest bleibt offen und gehört in die anwaltliche Prüfung:** Besucht ein
+Kind lernzeit.app, ohne angemeldet zu sein, ist es für die Messung ein
+anonymer Besucher wie jeder andere. Technisch lässt sich das nicht
+unterscheiden — niemand weiß vor der Anmeldung, wer da liest. Ob das bei einem
+Angebot, das sich auch an Kinder richtet, ausreicht, kann ich nicht
+beurteilen; es ist Frage 7 in Abschnitt 5.

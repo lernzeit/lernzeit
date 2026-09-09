@@ -1,9 +1,14 @@
 /**
  * Zentrales Event-Tracking für den Funnel (Landingpage → erster Zeitantrag).
  *
- * - Schreibt jedes Event in die Tabelle `analytics_events` (Supabase)
- * - Spiegelt jedes Event zusätzlich in `window.dataLayer`, damit GA4 / Google Ads
+ * - Schreibt jedes Event in die Tabelle `analytics_events` (Supabase, EU) —
+ *   erste Partei, verlaesst unsere Infrastruktur nicht
+ * - Spiegelt Events zusätzlich in `window.dataLayer`, damit GA4 / Google Ads
  *   später ohne Codeänderung per Google Tag Manager angeklemmt werden können
+ * - NIEMALS gespiegelt werden Events von Kindern: siehe `isChildAudience`.
+ *   Der dataLayer ist der einzige Weg nach draussen; die erste Haelfte
+ *   (analytics_events) bleibt vollstaendig, damit der eigene Funnel-Bericht
+ *   weiter funktioniert.
  * - Wirft niemals einen Fehler nach außen: Tracking darf die App nie blockieren
  * - Funktioniert auf Web und nativ (Capacitor), `platform` wird korrekt gesetzt
  */
@@ -189,6 +194,60 @@ function getPagePath(): string | null {
 }
 
 /* ------------------------------------------------------------------ */
+/* Zielgruppe: Kinder werden nie an Werbeplattformen gemeldet          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Conversions duerfen ausschliesslich aus Elternkonten gemeldet werden — sie
+ * schliessen das Abo ab, und Kinderdaten gehen Google und Meta nichts an.
+ *
+ * Die Sperre sitzt bewusst HIER und nicht beim Aufrufer: `track()` ist der
+ * einzige Weg in den dataLayer, und der dataLayer ist der einzige Weg nach
+ * draussen. Wer spaeter ein neues Event ergaenzt, ist damit automatisch auf
+ * der sicheren Seite, ohne die Regel zu kennen.
+ *
+ * Zwei Wege fuehren zur Sperre:
+ *   1. Das Event sagt es selbst (`role: 'child'`) — greift schon bei der
+ *      Registrierung, bevor ein Profil existiert.
+ *   2. Die angemeldete Person hat ein Kinderprofil — einmal je Nutzer
+ *      abgefragt und gemerkt.
+ *
+ * Der Merkposten haengt an der Nutzer-ID. Meldet sich auf demselben Geraet
+ * spaeter ein Elternteil an, wird neu abgefragt statt faelschlich gesperrt.
+ */
+type Audience = 'parent' | 'child';
+
+let cachedAudience: { userId: string; audience: Audience } | null = null;
+
+function eventClaimsChild(properties: AnalyticsProperties): boolean {
+  return properties.role === 'child';
+}
+
+async function resolveAudience(userId: string | null): Promise<Audience | null> {
+  // Nicht angemeldet: noch niemand, dessen Rolle wir kennen koennten. Das ist
+  // der anonyme Besucher auf der Landingpage — genau der Fall, fuer den die
+  // Messung gedacht ist.
+  if (!userId) return null;
+  if (cachedAudience?.userId === userId) return cachedAudience.audience;
+
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    // Rolle unbekannt (Zeile fehlt, RLS greift, Netz weg): im Zweifel sperren.
+    // Eine verlorene Conversion kostet Messgenauigkeit, ein gemeldetes Kind
+    // kostet eine Zusage.
+    const audience: Audience = data?.role === 'parent' ? 'parent' : 'child';
+    cachedAudience = { userId, audience };
+    return audience;
+  } catch {
+    return 'child';
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* dataLayer (GA4 / Google Ads über GTM – später ohne Codeänderung)     */
 /* ------------------------------------------------------------------ */
 
@@ -224,14 +283,20 @@ export async function track(
     const pagePath = getPagePath();
     const anonymousId = getAnonymousId();
 
-    pushToDataLayer(eventName, { ...properties, platform, page_path: pagePath });
-
     let userId: string | null = null;
     try {
       const { data } = await supabase.auth.getSession();
       userId = data?.session?.user?.id ?? null;
     } catch {
       userId = null;
+    }
+
+    // Erst die Rolle klaeren, dann spiegeln. Vorher stand der Push oben und
+    // lief damit auch fuer Kinder — folgenlos nur so lange, wie kein GTM
+    // angeklemmt ist.
+    const audience = eventClaimsChild(properties) ? 'child' : await resolveAudience(userId);
+    if (audience !== 'child') {
+      pushToDataLayer(eventName, { ...properties, platform, page_path: pagePath });
     }
 
     const payload: AnalyticsEventInsert = {

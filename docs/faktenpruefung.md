@@ -196,9 +196,11 @@ Klasse 1 bis 10."
 | Anpassbare Tagesobergrenze | `ChildSettingsEditor.tsx:396`, in `PremiumFeature` gekapselt |
 | Erweiterte Lernanalyse | `ChildLearningAnalysis.tsx` |
 
-**Warnung zum KI-Lernplan:** Er ist die auffälligste Premium-Zusage, aber laut
-Nutzungsdaten praktisch ungenutzt (drei Pläne, ein Nutzer). Vor einer Anzeige,
-die ihn bewirbt, selbst mehrfach durchspielen.
+**Vorsicht beim KI-Lernplan:** Er ist die auffälligste Premium-Zusage und
+zugleich die am wenigsten erprobte — bisher nur vereinzelt durchgespielt, und
+das im internen Test. Das ist kein Nutzungsbefund (es hat noch nie Werbung
+gegeben, siehe Positionierung Abschnitt 0), sondern schlicht fehlende
+Erprobung. Vor einer Anzeige, die ihn bewirbt, selbst mehrfach durchspielen.
 
 ---
 
@@ -285,12 +287,13 @@ native App wandert, dann gilt:
 wären das Gegenteil — sie bräuchten SDKs in der App und würden genau die
 Sätze brechen, die heute halten. Deshalb: **keine App-Install-Kampagnen.**
 
-**Ein Befund aus dem Entwurf, der die saubere Trennung stört:** Die
-Schaltfläche „Ich bin Kind" in `AuthForm.tsx:831` steht ohne Bedingung — ein
-Kind kann sich auch über die Website registrieren. Die Trennung „App für
-Kinder, Website für Eltern" ist damit nicht so belastbar, wie sie sein
-müsste. Drei Auswege stehen in `docs/datenschutz-entwurf.md`, Abschnitt 7;
-der erste ist, die Kinder-Registrierung im Web auszublenden.
+**Kinder auf der Website — erledigt am 09.09.2026:** Die Schaltfläche „Ich bin
+Kind" in `AuthForm.tsx:831` steht ohne Bedingung; ein Kind kann sich auch über
+die Website registrieren. Das bleibt so, weil dieser Weg gewollt ist.
+Ausgeschlossen ist stattdessen die Messung: `src/lib/analytics.ts` spiegelt
+kein Ereignis eines Kindes nach `window.dataLayer` und damit auch nicht an
+Google oder Meta. Geprüft mit `node scripts/test-analytics-audience.mjs`,
+acht Fälle. Einzelheiten in `docs/datenschutz-entwurf.md`, Abschnitt 7.
 
 **Zu tun vor dem ersten Euro:** Entwurf in `docs/datenschutz-entwurf.md`,
 Prüfung durch eine Anwältin oder einen Anwalt, dann Umsetzung in
