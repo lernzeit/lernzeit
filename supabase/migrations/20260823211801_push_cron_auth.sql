@@ -34,7 +34,20 @@ SELECT cron.schedule(
 -- ersetzt, sondern einen zweiten gleichen Namens angelegt — der alte gehoert
 -- dem Rollennamen supabase_read_only_user, der neue postgres. Der alte
 -- (jobid 13) laeuft weiter in seinen 401 und verschickt dadurch nichts;
--- doppelte Benachrichtigungen entstehen also nicht. Entfernen laesst er sich
--- nur als Eigentuemer bzw. als Superuser im SQL-Editor:
+-- doppelte Benachrichtigungen entstehen also nicht.
+--
+-- Nachtrag 14.09.2026: Er laesst sich von hier aus NICHT entfernen, auch
+-- nicht ueber den SQL-Editor des Dashboards. Beide laufen als `postgres`,
+-- und pg_cron verlangt den Eigentuemer:
 --
 --   SELECT cron.unschedule(13);
+--     -> ERROR 42501: permission denied for table job
+--   SET ROLE supabase_read_only_user;
+--     -> ERROR 42501: permission denied to set role
+--   GRANT supabase_read_only_user TO postgres;
+--     -> ERROR 42501: role memberships are reserved, only superusers may grant
+--
+-- Damit bleibt nur der Supabase-Support. Solange der Auftrag steht, kostet er
+-- nichts ausser einer 401-Zeile je Stunde in net._http_response (am
+-- 14.09.2026 nachgesehen: 6 Fehlschlaege neben 9 erfolgreichen Antworten in
+-- 24 Stunden). Kein Push geht doppelt raus, keiner geht verloren.

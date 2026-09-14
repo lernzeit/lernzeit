@@ -103,12 +103,21 @@ workflows:
         # bringt eine Aenderung an MARKETING_VERSION in project.pbxproj nichts -
         # dieser Wert hier ist die einzige Quelle der Wahrheit.
         IOS_MARKETING_VERSION: "1.2.5"
-        # Schaltet die Werkbank fuer die Geraetesperre in den Kind-
-        # Einstellungen frei. NUR fuer Testbuilds — vor einer Store-
-        # Veroeffentlichung entfernen. Ohne diese Variable ist die Oberflaeche
-        # unsichtbar; wer die Sperre selbst aufheben kann, fuer den ist sie
-        # keine.
-        VITE_SCREENTIME_UI: "1"
+        # VITE_SCREENTIME_UI stand frueher hier fest auf "1" und schaltete die
+        # Werkbank fuer die Geraetesperre in den Kind-Einstellungen frei. Das
+        # ist genau der Workflow, der in den Store veroeffentlicht — die
+        # Werkbank waere also frueher oder spaeter mitgegangen, weil sich
+        # niemand vor der Einreichung daran erinnert.
+        #
+        # Die Variable steht deshalb nicht mehr in dieser Datei. Der
+        # Store-Build ist damit von sich aus sauber, ohne dass jemand etwas
+        # entfernen muss.
+        #
+        # Fuer einen Testbuild MIT Werkbank: in Codemagic unter
+        # Environment variables die Variable VITE_SCREENTIME_UI auf 1 setzen
+        # (Gruppe egal, Hauptsache fuer diesen Workflow sichtbar) und den Build
+        # starten. Vite liest VITE_*-Variablen beim Bauen aus der Umgebung,
+        # eine Codeaenderung ist nicht noetig. Nach dem Testen wieder abwaehlen.
       node: 22
       xcode: latest
       cocoapods: default
@@ -132,7 +141,13 @@ workflows:
           npm install @capacitor/ios@latest @capacitor/cli@latest
 
       - name: Build web app
-        script: npm run build
+        # VITE_SCREENTIME_UI wird hier NICHT gesetzt. Ist sie in den Codemagic-
+        # Umgebungsvariablen hinterlegt, erbt npm sie und die Werkbank ist
+        # sichtbar; ist sie es nicht, bleibt sie unsichtbar. Siehe Kommentar
+        # bei IOS_MARKETING_VERSION.
+        script: |
+          echo "Werkbank Geraetesperre: ${VITE_SCREENTIME_UI:-aus}"
+          npm run build
 
       - name: Prepare and Sync iOS platform
         script: |

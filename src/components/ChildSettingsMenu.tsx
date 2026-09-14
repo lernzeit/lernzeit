@@ -377,8 +377,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                 Werkbank fuer die Geraetesperre, absichtlich hinter einer
                 Build-Variablen. Sie waere sonst fuer jedes Kind erreichbar —
                 und wer die Sperre selbst aufheben kann, fuer den ist sie keine.
-                Zum Erproben in codemagic.yaml VITE_SCREENTIME_UI: "1" setzen,
-                vor einer Store-Veroeffentlichung wieder entfernen.
+                Zum Erproben VITE_SCREENTIME_UI=1 setzen: lokal in .env.local,
+                fuer einen Testbuild in den Codemagic-Umgebungsvariablen. NICHT
+                in codemagic.yaml — dort stand sie frueher fest und waere
+                irgendwann in den Store gegangen.
               */}
               {import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
             </>
