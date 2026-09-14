@@ -296,7 +296,7 @@ Kindes erreicht eine Werbeplattform:
   kostet Messgenauigkeit; ein gemeldetes Kind kostet eine Zusage.
 - Die Sperre sitzt in `track()`, nicht beim Aufrufer. Wer später ein neues
   Ereignis ergänzt, ist automatisch auf der sicheren Seite.
-- Nachprüfbar mit `node scripts/test-analytics-audience.mjs` (acht Fälle).
+- Nachprüfbar mit `node scripts/test-analytics.mjs` (acht Fälle).
 
 **Was weiterhin erfasst wird:** Die Tabelle `analytics_events` in Supabase
 (EU) bekommt auch Kinder-Ereignisse. Das ist erste Partei — die Daten
@@ -426,15 +426,41 @@ Ziel ist `/`. Zwei Bedingungen vor der ersten Schaltung:
 |---|---|---|---|
 | W1 | Datenschutzerklärung deckt seitenübergreifendes Werbe-Tracking nicht ab | Vier Stellen neu fassen, juristisch prüfen lassen. Entwurf in `docs/datenschutz-entwurf.md` | **Blocker** |
 | W2 | Kein Einwilligungsbanner vorhanden | CMP einbinden, Consent Mode v2 verdrahten | **Blocker** |
-| W3 | Attribution erfasst nur `gclid` | `gbraid`, `wbraid`, `fbclid`, `fbp`, `fbc` ergänzen (`analytics.ts`, `ATTRIBUTION_FIELDS`) | **Blocker** |
-| W4 | Keine automatische Löschung der Attributionsdaten | 90 Tage / 13 Monate, wie im Datenschutz-Entwurf zugesagt | **Blocker** |
+| ~~W3~~ | ~~Attribution erfasst nur `gclid`~~ | **Erledigt am 14.09.2026.** `gbraid`, `wbraid`, `fbclid`, `fbp`, `fbc` werden erfasst und in `ad_attribution` gespeichert | erledigt |
+| ~~W4~~ | ~~Keine automatische Löschung der Attributionsdaten~~ | **Erledigt am 14.09.2026.** `delete_after` je Zeile, täglicher Auftrag `ad-attribution-retention` um 03:30 | erledigt |
 | W5 | Store-Stände nicht überprüfbar (Netzsperre der Arbeitsumgebung) | Beide Store-Seiten selbst aufrufen | Kontrolle durch dich |
 | W6 | Stripe-Beträge nicht gegengelesen | Im Stripe-Konto prüfen, ob 2,99 € und 29,99 € hinterlegt sind | Kontrolle durch dich |
 | W7 | „Höchstens 30 Minuten am Tag" nennt den Wochenend-Standard nicht | Zwei Textstellen ergänzen | optional |
 
-W3 ist neu und leicht zu übersehen: Ohne `gbraid` und `wbraid` fehlt die
-Zuordnung für einen Teil der Klicks von iOS-Geräten — also genau dort, wo die
-Zielgruppe sitzt.
+W3 und W4 sind erledigt (Abschnitt 12a). Es bleiben zwei Blocker, und beide
+brauchen jemanden außerhalb dieser Arbeitsumgebung: die anwaltliche Prüfung
+und ein Einwilligungsbanner.
+
+### 12a. Was am 14.09.2026 gebaut wurde
+
+**Tabelle `ad_attribution`.** Eine Zeile je Anzeigenklick, anonym angelegt.
+Erfasst werden `gclid`, `gbraid`, `wbraid` (Google), `fbclid`, `fbp`, `fbc`
+(Meta) sowie die UTM-Felder, der Verweis und die Landeseite.
+
+`gbraid` und `wbraid` sind der Grund, warum es diese Erweiterung überhaupt
+braucht: Sie treten bei Google an die Stelle von `gclid`, wenn auf iOS keine
+Einwilligung für geräteübergreifende Messung vorliegt. Wer nur `gclid`
+erfasst, verliert genau die Klicks, die aus der Zielgruppe kommen.
+
+**Die Löschfrist ist ein Wert, keine Absicht.** Jede Zeile trägt
+`delete_after` — beim Anlegen 90 Tage, bei einer Anmeldung 13 Monate. Der
+tägliche Auftrag `ad-attribution-retention` löscht, was abgelaufen ist.
+Geprüft: Von zwei Testzeilen hat er genau die abgelaufene entfernt.
+
+**Kinder hinterlassen keinen Werbedatensatz.** Meldet sich nach einem Klick
+ein Kinderkonto an, wird die Zeile gelöscht statt verknüpft — nicht nur nicht
+gemeldet. Die Rolle wird zweimal geprüft: im Browser (`analytics.ts`) und in
+der Datenbank (`link_ad_attribution` weist alles ab, was nicht `parent` ist).
+Wer die eine Sperre umgeht, steht vor der anderen.
+
+**Was noch fehlt** und erst nach dem Einwilligungsbanner Sinn ergibt: der
+Versand der Conversions an Google und Meta. Die Spalte `reported_at` und der
+zugehörige Index sind dafür schon angelegt.
 
 ---
 

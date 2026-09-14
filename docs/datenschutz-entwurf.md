@@ -192,11 +192,16 @@ Dieser Abschnitt ist neu. Er beschreibt genau das, was die Technik tun wird.
 > Übermittlung in die USA erfolgt auf Grundlage der Standardvertragsklauseln
 > und, soweit einschlägig, des EU-US Data Privacy Framework.
 
-**Achtung, diese Zusagen sind technisch bindend.** Die Speicherfristen von 90
-Tagen und 13 Monaten stehen bisher **nirgends im Code**. Sie werden mit dem
-Aufbau der Attributionstabelle als automatische Löschung umgesetzt. Wird der
-Abschnitt veröffentlicht, bevor die Löschung existiert, ist er eine
-unzutreffende Angabe. **Reihenfolge: erst Löschjob, dann Veröffentlichung.**
+**Diese Zusagen sind technisch bindend — und seit dem 14.09.2026 gedeckt.**
+Die Speicherfristen stehen nicht mehr nur hier, sondern in der Tabelle
+`ad_attribution`: Jede Zeile trägt eine Spalte `delete_after` (90 Tage beim
+Anlegen, 13 Monate ab einer Anmeldung), und der tägliche Auftrag
+`ad-attribution-retention` löscht, was abgelaufen ist. Geprüft: Von zwei
+Testzeilen wurde genau die abgelaufene entfernt.
+
+Ändert jemand die Fristen im Text, müssen die Vorgabewerte der Spalte
+mitgeändert werden — sonst sagt dieser Abschnitt wieder etwas anderes als die
+Datenbank tut.
 
 ---
 
@@ -209,9 +214,9 @@ Die Datenschutzerklärung beschreibt Verhalten. Dieses Verhalten muss es geben.
 | 1 | **Einwilligungsbanner (CMP).** Vor der Einwilligung lädt kein Werbe-Tag. Nicht vorausgewählt, Ablehnen genauso leicht wie Zustimmen. |
 | 2 | **Consent Mode v2.** Ohne ihn nimmt Google Conversions aus der EU ohnehin nicht an — das Banner ist also nicht nur Pflicht, sondern Voraussetzung dafür, dass die Messung funktioniert. |
 | 3 | **Widerruf im Seitenfuß.** Ein Link „Cookie-Einstellungen", der die Auswahl erneut öffnet. |
-| 4 | **Automatische Löschung** nach 90 Tagen beziehungsweise 13 Monaten in der Attributionstabelle. |
+| ~~4~~ | ~~Automatische Löschung nach 90 Tagen beziehungsweise 13 Monaten~~ — **erledigt**, Spalte `delete_after` und Auftrag `ad-attribution-retention`. |
 | 5 | **Hashing serverseitig.** Die E-Mail wird in der Edge Function zu SHA-256 verarbeitet und verlässt die Datenbank nie im Klartext Richtung Google oder Meta. |
-| 6 | **Filter auf Elternkonten.** Eine Conversion wird ausschließlich für `role = 'parent'` gemeldet. Technisch erzwungen, nicht per Konvention. |
+| ~~6~~ | ~~Filter auf Elternkonten~~ — **erledigt**, zweifach: `analytics.ts` im Browser und `link_ad_attribution` in der Datenbank. |
 | 7 | **Werbe-Tags aus, sobald ein Kinderkonto angemeldet ist.** Siehe Abschnitt 7 — dies ist der offene Punkt mit den größten Folgen. |
 
 ---
@@ -280,7 +285,7 @@ ausgeschlossen.
 | Wann sie greift | Wenn das Ereignis `role: 'child'` trägt (schon bei der Registrierung, bevor ein Profil existiert) **oder** die angemeldete Person ein Kinderprofil hat. |
 | Was bei Unklarheit passiert | Gesperrt. Eine verlorene Conversion kostet Messgenauigkeit; ein gemeldetes Kind kostet eine Zusage. |
 | Kontowechsel | Der Merkposten hängt an der Nutzer-ID. Meldet sich nach einem Kind ein Elternteil im selben Browser an, wird neu ermittelt statt fälschlich gesperrt. |
-| Nachprüfbar | `node scripts/test-analytics-audience.mjs` — acht Fälle, alle bestanden am 09.09.2026 |
+| Nachprüfbar | `node scripts/test-analytics.mjs` — acht Fälle, alle bestanden am 09.09.2026 |
 
 **Warum die Sperre in `track()` sitzt und nicht beim Aufrufer:** Eine Regel,
 die an dreißig Aufrufstellen eingehalten werden muss, wird irgendwann

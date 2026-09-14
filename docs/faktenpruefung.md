@@ -292,7 +292,7 @@ Kind" in `AuthForm.tsx:831` steht ohne Bedingung; ein Kind kann sich auch über
 die Website registrieren. Das bleibt so, weil dieser Weg gewollt ist.
 Ausgeschlossen ist stattdessen die Messung: `src/lib/analytics.ts` spiegelt
 kein Ereignis eines Kindes nach `window.dataLayer` und damit auch nicht an
-Google oder Meta. Geprüft mit `node scripts/test-analytics-audience.mjs`,
+Google oder Meta. Geprüft mit `node scripts/test-analytics.mjs`,
 acht Fälle. Einzelheiten in `docs/datenschutz-entwurf.md`, Abschnitt 7.
 
 **Zu tun vor dem ersten Euro:** Entwurf in `docs/datenschutz-entwurf.md`,

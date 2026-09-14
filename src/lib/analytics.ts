@@ -42,6 +42,8 @@ export type AnalyticsEventName =
 
 const ANON_ID_KEY = 'lernzeit_anonymous_id';
 const ATTRIBUTION_KEY = 'lernzeit_attribution';
+const AD_CLICK_KEY = 'lernzeit_ad_click';
+const AD_LINKED_KEY = 'lernzeit_ad_linked';
 
 export interface Attribution {
   utm_source?: string | null;
@@ -194,6 +196,129 @@ function getPagePath(): string | null {
 }
 
 /* ------------------------------------------------------------------ */
+/* Anzeigenklicks (ad_attribution)                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Die Kennungen, an denen eine Werbeplattform ihren eigenen Klick
+ * wiedererkennt. Sie liegen NICHT in analytics_events, sondern in der Tabelle
+ * `ad_attribution` — als einziges Datum im Projekt haben sie eine zugesagte
+ * Loeschfrist (90 Tage ohne Anmeldung, 13 Monate mit), und die laesst sich nur
+ * dort sauber durchsetzen.
+ *
+ * `gbraid` und `wbraid` treten bei Google an die Stelle von `gclid`, wenn auf
+ * iOS keine Einwilligung fuer geraeteuebergreifende Messung vorliegt. Wer nur
+ * `gclid` erfasst, verliert genau die Klicks, die aus der Zielgruppe kommen.
+ *
+ * `fbp` und `fbc` stehen nicht in der Adresse, sondern in Cookies, die das
+ * Meta-Pixel setzt. Sie werden deshalb aus `document.cookie` gelesen — ist
+ * kein Pixel geladen (heute der Fall), bleiben sie leer.
+ */
+const AD_CLICK_PARAMS = ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const;
+
+type AdClick = Record<string, string | null>;
+
+function readCookie(name: string): string | null {
+  try {
+    if (typeof document === 'undefined' || !document.cookie) return null;
+    const treffer = document.cookie
+      .split(';')
+      .map((teil) => teil.trim())
+      .find((teil) => teil.startsWith(`${name}=`));
+    return treffer ? decodeURIComponent(treffer.slice(name.length + 1)).slice(0, 200) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Liest die Klick-Kennungen aus Adresse und Cookies und legt genau EINE Zeile
+ * je Klick an.
+ *
+ * Der Merkposten im localStorage verhindert, dass ein Neuladen derselben
+ * Adresse — oder ein zurueckgeklickter Verlauf — denselben Klick mehrfach
+ * einträgt. Ein spaeterer Klick auf eine andere Anzeige traegt eine andere
+ * Kennung und wird deshalb als neue Zeile gezaehlt; beim Zuordnen gewinnt die
+ * juengste.
+ */
+export function captureAdClick(): void {
+  try {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const klick: AdClick = {};
+    for (const name of AD_CLICK_PARAMS) {
+      const wert = params.get(name);
+      if (wert) klick[name] = wert.slice(0, 200);
+    }
+    if (Object.keys(klick).length === 0) return;
+
+    const kennung = JSON.stringify(klick);
+    if (readLocal(AD_CLICK_KEY) === kennung) return;
+    writeLocal(AD_CLICK_KEY, kennung);
+
+    const attribution = getAttribution();
+    void supabase
+      .from('ad_attribution')
+      .insert({
+        anonymous_id: getAnonymousId(),
+        gclid: klick.gclid ?? null,
+        gbraid: klick.gbraid ?? null,
+        wbraid: klick.wbraid ?? null,
+        fbclid: klick.fbclid ?? null,
+        fbp: readCookie('_fbp'),
+        fbc: readCookie('_fbc'),
+        utm_source: attribution.utm_source ?? null,
+        utm_medium: attribution.utm_medium ?? null,
+        utm_campaign: attribution.utm_campaign ?? null,
+        utm_content: attribution.utm_content ?? null,
+        utm_term: attribution.utm_term ?? null,
+        referrer: attribution.referrer ?? null,
+        landing_path: getPagePath(),
+      })
+      .then(({ error }) => {
+        if (error && import.meta.env?.DEV) {
+          console.warn('[analytics] ad_attribution insert failed', error.message);
+        }
+      });
+  } catch {
+    /* Tracking darf die App nie blockieren. */
+  }
+}
+
+/**
+ * Verbindet den Klick mit dem Konto — oder loescht ihn.
+ *
+ * Elternkonto: einmal je Konto verknuepfen. Der Merkposten enthaelt die
+ * Nutzer-ID, damit ein zweites Konto im selben Browser erneut verknuepft wird.
+ *
+ * Kinderkonto: die Spur wird geloescht, nicht nur nicht verknuepft. Ein Kind
+ * hinterlaesst keinen Werbedatensatz, auch keinen anonymen.
+ *
+ * Die Datenbank prueft die Rolle ein zweites Mal (link_ad_attribution). Zwei
+ * Sperren an zwei Orten: Wer die eine umgeht, steht vor der anderen.
+ */
+async function resolveAdClick(userId: string | null, audience: Audience | null): Promise<void> {
+  try {
+    if (!readLocal(AD_CLICK_KEY)) return;
+    const anonymousId = getAnonymousId();
+
+    if (audience === 'child') {
+      writeLocal(AD_CLICK_KEY, '');
+      await supabase.rpc('forget_ad_attribution', { p_anonymous_id: anonymousId });
+      return;
+    }
+
+    if (audience !== 'parent' || !userId) return;
+    if (readLocal(AD_LINKED_KEY) === userId) return;
+    writeLocal(AD_LINKED_KEY, userId);
+    await supabase.rpc('link_ad_attribution', { p_anonymous_id: anonymousId });
+  } catch {
+    /* Tracking darf die App nie blockieren. */
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Zielgruppe: Kinder werden nie an Werbeplattformen gemeldet          */
 /* ------------------------------------------------------------------ */
 
@@ -295,6 +420,7 @@ export async function track(
     // lief damit auch fuer Kinder — folgenlos nur so lange, wie kein GTM
     // angeklemmt ist.
     const audience = eventClaimsChild(properties) ? 'child' : await resolveAudience(userId);
+    void resolveAdClick(userId, audience);
     if (audience !== 'child') {
       pushToDataLayer(eventName, { ...properties, platform, page_path: pagePath });
     }
@@ -342,6 +468,7 @@ export function initAnalytics(): void {
   try {
     captureAttribution();
     getAnonymousId();
+    captureAdClick();
   } catch {
     /* ignore */
   }

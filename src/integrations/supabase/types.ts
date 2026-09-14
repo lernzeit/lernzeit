@@ -53,6 +53,105 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_attribution: {
+        Row: {
+          anonymous_id: string
+          converted_at: string | null
+          created_at: string
+          delete_after: string
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          gbraid: string | null
+          gclid: string | null
+          id: string
+          landing_path: string | null
+          referrer: string | null
+          reported_at: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          wbraid: string | null
+        }
+        Insert: {
+          anonymous_id: string
+          converted_at?: string | null
+          created_at?: string
+          delete_after?: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          id?: string
+          landing_path?: string | null
+          referrer?: string | null
+          reported_at?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          wbraid?: string | null
+        }
+        Update: {
+          anonymous_id?: string
+          converted_at?: string | null
+          created_at?: string
+          delete_after?: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          id?: string
+          landing_path?: string | null
+          referrer?: string | null
+          reported_at?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          wbraid?: string | null
+        }
+        Relationships: []
+      }
+      ads_agent_logs: {
+        Row: {
+          command: string
+          created_at: string
+          details: Json
+          id: string
+          level: string
+          message: string
+          platform: string
+        }
+        Insert: {
+          command: string
+          created_at?: string
+          details?: Json
+          id?: string
+          level?: string
+          message: string
+          platform?: string
+        }
+        Update: {
+          command?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          level?: string
+          message?: string
+          platform?: string
+        }
+        Relationships: []
+      }
       ai_model_config: {
         Row: {
           created_at: string
@@ -1445,6 +1544,24 @@ export type Database = {
           },
         ]
       }
+      signup_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          origin_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          origin_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          origin_hash?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -1716,6 +1833,10 @@ export type Database = {
       }
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
+      forget_ad_attribution: {
+        Args: { p_anonymous_id: string }
+        Returns: undefined
+      }
       generate_invitation_code: { Args: never; Returns: string }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_ai_latency_summary: {
@@ -1788,7 +1909,12 @@ export type Database = {
         Returns: boolean
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
+      link_ad_attribution: {
+        Args: { p_anonymous_id: string }
+        Returns: undefined
+      }
       link_referral: { Args: { p_code: string }; Returns: Json }
+      purge_ad_attribution: { Args: never; Returns: number }
       set_child_platform: {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined
@@ -1884,12 +2010,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1913,11 +2039,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1938,11 +2064,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1963,11 +2089,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1980,11 +2106,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
