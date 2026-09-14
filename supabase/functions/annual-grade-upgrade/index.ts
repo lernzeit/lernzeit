@@ -16,6 +16,40 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Genau ein Lauf je Kalenderjahr.
+    //
+    // Diese Funktion erhoeht bei jedem Aufruf JEDE Klasse um eins und merkte
+    // sich bis September 2026 nicht, dass sie schon gelaufen war. Ein zweiter
+    // Aufruf — ein Wiederholungsversuch, ein manuelles Nachholen neben dem
+    // cron-Auftrag — setzte jedes Kind zwei Stufen hoch. Auffallen wuerde das
+    // erst an zu schweren Aufgaben, und dann waere die Ursache nicht mehr zu
+    // erkennen.
+    //
+    // claim_annual_job belegt das Jahr in einem Rutsch (INSERT ... ON CONFLICT
+    // mit Jahresvergleich) und meldet nur dem ersten Aufrufer `true`. Zwischen
+    // Nachsehen und Eintragen bleibt damit keine Luecke.
+    const jahr = new Date().getFullYear()
+    const { data: darfLaufen, error: claimError } = await supabase
+      .rpc('claim_annual_job', { p_job_name: 'annual-grade-upgrade', p_year: jahr })
+
+    if (claimError) {
+      console.error('❌ Jahresbelegung fehlgeschlagen:', claimError)
+      throw claimError
+    }
+
+    if (!darfLaufen) {
+      console.log(`ℹ️ Klassenwechsel ${jahr} lief bereits — kein zweiter Durchlauf.`)
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Klassenwechsel ${jahr} lief bereits`,
+          updated: 0,
+          skipped: true
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
     console.log('🎓 Jährlicher Klassenwechsel gestartet...')
 
     // Hole alle Profile von Kindern (role = 'child')
