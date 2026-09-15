@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "verify-claims": "node scripts/verify-claims.mjs",
-    "test:analytics": "node scripts/test-analytics.mjs"
+    "test:analytics": "node scripts/test-analytics.mjs",
+    "test:edge": "node scripts/test-edge-functions.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
