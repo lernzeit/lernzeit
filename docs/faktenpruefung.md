@@ -303,8 +303,31 @@ Prüfung durch eine Anwältin oder einen Anwalt, dann Umsetzung in
 
 ## Wie diese Prüfung wiederholt wird
 
-Sie ist heute von Hand gemacht. Der Befehl `npm run agent -- verify-claims`
-kommt in einer späteren Phase und automatisiert die Zeilen, die sich
-automatisieren lassen (1, 2, 3, 4, 5, 8, 10, 11). Die Store-Zeilen (6, 7)
-bleiben manuell, solange das Netzwerk der Arbeitsumgebung die Store-Abfragen
-blockiert.
+**Seit dem 15.09.2026 automatisch, soweit es geht:**
+
+```
+npm run verify-claims
+```
+
+Der Befehl prüft die Zeilen 1, 2, 3, 4, 5, 8 und 10 gegen Code und Datenbank
+und endet mit einem Fehler, sobald eine davon nicht mehr stimmt.
+
+Zwei Hälften:
+
+- **Code-Prüfungen** laufen immer: Preise aus `pricing.ts`, die Fächer-Tabelle
+  aus `SUBJECT_GRADE_CONSTRAINTS`, und ob irgendwo „30 Tage" statt „4 Wochen"
+  steht (Anzeige und Zielseite müssen dasselbe sagen, sonst beanstandet Google
+  es).
+- **Datenbank-Prüfungen** brauchen `SUPABASE_URL` und
+  `SUPABASE_SERVICE_ROLE_KEY`. Sie holen die Werte über die Funktion
+  `claim_facts()` aus dem Systemkatalog — Vorgabewerte von Spalten und den
+  Quelltext von `handle_new_user`, nicht aus einer Kopie.
+
+Fehlen die Zugangsdaten, werden diese Zeilen als **übersprungen** gemeldet,
+nicht als bestanden. Ein übersprungener Test, der wie ein bestandener
+aussieht, ist schlimmer als gar keiner.
+
+**Nicht automatisierbar und deshalb nicht enthalten:** die Store-Stände
+(Zeilen 6 und 7, das Netz der Arbeitsumgebung blockiert die Abfragen) und der
+bei Stripe hinterlegte Betrag (Zeile 5, zweite Hälfte). Beides braucht einen
+Menschen.

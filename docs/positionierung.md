@@ -458,6 +458,21 @@ gemeldet. Die Rolle wird zweimal geprüft: im Browser (`analytics.ts`) und in
 der Datenbank (`link_ad_attribution` weist alles ab, was nicht `parent` ist).
 Wer die eine Sperre umgeht, steht vor der anderen.
 
+**Am 15.09.2026 dazugekommen:**
+
+- **Der Trichter ist messbar.** Die Sichten `ads_funnel_summary` und
+  `ads_klicks_offen` zeigen je Kampagne: Anmeldung → Kind verknüpft → erste
+  Lernsitzung → zahlendes Abo. Das sind genau Z4 bis Z7, gezählt an den
+  eigenen Daten statt an Googles Schätzung — Google kennt die Verknüpfung mit
+  dem Kind nicht.
+- **Der Notaus ist beschrieben und halb gebaut.** `ad_settings.tags_enabled`
+  schaltet die Tags ohne neues Build ab; die eigentliche Ausgabenbremse sind
+  Tagesbudget und Kontobudget im Google-Ads-Konto. Beide Hälften und ihre
+  Reihenfolge stehen in `docs/werbung-notaus.md`.
+- **Die Faktenprüfung läuft per Befehl.** `npm run verify-claims` vergleicht
+  sieben der vierzehn Zeilen mit Code und Datenbank und schlägt fehl, sobald
+  eine nicht mehr stimmt.
+
 **Was noch fehlt** und erst nach dem Einwilligungsbanner Sinn ergibt: der
 Versand der Conversions an Google und Meta. Die Spalte `reported_at` und der
 zugehörige Index sind dafür schon angelegt.

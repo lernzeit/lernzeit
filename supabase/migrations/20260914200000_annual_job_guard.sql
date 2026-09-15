@@ -64,3 +64,18 @@ insert into public.annual_job_runs (job_name, last_run_year, note)
 values ('annual-grade-upgrade', 2025,
         'Lauf 2026 ist ausgefallen (cron schickte den anon-Schluessel, 401). Nachholen offen.')
 on conflict (job_name) do nothing;
+
+-- Nachtrag 15.09.2026: Entschieden, den ausgefallenen Lauf NICHT nachzuholen.
+-- 46 Kinderprofile stammten von vor dem 01.08.2026 und stuenden eine Stufe zu
+-- niedrig, 20 wurden seither angelegt und sind richtig; ein pauschaler Lauf
+-- ueber alle waere heute falsch gewesen. Eltern korrigieren die Klassenstufe
+-- selbst in den Kind-Einstellungen.
+--
+-- Der Merkposten bleibt deshalb auf 2025 stehen. Das ist Absicht: Der
+-- regulaere Lauf am 01.08.2027 findet ein aelteres Jahr vor und laeuft
+-- normal.
+update public.annual_job_runs
+   set note = 'Lauf 2026 ist ausgefallen (cron schickte den anon-Schluessel, 401). '
+              'Entscheidung vom 15.09.2026: NICHT nachgeholt, Eltern korrigieren die '
+              'Klassenstufe selbst. Der Lauf 2027 am 01.08. ist davon unberuehrt.'
+ where job_name = 'annual-grade-upgrade';
