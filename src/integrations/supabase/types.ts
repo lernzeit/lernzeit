@@ -1589,6 +1589,27 @@ export type Database = {
           },
         ]
       }
+      shield_attempts: {
+        Row: {
+          attempted_at: string
+          child_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          attempted_at: string
+          child_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          attempted_at?: string
+          child_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       signup_attempts: {
         Row: {
           created_at: string
@@ -2009,6 +2030,7 @@ export type Database = {
       is_premium: { Args: { user_id: string }; Returns: boolean }
       link_referral: { Args: { p_code: string }; Returns: Json }
       purge_ad_attribution: { Args: never; Returns: number }
+      purge_shield_attempts: { Args: never; Returns: number }
       set_child_platform: {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined

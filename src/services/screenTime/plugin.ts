@@ -75,5 +75,22 @@ export async function screenTimeStatus(): Promise<ShieldStatus> {
   }
 }
 
+/**
+ * Holt die Drücke auf „Eltern fragen“ vom Sperrbildschirm ab und leert dabei
+ * die Liste auf dem Gerät.
+ *
+ * Auf Web und Android gibt es keinen Sperrbildschirm — dann eine leere Liste
+ * statt eines Fehlers, damit der Aufrufer nicht plattformabhängig verzweigen
+ * muss.
+ */
+export async function screenTimePendingRequests(): Promise<{ requestedAt: string[] }> {
+  if (!screenTimeSupportedPlatform()) return { requestedAt: [] };
+  try {
+    return await ScreenTime.pendingShieldRequests();
+  } catch {
+    return { requestedAt: [] };
+  }
+}
+
 export type { ReleaseResult, ShieldStatus };
 export { ScreenTime };

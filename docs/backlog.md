@@ -21,17 +21,11 @@ Der Vertrag sieht den Modus schon vor (`UnlockMode = 'all' | 'selected'` in
 *Zurückgestellt am 20.09.2026:* erst soll das Bestehende getestet werden.
 Braucht keine neuen Apple-Identifier.
 
-### „Eltern fragen" sichtbar machen
+### ~~„Eltern fragen" sichtbar machen~~ — erledigt am 20.09.2026
 
-Der Knopf auf dem Sperrbildschirm merkt sich den Druck, und
-`pendingShieldRequests()` holt ihn ab — **aber nichts in der Oberfläche ruft
-das auf.** Die Daten werden gesammelt und niemandem gezeigt.
-
-Fehlt: Abholen beim App-Start und eine Anzeige im Eltern-Dashboard („Klara
-hat heute dreimal um Zeit gebeten").
-
-*Nicht zurückgestellt, sondern noch nicht fertig.* Der halbe Weg ist
-ausgeliefert, weil der Rest ohne einen weiteren Build nichts gebracht hätte.
+Der Weg ist geschlossen: Das Kindgerät holt die Drücke beim App-Start ab
+(`useSyncShieldAttempts`), schreibt sie nach `shield_attempts`, und das
+Eltern-Dashboard zeigt sie über den Anträgen an.
 
 ---
 

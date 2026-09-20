@@ -42,6 +42,7 @@ import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 import { StreakFireCard } from '@/components/StreakFireCard';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
+import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 
 interface UserProfileProps {
   user: any;
@@ -121,6 +122,11 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
     // Eltern werden erst beim Teilen des Einladungslinks gefragt (besserer Kontext).
     autoPrompt: profile?.role !== 'parent',
   });
+
+  // Drücke auf „Eltern fragen“ am Sperrbildschirm einsammeln. Läuft nur auf
+  // dem Gerät des Kindes — dort liegen sie in der App Group, und nur LernZeit
+  // selbst kann sie weitergeben.
+  useSyncShieldAttempts(user?.id, profile?.role === 'child');
 
   // Check for parent-child relationship
   const checkParentLink = async () => {

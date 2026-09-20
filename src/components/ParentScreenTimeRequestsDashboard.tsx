@@ -13,6 +13,7 @@ import { useChildPlatforms } from '@/hooks/useChildPlatforms';
 import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
 import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
+import { ShieldAttemptsNotice } from '@/components/ShieldAttemptsNotice';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
@@ -202,6 +203,12 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Versuche am Sperrbildschirm. Steht ueber den Antraegen, weil es die
+            Lage beschreibt und nicht eine Entscheidung verlangt: Ein Druck auf
+            "Eltern fragen" nennt keine Minuten und laesst sich nicht
+            genehmigen. */}
+        <ShieldAttemptsNotice parentId={userId} />
+
         {/* Pending Requests - Prominent Display */}
         {pendingRequests.length > 0 ? (
           <div className="space-y-3">
