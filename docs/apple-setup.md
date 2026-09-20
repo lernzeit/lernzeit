@@ -1,7 +1,7 @@
 # Apple-Einrichtung für die Gerätesperre
 
 **Wer das machen muss: du. Es geht nicht anders — der Grund steht unten.**
-**Wie lange es dauert: etwa fünf Minuten.**
+**Wie lange es dauert: etwa zehn Minuten für alles, fünf für die erste Hälfte.**
 
 ---
 
@@ -39,21 +39,33 @@ es so wenig wie möglich ist.
 
 ---
 
-## Was ich weggelassen habe, um dir Arbeit zu sparen
+## Umfang
 
-Ursprünglich hatte ich **drei** App-IDs und eine App Group genannt. Das war
-der vollständige Ausbau. Für die erste Scheibe reicht **eine** App-ID:
+Du hast gesagt, du legst gleich alles an. Dann ist das hier die vollständige
+Liste — **vier App-IDs, eine App Group, vier Profile.**
 
-| Erweiterung | Wofür | jetzt? |
+Wenn die Zeit knapp wird: Schritt 1 bis 5 reichen für die erste Scheibe. Die
+Schritte 6 und 7 sind der eigene Sperrbildschirm; ohne sie zeigt iOS seinen
+grauen Standard, die Sperre selbst funktioniert trotzdem.
+
+| Erweiterung | Wofür | Schritt |
 |---|---|---|
-| `DeviceActivityMonitor` | Sperrt die Apps wieder, wenn die verdiente Zeit abgelaufen ist | **ja** |
-| `ShieldConfiguration` | Eigener Sperrbildschirm im LernZeit-Aussehen statt Apples grauem Standard | später |
-| `ShieldAction` | Der Knopf „Zeit beantragen" auf diesem Sperrbildschirm | später |
+| `DeviceActivityMonitor` | Sperrt die Apps wieder, wenn die verdiente Zeit abgelaufen ist | 3 |
+| `ShieldConfiguration` | Sperrbildschirm im LernZeit-Aussehen statt Apples grauem | 6 |
+| `ShieldAction` | Der Knopf „Zeit beantragen" auf diesem Sperrbildschirm | 7 |
 
-Die beiden letzten sind Aussehen und Bequemlichkeit. Ohne sie zeigt iOS seinen
-eigenen Sperrbildschirm — unschön, aber die Sperre funktioniert. **Der
-eigentliche Nutzen steckt in der ersten Zeile**: Ohne sie läuft die verdiente
-Zeit ab, ohne dass sich etwas ändert.
+---
+
+## Der eine Stolperstein, vorweg
+
+**Sobald du in Schritt 2 die App Group zur Haupt-App hinzufügst, wird das
+bestehende Provisioning-Profil `delernzeitapp_App_Store` ungültig.** Apple
+zeigt es danach als *Invalid* an.
+
+Das ist kein Fehler, sondern Apples normales Verhalten: Ändert sich eine
+App-ID, passen die alten Profile nicht mehr dazu. **Es muss neu erzeugt und
+bei Codemagic hochgeladen werden** — sonst scheitert der nächste iOS-Build.
+Das ist Schritt 8, und er ist der wichtigste in dieser Liste.
 
 ---
 
@@ -72,18 +84,20 @@ Alles unter <https://developer.apple.com/account/resources>.
 
 → *Continue* → *Register*
 
-*Wozu:* Hauptapp und Erweiterung sind zwei getrennte Prozesse. Sie können
-Daten nur über eine App Group austauschen — die Erweiterung muss wissen,
-welche Apps gesperrt werden sollen.
+*Wozu:* Hauptapp und Erweiterungen sind getrennte Prozesse. Sie können Daten
+nur über eine App Group austauschen — die Erweiterung muss wissen, welche Apps
+gesperrt werden sollen.
 
 ### 2. App Group zur bestehenden App-ID hinzufügen
 
 *Identifiers* → `de.lernzeit.app` anklicken → Häkchen bei **App Groups** →
 *Edit* → `group.de.lernzeit.app` auswählen → *Continue* → *Save*
 
-**Family Controls bleibt dort gesetzt.** Nicht abwählen.
+**Family Controls bleibt gesetzt.** Nicht abwählen.
 
-### 3. Neue App-ID für die Erweiterung
+*Ab hier ist das alte Profil ungültig. Siehe Schritt 8.*
+
+### 3. App-ID für den Monitor
 
 *Identifiers* → **+** → **App IDs** → *App* → *Continue*
 
@@ -92,46 +106,76 @@ welche Apps gesperrt werden sollen.
 | Description | `LernZeit Device Activity Monitor` |
 | Bundle ID | **Explicit**, `de.lernzeit.app.monitor` |
 
-Zwei Häkchen setzen:
+Zwei Häkchen:
 
 - **Family Controls (Distribution)**
 - **App Groups** → *Edit* → `group.de.lernzeit.app`
 
 → *Continue* → *Register*
 
-> Falls **Family Controls (Distribution)** nicht auswählbar ist: Das ist die
-> Berechtigung, die du für die Haupt-App schon freigeschaltet hast. Sie gilt
-> pro App-ID, nicht pro Konto — sollte hier also erscheinen. Wenn nicht,
-> schick mir einen Screenshot der Liste.
+### 4. Profil für den Monitor
 
-### 4. Provisioning-Profil
+*Profiles* → **+** → **App Store Connect** (unter *Distribution*) → *Continue*
 
-*Profiles* → **+** → **App Store Connect** (unter *Distribution*) →
-*Continue*
-
-- App ID: `de.lernzeit.app.monitor`
-- Zertifikat: dasselbe wie beim letzten Mal
-- Profile Name: `delernzeitapp_monitor_App_Store`
+| Feld | Wert |
+|---|---|
+| App ID | `de.lernzeit.app.monitor` |
+| Zertifikat | das vorhandene Distribution-Zertifikat |
+| Profile Name | `delernzeitapp_monitor_App_Store` |
 
 → *Generate* → *Download*
 
-### 5. Beides bei Codemagic hochladen
+### 5. Bei Codemagic hochladen
 
 *Teams* → dein Team → *Code signing identities* → *Provisioning profiles* →
-das neue Profil hochladen.
+das Profil aus Schritt 4 hochladen.
 
-**Wichtig:** Das bestehende Profil `delernzeitapp_App_Store` bleibt. Es kommt
-eines dazu, es wird keines ersetzt — die Haupt-App braucht ihres weiterhin.
+**Hier könntest du aufhören.** Damit funktioniert die Sperre. Die Schritte 6
+und 7 machen sie nur schöner.
+
+### 6. App-ID und Profil für den Sperrbildschirm
+
+Wie Schritt 3 und 4, mit:
+
+| Feld | Wert |
+|---|---|
+| Description | `LernZeit Shield Configuration` |
+| Bundle ID | **Explicit**, `de.lernzeit.app.shield` |
+| Häkchen | **Family Controls (Distribution)** und **App Groups** → `group.de.lernzeit.app` |
+| Profile Name | `delernzeitapp_shield_App_Store` |
+
+### 7. App-ID und Profil für den Knopf auf dem Sperrbildschirm
+
+Wie Schritt 3 und 4, mit:
+
+| Feld | Wert |
+|---|---|
+| Description | `LernZeit Shield Action` |
+| Bundle ID | **Explicit**, `de.lernzeit.app.shieldaction` |
+| Häkchen | **Family Controls (Distribution)** und **App Groups** → `group.de.lernzeit.app` |
+| Profile Name | `delernzeitapp_shieldaction_App_Store` |
+
+### 8. Das Profil der Haupt-App neu erzeugen — nicht vergessen
+
+*Profiles* → `delernzeitapp_App_Store` anklicken → *Edit* → *Save* →
+*Download*
+
+Dann bei Codemagic hochladen und die alte Fassung ersetzen. **Der Name muss
+gleich bleiben** — `codemagic.yaml` verweist in Zeile 93 darauf.
+
+Ohne diesen Schritt scheitert der nächste iOS-Build mit einer Meldung über
+ein nicht passendes Profil.
 
 ---
 
 ## Wenn du fertig bist
 
-Sag mir zwei Dinge:
+Sag mir drei Dinge:
 
 1. Ob die App Group genau `group.de.lernzeit.app` heißt (falls Apple den Namen
    schon vergeben fand, nenn mir den, den du genommen hast).
-2. Wie das neue Profil bei Codemagic heißt.
+2. Wie weit du gekommen bist — nur bis Schritt 5, oder alle sieben.
+3. Ob Schritt 8 erledigt ist (das neue Profil der Haupt-App bei Codemagic).
 
 Mehr brauche ich nicht. Den Swift-Teil, die Einbindung in den Build und die
 Entitlements schreibe ich dann in einem Zug — und so, dass ein fehlendes
