@@ -10,6 +10,38 @@ macht. Diese Hälfte liefere ich.
 
 **Bezug:** `src/pages/Datenschutz.tsx`, Stand 08.09.2026, 235 Zeilen.
 **Auslöser:** geplante Anzeigen bei Google und Meta für die App.
+**Fassung 2 (20.09.2026):** nach Rückfrage der Kanzlei auf eine Umsetzung
+**ganz ohne Werbe-Skripte im Browser** umgestellt. Siehe Abschnitt 0.
+
+---
+
+## 0. Die Architekturentscheidung, die alles andere vereinfacht
+
+Die Kanzlei fragte, ob die Messung auf einen ausdrücklich für Erwachsene
+bestimmten Bereich beschränkt werden kann, während öffentliche Seiten und
+Kinderbereiche ohne Werbe-Tags bleiben.
+
+**Nach Adressen lässt sich das nicht trennen.** Unter `/` liegt beides: die
+Marketingseite, solange niemand angemeldet ist, und die App nach dem Anmelden
+— einschließlich der Kinderansicht. Dazu gibt es einen Demo-Modus, in dem ein
+Kind Aufgaben löst, ohne Konto, auf derselben Adresse.
+
+**Deshalb der weitergehende Weg: gar keine Werbe-Skripte, auf keiner Seite.**
+
+| | |
+|---|---|
+| Woher die Zuordnung kommt | Aus dem Klick-Parameter in der Adresse (`gclid`, `gbraid`, `wbraid`, `fbclid`), den unser eigener Code liest |
+| Wie die Conversion gemeldet wird | Server-zu-Server aus unserer Infrastruktur, ausschließlich mit gehashter E-Mail |
+| Was im Browser des Besuchers passiert | Ein Eintrag im lokalen Speicher (`localStorage`). **Kein fremdes Skript, kein Pixel, kein Werbe-Cookie.** |
+| Wie das technisch abgesichert ist | Die Content-Security-Policy in `index.html` erlaubt Skripte ausschließlich von `'self'`. Ein Google- oder Meta-Skript würde vom Browser blockiert. Es einzubinden erforderte eine ausdrückliche Änderung dieser Zeile. |
+
+**Was dadurch entfällt:** Google Analytics 4 und das Meta-Pixel. Beide werden
+nicht eingesetzt. Metas Zuordnung wird dadurch ungenauer, weil die Cookies
+`_fbp` und `_fbc` fehlen — das ist der bewusst gezahlte Preis.
+
+**Was dadurch an die Stelle von Consent Mode v2 tritt:** Der Einwilligungs-
+status wird nicht im Browser an ein Google-Skript signalisiert, sondern mit
+jeder Conversion serverseitig mitübertragen.
 
 ---
 
@@ -80,11 +112,12 @@ Zusage für Kinder bleibt vollständig.
 > keine Profilbildung statt. Wir nutzen dort keine geräte- oder
 > app-übergreifenden Tracking-Technologien und keine Werbe-Identifier. Die App
 > fragt unter iOS daher auch keine „App Tracking Transparency"-Erlaubnis (ATT)
-> ab. Auf unserer Website lernzeit.app setzen wir — **nur mit Ihrer
-> Einwilligung** — Reichweiten- und Werbemessung ein; Einzelheiten in § 8a.
-> Für Kinderkonten findet diese Messung nicht statt: Wählt jemand bei der
-> Registrierung „Ich bin Kind" oder ist ein Kinderkonto angemeldet, werden
-> keine Daten an Werbeplattformen übermittelt.
+> ab. Auch auf unserer Website binden wir keine Skripte von Google oder Meta
+> ein. Kommen Sie über eine unserer Anzeigen, speichern wir — **nur mit Ihrer
+> Einwilligung** — die Kennung dieses Klicks, um die Wirksamkeit der Anzeige
+> zu messen; Einzelheiten in § 8a. Für Kinderkonten findet das nicht statt:
+> Wählt jemand bei der Registrierung „Ich bin Kind" oder ist ein Kinderkonto
+> angemeldet, werden keine Daten an Werbeplattformen übermittelt.
 
 **Begründung:** Dies ist die einzige Stelle, an der die heutige Zusage
 tatsächlich bricht. Ein Google-Ads-Tag ist eine seitenübergreifende
@@ -132,12 +165,20 @@ Privacy Framework) bleibt unverändert und gilt für die neuen Empfänger mit.
 > In der App verwenden wir ausschließlich technisch notwendige Speicherung für
 > Authentifizierung und Einstellungen.
 >
-> Auf unserer Website lernzeit.app verwenden wir darüber hinaus Cookies zur
-> Werbemessung — **ausschließlich, wenn Sie darin eingewilligt haben.** Ohne
-> Ihre Einwilligung werden keine solchen Cookies gesetzt und keine Daten an
-> Google oder Meta übermittelt. Ihre Einwilligung können Sie jederzeit über
-> den Link „Cookie-Einstellungen" im Seitenfuß mit Wirkung für die Zukunft
-> widerrufen.
+> **Wir verwenden keine Werbe-Cookies und keine Cookies Dritter.**
+>
+> Kommen Sie über eine unserer Anzeigen auf unsere Website, speichern wir die
+> Kennung dieses Klicks im lokalen Speicher Ihres Browsers (`localStorage`) —
+> **ausschließlich, wenn Sie darin eingewilligt haben.** Ohne Ihre
+> Einwilligung wird nichts gespeichert und nichts an Google oder Meta
+> übermittelt. Ihre Einwilligung können Sie jederzeit über den Link
+> „Cookie-Einstellungen" im Seitenfuß mit Wirkung für die Zukunft widerrufen.
+
+**Hinweis zur Formulierung:** Der heutige Satz „Es werden keine
+Tracking-Cookies oder Cookies für Werbezwecke verwendet" bleibt damit
+**wahr** — wir setzen tatsächlich keine. Die Speicherung erfolgt im lokalen
+Speicher, der rechtlich aber gleich zu behandeln ist (§ 25 TDDDG). Der neue
+Text sagt beides, statt sich auf die Cookie-Aussage zurückzuziehen.
 
 ---
 
@@ -153,11 +194,16 @@ Dieser Abschnitt ist neu. Er beschreibt genau das, was die Technik tun wird.
 >
 > **Was das für Sie bedeutet, wenn Sie über eine Anzeige zu uns kommen:**
 >
+> **Wir binden für diese Messung keine Skripte von Google oder Meta in unsere
+> Website ein.** Es werden weder ein Werbe-Pixel noch Google Analytics noch
+> ein vergleichbarer Dienst geladen — auf keiner Seite unseres Angebots.
+>
 > Klicken Sie auf eine unserer Anzeigen, hängt an der Adresse unserer Website
 > eine Kennung, an der die werbende Plattform den Klick wiedererkennt (bei
 > Google `gclid`, `gbraid` oder `wbraid`, bei Meta `fbclid`). Wir speichern
-> diese Kennung zusammen mit dem Zeitpunkt, damit wir nachvollziehen können,
-> welche Anzeige zu einer Anmeldung geführt hat.
+> diese Kennung zusammen mit dem Zeitpunkt im lokalen Speicher Ihres Browsers
+> und in unserer Datenbank, damit wir nachvollziehen können, welche Anzeige zu
+> einer Anmeldung geführt hat.
 >
 > Melden Sie sich anschließend an, übermitteln wir an die betreffende
 > Plattform die Information, dass eine Anmeldung stattgefunden hat. Dabei
@@ -172,7 +218,8 @@ Dieser Abschnitt ist neu. Er beschreibt genau das, was die Technik tun wird.
 > - Wir übermitteln keinerlei Daten von Kindern — weder Namen, Klassenstufe,
 >   Lernergebnisse noch die Tatsache, dass ein Kinderprofil besteht.
 > - Wir bilden keine Zielgruppen aus Kinderdaten.
-> - Wir setzen in der App kein Werbe-SDK und keinen Werbe-Identifier ein.
+> - Wir setzen weder in der App noch auf der Website ein Werbe-SDK, ein Pixel
+>   oder einen Werbe-Identifier ein.
 > - Wir verkaufen keine Daten.
 >
 > **Rechtsgrundlage:** Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO
@@ -212,7 +259,7 @@ Die Datenschutzerklärung beschreibt Verhalten. Dieses Verhalten muss es geben.
 | | Muss existieren, bevor § 8a veröffentlicht wird |
 |---|---|
 | 1 | **Einwilligungsbanner (CMP).** Vor der Einwilligung lädt kein Werbe-Tag. Nicht vorausgewählt, Ablehnen genauso leicht wie Zustimmen. |
-| 2 | **Consent Mode v2.** Ohne ihn nimmt Google Conversions aus der EU ohnehin nicht an — das Banner ist also nicht nur Pflicht, sondern Voraussetzung dafür, dass die Messung funktioniert. |
+| 2 | **Einwilligungsstatus bei der Conversion.** Da kein Google-Skript im Browser laeuft, tritt an die Stelle von Consent Mode v2 die Uebertragung des Einwilligungsstatus mit jeder einzelnen serverseitig gemeldeten Conversion. |
 | 3 | **Widerruf im Seitenfuß.** Ein Link „Cookie-Einstellungen", der die Auswahl erneut öffnet. |
 | ~~4~~ | ~~Automatische Löschung nach 90 Tagen beziehungsweise 13 Monaten~~ — **erledigt**, Spalte `delete_after` und Auftrag `ad-attribution-retention`. |
 | 5 | **Hashing serverseitig.** Die E-Mail wird in der Edge Function zu SHA-256 verarbeitet und verlässt die Datenbank nie im Klartext Richtung Google oder Meta. |
@@ -241,10 +288,13 @@ Diese Punkte kann ich nicht beantworten. Sie gehören in die Prüfung:
    eine Datenschutz-Folgenabschätzung nötig, weil das Angebot Kinder betrifft?
 6. Sind Auftragsverarbeitungs- beziehungsweise Joint-Controller-Verträge mit
    Google und Meta abzuschließen, und wer schließt sie?
-7. Ein Kind kann lernzeit.app besuchen, ohne angemeldet zu sein — für die
-   Messung ist es dann ein anonymer Besucher wie jeder andere, weil sich vor
-   der Anmeldung technisch niemand unterscheiden lässt. Genügt das bei einem
-   Angebot, das sich auch an Kinder richtet? Siehe Abschnitt 7.
+7. Ein Kind kann lernzeit.app besuchen, ohne angemeldet zu sein — vor der
+   Anmeldung lässt sich technisch niemand unterscheiden. Durch die
+   Entscheidung aus Abschnitt 0 wird dabei **kein fremdes Skript geladen und
+   nichts an Dritte übermittelt**; gespeichert würde allenfalls die Kennung
+   eines Anzeigenklicks im lokalen Speicher, und auch das nur nach
+   Einwilligung. Genügt das bei einem Angebot, das sich auch an Kinder
+   richtet?
 
 ---
 
