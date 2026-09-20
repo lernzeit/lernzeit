@@ -460,11 +460,16 @@ Wer die eine Sperre umgeht, steht vor der anderen.
 
 **Am 15.09.2026 dazugekommen:**
 
-- **Der Trichter ist messbar.** Die Sichten `ads_funnel_summary` und
-  `ads_klicks_offen` zeigen je Kampagne: Anmeldung → Kind verknüpft → erste
-  Lernsitzung → zahlendes Abo. Das sind genau Z4 bis Z7, gezählt an den
-  eigenen Daten statt an Googles Schätzung — Google kennt die Verknüpfung mit
-  dem Kind nicht.
+- **Der Trichter ist messbar.** Die Sicht `ads_funnel_summary` zeigt je
+  Kampagne: Anmeldung → Kind verknüpft → erste Lernsitzung → zahlendes Abo.
+  Das sind genau Z4 bis Z7, gezählt an den eigenen Daten statt an Googles
+  Schätzung — Google kennt die Verknüpfung mit dem Kind nicht.
+
+  *Nachtrag 20.09.2026:* Die Zahl der Klicks **ohne** Anmeldung kommt
+  seitdem aus dem Google-Ads-Konto statt aus der eigenen Datenbank — auf
+  Empfehlung der Kanzlei wird ein Klick erst bei der Eltern-Registrierung
+  gespeichert. Z2 und Z3 werden ohnehin bei Google gemessen, Z4 bis Z7
+  weiterhin bei uns.
 - **Der Notaus ist beschrieben und halb gebaut.** `ad_settings.tags_enabled`
   schaltet die Tags ohne neues Build ab; die eigentliche Ausgabenbremse sind
   Tagesbudget und Kontobudget im Google-Ads-Konto. Beide Hälften und ihre

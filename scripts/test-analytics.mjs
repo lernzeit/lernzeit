@@ -127,42 +127,57 @@ zuruecksetzen(); rolle = 'parent'; sitzung = 'eltern-2';
 await track('page_view', { role: 'child' });
 pruefe(dataLayer().length === 0, 'Elternkonto, aber Event nennt role=child: trotzdem gesperrt');
 
-/* --- Anzeigenklicks ------------------------------------------------- */
+/* --- Anzeigenklicks -------------------------------------------------- */
+/*
+ * Seit dem 20.09.2026 gilt: Beim Ankommen wird NICHTS gespeichert. Die
+ * Kennung lebt nur im Arbeitsspeicher; geschrieben wird erst bei der
+ * Registrierung eines Elternkontos, und nur nach Einwilligung.
+ */
+
+const { setWerbeEinwilligung } = await import(bundle);
 
 zuruecksetzen(); speicher.clear();
 besuche('?gbraid=abc123&utm_campaign=test');
 captureAdClick();
-pruefe(klickZeilen.length === 1, 'Klick mit gbraid wird erfasst');
-pruefe(klickZeilen[0]?.gbraid === 'abc123', 'gbraid landet in der Zeile — nicht nur gclid');
-pruefe(klickZeilen[0]?.gclid === null, 'gclid bleibt leer, wenn keins uebergeben wurde');
-
-zuruecksetzen();
-captureAdClick();
-pruefe(klickZeilen.length === 0, 'Neuladen derselben Adresse legt keine zweite Zeile an');
-
-zuruecksetzen();
-besuche('?gclid=xyz789');
-captureAdClick();
-pruefe(klickZeilen.length === 1, 'Ein spaeterer Klick auf eine andere Anzeige zaehlt neu');
+pruefe(klickZeilen.length === 0, 'Beim Ankommen wird nichts gespeichert');
 
 zuruecksetzen(); rolle = 'parent'; sitzung = 'eltern-9';
+setWerbeEinwilligung(false);
 await track('sign_up_completed', { role: 'parent' });
 await warte();
-pruefe(rpcAufrufe.some((r) => r.name === 'link_ad_attribution'), 'Elternkonto: Klick wird verknuepft');
+pruefe(klickZeilen.length === 0, 'Ohne Einwilligung wird auch bei Eltern nichts gespeichert');
+
+zuruecksetzen();
+setWerbeEinwilligung(true);
+await track('sign_up_completed', { role: 'parent' });
+await warte();
+pruefe(klickZeilen.length === 1, 'Mit Einwilligung wird bei der Eltern-Registrierung verbucht');
+pruefe(klickZeilen[0]?.user_id === 'eltern-9', 'Die Zeile haengt direkt am Elternkonto');
+pruefe(klickZeilen[0]?.gbraid === 'abc123', 'gbraid landet in der Zeile — nicht nur gclid');
+pruefe(!('anonymous_id' in (klickZeilen[0] ?? {})), 'Keine anonyme Kennung mehr');
 
 zuruecksetzen();
 await track('page_view', {});
 await warte();
-pruefe(rpcAufrufe.length === 0, 'Verknuepfung passiert nur einmal je Konto');
+pruefe(klickZeilen.length === 0, 'Ein zweites Ereignis verbucht nicht noch einmal');
 
 zuruecksetzen(); speicher.clear();
 besuche('?gclid=kind-klick');
 captureAdClick();
 zuruecksetzen(); rolle = 'child'; sitzung = 'kind-9';
+setWerbeEinwilligung(true);
 await track('sign_up_completed', { role: 'child' });
 await warte();
-pruefe(rpcAufrufe.some((r) => r.name === 'forget_ad_attribution'), 'Kinderkonto: Klick wird geloescht, nicht verknuepft');
-pruefe(!rpcAufrufe.some((r) => r.name === 'link_ad_attribution'), 'Kinderkonto: keine Verknuepfung');
+pruefe(klickZeilen.length === 0, 'Kinderkonto: nichts gespeichert, auch mit Einwilligung');
+
+zuruecksetzen(); speicher.clear();
+besuche('');
+rolle = 'parent'; sitzung = 'eltern-10';
+await track('sign_up_completed', { role: 'parent' });
+await warte();
+pruefe(klickZeilen.length === 0, 'Ohne Anzeigenklick wird nichts verbucht');
+
+setWerbeEinwilligung(false);
 
 await rm(dir, { recursive: true, force: true });
 console.log(fehler === 0 ? '\nAlle Faelle bestanden.' : `\n${fehler} FEHLGESCHLAGEN`);

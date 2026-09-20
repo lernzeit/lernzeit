@@ -42,8 +42,10 @@ export type AnalyticsEventName =
 
 const ANON_ID_KEY = 'lernzeit_anonymous_id';
 const ATTRIBUTION_KEY = 'lernzeit_attribution';
-const AD_CLICK_KEY = 'lernzeit_ad_click';
-const AD_LINKED_KEY = 'lernzeit_ad_linked';
+// Merkposten dafuer, dass fuer dieses Konto bereits ein Klick verbucht wurde.
+// Enthaelt die Nutzer-ID, damit ein zweites Konto im selben Browser erneut
+// verbucht wird. Kein Werbedatum — deshalb auch ohne Einwilligung zulaessig.
+const AD_RECORDED_KEY = 'lernzeit_ad_recorded';
 
 export interface Attribution {
   utm_source?: string | null;
@@ -201,34 +203,60 @@ function getPagePath(): string | null {
 
 /**
  * Die Kennungen, an denen eine Werbeplattform ihren eigenen Klick
- * wiedererkennt. Sie liegen NICHT in analytics_events, sondern in der Tabelle
- * `ad_attribution` — als einziges Datum im Projekt haben sie eine zugesagte
- * Loeschfrist (90 Tage ohne Anmeldung, 13 Monate mit), und die laesst sich nur
- * dort sauber durchsetzen.
+ * wiedererkennt.
  *
  * `gbraid` und `wbraid` treten bei Google an die Stelle von `gclid`, wenn auf
  * iOS keine Einwilligung fuer geraeteuebergreifende Messung vorliegt. Wer nur
  * `gclid` erfasst, verliert genau die Klicks, die aus der Zielgruppe kommen.
  *
- * `fbp` und `fbc` stehen nicht in der Adresse, sondern in Cookies, die das
- * Meta-Pixel setzt. Sie werden deshalb aus `document.cookie` gelesen — ist
- * kein Pixel geladen (heute der Fall), bleiben sie leer.
+ * ── Warum hier nichts gespeichert wird ────────────────────────────────────
+ *
+ * Empfehlung der Kanzlei vom 20.09.2026: Werbemessung nur in einem
+ * abgegrenzten Erwachsenenbereich; oeffentliche Seiten und Kinderbereiche
+ * bleiben frei davon. Nach Adressen laesst sich das nicht trennen — unter "/"
+ * liegen Marketingseite, App und Kinderansicht, dazu ein Demo-Modus ohne
+ * Konto.
+ *
+ * Abgegrenzt wird deshalb ueber den ZEITPUNKT: Beim Ankommen wird gar nichts
+ * gespeichert. Die Kennung lebt nur in dieser Variablen, also im
+ * Arbeitsspeicher der geoeffneten Seite, und ist mit dem Schliessen des Tabs
+ * weg. Geschrieben wird erst, wenn sich jemand als ELTERNTEIL registriert.
+ *
+ * Wer sich nur umsieht, hinterlaesst nichts. Wer sich als Kind registriert,
+ * ebenfalls nicht.
+ *
+ * Preis: Wer die Seite verlaesst und spaeter zurueckkommt, wird nicht mehr
+ * zugeordnet. Wir zaehlen dadurch eher zu wenig als zu viel — die richtige
+ * Richtung fuer einen Fehler.
  */
 const AD_CLICK_PARAMS = ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const;
 
 type AdClick = Record<string, string | null>;
 
-function readCookie(name: string): string | null {
-  try {
-    if (typeof document === 'undefined' || !document.cookie) return null;
-    const treffer = document.cookie
-      .split(';')
-      .map((teil) => teil.trim())
-      .find((teil) => teil.startsWith(`${name}=`));
-    return treffer ? decodeURIComponent(treffer.slice(name.length + 1)).slice(0, 200) : null;
-  } catch {
-    return null;
-  }
+/** Nur im Arbeitsspeicher. Bewusst kein localStorage, kein Cookie. */
+let klickImArbeitsspeicher: AdClick | null = null;
+
+/**
+ * Einwilligung in die Werbemessung.
+ *
+ * Der Vorgabewert ist `false`, und das ist der heutige Zustand: Es gibt noch
+ * kein Einwilligungsbanner, und die Anforderungen daran stehen bei der
+ * Kanzlei aus. Solange niemand etwas anderes setzt, wird nichts gespeichert
+ * und nichts uebermittelt — die Messung ist vollstaendig aus, nicht nur
+ * ungenutzt.
+ *
+ * Bewusst eine Variable und kein Import aus der CMP: Diese Datei soll nicht
+ * wissen, welcher Anbieter die Einwilligung einholt. Wenn die CMP steht, ruft
+ * sie setWerbeEinwilligung() — eine Stelle, an der alles andere haengt.
+ */
+let werbeEinwilligung = false;
+
+export function setWerbeEinwilligung(erteilt: boolean): void {
+  werbeEinwilligung = erteilt;
+}
+
+function hatWerbeEinwilligung(): boolean {
+  return werbeEinwilligung;
 }
 
 /**
@@ -240,6 +268,10 @@ function readCookie(name: string): string | null {
  * einträgt. Ein spaeterer Klick auf eine andere Anzeige traegt eine andere
  * Kennung und wird deshalb als neue Zeile gezaehlt; beim Zuordnen gewinnt die
  * juengste.
+ */
+/**
+ * Liest die Klick-Kennung aus der Adresse — und merkt sie sich nur im
+ * Arbeitsspeicher. Schreibt nichts, uebermittelt nichts.
  */
 export function captureAdClick(): void {
   try {
@@ -253,66 +285,58 @@ export function captureAdClick(): void {
     }
     if (Object.keys(klick).length === 0) return;
 
-    const kennung = JSON.stringify(klick);
-    if (readLocal(AD_CLICK_KEY) === kennung) return;
-    writeLocal(AD_CLICK_KEY, kennung);
-
-    const attribution = getAttribution();
-    void supabase
-      .from('ad_attribution')
-      .insert({
-        anonymous_id: getAnonymousId(),
-        gclid: klick.gclid ?? null,
-        gbraid: klick.gbraid ?? null,
-        wbraid: klick.wbraid ?? null,
-        fbclid: klick.fbclid ?? null,
-        fbp: readCookie('_fbp'),
-        fbc: readCookie('_fbc'),
-        utm_source: attribution.utm_source ?? null,
-        utm_medium: attribution.utm_medium ?? null,
-        utm_campaign: attribution.utm_campaign ?? null,
-        utm_content: attribution.utm_content ?? null,
-        utm_term: attribution.utm_term ?? null,
-        referrer: attribution.referrer ?? null,
-        landing_path: getPagePath(),
-      })
-      .then(({ error }) => {
-        if (error && import.meta.env?.DEV) {
-          console.warn('[analytics] ad_attribution insert failed', error.message);
-        }
-      });
+    klickImArbeitsspeicher = klick;
   } catch {
     /* Tracking darf die App nie blockieren. */
   }
 }
 
 /**
- * Verbindet den Klick mit dem Konto — oder loescht ihn.
+ * Verbucht den gemerkten Klick — aber nur fuer ein Elternkonto und nur nach
+ * Einwilligung. Alles andere laesst die Kennung im Arbeitsspeicher verfallen.
  *
- * Elternkonto: einmal je Konto verknuepfen. Der Merkposten enthaelt die
- * Nutzer-ID, damit ein zweites Konto im selben Browser erneut verknuepft wird.
+ * Kinderkonto: Es gibt nichts zu loeschen, weil nie etwas geschrieben wurde.
+ * Die Kennung wird nur verworfen.
  *
- * Kinderkonto: die Spur wird geloescht, nicht nur nicht verknuepft. Ein Kind
- * hinterlaesst keinen Werbedatensatz, auch keinen anonymen.
- *
- * Die Datenbank prueft die Rolle ein zweites Mal (link_ad_attribution). Zwei
- * Sperren an zwei Orten: Wer die eine umgeht, steht vor der anderen.
+ * Die Datenbank prueft die Rolle ein zweites Mal (Zugriffsregel auf
+ * ad_attribution). Zwei Sperren an zwei Orten: Wer die eine umgeht, steht vor
+ * der anderen.
  */
 async function resolveAdClick(userId: string | null, audience: Audience | null): Promise<void> {
   try {
-    if (!readLocal(AD_CLICK_KEY)) return;
-    const anonymousId = getAnonymousId();
+    if (!klickImArbeitsspeicher) return;
 
     if (audience === 'child') {
-      writeLocal(AD_CLICK_KEY, '');
-      await supabase.rpc('forget_ad_attribution', { p_anonymous_id: anonymousId });
+      klickImArbeitsspeicher = null;
       return;
     }
 
     if (audience !== 'parent' || !userId) return;
-    if (readLocal(AD_LINKED_KEY) === userId) return;
-    writeLocal(AD_LINKED_KEY, userId);
-    await supabase.rpc('link_ad_attribution', { p_anonymous_id: anonymousId });
+    if (!hatWerbeEinwilligung()) return;
+    if (readLocal(AD_RECORDED_KEY) === userId) return;
+
+    const klick = klickImArbeitsspeicher;
+    klickImArbeitsspeicher = null;
+    writeLocal(AD_RECORDED_KEY, userId);
+
+    const attribution = getAttribution();
+    const { error } = await supabase.from('ad_attribution').insert({
+      user_id: userId,
+      gclid: klick.gclid ?? null,
+      gbraid: klick.gbraid ?? null,
+      wbraid: klick.wbraid ?? null,
+      fbclid: klick.fbclid ?? null,
+      utm_source: attribution.utm_source ?? null,
+      utm_medium: attribution.utm_medium ?? null,
+      utm_campaign: attribution.utm_campaign ?? null,
+      utm_content: attribution.utm_content ?? null,
+      utm_term: attribution.utm_term ?? null,
+      referrer: attribution.referrer ?? null,
+      landing_path: getPagePath(),
+    });
+    if (error && import.meta.env?.DEV) {
+      console.warn('[analytics] ad_attribution insert failed', error.message);
+    }
   } catch {
     /* Tracking darf die App nie blockieren. */
   }

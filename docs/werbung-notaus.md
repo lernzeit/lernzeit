@@ -91,7 +91,7 @@ Aus `docs/positionierung.md`, Abschnitt 13.4 — hier als Handlungsanweisung:
 | Frage | Wo |
 |---|---|
 | Was wurde ausgegeben? | Nur im Google-Ads-Konto. Die Datenbank weiß es nicht. |
-| Wie viele Klicks kamen an? | `select * from public.ads_klicks_offen;` |
+| Wie viele Klicks kamen an? | Nur im Google-Ads-Konto. Klicks ohne Anmeldung werden seit dem 20.09.2026 nicht mehr gespeichert. |
 | Was ist aus ihnen geworden? | `select * from public.ads_funnel_summary;` |
 
 `ads_funnel_summary` ist der Trichter aus Abschnitt 13 der Positionierung:

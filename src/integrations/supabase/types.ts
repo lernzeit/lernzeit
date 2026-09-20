@@ -55,7 +55,7 @@ export type Database = {
       }
       ad_attribution: {
         Row: {
-          anonymous_id: string
+          anonymous_id: string | null
           converted_at: string | null
           created_at: string
           delete_after: string
@@ -77,7 +77,7 @@ export type Database = {
           wbraid: string | null
         }
         Insert: {
-          anonymous_id: string
+          anonymous_id?: string | null
           converted_at?: string | null
           created_at?: string
           delete_after?: string
@@ -99,7 +99,7 @@ export type Database = {
           wbraid?: string | null
         }
         Update: {
-          anonymous_id?: string
+          anonymous_id?: string | null
           converted_at?: string | null
           created_at?: string
           delete_after?: string
@@ -119,6 +119,30 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
           wbraid?: string | null
+        }
+        Relationships: []
+      }
+      ad_settings: {
+        Row: {
+          id: boolean
+          monthly_cap_eur: number
+          note: string | null
+          tags_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          monthly_cap_eur?: number
+          note?: string | null
+          tags_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          monthly_cap_eur?: number
+          note?: string | null
+          tags_enabled?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
@@ -434,6 +458,27 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+        }
+        Relationships: []
+      }
+      annual_job_runs: {
+        Row: {
+          job_name: string
+          last_run_at: string
+          last_run_year: number
+          note: string | null
+        }
+        Insert: {
+          job_name: string
+          last_run_at?: string
+          last_run_year: number
+          note?: string | null
+        }
+        Update: {
+          job_name?: string
+          last_run_at?: string
+          last_run_year?: number
+          note?: string | null
         }
         Relationships: []
       }
@@ -1811,7 +1856,58 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ads_funnel: {
+        Row: {
+          angemeldet_am: string | null
+          attribution_id: string | null
+          gelernt_in_woche_1: boolean | null
+          kampagne: string | null
+          kind_verknuepft: boolean | null
+          klick_am: string | null
+          plattform: string | null
+          quelle: string | null
+          user_id: string | null
+          zahlt: boolean | null
+        }
+        Insert: {
+          angemeldet_am?: string | null
+          attribution_id?: string | null
+          gelernt_in_woche_1?: never
+          kampagne?: never
+          kind_verknuepft?: never
+          klick_am?: string | null
+          plattform?: never
+          quelle?: never
+          user_id?: string | null
+          zahlt?: never
+        }
+        Update: {
+          angemeldet_am?: string | null
+          attribution_id?: string | null
+          gelernt_in_woche_1?: never
+          kampagne?: never
+          kind_verknuepft?: never
+          klick_am?: string | null
+          plattform?: never
+          quelle?: never
+          user_id?: string | null
+          zahlt?: never
+        }
+        Relationships: []
+      }
+      ads_funnel_summary: {
+        Row: {
+          anmeldungen: number | null
+          erste_anmeldung: string | null
+          gelernt_woche_1: number | null
+          kampagne: string | null
+          letzte_anmeldung: string | null
+          mit_kind: number | null
+          plattform: string | null
+          zahlende_abos: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       apply_premium_grant: {
@@ -1827,16 +1923,18 @@ export type Database = {
         Args: { p_requested: number; p_user_id: string }
         Returns: number
       }
+      claim_annual_job: {
+        Args: { p_job_name: string; p_year: number }
+        Returns: boolean
+      }
+      claim_facts: { Args: never; Returns: Json }
       claim_invitation_code: {
         Args: { claiming_child_id: string; code_to_claim: string }
         Returns: Json
       }
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
-      forget_ad_attribution: {
-        Args: { p_anonymous_id: string }
-        Returns: undefined
-      }
+      forget_ad_attribution: { Args: never; Returns: number }
       generate_invitation_code: { Args: never; Returns: string }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_ai_latency_summary: {
@@ -1909,10 +2007,6 @@ export type Database = {
         Returns: boolean
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
-      link_ad_attribution: {
-        Args: { p_anonymous_id: string }
-        Returns: undefined
-      }
       link_referral: { Args: { p_code: string }; Returns: Json }
       purge_ad_attribution: { Args: never; Returns: number }
       set_child_platform: {
@@ -1920,6 +2014,10 @@ export type Database = {
         Returns: undefined
       }
       set_own_platform: { Args: { p_platform: string }; Returns: undefined }
+      spalten_vorgabe: {
+        Args: { p_spalte: string; p_tabelle: string }
+        Returns: string
+      }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {
