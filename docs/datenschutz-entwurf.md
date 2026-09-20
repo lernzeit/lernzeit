@@ -10,8 +10,9 @@ macht. Diese Hälfte liefere ich.
 
 **Bezug:** `src/pages/Datenschutz.tsx`, Stand 08.09.2026, 235 Zeilen.
 **Auslöser:** geplante Anzeigen bei Google und Meta für die App.
-**Fassung 2 (20.09.2026):** nach Rückfrage der Kanzlei auf eine Umsetzung
-**ganz ohne Werbe-Skripte im Browser** umgestellt. Siehe Abschnitt 0.
+**Fassung 3 (20.09.2026):** nach Empfehlung der Kanzlei zusätzlich reduziert —
+**keine Übermittlung gehashter E-Mail-Adressen**, und gespeichert wird erst
+bei der Eltern-Registrierung. Siehe Abschnitt 0.
 
 ---
 
@@ -31,13 +32,26 @@ Kind Aufgaben löst, ohne Konto, auf derselben Adresse.
 | | |
 |---|---|
 | Woher die Zuordnung kommt | Aus dem Klick-Parameter in der Adresse (`gclid`, `gbraid`, `wbraid`, `fbclid`), den unser eigener Code liest |
-| Wie die Conversion gemeldet wird | Server-zu-Server aus unserer Infrastruktur, ausschließlich mit gehashter E-Mail |
-| Was im Browser des Besuchers passiert | Ein Eintrag im lokalen Speicher (`localStorage`). **Kein fremdes Skript, kein Pixel, kein Werbe-Cookie.** |
+| Wie die Conversion gemeldet wird | Server-zu-Server aus unserer Infrastruktur, **ausschließlich mit der Klick-Kennung**. Keine E-Mail-Adresse, auch nicht gehasht. Keine sonstigen Nutzerdaten. |
+| Wann überhaupt etwas gespeichert wird | **Erst bei der Registrierung eines Elternkontos**, nach Einwilligung. Bis dahin liegt die Klick-Kennung nur im Arbeitsspeicher der geöffneten Seite. |
+| Was im Browser eines blossen Besuchers passiert | **Nichts.** Kein fremdes Skript, kein Pixel, kein Werbe-Cookie, kein Eintrag im lokalen Speicher. |
 | Wie das technisch abgesichert ist | Die Content-Security-Policy in `index.html` erlaubt Skripte ausschließlich von `'self'`. Ein Google- oder Meta-Skript würde vom Browser blockiert. Es einzubinden erforderte eine ausdrückliche Änderung dieser Zeile. |
 
-**Was dadurch entfällt:** Google Analytics 4 und das Meta-Pixel. Beide werden
-nicht eingesetzt. Metas Zuordnung wird dadurch ungenauer, weil die Cookies
-`_fbp` und `_fbc` fehlen — das ist der bewusst gezahlte Preis.
+**Der „abgegrenzte Erwachsenenbereich" ist kein Seitenbereich, sondern ein
+Vorgang.** Nach Adressen liesse er sich nicht abgrenzen (siehe oben). Über den
+Zeitpunkt schon: Gespeichert wird ausschliesslich, wenn sich ein Erwachsener
+als Elternteil registriert. Wer nur schaut, hinterlässt nichts. Wer sich als
+Kind registriert, ebenfalls nicht.
+
+**Was dadurch entfällt:** Google Analytics 4, das Meta-Pixel und die
+Übermittlung gehashter E-Mail-Adressen. Metas Zuordnung wird dadurch deutlich
+ungenauer, und eine geräteübergreifende Zuordnung gibt es nicht mehr — das ist
+der bewusst gezahlte Preis.
+
+**Was erhalten bleibt:** Die Zuordnung bei Google über die Klick-Kennung, und
+die vollständige eigene Auswertung in unserer Datenbank in der EU. Was wir an
+Google und Meta senden, ist beschränkt; was wir selbst über die Wirksamkeit
+einer Anzeige wissen, nicht.
 
 **Was dadurch an die Stelle von Consent Mode v2 tritt:** Der Einwilligungs-
 status wird nicht im Browser an ein Google-Skript signalisiert, sondern mit
@@ -200,18 +214,17 @@ Dieser Abschnitt ist neu. Er beschreibt genau das, was die Technik tun wird.
 >
 > Klicken Sie auf eine unserer Anzeigen, hängt an der Adresse unserer Website
 > eine Kennung, an der die werbende Plattform den Klick wiedererkennt (bei
-> Google `gclid`, `gbraid` oder `wbraid`, bei Meta `fbclid`). Wir speichern
-> diese Kennung zusammen mit dem Zeitpunkt im lokalen Speicher Ihres Browsers
-> und in unserer Datenbank, damit wir nachvollziehen können, welche Anzeige zu
-> einer Anmeldung geführt hat.
+> Google `gclid`, `gbraid` oder `wbraid`, bei Meta `fbclid`).
 >
-> Melden Sie sich anschließend an, übermitteln wir an die betreffende
-> Plattform die Information, dass eine Anmeldung stattgefunden hat. Dabei
-> übertragen wir Ihre E-Mail-Adresse **niemals im Klartext**, sondern
-> ausschließlich als nicht umkehrbaren kryptografischen Hashwert (SHA-256).
-> Die Plattform kann damit prüfen, ob es sich um eine ihr bereits bekannte
-> Person handelt, sie kann daraus aber nicht auf Ihre E-Mail-Adresse
-> zurückschließen.
+> **Solange Sie sich nur umsehen, wird diese Kennung nirgends gespeichert** —
+> weder auf Ihrem Gerät noch bei uns. Sie besteht nur, solange die Seite
+> geöffnet ist, und verschwindet, wenn Sie sie schliessen.
+>
+> Registrieren Sie sich anschließend als Elternteil, übermitteln wir an die
+> betreffende Plattform ausschließlich diese Kennung zusammen mit der
+> Information, dass eine Registrierung stattgefunden hat. **Wir übermitteln
+> dabei keine E-Mail-Adresse — weder im Klartext noch verschlüsselt oder als
+> Hashwert — und keine sonstigen Angaben zu Ihrer Person.**
 >
 > **Was wir nicht tun:**
 >
@@ -220,6 +233,10 @@ Dieser Abschnitt ist neu. Er beschreibt genau das, was die Technik tun wird.
 > - Wir bilden keine Zielgruppen aus Kinderdaten.
 > - Wir setzen weder in der App noch auf der Website ein Werbe-SDK, ein Pixel
 >   oder einen Werbe-Identifier ein.
+> - Wir übermitteln keine E-Mail-Adressen an Werbeplattformen, auch nicht in
+>   verschlüsselter oder gehashter Form.
+> - Wir speichern nichts auf Ihrem Gerät, solange Sie sich kein Elternkonto
+>   anlegen.
 > - Wir verkaufen keine Daten.
 >
 > **Rechtsgrundlage:** Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO
@@ -262,7 +279,7 @@ Die Datenschutzerklärung beschreibt Verhalten. Dieses Verhalten muss es geben.
 | 2 | **Einwilligungsstatus bei der Conversion.** Da kein Google-Skript im Browser laeuft, tritt an die Stelle von Consent Mode v2 die Uebertragung des Einwilligungsstatus mit jeder einzelnen serverseitig gemeldeten Conversion. |
 | 3 | **Widerruf im Seitenfuß.** Ein Link „Cookie-Einstellungen", der die Auswahl erneut öffnet. |
 | ~~4~~ | ~~Automatische Löschung nach 90 Tagen beziehungsweise 13 Monaten~~ — **erledigt**, Spalte `delete_after` und Auftrag `ad-attribution-retention`. |
-| 5 | **Hashing serverseitig.** Die E-Mail wird in der Edge Function zu SHA-256 verarbeitet und verlässt die Datenbank nie im Klartext Richtung Google oder Meta. |
+| ~~5~~ | ~~Hashing serverseitig~~ — **entfällt.** Auf Empfehlung der Kanzlei werden gar keine E-Mail-Adressen übermittelt. Das bereits gebaute Modul dafür ist entfernt. |
 | ~~6~~ | ~~Filter auf Elternkonten~~ — **erledigt**, zweifach: `analytics.ts` im Browser und `link_ad_attribution` in der Datenbank. |
 | 7 | **Werbe-Tags aus, sobald ein Kinderkonto angemeldet ist.** Siehe Abschnitt 7 — dies ist der offene Punkt mit den größten Folgen. |
 
@@ -279,11 +296,12 @@ Diese Punkte kann ich nicht beantworten. Sie gehören in die Prüfung:
    das zu belegen?
 3. Sind 13 Monate für die Attributionsdaten angemessen, oder ist kürzer
    geboten?
-4. Genügt der SHA-256-Hashwert der E-Mail-Adresse als Maßnahme, oder bleibt
-   die Übermittlung auch dann eine Übermittlung personenbezogener Daten mit
-   allen Folgepflichten? (Meine Annahme: sie bleibt es — der Hash ist eine
-   Schutzmaßnahme, keine Anonymisierung. Der Entwurf ist entsprechend
-   formuliert.)
+4. ~~Genügt der SHA-256-Hashwert der E-Mail-Adresse als Maßnahme?~~
+   **Erledigt durch die Empfehlung der Kanzlei:** Es werden gar keine
+   E-Mail-Adressen übermittelt. Offen bleibt die Anschlussfrage: Fällt auch
+   die blosse Klick-Kennung (`gclid`) unter die Einschränkung? Falls ja, wäre
+   bei Google keine Conversion-Messung mehr möglich, und das Vorhaben wäre
+   grundsätzlich neu zu bewerten.
 5. Muss das Verzeichnis von Verarbeitungstätigkeiten ergänzt werden, und ist
    eine Datenschutz-Folgenabschätzung nötig, weil das Angebot Kinder betrifft?
 6. Sind Auftragsverarbeitungs- beziehungsweise Joint-Controller-Verträge mit
