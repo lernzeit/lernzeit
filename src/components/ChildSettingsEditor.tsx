@@ -30,6 +30,12 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { isSubjectAvailableForGrade } from '@/lib/category';
+import {
+  DEFAULT_SECONDS_PER_TASK,
+  DEFAULT_WEEKDAY_MAX_MINUTES,
+  DEFAULT_WEEKEND_MAX_MINUTES,
+  describeStandard,
+} from '@/config/childSettings';
 
 interface ChildSettingsEditorProps {
   childId: string;
@@ -83,18 +89,18 @@ const SUBJECTS = [
 ];
 
 const DEFAULT_SETTINGS: ChildSettings = {
-  weekday_max_minutes: 30,
-  weekend_max_minutes: 60,
-  math_seconds_per_task: 30,
-  german_seconds_per_task: 30,
-  science_seconds_per_task: 30,
-  english_seconds_per_task: 30,
-  geography_seconds_per_task: 30,
-  history_seconds_per_task: 30,
-  physics_seconds_per_task: 30,
-  biology_seconds_per_task: 30,
-  chemistry_seconds_per_task: 30,
-  latin_seconds_per_task: 30,
+  weekday_max_minutes: DEFAULT_WEEKDAY_MAX_MINUTES,
+  weekend_max_minutes: DEFAULT_WEEKEND_MAX_MINUTES,
+  math_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  german_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  science_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  english_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  geography_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  history_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  physics_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  biology_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  chemistry_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
+  latin_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
 };
 
 export function ChildSettingsEditor({ childId, childName, parentId, currentGrade, onSettingsChanged }: ChildSettingsEditorProps) {
@@ -354,8 +360,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Du hattest {list} pro Aufgabe eingestellt. Jetzt gilt wieder für alle Fächer der
-                Standard: 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten an
-                Schultagen und 60 Minuten am Wochenende.
+                Standard: {describeStandard()}.
                 Deine Einstellungen bleiben gespeichert und gelten sofort wieder, wenn du Premium aktivierst.
               </p>
             </CardContent>

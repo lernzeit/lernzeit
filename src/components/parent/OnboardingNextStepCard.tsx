@@ -6,6 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { trackFireAndForget } from '@/lib/analytics';
 import { shareInviteLink, buildInviteLink } from '@/lib/inviteLink';
 import { Share2, KeyRound, UserPlus, Sparkles, Loader2 } from 'lucide-react';
+import {
+  DEFAULT_WEEKDAY_MAX_MINUTES,
+  DEFAULT_WEEKEND_MAX_MINUTES,
+  describeDailyLimits,
+  describeSecondsPerTask,
+  type DailyLimits,
+  type SecondsPerTask,
+} from '@/config/childSettings';
 
 interface LinkedChild {
   id: string;
@@ -41,6 +49,14 @@ export function OnboardingNextStepCard({
 }: OnboardingNextStepCardProps) {
   const { toast } = useToast();
   const [hasRequest, setHasRequest] = useState<boolean | null>(null);
+  /**
+   * Die echten Einstellungen des Kindes. Der Text in Schritt 3 nennt
+   * konkrete Zahlen — und die duerfen Eltern mit Premium veraendern. Eine
+   * fest eingetragene Zahl waere dort schlicht falsch.
+   *
+   * Bis sie geladen sind (oder wenn es keine Zeile gibt), gilt der Standard.
+   */
+  const [limits, setLimits] = useState<(DailyLimits & SecondsPerTask) | null>(null);
   const [sharing, setSharing] = useState(false);
   const lastTrackedStep = useRef<number | null>(null);
 
@@ -57,6 +73,24 @@ export function OnboardingNextStepCard({
     check();
     return () => { cancelled = true; };
   }, [parentId, linkedChildren.length]);
+
+  const ersterChildId = linkedChildren[0]?.id;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!ersterChildId) { setLimits(null); return; }
+    const laden = async () => {
+      const { data } = await supabase
+        .from('child_settings')
+        .select('*')
+        .eq('parent_id', parentId)
+        .eq('child_id', ersterChildId)
+        .maybeSingle();
+      if (!cancelled && data) setLimits(data as DailyLimits & SecondsPerTask);
+    };
+    laden();
+    return () => { cancelled = true; };
+  }, [parentId, ersterChildId]);
 
   // Zustand bestimmen
   let step: 1 | 2 | 3 | null = null;
@@ -146,8 +180,11 @@ export function OnboardingNextStepCard({
                 <p className="font-bold text-base">Schritt 3 von 3: {childName} löst die erste Aufgabe</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Sobald {childName} Aufgaben löst, verdient er oder sie Bildschirmzeit und stellt hier einen Antrag.
-                  Standard sind 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten an
-                  Schultagen und 60 Minuten am Wochenende.
+                  {' '}Eingestellt sind {describeSecondsPerTask(limits ?? {})},{' '}
+                  {describeDailyLimits(limits ?? {
+                    weekday_max_minutes: DEFAULT_WEEKDAY_MAX_MINUTES,
+                    weekend_max_minutes: DEFAULT_WEEKEND_MAX_MINUTES,
+                  })}.
                 </p>
               </>
             )}

@@ -109,8 +109,18 @@ höchstens 30 Minuten am Tag" (`ChildSettingsEditor.tsx:357`,
 den Wochenend-Standard nicht. Ein Elternteil, das ihn am Samstag liest, sieht
 im Produkt 60 Minuten stehen.
 
-**Erledigt am 20.09.2026.** Beide Textstellen nennen jetzt beide Werte:
-„höchstens 30 Minuten an Schultagen und 60 Minuten am Wochenende".
+**Erledigt am 20.09.2026.** Die Texte nennen keine festen Zahlen mehr,
+sondern die tatsächlich eingestellten Werte — sie sind im Premium-Bereich
+veränderbar, eine eingetragene Zahl wäre also schon beim nächsten Elternteil
+falsch gewesen.
+
+Quelle ist `src/config/childSettings.ts`. Dort stehen die Vorgabewerte einmal
+statt in vier Dateien, und `describeDailyLimits` / `describeSecondsPerTask`
+formulieren den Satz. Sonderfälle, die dabei auffielen und mitbehandelt sind:
+sind Werktags- und Wochenendwert gleich, heißt es schlicht „höchstens X
+Minuten am Tag"; sind die Fächer unterschiedlich eingestellt, heißt es „je
+nach Fach unterschiedlich" statt einer Zahl, die für neun von zehn Fächern
+falsch wäre.
 
 **Für die Werbung:** Die Zahl kommt in keine Anzeige — nicht weil sie falsch
 wäre, sondern weil „höchstens 30 Minuten" in 30 Zeichen ohne den Zusatz
