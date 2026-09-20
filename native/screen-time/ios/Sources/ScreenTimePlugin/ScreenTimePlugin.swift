@@ -108,10 +108,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "authorization": authorization,
             "managing": managing,
             "shieldAll": LernzeitScreenTime.shieldAll,
-            "shieldedCount": shieldedCount,
-            // Diese Fassung gibt immer alles frei; im Modus 'selected' waere
-            // hier die Zahl der tatsaechlich offenen Apps zu fuehren.
-            "releasedCount": running ? shieldedCount : 0
+            "shieldedCount": shieldedCount
         ]
         if running, let until = releasedUntil {
             payload["releasedUntil"] = ISO8601DateFormatter().string(from: until)
@@ -125,8 +122,11 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve([
             "authorization": "notDetermined",
             "managing": false,
+            // Der strengere Wert, auch wenn hier ohnehin nichts gesperrt wird:
+            // Die Oberflaeche soll nicht behaupten, es seien nur einzelne Apps
+            // betroffen.
+            "shieldAll": true,
             "shieldedCount": 0,
-            "releasedCount": 0,
             "releasedUntil": NSNull()
         ])
     }

@@ -142,14 +142,14 @@ async function laufAbgleich({ managing = true, releasedUntil = null, genehmigt, 
   globalThis.__st = {
     getStatus: async () => ({
       authorization: 'approved', managing, shieldAll: true,
-      shieldedCount: 0, releasedCount: 0, releasedUntil,
+      shieldedCount: 0, releasedUntil,
     }),
     releaseFor: async ({ minutes }) => {
       releases.push(minutes);
       if (releaseWirft) throw new Error('kein Geraet');
       return {
         authorization: 'approved', managing: true, shieldAll: true,
-        shieldedCount: 0, releasedCount: 1,
+        shieldedCount: 0,
         releasedUntil: new Date(Date.now() + minutes * 60_000).toISOString(),
         cancelled, grantedMinutes: cancelled ? 0 : minutes,
       };

@@ -95,14 +95,14 @@ export interface ShieldStatus {
    */
   shieldedCount: number;
   /**
-   * Wie viele davon gerade freigegeben sind. 0 heisst: alles zu.
+   * Ende der laufenden Freigabe, ISO-8601. null, wenn keine laeuft.
    *
-   * Heute immer 0 oder gleich `shieldedCount` — die Freigabe gilt fuer
-   * alles. Die Zahl bleibt statt eines Ja/Nein, damit eine spaetere
-   * Teilfreigabe die Schnittstelle nicht bricht.
+   * Das ist die EINZIGE Auskunft darueber, ob gerade offen ist. Ein
+   * frueher hier gefuehrtes `releasedCount` ist am 20.09.2026 entfallen:
+   * Seit jede Freigabe fuer alles gilt, zaehlte es nichts mehr, was sich
+   * zaehlen liesse — bei `shieldAll` ohne Ausnahmen haette es waehrend
+   * einer laufenden Freigabe 0 gemeldet und damit "alles zu" behauptet.
    */
-  releasedCount: number;
-  /** Ende der laufenden Freigabe, ISO-8601. null, wenn keine laeuft. */
   releasedUntil: string | null;
 }
 
@@ -230,6 +230,5 @@ export const EMPTY_STATUS: ShieldStatus = {
   // einzelne Apps betroffen.
   shieldAll: true,
   shieldedCount: 0,
-  releasedCount: 0,
   releasedUntil: null,
 };

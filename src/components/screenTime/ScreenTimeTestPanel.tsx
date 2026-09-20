@@ -82,7 +82,9 @@ export function ScreenTimeTestPanel() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          {status.releasedCount > 0 ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+          {status.releasedUntil && new Date(status.releasedUntil) > new Date()
+            ? <ShieldOff className="h-4 w-4" />
+            : <ShieldCheck className="h-4 w-4" />}
           Gerätesperre (Werkbank)
         </CardTitle>
         <CardDescription>
@@ -99,7 +101,9 @@ export function ScreenTimeTestPanel() {
           <dd className="font-medium">{status.shieldedCount}</dd>
           <dt className="text-muted-foreground">Gerade offen</dt>
           <dd className="font-medium">
-            {status.releasedCount > 0 ? `${status.releasedCount} bis ${laufend}` : 'keine'}
+            {status.releasedUntil && new Date(status.releasedUntil) > new Date()
+              ? `alles bis ${laufend}`
+              : 'nichts'}
           </dd>
         </dl>
 
