@@ -12,23 +12,27 @@ import UIKit
 /// eigenes Paket mit podspec zieht "npx cap sync ios" die Dateien dagegen bei
 /// jedem Lauf wieder herein.
 ///
-/// ── Was diese erste Fassung kann und was NICHT ────────────────────────────
+/// ── Was diese Fassung kann und was NICHT ──────────────────────────────────
 ///
-/// Kann: Berechtigung anfragen, Apps auswaehlen, sperren, alles freigeben,
-/// wieder sperren, Zustand melden.
+/// Kann: Berechtigung anfragen, Apps auswaehlen, sperren, fuer eine bestimmte
+/// Zeit freigeben, nach Ablauf von selbst wieder sperren, Zustand melden.
 ///
-/// Kann NICHT: die Sperre nach Ablauf von selbst wieder zuschnappen lassen,
-/// solange die App geschlossen ist. Dafuer braucht es eine
-/// DeviceActivityMonitor-Erweiterung, und die verlangt einen eigenen
-/// App-Identifier samt Profil. Bis dahin prueft die App den Ablauf, sobald sie
-/// wieder in den Vordergrund kommt.
+/// Das Zuschnappen nach Ablauf erledigt die DeviceActivityMonitor-Erweiterung
+/// (native/screen-time/ios/Extensions). Sie laeuft als eigener Prozess und
+/// braucht LernZeit dafuer nicht im Vordergrund. In der vorigen Fassung stand
+/// an dieser Stelle eine ECHTE Luecke: Wer die App nach dem Freigeben nicht
+/// mehr oeffnete, behielt seine Apps offen. Die Pruefung beim Oeffnen bleibt
+/// als zweiter Weg bestehen — sie greift frueher, wenn das Zeitfenster
+/// aufgerundet werden musste.
 ///
-/// Das ist eine ECHTE Luecke, kein Schoenheitsfehler: Wer LernZeit nach dem
-/// Freigeben nicht mehr oeffnet, behaelt die Apps offen. Diese Fassung ist
-/// zum Erproben auf dem eigenen Geraet gedacht, nicht zum Ausliefern.
+/// Kann NICHT: einen eigenen Sperrbildschirm zeigen (iOS zeigt seinen
+/// grauen Standard), und den Modus 'selected', bei dem das Kind eine einzelne
+/// App auswaehlt. Beides bewusst spaeter — um die Menge an ungetestetem Swift
+/// klein zu halten.
 ///
-/// Der Modus 'selected' (Kind waehlt eine App) fehlt hier ebenfalls noch —
-/// bewusst, um die Menge an ungetestetem Swift klein zu halten.
+/// Der Zustand liegt in der App Group, nicht in UserDefaults.standard: Die
+/// Erweiterung ist ein eigener Prozess und saehe sonst nichts. Siehe
+/// ScreenTimeShared.swift.
 @objc(ScreenTimePlugin)
 public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "ScreenTimePlugin"
@@ -44,76 +48,40 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise)
     ]
 
-    private enum Keys {
-        static let selection = "lernzeit.screentime.selection"
-        static let managing = "lernzeit.screentime.managing"
-        static let releasedUntil = "lernzeit.screentime.releasedUntil"
-    }
-
-    private let defaults = UserDefaults.standard
-
-    // MARK: - Zustand lesen und schreiben
+    // MARK: - Zustand
+    //
+    // Alles liegt in LernzeitScreenTime, damit App und Erweiterung dieselbe
+    // Wahrheit lesen. Die Huellen hier halten die uebrigen Methoden lesbar.
 
     @available(iOS 16.0, *)
     private var storedSelection: FamilyActivitySelection? {
-        get {
-            guard let data = defaults.data(forKey: Keys.selection) else { return nil }
-            return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
-        }
-        set {
-            if let newValue, let data = try? JSONEncoder().encode(newValue) {
-                defaults.set(data, forKey: Keys.selection)
-            } else {
-                defaults.removeObject(forKey: Keys.selection)
-            }
-        }
+        get { LernzeitScreenTime.selection }
+        set { LernzeitScreenTime.selection = newValue }
     }
 
     private var managing: Bool {
-        get { defaults.bool(forKey: Keys.managing) }
-        set { defaults.set(newValue, forKey: Keys.managing) }
+        get { LernzeitScreenTime.managing }
+        set { LernzeitScreenTime.managing = newValue }
     }
 
     private var releasedUntil: Date? {
-        get { defaults.object(forKey: Keys.releasedUntil) as? Date }
-        set {
-            if let newValue { defaults.set(newValue, forKey: Keys.releasedUntil) }
-            else { defaults.removeObject(forKey: Keys.releasedUntil) }
-        }
-    }
-
-    // MARK: - Sperre setzen und loesen
-
-    @available(iOS 16.0, *)
-    private func shieldNow() {
-        let store = ManagedSettingsStore()
-        guard managing, let selection = storedSelection else {
-            store.shield.applications = nil
-            store.shield.applicationCategories = nil
-            return
-        }
-        store.shield.applications = selection.applicationTokens.isEmpty
-            ? nil : selection.applicationTokens
-        store.shield.applicationCategories = selection.categoryTokens.isEmpty
-            ? nil : .specific(selection.categoryTokens)
+        get { LernzeitScreenTime.releasedUntil }
+        set { LernzeitScreenTime.releasedUntil = newValue }
     }
 
     @available(iOS 16.0, *)
-    private func unshieldNow() {
-        let store = ManagedSettingsStore()
-        store.shield.applications = nil
-        store.shield.applicationCategories = nil
-    }
+    private func shieldNow() { LernzeitScreenTime.applyShield() }
 
-    /// Ersatz fuer die noch fehlende DeviceActivityMonitor-Erweiterung: Bei
-    /// jeder Abfrage pruefen, ob die Freigabe abgelaufen ist, und dann wieder
-    /// sperren. Greift nur, solange die App laeuft — siehe Hinweis oben.
+    @available(iOS 16.0, *)
+    private func unshieldNow() { LernzeitScreenTime.clearShield() }
+
+    /// Zweiter Weg neben der Erweiterung: Kommt die App in den Vordergrund und
+    /// die Freigabe ist abgelaufen, wird sofort gesperrt. Das greift frueher
+    /// als das Zeitfenster, wenn dieses aufgerundet werden musste.
     @available(iOS 16.0, *)
     private func reshieldIfExpired() {
-        guard let until = releasedUntil else { return }
-        if until <= Date() {
-            releasedUntil = nil
-            shieldNow()
+        if LernzeitScreenTime.reshieldIfExpired() {
+            LernzeitScreenTime.stopMonitoring()
         }
     }
 
@@ -225,6 +193,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         managing = true
         releasedUntil = nil
+        LernzeitScreenTime.stopMonitoring()
         shieldNow()
         call.resolve(statusPayload())
     }
@@ -238,8 +207,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         // weiterlernt, bekommt die neuen Minuten hinten angehaengt. Andersherum
         // waere es eine Bestrafung fuers Weiterlernen.
         let basis = max(releasedUntil ?? Date(), Date())
-        releasedUntil = basis.addingTimeInterval(TimeInterval(minutes * 60))
+        let ablauf = basis.addingTimeInterval(TimeInterval(minutes * 60))
+        releasedUntil = ablauf
         unshieldNow()
+        // Ab hier uebernimmt das System: Auch wenn LernZeit geschlossen wird,
+        // schnappt die Sperre zu.
+        LernzeitScreenTime.startMonitoring(until: ablauf)
 
         var payload = statusPayload()
         payload["cancelled"] = false
@@ -250,6 +223,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func restoreShield(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         releasedUntil = nil
+        LernzeitScreenTime.stopMonitoring()
         shieldNow()
         call.resolve(statusPayload())
     }
@@ -260,6 +234,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         managing = false
         releasedUntil = nil
         storedSelection = nil
+        LernzeitScreenTime.stopMonitoring()
         unshieldNow()
         call.resolve(statusPayload())
     }

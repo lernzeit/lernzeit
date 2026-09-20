@@ -91,6 +91,16 @@ workflows:
       ios_signing:
         provisioning_profiles:
           - delernzeitapp_App_Store
+          # Fuer die DeviceActivityMonitor-Erweiterung. Wird das Profil hier
+          # nicht geladen, laesst scripts/ios-add-extensions.rb die Erweiterung
+          # weg und der Build bleibt gruen — nur ohne automatische Ruecksperre.
+          #
+          # delernzeitapp_shield_App_Store und
+          # delernzeitapp_shieldaction_App_Store sind im Portal angelegt und
+          # bei Codemagic hochgeladen, stehen hier aber bewusst noch NICHT:
+          # Solange es die zugehoerigen Erweiterungen im Projekt nicht gibt,
+          # waeren es Profile ohne Ziel.
+          - delernzeitapp_monitor_App_Store
         certificates:
           - cert
       vars:
@@ -262,6 +272,15 @@ workflows:
           	     scheitert die Signierung. -->
           	<key>com.apple.developer.family-controls</key>
           	<true/>
+          	<!-- App Group: Haupt-App und DeviceActivityMonitor-Erweiterung sind
+          	     zwei Prozesse und teilen ihren Zustand ueber diesen Container.
+          	     Ohne den Eintrag saehe die Erweiterung die Auswahl des Kindes
+          	     nicht und koennte nichts sperren. Muss mit
+          	     LernzeitScreenTime.appGroup uebereinstimmen. -->
+          	<key>com.apple.security.application-groups</key>
+          	<array>
+          		<string>group.de.lernzeit.app</string>
+          	</array>
           </dict>
           </plist>
           EOF
@@ -328,6 +347,8 @@ workflows:
           	<dict>
           		<key>de.lernzeit.app</key>
           		<string>delernzeitapp_App_Store</string>
+          		<key>de.lernzeit.app.monitor</key>
+          		<string>delernzeitapp_monitor_App_Store</string>
           	</dict>
           	<key>uploadSymbols</key>
           	<true/>
@@ -336,6 +357,23 @@ workflows:
           </dict>
           </plist>
           EOF
+
+      # NACH dem Entitlements-Patch: Der prueft, dass CODE_SIGN_ENTITLEMENTS
+      # genau zweimal vorkommt (Debug und Release der App). Jedes
+      # Erweiterungsziel bringt zwei weitere mit und wuerde die Pruefung
+      # fehlschlagen lassen.
+      #
+      # VOR pod install, damit das Ziel existiert, bevor der Workspace
+      # entsteht.
+      - name: Bildschirmzeit-Erweiterungen einhaengen
+        script: |
+          set -e
+          ruby scripts/ios-add-extensions.rb
+
+          echo "--- Integritaetspruefung nach dem Eingriff ---"
+          plutil -lint ios/App/App.xcodeproj/project.pbxproj \
+            || { echo "ERROR: project.pbxproj ist beschaedigt."; exit 1; }
+          xcodebuild -list -project ios/App/App.xcodeproj
 
       - name: Install CocoaPods dependencies
         script: |
