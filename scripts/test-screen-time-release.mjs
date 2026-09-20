@@ -70,16 +70,14 @@ function baueSupabase({ genehmigt = [], freigaben = [], antwort }) {
   return {
     aufrufe,
     from: (tabelle) => kette(tabelle === 'screen_time_requests' ? genehmigt : freigaben),
-    functions: {
-      invoke: async (name, optionen) => {
-        aufrufe.push(optionen.body);
-        return antwort(optionen.body);
-      },
+    rpc: async (name, argumente) => {
+      aufrufe.push({ name, ...argumente });
+      return antwort({ name, ...argumente });
     },
   };
 }
 
-const { offeneGenehmigungen, nachzuholendeMinuten, gleicheFreigabenAb } = await import(bundle);
+const { offeneGenehmigungen, nachzuholendeMinuten, gleicheFreigabenAb, starteGrundzeit } = await import(bundle);
 
 // ── 1. Welche Genehmigungen sind offen ───────────────────────────────────
 {
@@ -136,20 +134,20 @@ const { offeneGenehmigungen, nachzuholendeMinuten, gleicheFreigabenAb } = await 
 }
 
 // ── 3. Der Abgleich von Anfang bis Ende ──────────────────────────────────
-async function laufAbgleich({ managing = true, releasedUntil = null, genehmigt, freigaben, releaseWirft = false, cancelled = false, antwort }) {
+async function laufAbgleich({ managing = true, releasedUntil = null, trialUntil = null, genehmigt, freigaben, releaseWirft = false, cancelled = false, antwort }) {
   globalThis.__toasts = [];
   const releases = [];
   globalThis.__st = {
     getStatus: async () => ({
       authorization: 'approved', managing, shieldAll: true,
-      shieldedCount: 0, releasedUntil,
+      shieldedCount: 0, trialUntil, releasedUntil,
     }),
     releaseFor: async ({ minutes }) => {
       releases.push(minutes);
       if (releaseWirft) throw new Error('kein Geraet');
       return {
         authorization: 'approved', managing: true, shieldAll: true,
-        shieldedCount: 0,
+        shieldedCount: 0, trialUntil: null,
         releasedUntil: new Date(Date.now() + minutes * 60_000).toISOString(),
         cancelled, grantedMinutes: cancelled ? 0 : minutes,
       };
@@ -161,10 +159,12 @@ async function laufAbgleich({ managing = true, releasedUntil = null, genehmigt, 
   return { releases, aufrufe: sb.aufrufe, toasts: globalThis.__toasts };
 }
 
-const erfolg = (body) => ({
-  data: body.action === 'redeem_unlock'
-    ? { success: true, unlock: { id: 'u-neu', minutes: 15 } }
-    : { success: true },
+const erfolg = (aufruf) => ({
+  data: aufruf.name === 'claim_approved_time'
+    ? [{ unlock_id: 'u-neu', minutes: 15, expires_at: new Date(Date.now() + 900_000).toISOString() }]
+    : aufruf.name === 'claim_base_time'
+      ? [{ unlock_id: 'u-grund', minutes: 30, expires_at: new Date(Date.now() + 1_800_000).toISOString() }]
+      : null,
   error: null,
 });
 
@@ -172,7 +172,7 @@ const erfolg = (body) => ({
   const { releases, aufrufe, toasts } = await laufAbgleich({
     genehmigt: [{ id: 'a', requested_minutes: 15 }], freigaben: [], antwort: erfolg,
   });
-  pruefe(aufrufe.length === 1 && aufrufe[0].action === 'redeem_unlock', 'offene Genehmigung wird gebucht');
+  pruefe(aufrufe.length === 1 && aufrufe[0].name === 'claim_approved_time', 'offene Genehmigung wird gebucht');
   pruefe(releases.length === 1 && releases[0] === 15, 'danach wird fuer 15 Minuten entsperrt');
   pruefe(toasts.length === 1, 'das Kind bekommt eine Meldung');
 }
@@ -218,7 +218,7 @@ const erfolg = (body) => ({
     genehmigt: [{ id: 'a', requested_minutes: 15 }], freigaben: [], antwort: erfolg, releaseWirft: true,
   });
   pruefe(
-    aufrufe.length === 2 && aufrufe[1].action === 'revoke_unlock' && aufrufe[1].unlockId === 'u-neu',
+    aufrufe.length === 2 && aufrufe[1].name === 'revoke_unlock' && aufrufe[1].p_unlock_id === 'u-neu',
     'scheitert das Entsperren, wird die Buchung zurueckgenommen',
   );
 }
@@ -228,7 +228,7 @@ const erfolg = (body) => ({
     genehmigt: [{ id: 'a', requested_minutes: 15 }], freigaben: [], antwort: erfolg, cancelled: true,
   });
   pruefe(
-    aufrufe.length === 2 && aufrufe[1].action === 'revoke_unlock',
+    aufrufe.length === 2 && aufrufe[1].name === 'revoke_unlock',
     'ein abgebrochenes Entsperren zaehlt genauso — die Minuten bleiben dem Kind',
   );
 }
@@ -236,9 +236,9 @@ const erfolg = (body) => ({
 {
   const { releases, toasts } = await laufAbgleich({
     genehmigt: [{ id: 'a', requested_minutes: 15 }], freigaben: [],
-    antwort: () => ({ data: { success: true, alreadyRedeemed: true }, error: null }),
+    antwort: () => ({ data: [], error: null }),
   });
-  pruefe(releases.length === 0 && toasts.length === 0, '"schon eingeloest" entsperrt nicht noch einmal');
+  pruefe(releases.length === 0 && toasts.length === 0, 'leeres Ergebnis (schon eingeloest) entsperrt nicht noch einmal');
 }
 
 {
@@ -255,8 +255,93 @@ const erfolg = (body) => ({
     freigaben: [], antwort: erfolg,
   });
   pruefe(
-    aufrufe.filter((a) => a.action === 'redeem_unlock').length === 2 && releases.length === 2,
+    aufrufe.filter((a) => a.name === 'claim_approved_time').length === 2 && releases.length === 2,
     'mehrere offene Genehmigungen werden einzeln eingeloest',
+  );
+}
+
+{
+  const { releases, aufrufe } = await laufAbgleich({
+    trialUntil: new Date(Date.now() + 8 * 60_000).toISOString(),
+    genehmigt: [{ id: 'a', requested_minutes: 15 }], freigaben: [], antwort: erfolg,
+  });
+  pruefe(
+    aufrufe.length === 0 && releases.length === 0,
+    'waehrend des Probelaufs wird nichts eingeloest',
+  );
+}
+
+{
+  const { releases } = await laufAbgleich({
+    trialUntil: new Date(Date.now() - 60_000).toISOString(),
+    genehmigt: [{ id: 'a', requested_minutes: 15 }], freigaben: [], antwort: erfolg,
+  });
+  pruefe(releases.length === 1, 'ein abgelaufener Probelauf haelt nichts mehr auf');
+}
+
+// ── 4. Grundzeit ─────────────────────────────────────────────────────────
+async function laufGrundzeit({ antwort, releaseWirft = false, releasedUntilNachher = 'offen' }) {
+  globalThis.__toasts = [];
+  const releases = [];
+  // Das Geraet gilt nur als offen, wenn das Entsperren auch GELUNGEN ist.
+  // Ein Wurf laesst es zu — sonst prueft der Test eine Lage, die es nicht
+  // gibt.
+  let geoeffnet = false;
+  globalThis.__st = {
+    getStatus: async () => ({
+      authorization: 'approved', managing: true, shieldAll: true,
+      shieldedCount: 0, trialUntil: null,
+      releasedUntil: releasedUntilNachher === 'offen' && geoeffnet
+        ? new Date(Date.now() + 1_800_000).toISOString()
+        : null,
+    }),
+    releaseFor: async ({ minutes }) => {
+      releases.push(minutes);
+      if (releaseWirft) throw new Error('kein Geraet');
+      geoeffnet = true;
+      return {
+        authorization: 'approved', managing: true, shieldAll: true,
+        shieldedCount: 0, trialUntil: null,
+        releasedUntil: new Date(Date.now() + minutes * 60_000).toISOString(),
+        cancelled: false, grantedMinutes: minutes,
+      };
+    },
+  };
+  const sb = baueSupabase({ genehmigt: [], freigaben: [], antwort });
+  globalThis.__sb = sb;
+  const minuten = await starteGrundzeit();
+  return { minuten, releases, aufrufe: sb.aufrufe };
+}
+
+{
+  const { minuten, releases, aufrufe } = await laufGrundzeit({ antwort: erfolg });
+  pruefe(aufrufe[0]?.name === 'claim_base_time', 'Grundzeit wird in der Datenbank gebucht');
+  pruefe(releases.length === 1 && releases[0] === 30, 'danach wird fuer 30 Minuten entsperrt');
+  pruefe(minuten === 30, 'zurueck kommen die tatsaechlich erteilten Minuten');
+}
+
+{
+  const { minuten, releases } = await laufGrundzeit({ antwort: () => ({ data: [], error: null }) });
+  pruefe(
+    minuten === 0 && releases.length === 0,
+    'heute schon gelaufen oder auf 0 gestellt: kein Entsperren, keine Zahl',
+  );
+}
+
+{
+  const { minuten, aufrufe } = await laufGrundzeit({ antwort: erfolg, releaseWirft: true });
+  pruefe(
+    aufrufe.length === 2 && aufrufe[1].name === 'revoke_unlock' && aufrufe[1].p_unlock_id === 'u-grund',
+    'scheitert das Entsperren, wird die Grundzeit zurueckgenommen',
+  );
+  pruefe(minuten === 0, 'und dem Kind werden keine Minuten vorgegaukelt');
+}
+
+{
+  const { minuten } = await laufGrundzeit({ antwort: erfolg, releasedUntilNachher: 'zu' });
+  pruefe(
+    minuten === 0,
+    'bleibt das Geraet trotz Buchung zu, wird auch nichts gemeldet',
   );
 }
 

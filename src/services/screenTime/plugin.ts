@@ -26,6 +26,7 @@ const nichtVerfuegbar: ScreenTimePlugin = {
   requestAuthorization: async () => ({ authorization: 'denied' as const }),
   pickShieldedApps: async () => ({ shieldedCount: 0, cancelled: true }),
   applyShield: async () => EMPTY_STATUS,
+  confirmShield: async () => EMPTY_STATUS,
   releaseFor: async () => ({ ...EMPTY_STATUS, cancelled: true, grantedMinutes: 0 }),
   restoreShield: async () => EMPTY_STATUS,
   stopManaging: async () => EMPTY_STATUS,

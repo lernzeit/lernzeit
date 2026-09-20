@@ -100,6 +100,10 @@ if (!url || !key) {
     pruefe(3, 'In allen Faechern derselbe Wert', f.sekunden_je_aufgabe_uneinheitlich, false);
     pruefe(4, 'Obergrenze werktags (Minuten)', f.minuten_werktags, '30');
     pruefe(4, 'Obergrenze am Wochenende (Minuten)', f.minuten_wochenende, '60');
+    // Neu seit dem 20.09.2026: Minuten, die ohne Lernen zustehen. Muss mit
+    // DEFAULT_BASE_MINUTES in src/config/childSettings.ts uebereinstimmen —
+    // sonst behauptet die Oberflaeche eine Zahl, die die Datenbank nicht gibt.
+    pruefe(4, 'Grundzeit am Tag (Minuten)', f.grundzeit_minuten, '30');
     pruefe(10, 'Geraetesperre standardmaessig aus', f.bildschirmzeit_verwaltet, 'false');
     pruefe(10, 'Automatische Freigabe standardmaessig aus', f.bildschirmzeit_auto_freigabe, 'false');
   }

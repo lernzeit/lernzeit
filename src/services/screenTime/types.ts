@@ -95,6 +95,19 @@ export interface ShieldStatus {
    */
   shieldedCount: number;
   /**
+   * Ende eines laufenden PROBELAUFS, ISO-8601. null, wenn die Sperre
+   * dauerhaft gilt.
+   *
+   * Die erste Aktivierung ist bewusst auf Widerruf: Apple sagt nirgends, ob
+   * eine App, die alles sperrt, sich dabei selbst mitsperrt. Waere das so,
+   * koennte das Kind LernZeit nicht mehr oeffnen — und die Eltern kaemen nur
+   * noch ueber die iOS-Einstellungen an die Sperre heran.
+   *
+   * Solange dieser Wert gesetzt ist, faellt die Sperre von selbst, wenn
+   * niemand sie mit `confirmShield()` bestaetigt.
+   */
+  trialUntil: string | null;
+  /**
    * Ende der laufenden Freigabe, ISO-8601. null, wenn keine laeuft.
    *
    * Das ist die EINZIGE Auskunft darueber, ob gerade offen ist. Ein
@@ -152,8 +165,21 @@ export interface ScreenTimePlugin {
    * `shieldAll: true` (die Vorgabe) sperrt ALLES; eine gespeicherte Auswahl
    * gilt dann als Ausnahmenliste. `shieldAll: false` sperrt nur die
    * ausgewaehlten Apps. Ohne Angabe bleibt der zuletzt gesetzte Modus.
+   *
+   * `trialMinutes` macht daraus einen Probelauf, der sich von selbst wieder
+   * aufloest — siehe `trialUntil`. Die ERSTE Aktivierung sollte immer so
+   * laufen.
    */
-  applyShield(options?: { shieldAll?: boolean }): Promise<ShieldStatus>;
+  applyShield(options?: { shieldAll?: boolean; trialMinutes?: number }): Promise<ShieldStatus>;
+
+  /**
+   * Macht aus einem Probelauf die dauerhafte Sperre.
+   *
+   * Erst dieser Aufruf beweist, was sich sonst nirgends beweisen laesst:
+   * dass LernZeit nach dem Sperren noch zu oeffnen war. Wer das nicht
+   * konnte, kommt hier nie an.
+   */
+  confirmShield(): Promise<ShieldStatus>;
 
   /**
    * Hebt die Sperre fuer `minutes` Minuten auf und laesst sie danach von
@@ -230,5 +256,6 @@ export const EMPTY_STATUS: ShieldStatus = {
   // einzelne Apps betroffen.
   shieldAll: true,
   shieldedCount: 0,
+  trialUntil: null,
   releasedUntil: null,
 };

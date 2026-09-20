@@ -21,6 +21,12 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // stiller Fehlgriff waere spaeter kaum zu finden.
         guard activity == LernzeitScreenTime.activityName else { return }
 
+        // Zuerst der Probelauf: Laeuft eine unbestaetigte Probesperre ab,
+        // faellt sie GANZ — nicht nur bis zur naechsten Freigabe. Das ist der
+        // Notausstieg fuer den Fall, dass LernZeit sich unter .all() selbst
+        // mitsperrt und die App deshalb gar nichts mehr tun kann.
+        if LernzeitScreenTime.endTrialIfExpired() { return }
+
         // Bewusst NICHT blind sperren, sondern nur bei abgelaufener Freigabe.
         // Das Fenster kann aufgerundet worden sein (siehe startMonitoring),
         // und in der Zwischenzeit kann die App die Freigabe verlaengert haben

@@ -2,12 +2,22 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone } from 'lucide-react';
+import { Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone, TimerReset } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { ScreenTime, screenTimeAvailability } from '@/services/screenTime/plugin';
 import { EMPTY_STATUS, type ScreenTimeAvailability, type ShieldStatus } from '@/services/screenTime/types';
 import { ParentGate } from '@/components/screenTime/ParentGate';
+
+/**
+ * Dauer des Probelaufs bei der ersten Aktivierung.
+ *
+ * Kurz genug, dass ein Fehlschlag nicht den Abend kostet, lang genug zum
+ * Ausprobieren. iOS weist sehr kurze Überwachungsfenster ab und verlängert
+ * sie dann — der angezeigte Zeitpunkt kommt deshalb vom Gerät und nicht aus
+ * dieser Zahl.
+ */
+const PROBELAUF_MINUTEN = 10;
 
 interface ScreenTimeSetupProps {
   /** Das Kind, auf dessen Gerät diese Ansicht läuft. */
@@ -85,12 +95,19 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
   };
 
   /**
-   * Der eine Knopf: zustimmen und sofort sperren.
+   * Der eine Knopf: zustimmen und sofort sperren — auf Widerruf.
    *
    * Zwischen Apples Zustimmung und dem Einschalten der Sperre liegt kein
    * weiterer Schritt. Bliebe dazwischen ein Bildschirm stehen, hätte das
    * Elternteil zugestimmt und trotzdem nichts erreicht — der häufigste Weg,
    * eine Einrichtung halb fertig liegen zu lassen.
+   *
+   * Warum als Probelauf: Apple sagt nirgends, ob eine App, die alles sperrt,
+   * sich dabei selbst mitsperrt. Wäre das so, käme das Kind nicht mehr in
+   * LernZeit, um Zeit zu verdienen, und die Eltern nur noch über die
+   * iOS-Einstellungen an die Sperre heran. Der Probelauf macht diese offene
+   * Frage harmlos: Wer sie nicht bestätigt, bekommt sie von selbst wieder
+   * los.
    */
   const einrichten = async () => {
     setBusy('Einrichten');
@@ -100,8 +117,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
         await laden();
         return;
       }
-      await ScreenTime.applyShield({ shieldAll: true });
-      toast.success('Die Sperre ist aktiv.');
+      await ScreenTime.applyShield({ shieldAll: true, trialMinutes: PROBELAUF_MINUTEN });
     } catch (e) {
       toast.error('Einrichten hat nicht geklappt', { description: String(e) });
     } finally {
@@ -151,6 +167,65 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
 
   const zugestimmt = status.authorization === 'approved';
   const freigabeLaeuft = Boolean(status.releasedUntil && new Date(status.releasedUntil) > new Date());
+  const probeLaeuft = Boolean(status.trialUntil && new Date(status.trialUntil) > new Date());
+
+  // Der Probelauf bekommt die ganze Karte. Alles andere — Ausnahmen,
+  // Aufheben, Erklärungen — wäre jetzt im Weg: Es gibt genau eine Frage zu
+  // beantworten, und zwar sofort.
+  if (probeLaeuft && status.trialUntil) {
+    const bis = new Date(status.trialUntil).toLocaleTimeString('de-DE', {
+      hour: '2-digit', minute: '2-digit',
+    });
+    return (
+      <Card className="border-amber-500/40 bg-amber-500/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TimerReset className="h-4 w-4 text-amber-600" />
+            Probelauf bis {bis} Uhr
+          </CardTitle>
+          <CardDescription>
+            Die Sperre ist an — aber nur auf Probe. Wenn du sie nicht
+            bestätigst, löst sie sich bis {bis} Uhr von selbst wieder auf.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <ol className="text-sm space-y-2 list-decimal pl-5 leading-relaxed">
+            <li>Schließe LernZeit und öffne eine andere App. Es sollte ein Sperrbildschirm erscheinen.</li>
+            <li>Öffne LernZeit wieder. <strong>Das muss gehen</strong> — sonst kann dein Kind keine Zeit verdienen.</li>
+            <li>Erst wenn beides stimmt: unten bestätigen.</li>
+          </ol>
+
+          <div className="grid gap-2">
+            <Button
+              disabled={busy !== null}
+              onClick={() => void fuehreAus('Bestätigen', () => ScreenTime.confirmShield())}
+            >
+              {busy === 'Bestätigen'
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <ShieldCheck className="h-4 w-4 mr-2" />}
+              Hat geklappt — dauerhaft einschalten
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={busy !== null}
+              onClick={() => void fuehreAus('Abbrechen', () => ScreenTime.stopManaging())}
+            >
+              <LockOpen className="h-4 w-4 mr-2" />
+              Sofort abbrechen
+            </Button>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Ließ sich LernZeit nicht mehr öffnen, tu nichts — warte einfach ab.
+            Die Sperre fällt von allein, auch wenn du diese Seite nicht
+            erreichst.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>

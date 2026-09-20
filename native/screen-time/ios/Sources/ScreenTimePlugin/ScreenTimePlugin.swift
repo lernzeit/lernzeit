@@ -42,6 +42,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pickShieldedApps", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "applyShield", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "confirmShield", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "releaseFor", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restoreShield", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopManaging", returnType: CAPPluginReturnPromise),
@@ -110,6 +111,11 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "shieldAll": LernzeitScreenTime.shieldAll,
             "shieldedCount": shieldedCount
         ]
+        if let probeEnde = LernzeitScreenTime.trialUntil, probeEnde > Date() {
+            payload["trialUntil"] = ISO8601DateFormatter().string(from: probeEnde)
+        } else {
+            payload["trialUntil"] = NSNull()
+        }
         if running, let until = releasedUntil {
             payload["releasedUntil"] = ISO8601DateFormatter().string(from: until)
         } else {
@@ -127,6 +133,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             // betroffen.
             "shieldAll": true,
             "shieldedCount": 0,
+            "trialUntil": NSNull(),
             "releasedUntil": NSNull()
         ])
     }
@@ -195,6 +202,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     ///
     /// `shieldAll` (Vorgabe true) sperrt ALLES und behandelt die Auswahl als
     /// Ausnahmen. Ohne den Parameter bleibt der zuletzt gesetzte Modus.
+    ///
+    /// `trialMinutes` macht daraus einen PROBELAUF: Die Sperre loest sich
+    /// nach dieser Zeit von selbst wieder auf, wenn sie niemand mit
+    /// `confirmShield` bestaetigt. Gedacht fuer die erste Aktivierung, solange
+    /// nicht geklaert ist, ob LernZeit sich unter `.all()` selbst mitsperrt —
+    /// siehe LernzeitScreenTime.trialUntil.
     @objc func applyShield(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         if let alles = call.getBool("shieldAll") {
@@ -202,7 +215,36 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         managing = true
         releasedUntil = nil
+
+        if let probeMinuten = call.getInt("trialMinutes"), probeMinuten > 0 {
+            let gewuenscht = Date().addingTimeInterval(TimeInterval(probeMinuten * 60))
+            shieldNow()
+            // Das System raeumt auf, auch wenn LernZeit gesperrt sein sollte.
+            // Massgeblich ist das Fenster, das iOS tatsaechlich angenommen
+            // hat: Kuerzere Fenster weist es ab, und dann faellt die Sperre
+            // eben spaeter. Die Eltern sollen die echte Zahl sehen.
+            let ende = LernzeitScreenTime.startMonitoring(until: gewuenscht)
+            LernzeitScreenTime.trialUntil = ende ?? gewuenscht
+        } else {
+            LernzeitScreenTime.trialUntil = nil
+            LernzeitScreenTime.stopMonitoring()
+            shieldNow()
+        }
+
+        call.resolve(statusPayload())
+    }
+
+    /// Macht aus einem Probelauf die dauerhafte Sperre.
+    ///
+    /// Erst hier ist bewiesen, was sich sonst nirgends beweisen laesst: dass
+    /// das Elternteil LernZeit nach dem Sperren noch oeffnen konnte. Wer das
+    /// nicht konnte, drueckt diesen Knopf nie — und die Sperre faellt von
+    /// selbst.
+    @objc func confirmShield(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        LernzeitScreenTime.trialUntil = nil
         LernzeitScreenTime.stopMonitoring()
+        managing = true
         shieldNow()
         call.resolve(statusPayload())
     }
@@ -243,6 +285,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         managing = false
         releasedUntil = nil
         storedSelection = nil
+        LernzeitScreenTime.trialUntil = nil
         LernzeitScreenTime.stopMonitoring()
         unshieldNow()
         call.resolve(statusPayload())
@@ -250,6 +293,10 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func getStatus(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        // Aufraeumen, falls das System die Erweiterung nicht gerufen hat.
+        // Doppelt gemoppelt ist hier richtig: Ein Probelauf, der stehen
+        // bleibt, waere genau der Zustand, den er verhindern soll.
+        LernzeitScreenTime.endTrialIfExpired()
         call.resolve(statusPayload())
     }
 

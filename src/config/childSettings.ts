@@ -12,6 +12,15 @@
  */
 
 export const DEFAULT_SECONDS_PER_TASK = 30;
+/**
+ * Minuten, die einem Kind taeglich ohne Lernen zustehen.
+ *
+ * Muss mit dem Spalten-Vorgabewert von `child_settings.screen_time_base_minutes`
+ * uebereinstimmen. Der Gedanke stammt von Apple: Dort funktioniert das Handy
+ * erst einmal, und die Sperre greift, wenn das Tagesbudget aufgebraucht ist.
+ * Ohne diesen Wert waere LernZeit strenger als Apples eigene Bildschirmzeit.
+ */
+export const DEFAULT_BASE_MINUTES = 30;
 export const DEFAULT_WEEKDAY_MAX_MINUTES = 30;
 export const DEFAULT_WEEKEND_MAX_MINUTES = 60;
 

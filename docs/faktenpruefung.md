@@ -103,6 +103,12 @@ Eltern können den Wert je Fach ändern — das ist eine Premium-Funktion
 Es handelt sich um Voreinstellungen, nicht um eine feste Obergrenze des
 Produkts. Eltern passen sie an. Das ist geprüft und bestätigt.
 
+**Nicht verwechseln:** Diese Zahlen begrenzen die **verdiente** Zeit. Davon
+getrennt stehen seit dem 20.09.2026 täglich 30 **Freiminuten**
+(`screen_time_base_minutes`), für die das Kind nichts tun muss — siehe
+Zeile 10. Ein Satz wie „höchstens 30 Minuten am Tag" beschreibt also nur die
+eine Hälfte.
+
 **Was bleibt:** Der Satz „Standard: 30 Sekunden pro richtiger Aufgabe,
 höchstens 30 Minuten am Tag" (`ChildSettingsEditor.tsx:357`,
 `OnboardingNextStepCard.tsx:149`) beschreibt den Werktags-Standard und nennt
@@ -233,6 +239,15 @@ Kindes eingerichtet hat, und nur nach einer Genehmigung. Ohne Genehmigung
 passiert weiterhin nichts; `screen_time_auto_release` steht unverändert auf
 `false`. Die Zusage „verdiente Zeit wird nicht automatisch freigegeben" bleibt
 damit richtig.
+
+**Neu und sauber zu trennen — die Grundzeit:** Seit demselben Tag stehen einem
+Kind täglich 30 Minuten zu, die es *nicht* verdienen muss
+(`child_settings.screen_time_base_minutes`, Vorgabe am 20.09.2026 gegen die
+Datenbank geprüft: `30`). Das ist keine verdiente Zeit und ändert die Zusage
+oben nicht — wohl aber das Bild, das ein Werbetext zeichnen darf: „Das Handy
+bleibt zu, bis gelernt wurde" wäre ab jetzt falsch. Richtig ist: „Nach den
+Freiminuten bleibt das Handy zu, bis gelernt wurde." Eltern können die
+Freiminuten im Premium-Bereich bis auf 0 senken.
 
 **Noch nicht belegt:** Dass die Kette auf einem echten iPhone durchläuft. Das
 lässt sich nur auf einem Gerät mit der Apple-Berechtigung prüfen, nicht hier.

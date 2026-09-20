@@ -46,10 +46,43 @@ löst `useScreenTimeRelease` die Genehmigung auf dem Kindgerät ein:
 auf. Ein eindeutiger Index auf `screen_time_unlocks.request_id` verhindert
 doppeltes Einlösen.
 
-**Noch offen und nur auf einem Gerät prüfbar:** ob LernZeit sich unter
-`.all()` selbst sperrt. Falls ja, kann das Kind die App nicht mehr öffnen und
-muss als Ausnahme gesetzt werden — dann wird der Auswahldialog beim
-Einrichten doch wieder Pflicht.
+**Entschärft am 20.09.2026:** Ob LernZeit sich unter `.all()` selbst sperrt,
+ist weiterhin offen — Apple sagt dazu nichts, und es lässt sich nur auf einem
+Gerät klären. Die erste Aktivierung ist deshalb ein **Probelauf von zehn
+Minuten**, der sich von selbst auflöst, wenn ihn niemand bestätigt. Das
+Auflösen erledigt die DeviceActivityMonitor-Erweiterung, nicht die App: Wäre
+LernZeit gesperrt, könnte die App selbst nichts mehr tun.
+
+### ~~Grundzeit ohne Lernen~~ — erledigt am 20.09.2026
+
+LernZeit war strenger als Apples eigene Bildschirmzeit: Dort gibt es ein
+Tagesbudget, und die Sperre greift erst, wenn es aufgebraucht ist. Bei uns war
+das Budget null — ohne verdiente und genehmigte Zeit war das Telefon rund um
+die Uhr zu.
+
+Jetzt `child_settings.screen_time_base_minutes` (Vorgabe 30, im Premium-Bereich
+bis 0 absenkbar). Das Kind startet die Freiminuten selbst.
+
+**Bewusst anders als bei Apple:** Apples App-Limits zählen die tatsächliche
+NUTZUNG (`DeviceActivityEvent` mit Schwelle). Das lässt sich nicht nachbauen —
+ein solches Ereignis verlangt `ApplicationToken`s, und die gibt es nur aus dem
+Auswahldialog, den wir gerade abgeschafft haben. Unsere Freiminuten laufen
+deshalb ab dem Start, auch wenn das Telefon in der Tasche liegt. Deshalb
+startet sie das Kind per Knopf und nicht die App automatisch.
+
+### Ausnahmen-Knopf: von Apple kaputt
+
+Die Funktion „Ausnahmen wählen" baut auf
+`ShieldSettings.ActivityCategoryPolicy.all(except:)`. Entwickler berichten,
+dass die ausgenommenen Apps trotzdem gesperrt werden; ein Apple-Engineer hat
+das bestätigt („There are known issues in this area", FB15500605), ohne
+Lösung.
+
+*Zurückgestellt am 20.09.2026:* Erst der Gerätetest zeigt, ob es bei uns
+auftritt. Falls ja, ist der Ausweg nicht `except`, sondern Sperren nach
+**Kategorien** — die Eltern tippen einmal „Spiele", „Soziale Netzwerke",
+„Unterhaltung" an, und LernZeit als Bildungs-App ist gar nicht erst
+betroffen.
 
 ### ~~„Eltern fragen" sichtbar machen~~ — erledigt am 20.09.2026
 

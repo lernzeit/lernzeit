@@ -44,6 +44,7 @@ import { StreakFireCard } from '@/components/StreakFireCard';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
+import { BaseTimeCard } from '@/components/screenTime/BaseTimeCard';
 
 interface UserProfileProps {
   user: any;
@@ -615,6 +616,10 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                 </CardContent>
               </Card>
 
+              {/* Freiminuten stehen ueber dem Antrag: Wer heute noch welche
+                  hat, muss gar nicht erst fragen. */}
+              <BaseTimeCard childId={user.id} />
+
               {/* Show EarnedTimeWidget even when limit is reached - for breakdown and request */}
               <EarnedTimeWidget 
                 userId={user.id}
@@ -648,6 +653,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   </Button>
                 </CardContent>
               </Card>
+
+              <BaseTimeCard childId={user.id} />
 
               {/* Combined Earned Time + Screen Time Request Widget */}
               <EarnedTimeWidget 

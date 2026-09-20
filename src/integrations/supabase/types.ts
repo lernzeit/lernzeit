@@ -550,6 +550,7 @@ export type Database = {
           physics_seconds_per_task: number
           science_seconds_per_task: number
           screen_time_auto_release: boolean
+          screen_time_base_minutes: number
           screen_time_managed: boolean
           screen_time_unlock_mode: string
           updated_at: string
@@ -572,6 +573,7 @@ export type Database = {
           physics_seconds_per_task?: number
           science_seconds_per_task?: number
           screen_time_auto_release?: boolean
+          screen_time_base_minutes?: number
           screen_time_managed?: boolean
           screen_time_unlock_mode?: string
           updated_at?: string
@@ -594,6 +596,7 @@ export type Database = {
           physics_seconds_per_task?: number
           science_seconds_per_task?: number
           screen_time_auto_release?: boolean
+          screen_time_base_minutes?: number
           screen_time_managed?: boolean
           screen_time_unlock_mode?: string
           updated_at?: string
@@ -2035,6 +2038,15 @@ export type Database = {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined
       }
+      claim_approved_time: {
+        Args: { p_request_id: string }
+        Returns: { unlock_id: string; minutes: number; expires_at: string }[]
+      }
+      claim_base_time: {
+        Args: never
+        Returns: { unlock_id: string; minutes: number; expires_at: string }[]
+      }
+      revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
       set_own_platform: { Args: { p_platform: string }; Returns: undefined }
       set_screen_time_managed: { Args: { ist_verwaltet: boolean }; Returns: undefined }
       spalten_vorgabe: {

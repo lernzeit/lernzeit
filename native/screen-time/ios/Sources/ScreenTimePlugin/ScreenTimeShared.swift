@@ -35,6 +35,9 @@ public enum LernzeitScreenTime {
         public static let shieldRequests = "lernzeit.screentime.shieldRequests"
         /// true = alles sperren, die Auswahl sind dann AUSNAHMEN.
         public static let shieldAll = "lernzeit.screentime.shieldAll"
+        /// Ende des Probelaufs. Gesetzt heisst: Die Sperre loest sich von
+        /// selbst wieder, wenn niemand sie bis dahin bestaetigt.
+        public static let trialUntil = "lernzeit.screentime.trialUntil"
     }
 
     /// Faellt auf UserDefaults.standard zurueck, falls die App Group fehlt —
@@ -94,6 +97,32 @@ public enum LernzeitScreenTime {
         set { defaults.set(newValue, forKey: Keys.shieldAll) }
     }
 
+    /**
+     Ende des Probelaufs — oder nil, wenn die Sperre dauerhaft gilt.
+
+     Warum es das gibt: Apple sagt nirgends, ob eine App, die ALLES sperrt,
+     sich dabei selbst mitsperrt. Waere das so, koennte das Kind LernZeit
+     nicht mehr oeffnen, um Zeit zu verdienen — und die Eltern kaemen an die
+     Sperre nur noch ueber die iOS-Einstellungen heran. Eine Frage, die sich
+     nur auf einem echten Geraet beantworten laesst.
+
+     Der Probelauf macht die offene Frage harmlos: Die erste Sperre loest
+     sich nach wenigen Minuten von selbst, wenn niemand sie bestaetigt.
+     Schlimmstenfalls kostet ein Fehlschlag also ein paar Minuten statt eines
+     Telefons, das nur noch ueber die Systemeinstellungen zu retten ist.
+
+     Das Aufloesen erledigt die DeviceActivityMonitor-Erweiterung, nicht die
+     App: Wenn LernZeit gesperrt waere, koennte die App selbst nichts mehr
+     tun. Genau dafuer ist ein eigener Prozess da.
+     */
+    public static var trialUntil: Date? {
+        get { defaults.object(forKey: Keys.trialUntil) as? Date }
+        set {
+            if let newValue { defaults.set(newValue, forKey: Keys.trialUntil) }
+            else { defaults.removeObject(forKey: Keys.trialUntil) }
+        }
+    }
+
     /// Der WAHRE Ablaufzeitpunkt der Freigabe.
     ///
     /// Er kann frueher liegen als das Ende des ueberwachten Zeitfensters: Das
@@ -146,6 +175,26 @@ public enum LernzeitScreenTime {
         let store = ManagedSettingsStore()
         store.shield.applications = nil
         store.shield.applicationCategories = nil
+    }
+
+    /// Hebt einen abgelaufenen, unbestaetigten Probelauf vollstaendig auf.
+    ///
+    /// Rueckgabe sagt, ob tatsaechlich aufgehoben wurde. Wird sowohl von der
+    /// Erweiterung als auch beim Oeffnen der App gerufen — je nachdem, wer
+    /// zuerst drankommt. Beides muss gehen: Die Erweiterung fuer den Fall,
+    /// dass LernZeit selbst gesperrt ist, die App fuer den Fall, dass das
+    /// System die Erweiterung nicht aufgerufen hat.
+    @discardableResult
+    @available(iOS 16.0, *)
+    public static func endTrialIfExpired(now: Date = Date()) -> Bool {
+        guard let ende = trialUntil else { return false }
+        guard ende <= now else { return false }
+        trialUntil = nil
+        managing = false
+        releasedUntil = nil
+        stopMonitoring()
+        clearShield()
+        return true
     }
 
     /// Sperrt wieder, wenn die Freigabe abgelaufen ist. Rueckgabe sagt, ob
@@ -213,8 +262,15 @@ public enum LernzeitScreenTime {
     /// wahre Ablauf bleibt `releasedUntil`; ein aufgerundetes Fenster fuehrt
     /// nur dazu, dass die Erweiterung spaeter prueft, nicht dazu, dass das
     /// Kind laenger frei hat, sobald es LernZeit wieder oeffnet.
+    ///
+    /// Zurueck kommt das ENDE des tatsaechlich angenommenen Fensters — oder
+    /// nil, wenn keines angenommen wurde. Fuer den Probelauf ist das
+    /// wesentlich: Dort ist das Fensterende der spaeteste Zeitpunkt, zu dem
+    /// eine misslungene Sperre von selbst faellt, und genau diese Zahl gehoert
+    /// den Eltern gesagt — nicht die schoenere, die wir uns gewuenscht haben.
+    @discardableResult
     @available(iOS 16.0, *)
-    public static func startMonitoring(until deadline: Date) {
+    public static func startMonitoring(until deadline: Date) -> Date? {
         let center = DeviceActivityCenter()
         center.stopMonitoring([activityName])
 
@@ -232,15 +288,16 @@ public enum LernzeitScreenTime {
             )
             do {
                 try center.startMonitoring(activityName, during: schedule)
-                return
+                return ende
             } catch DeviceActivityCenter.MonitoringError.intervalTooShort {
                 continue
             } catch {
                 // Jeder andere Fehler ist nicht durch ein laengeres Fenster zu
                 // heilen. Die App prueft den Ablauf weiterhin beim Oeffnen.
-                return
+                return nil
             }
         }
+        return nil
     }
 
     @available(iOS 16.0, *)

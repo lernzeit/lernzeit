@@ -31,6 +31,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
+  DEFAULT_BASE_MINUTES,
   DEFAULT_SECONDS_PER_TASK,
   DEFAULT_WEEKDAY_MAX_MINUTES,
   DEFAULT_WEEKEND_MAX_MINUTES,
@@ -46,6 +47,15 @@ interface ChildSettingsEditorProps {
 }
 
 interface ChildSettings {
+  /**
+   * Minuten, die dem Kind taeglich ohne Lernen zustehen — Apples Gedanke
+   * eines Tagesbudgets. 0 heisst: alles muss verdient werden.
+   *
+   * Der Vorgabewert gilt fuer alle; nur das Aendern ist Premium. Ein Kind,
+   * dessen Eltern nicht zahlen, soll kein rund um die Uhr gesperrtes Telefon
+   * haben.
+   */
+  screen_time_base_minutes: number;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
   math_seconds_per_task: number;
@@ -89,6 +99,7 @@ const SUBJECTS = [
 ];
 
 const DEFAULT_SETTINGS: ChildSettings = {
+  screen_time_base_minutes: DEFAULT_BASE_MINUTES,
   weekday_max_minutes: DEFAULT_WEEKDAY_MAX_MINUTES,
   weekend_max_minutes: DEFAULT_WEEKEND_MAX_MINUTES,
   math_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
@@ -148,6 +159,9 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
       if (settingsData) {
         setSettings({
+          screen_time_base_minutes:
+            (settingsData as { screen_time_base_minutes?: number }).screen_time_base_minutes
+            ?? DEFAULT_BASE_MINUTES,
           weekday_max_minutes: settingsData.weekday_max_minutes,
           weekend_max_minutes: settingsData.weekend_max_minutes,
           math_seconds_per_task: settingsData.math_seconds_per_task,
@@ -414,6 +428,24 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             </div>
           </CardHeader>
           <CardContent>
+            <div className="space-y-2 mb-4">
+              <Label className="text-xs">Freiminuten am Tag (ohne Lernen)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={480}
+                value={settings.screen_time_base_minutes}
+                onChange={(e) => updateSetting('screen_time_base_minutes', Math.max(0, parseInt(e.target.value) || 0))}
+                disabled={!hasPremiumAccess}
+              />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Zeit, die {childName} täglich ohne Lernen zusteht — wie ein
+                Tagesbudget in Apples Bildschirmzeit. 0 bedeutet: Alles muss
+                verdient werden. Wirkt nur, wenn die Handysperre auf dem Gerät
+                eingerichtet ist.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs">Wochentags (Min)</Label>
