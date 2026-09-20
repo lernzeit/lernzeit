@@ -9,6 +9,15 @@ rätselt, ob es vergessen wurde oder gewollt war.
 
 ## Produkt
 
+### ~~Eltern-Oberfläche zur Einrichtung der Sperre~~ — erledigt am 20.09.2026
+
+War die Lücke, die den ersten Gerätetest scheitern ließ: Die einzige
+Oberfläche, die Apps auswählen konnte, war die Test-Werkbank hinter
+`VITE_SCREENTIME_UI` — im Store-Build also gar nicht vorhanden.
+
+Jetzt `ScreenTimeSetup` in den Einstellungen des Kindes, mit `ParentGate`
+davor. Im Eltern-Bereich steht ein Hinweis, wo die Einrichtung stattfindet.
+
 ### Modus „ausgewählte Apps"
 
 Das Kind sucht beim Einlösen aus, für welche App die verdiente Zeit gelten

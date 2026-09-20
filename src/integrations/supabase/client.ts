@@ -30,6 +30,13 @@ const resolveAuthStorage = () => {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Fuer Aufrufer, die einen ZWEITEN, kurzlebigen Client brauchen — etwa um
+// Zugangsdaten zu pruefen, ohne die bestehende Sitzung zu ersetzen
+// (ParentGate). Ohne diesen Export muessten sie URL und Schluessel
+// verdoppeln, und eine Kopie laeuft frueher oder spaeter auseinander.
+export const SUPABASE_PROJECT_URL = SUPABASE_URL;
+export const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: resolveAuthStorage(),

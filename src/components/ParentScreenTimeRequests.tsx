@@ -18,10 +18,22 @@ export function ParentScreenTimeRequests({ userId }: ParentScreenTimeRequestsPro
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="text-sm text-muted-foreground">
-            Hier können Sie Bildschirmzeit-Anfragen Ihrer Kinder verwalten. 
-            Wenn Sie eine Anfrage genehmigen, müssen Sie die Bildschirmzeit 
-            manuell in den Geräteeinstellungen freigeben.
+          <div className="text-sm text-muted-foreground space-y-3">
+            <p>
+              Hier verwaltest du die Bildschirmzeit-Anfragen deiner Kinder.
+            </p>
+            <p>
+              <strong className="text-foreground">Die Gerätesperre richtest du auf dem
+              Gerät deines Kindes ein</strong>, nicht hier: dort LernZeit öffnen →
+              Einstellungen → Bildschirmzeit. Du weist dich dabei mit deinem
+              Elternkonto aus.
+            </p>
+            <p>
+              Das ist keine Umständlichkeit, sondern eine Vorgabe von Apple: Welche
+              Apps gesperrt werden, lässt sich nur auf dem Gerät auswählen, auf dem
+              sie liegen. Ohne eingerichtete Sperre gibst du die genehmigte Zeit wie
+              bisher selbst in der iOS-Bildschirmzeit frei.
+            </p>
           </div>
           
           <ScreenTimeRequestWidget userId={userId} role="parent" />

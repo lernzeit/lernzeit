@@ -22,6 +22,7 @@ import {
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ScreenTimeTestPanel } from '@/components/screenTime/ScreenTimeTestPanel';
+import { ScreenTimeSetup } from '@/components/screenTime/ScreenTimeSetup';
 import { ScreenTimeRequestWidget } from '@/components/ScreenTimeRequestWidget';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -374,13 +375,23 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
               <ScreenTimeWidget />
               <ScreenTimeRequestWidget userId={user.id} role="child" />
               {/*
-                Werkbank fuer die Geraetesperre, absichtlich hinter einer
-                Build-Variablen. Sie waere sonst fuer jedes Kind erreichbar —
-                und wer die Sperre selbst aufheben kann, fuer den ist sie keine.
-                Zum Erproben VITE_SCREENTIME_UI=1 setzen: lokal in .env.local,
-                fuer einen Testbuild in den Codemagic-Umgebungsvariablen. NICHT
-                in codemagic.yaml — dort stand sie frueher fest und waere
-                irgendwann in den Store gegangen.
+                Einrichtung der Geraetesperre. Sie steht hier auf dem Geraet des
+                KINDES, weil ein ApplicationToken geraetegebunden ist — welche
+                Apps gesperrt werden, laesst sich nur dort auswaehlen, wo sie
+                liegen. Ein Schalter im Eltern-Dashboard koennte technisch
+                nichts bewirken.
+                Die Aenderungen selbst sind hinter der Eltern-Huerde
+                (ParentGate): Apple fragt nur beim ERSTEN Zustimmen nach der
+                Bildschirmzeit-Kennung, danach nie wieder.
+              */}
+              <ScreenTimeSetup childId={user.id} />
+              {/*
+                Werkbank mit den Einzelschritten — nur zur Fehlersuche, hinter
+                einer Build-Variablen. Zum Erproben VITE_SCREENTIME_UI=1 setzen:
+                lokal in .env.local, fuer einen Testbuild in den
+                Codemagic-Umgebungsvariablen. NICHT in codemagic.yaml — dort
+                stand sie frueher fest und waere irgendwann in den Store
+                gegangen.
               */}
               {import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
             </>
