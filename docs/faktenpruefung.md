@@ -152,8 +152,9 @@ hinterlegte Betrag. Vor der ersten Anzeige einmal im Stripe-Konto gegenlesen.
 Die Abfrage der Apple-Store-Schnittstelle wird vom Netzwerk dieser
 Arbeitsumgebung blockiert (HTTP 403 beim Verbindungsaufbau).
 
-Bekannt ist: Die Build-Konfiguration liefert `IOS_MARKETING_VERSION 1.2.5`
-(`codemagic.yaml`), die App-Store-ID lautet `6789603688`.
+Bekannt ist: Die Build-Konfiguration liefert `IOS_MARKETING_VERSION 1.3.0`
+(`codemagic.yaml`, hochgezählt am 20.09.2026), die App-Store-ID lautet
+`6789603688`.
 
 **Zu tun:** Store-Seite selbst aufrufen und Version notieren.
 
@@ -163,8 +164,9 @@ Bekannt ist: Die Build-Konfiguration liefert `IOS_MARKETING_VERSION 1.2.5`
 
 **Status: NICHT PRÜFBAR** — gleicher Grund.
 
-Bekannt ist: `versionCode 15`, `versionName 1.2.5` in
-`android/app/build.gradle`, Paketname `de.lernzeit.app`.
+Bekannt ist: `versionCode 16`, `versionName 1.3.0` in
+`android/app/build.gradle` (hochgezählt am 20.09.2026), Paketname
+`de.lernzeit.app`.
 
 ---
 

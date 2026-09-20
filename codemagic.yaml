@@ -112,7 +112,7 @@ workflows:
         # `ios/` wird bei jedem Build per `npx cap add ios` neu erzeugt, daher
         # bringt eine Aenderung an MARKETING_VERSION in project.pbxproj nichts -
         # dieser Wert hier ist die einzige Quelle der Wahrheit.
-        IOS_MARKETING_VERSION: "1.2.5"
+        IOS_MARKETING_VERSION: "1.3.0"
         # VITE_SCREENTIME_UI stand frueher hier fest auf "1" und schaltete die
         # Werkbank fuer die Geraetesperre in den Kind-Einstellungen frei. Das
         # ist genau der Workflow, der in den Store veroeffentlicht — die
