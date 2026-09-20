@@ -495,6 +495,37 @@ workflows:
 
           echo "OK: Sign in with Apple ist in Entitlements und Provisioning Profile der IPA enthalten."
 
+          # Was tatsaechlich mitgeliefert wurde.
+          #
+          # Ohne das ist "ist die Erweiterung drin?" erst auf dem Geraet zu
+          # beantworten — und ein Build kostet Zeit und Geld. Hier steht es im
+          # Log, samt Bundle-ID und Entitlements.
+          #
+          # Bewusst OHNE Abbruch bei fehlender Erweiterung: Ein fehlendes
+          # Profil laesst sie absichtlich weg, und ein gruener Build ohne
+          # Sperre ist besser als ein roter mit. Gemeldet wird es trotzdem
+          # deutlich.
+          echo "--- Mitgelieferte App-Erweiterungen ---"
+          PLUGINS_DIR="$APP_BUNDLE/PlugIns"
+          if [ ! -d "$PLUGINS_DIR" ] || [ -z "$(ls -A "$PLUGINS_DIR" 2>/dev/null)" ]; then
+            echo "HINWEIS: Keine Erweiterung in der IPA. Die Bildschirmzeit-Sperre"
+            echo "         schnappt dann nur zu, solange LernZeit geoeffnet ist,"
+            echo "         und es gibt keinen eigenen Sperrbildschirm."
+            echo "         Ursache steht im Schritt 'Bildschirmzeit-Erweiterungen einhaengen'."
+          else
+            for APPEX in "$PLUGINS_DIR"/*.appex; do
+              [ -d "$APPEX" ] || continue
+              APPEX_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APPEX/Info.plist" 2>/dev/null || echo "?")
+              APPEX_POINT=$(/usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$APPEX/Info.plist" 2>/dev/null || echo "?")
+              echo "  $(basename "$APPEX")"
+              echo "      Bundle-ID:        $APPEX_ID"
+              echo "      Erweiterungspunkt: $APPEX_POINT"
+              codesign -d --entitlements :- "$APPEX" 2>/dev/null \
+                | grep -o "com.apple.developer.family-controls\|group.de.lernzeit.app" \
+                | sort -u | sed 's/^/      Entitlement:       /' || true
+            done
+          fi
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
