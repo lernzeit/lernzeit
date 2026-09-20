@@ -146,7 +146,8 @@ export function OnboardingNextStepCard({
                 <p className="font-bold text-base">Schritt 3 von 3: {childName} löst die erste Aufgabe</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Sobald {childName} Aufgaben löst, verdient er oder sie Bildschirmzeit und stellt hier einen Antrag.
-                  Standard sind 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten am Tag.
+                  Standard sind 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten an
+                  Schultagen und 60 Minuten am Wochenende.
                 </p>
               </>
             )}

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Von "tsc -b" erzeugt (npm run typecheck). Reine Zwischenstaende.
+*.tsbuildinfo

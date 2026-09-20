@@ -39,6 +39,20 @@ EXTENSIONS = [
     profile:      'delernzeitapp_monitor_App_Store',
     source_dir:   'native/screen-time/ios/Extensions/DeviceActivityMonitorExtension',
     entitlements: 'Monitor.entitlements'
+  },
+  {
+    target:       'LernZeitShield',
+    bundle_id:    'de.lernzeit.app.shield',
+    profile:      'delernzeitapp_shield_App_Store',
+    source_dir:   'native/screen-time/ios/Extensions/ShieldConfigurationExtension',
+    entitlements: 'Shield.entitlements'
+  },
+  {
+    target:       'LernZeitShieldAction',
+    bundle_id:    'de.lernzeit.app.shieldaction',
+    profile:      'delernzeitapp_shieldaction_App_Store',
+    source_dir:   'native/screen-time/ios/Extensions/ShieldActionExtension',
+    entitlements: 'ShieldAction.entitlements'
   }
 ].freeze
 

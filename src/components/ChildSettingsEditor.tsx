@@ -354,7 +354,8 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Du hattest {list} pro Aufgabe eingestellt. Jetzt gilt wieder für alle Fächer der
-                Standard: 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten am Tag.
+                Standard: 30 Sekunden pro richtiger Aufgabe, höchstens 30 Minuten an
+                Schultagen und 60 Minuten am Wochenende.
                 Deine Einstellungen bleiben gespeichert und gelten sofort wieder, wenn du Premium aktivierst.
               </p>
             </CardContent>

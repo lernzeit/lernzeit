@@ -109,9 +109,8 @@ höchstens 30 Minuten am Tag" (`ChildSettingsEditor.tsx:357`,
 den Wochenend-Standard nicht. Ein Elternteil, das ihn am Samstag liest, sieht
 im Produkt 60 Minuten stehen.
 
-**Kleiner Vorschlag, keine Baustelle:** ein Wort einfügen — „höchstens 30
-Minuten an Schultagen, 60 am Wochenende". Zwei Textstellen. Ob sich das
-lohnt, entscheidest du.
+**Erledigt am 20.09.2026.** Beide Textstellen nennen jetzt beide Werte:
+„höchstens 30 Minuten an Schultagen und 60 Minuten am Wochenende".
 
 **Für die Werbung:** Die Zahl kommt in keine Anzeige — nicht weil sie falsch
 wäre, sondern weil „höchstens 30 Minuten" in 30 Zeichen ohne den Zusatz

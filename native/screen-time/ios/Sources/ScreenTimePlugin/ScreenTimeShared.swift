@@ -30,6 +30,9 @@ public enum LernzeitScreenTime {
         public static let selection = "lernzeit.screentime.selection"
         public static let managing = "lernzeit.screentime.managing"
         public static let releasedUntil = "lernzeit.screentime.releasedUntil"
+        /// Zeitpunkte, zu denen das Kind auf dem Sperrbildschirm "Eltern
+        /// fragen" gedrueckt hat.
+        public static let shieldRequests = "lernzeit.screentime.shieldRequests"
     }
 
     /// Faellt auf UserDefaults.standard zurueck, falls die App Group fehlt —
@@ -113,6 +116,44 @@ public enum LernzeitScreenTime {
         releasedUntil = nil
         applyShield()
         return true
+    }
+
+    // MARK: - Anfragen vom Sperrbildschirm
+
+    /// Hoechstzahl gemerkter Anfragen.
+    ///
+    /// Ohne Deckel wuerde ein Kind, das zwanzig Mal auf die gesperrte App
+    /// tippt, zwanzig Eintraege erzeugen — und der Wert waechst unbegrenzt,
+    /// solange LernZeit nicht geoeffnet wird. Die juengsten sind die
+    /// interessanten.
+    private static let maxShieldRequests = 20
+
+    /// Wird von der ShieldAction-Erweiterung aufgerufen, wenn das Kind auf
+    /// dem Sperrbildschirm "Eltern fragen" drueckt.
+    ///
+    /// Warum nur merken und nicht sofort senden: Die Erweiterung hat wenige
+    /// Sekunden Laufzeit und keinen angemeldeten Supabase-Client. Ein
+    /// Netzaufruf von hier waere unzuverlaessig. LernZeit holt die Eintraege
+    /// beim naechsten Start ab.
+    public static func recordShieldRequest(now: Date = Date()) {
+        var zeiten = (defaults.array(forKey: Keys.shieldRequests) as? [Double]) ?? []
+        zeiten.append(now.timeIntervalSince1970)
+        if zeiten.count > maxShieldRequests {
+            zeiten = Array(zeiten.suffix(maxShieldRequests))
+        }
+        defaults.set(zeiten, forKey: Keys.shieldRequests)
+    }
+
+    /// Gibt die gemerkten Anfragen zurueck und leert die Liste.
+    ///
+    /// Bewusst in einem Schritt: Waeren Lesen und Leeren getrennt, koennte
+    /// zwischen beiden eine neue Anfrage eintreffen und verloren gehen.
+    public static func takeShieldRequests() -> [Double] {
+        let zeiten = (defaults.array(forKey: Keys.shieldRequests) as? [Double]) ?? []
+        if !zeiten.isEmpty {
+            defaults.removeObject(forKey: Keys.shieldRequests)
+        }
+        return zeiten
     }
 
     // MARK: - Ueberwachung des Zeitfensters

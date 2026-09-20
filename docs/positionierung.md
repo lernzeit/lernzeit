@@ -430,7 +430,7 @@ Ziel ist `/`. Zwei Bedingungen vor der ersten Schaltung:
 | ~~W4~~ | ~~Keine automatische Löschung der Attributionsdaten~~ | **Erledigt am 14.09.2026.** `delete_after` je Zeile, täglicher Auftrag `ad-attribution-retention` um 03:30 | erledigt |
 | W5 | Store-Stände nicht überprüfbar (Netzsperre der Arbeitsumgebung) | Beide Store-Seiten selbst aufrufen | Kontrolle durch dich |
 | W6 | Stripe-Beträge nicht gegengelesen | Im Stripe-Konto prüfen, ob 2,99 € und 29,99 € hinterlegt sind | Kontrolle durch dich |
-| W7 | „Höchstens 30 Minuten am Tag" nennt den Wochenend-Standard nicht | Zwei Textstellen ergänzen | optional |
+| ~~W7~~ | ~~„Höchstens 30 Minuten am Tag" nennt den Wochenend-Standard nicht~~ | **Erledigt am 20.09.2026**, beide Textstellen nennen jetzt beide Werte | erledigt |
 
 W3 und W4 sind erledigt (Abschnitt 12a). Es bleiben zwei Blocker, und beide
 brauchen jemanden außerhalb dieser Arbeitsumgebung: die anwaltliche Prüfung

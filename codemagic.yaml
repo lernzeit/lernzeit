@@ -95,12 +95,12 @@ workflows:
           # nicht geladen, laesst scripts/ios-add-extensions.rb die Erweiterung
           # weg und der Build bleibt gruen — nur ohne automatische Ruecksperre.
           #
-          # delernzeitapp_shield_App_Store und
-          # delernzeitapp_shieldaction_App_Store sind im Portal angelegt und
-          # bei Codemagic hochgeladen, stehen hier aber bewusst noch NICHT:
-          # Solange es die zugehoerigen Erweiterungen im Projekt nicht gibt,
-          # waeren es Profile ohne Ziel.
           - delernzeitapp_monitor_App_Store
+          # Sperrbildschirm und der Knopf darauf. Seit dem 20.09.2026 im
+          # Projekt — der Monitor-Build davor war gruen, damit war klar, dass
+          # der Eingriff ins Xcode-Projekt traegt.
+          - delernzeitapp_shield_App_Store
+          - delernzeitapp_shieldaction_App_Store
         certificates:
           - cert
       vars:
@@ -349,6 +349,10 @@ workflows:
           		<string>delernzeitapp_App_Store</string>
           		<key>de.lernzeit.app.monitor</key>
           		<string>delernzeitapp_monitor_App_Store</string>
+          		<key>de.lernzeit.app.shield</key>
+          		<string>delernzeitapp_shield_App_Store</string>
+          		<key>de.lernzeit.app.shieldaction</key>
+          		<string>delernzeitapp_shieldaction_App_Store</string>
           	</dict>
           	<key>uploadSymbols</key>
           	<true/>

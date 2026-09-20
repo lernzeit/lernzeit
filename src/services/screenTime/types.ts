@@ -165,6 +165,29 @@ export interface ScreenTimePlugin {
   stopManaging(): Promise<ShieldStatus>;
 
   getStatus(): Promise<ShieldStatus>;
+
+  /**
+   * Holt die Anfragen ab, die das Kind auf dem SPERRBILDSCHIRM gestellt hat —
+   * ueber den Knopf "Eltern fragen".
+   *
+   * Warum es das gibt: Apple erlaubt einer Sperrbildschirm-Erweiterung nicht,
+   * eine App zu oeffnen. Das Kind kann von dort aus also nicht zu LernZeit
+   * springen. Die Erweiterung merkt sich den Knopfdruck stattdessen in der
+   * App Group, und LernZeit holt ihn beim naechsten Start ab.
+   *
+   * Der Wert davon liegt gerade in den Faellen, in denen das Kind die App
+   * NICHT gleich oeffnet: Die Eltern sehen sonst nie, dass es um Zeit gebeten
+   * hat.
+   *
+   * Der Aufruf LEERT die Liste. Wer das Ergebnis verwirft, verliert es —
+   * anders ginge es nicht, ohne zwischen Lesen und Leeren eine Luecke zu
+   * lassen, in der eine neue Anfrage verschwindet.
+   *
+   * Gibt ausschliesslich Zeitpunkte zurueck, nie eine App: Welche App das
+   * Kind oeffnen wollte, erfaehrt unser Code nicht und soll er nicht
+   * erfahren.
+   */
+  pendingShieldRequests(): Promise<{ requestedAt: string[] }>;
 }
 
 /**

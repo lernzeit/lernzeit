@@ -30,6 +30,10 @@ const nichtVerfuegbar: ScreenTimePlugin = {
   restoreShield: async () => EMPTY_STATUS,
   stopManaging: async () => EMPTY_STATUS,
   getStatus: async () => EMPTY_STATUS,
+  // Auf Web und Android gibt es keinen Sperrbildschirm, also auch keine
+  // Anfragen von dort. Leere Liste statt Fehler — der Aufrufer soll nicht
+  // plattformabhaengig verzweigen muessen.
+  pendingShieldRequests: async () => ({ requestedAt: [] }),
 };
 
 const ScreenTime = registerPlugin<ScreenTimePlugin>('ScreenTime', {

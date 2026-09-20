@@ -45,7 +45,8 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "releaseFor", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restoreShield", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopManaging", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pendingShieldRequests", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Zustand
@@ -242,6 +243,19 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func getStatus(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         call.resolve(statusPayload())
+    }
+
+    /// Holt die Knopfdruecke vom Sperrbildschirm ab und leert die Liste.
+    ///
+    /// Zurueck gehen nur Zeitpunkte als ISO-8601, nie eine App. Welche App
+    /// das Kind oeffnen wollte, erfaehrt dieser Code nicht — das Token bleibt
+    /// in Apples Hand.
+    @objc func pendingShieldRequests(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        let formatierer = ISO8601DateFormatter()
+        let zeiten = LernzeitScreenTime.takeShieldRequests()
+            .map { formatierer.string(from: Date(timeIntervalSince1970: $0)) }
+        call.resolve(["requestedAt": zeiten])
     }
 }
 

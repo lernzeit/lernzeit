@@ -49,80 +49,117 @@ def fuehre_aus
   `ruby scripts/ios-add-extensions.rb 2>&1`
 end
 
+ERWARTET = [
+  { target: 'LernZeitMonitor',      bundle: 'de.lernzeit.app.monitor',
+    profil: 'delernzeitapp_monitor_App_Store',      ent: 'Monitor.entitlements',
+    quelle: 'MonitorExtension.swift',
+    punkt:  'com.apple.deviceactivity.monitor-extension',
+    klasse: 'DeviceActivityMonitorExtension' },
+  { target: 'LernZeitShield',       bundle: 'de.lernzeit.app.shield',
+    profil: 'delernzeitapp_shield_App_Store',       ent: 'Shield.entitlements',
+    quelle: 'ShieldConfig.swift',
+    punkt:  'com.apple.ManagedSettingsUI.shield-configuration-service',
+    klasse: 'ShieldConfigurationExtension' },
+  { target: 'LernZeitShieldAction', bundle: 'de.lernzeit.app.shieldaction',
+    profil: 'delernzeitapp_shieldaction_App_Store', ent: 'ShieldAction.entitlements',
+    quelle: 'ShieldAction.swift',
+    punkt:  'com.apple.ManagedSettings.shield-action-service',
+    klasse: 'ShieldActionExtension' }
+].freeze
+
 Dir.mktmpdir('lernzeit-ios-') do |arbeitsordner|
   Dir.chdir(arbeitsordner) do
     FileUtils.mkdir_p('scripts')
     FileUtils.cp(File.join(REPO, 'scripts/ios-add-extensions.rb'), 'scripts/')
     FileUtils.cp_r(File.join(REPO, 'native'), '.')
 
-    # ---- Fall 1: Profil vorhanden ----
     profil_dir = File.expand_path('~/Library/MobileDevice/Provisioning Profiles')
     FileUtils.mkdir_p(profil_dir)
-    File.write(File.join(profil_dir, 'monitor.mobileprovision'),
-               "<key>Name</key>\n<string>delernzeitapp_monitor_App_Store</string>\n")
+
+    # ---- Fall 1: alle Profile vorhanden ----
+    ERWARTET.each_with_index do |e, i|
+      File.write(File.join(profil_dir, "p#{i}.mobileprovision"),
+                 "<key>Name</key>\n<string>#{e[:profil]}</string>\n")
+    end
 
     baue_testprojekt
     ausgabe = fuehre_aus
-    ok(ausgabe.include?('eingehaengt'), 'Erweiterung wird eingehaengt, wenn das Profil geladen ist')
+    ok(ausgabe.scan('eingehaengt').size == ERWARTET.size,
+       "Alle #{ERWARTET.size} Erweiterungen werden eingehaengt")
 
     project = Xcodeproj::Project.open('ios/App/App.xcodeproj')
     app = project.targets.find { |t| t.name == 'App' }
-    ext = project.targets.find { |t| t.name == 'LernZeitMonitor' }
 
-    ok(!ext.nil?, 'Erweiterungsziel existiert')
-    ok(ext && ext.product_type == 'com.apple.product-type.app-extension', 'Ziel ist eine App-Erweiterung')
+    ERWARTET.each do |e|
+      ext = project.targets.find { |t| t.name == e[:target] }
+      ok(!ext.nil?, "#{e[:target]}: Ziel existiert")
+      next if ext.nil?
 
-    quellen = ext ? ext.source_build_phase.files.map { |f| f.file_ref.path } : []
-    ok(quellen.include?('MonitorExtension.swift'), 'MonitorExtension.swift wird kompiliert')
-    ok(quellen.include?('ScreenTimeShared.swift'),
-       'ScreenTimeShared.swift wird mitkompiliert — sonst kennt die Erweiterung den Zustand nicht')
+      ok(ext.product_type == 'com.apple.product-type.app-extension',
+         "#{e[:target]}: ist eine App-Erweiterung")
 
-    (ext ? ext.build_configurations : []).each do |c|
-      s = c.build_settings
-      ok(s['PRODUCT_BUNDLE_IDENTIFIER'] == 'de.lernzeit.app.monitor', "#{c.name}: Bundle-ID")
-      ok(s['PROVISIONING_PROFILE_SPECIFIER'] == 'delernzeitapp_monitor_App_Store', "#{c.name}: Profil")
-      ok(s['CODE_SIGN_ENTITLEMENTS'] == 'LernZeitMonitor/Monitor.entitlements', "#{c.name}: Entitlements")
-      ok(s['INFOPLIST_FILE'] == 'LernZeitMonitor/Info.plist', "#{c.name}: Info.plist")
-      ok(s['MARKETING_VERSION'] == '1.2.5', "#{c.name}: Version von der App uebernommen")
-      ok(s['CURRENT_PROJECT_VERSION'] == '15', "#{c.name}: Buildnummer von der App uebernommen")
-      ok(s['IPHONEOS_DEPLOYMENT_TARGET'] == '16.0', "#{c.name}: iOS 16, wegen Family Controls")
+      quellen = ext.source_build_phase.files.map { |f| f.file_ref.path }
+      ok(quellen.include?(e[:quelle]), "#{e[:target]}: #{e[:quelle]} wird kompiliert")
+      ok(quellen.include?('ScreenTimeShared.swift'),
+         "#{e[:target]}: gemeinsamer Zustand wird mitkompiliert")
+
+      ext.build_configurations.each do |c|
+        b = c.build_settings
+        ok(b['PRODUCT_BUNDLE_IDENTIFIER'] == e[:bundle], "#{e[:target]}/#{c.name}: Bundle-ID")
+        ok(b['PROVISIONING_PROFILE_SPECIFIER'] == e[:profil], "#{e[:target]}/#{c.name}: Profil")
+        ok(b['CODE_SIGN_ENTITLEMENTS'] == "#{e[:target]}/#{e[:ent]}", "#{e[:target]}/#{c.name}: Entitlements")
+        ok(b['MARKETING_VERSION'] == '1.2.5', "#{e[:target]}/#{c.name}: Version von der App")
+        ok(b['IPHONEOS_DEPLOYMENT_TARGET'] == '16.0', "#{e[:target]}/#{c.name}: iOS 16")
+      end
+
+      ok(app.dependencies.any? { |d| d.target&.name == e[:target] },
+         "#{e[:target]}: App haengt davon ab")
+
+      plist = File.read("ios/App/#{e[:target]}/Info.plist")
+      ok(plist.include?(e[:punkt]), "#{e[:target]}: Erweiterungspunkt #{e[:punkt].split('.').last}")
+      ok(plist.include?("$(PRODUCT_MODULE_NAME).#{e[:klasse]}"), "#{e[:target]}: Hauptklasse")
+
+      ent = File.read("ios/App/#{e[:target]}/#{e[:ent]}")
+      ok(ent.include?('com.apple.developer.family-controls'), "#{e[:target]}: Family Controls")
+      ok(ent.include?('group.de.lernzeit.app'), "#{e[:target]}: App Group")
     end
 
-    embed = app.copy_files_build_phases.select { |p| p.symbol_dst_subfolder_spec == :plug_ins }
+    embed = app.copy_files_build_phases.select { |ph| ph.symbol_dst_subfolder_spec == :plug_ins }
     ok(embed.size == 1, 'Genau eine Phase "Embed App Extensions"')
-    ok(embed.first && embed.first.files.any? { |f| f.display_name.include?('LernZeitMonitor') },
-       'Erweiterung wird in die App eingebettet — sonst wird sie gebaut, landet aber nicht im Paket')
-    ok(app.dependencies.any? { |d| d.target&.name == 'LernZeitMonitor' },
-       'App haengt vom Erweiterungsziel ab (Baureihenfolge)')
+    eingebettet = embed.first ? embed.first.files.map(&:display_name) : []
+    ERWARTET.each do |e|
+      ok(eingebettet.any? { |n| n.include?(e[:target]) },
+         "#{e[:target]}: wird in die App eingebettet")
+    end
 
-    plist = File.read('ios/App/LernZeitMonitor/Info.plist')
-    ok(plist.include?('com.apple.deviceactivity.monitor-extension'), 'Erweiterungspunkt ist DeviceActivity')
-    ok(plist.include?('$(PRODUCT_MODULE_NAME).DeviceActivityMonitorExtension'), 'Hauptklasse zeigt auf die Swift-Klasse')
-
-    ent = File.read('ios/App/LernZeitMonitor/Monitor.entitlements')
-    ok(ent.include?('com.apple.developer.family-controls'), 'Entitlement: Family Controls')
-    ok(ent.include?('group.de.lernzeit.app'), 'Entitlement: App Group')
+    # Jede Erweiterung braucht eine EIGENE Bundle-ID, sonst weist App Store
+    # Connect den Upload ab.
+    ids = project.targets.reject { |t| t.name == 'App' }.map do |t|
+      t.build_configurations.first.build_settings['PRODUCT_BUNDLE_IDENTIFIER']
+    end
+    ok(ids.uniq.size == ids.size, 'Alle Bundle-IDs sind verschieden')
 
     # ---- Fall 2: zweiter Lauf aendert nichts ----
     ausgabe = fuehre_aus
-    ok(ausgabe.include?('bereits vorhanden'), 'Zweiter Lauf erkennt das vorhandene Ziel')
+    ok(ausgabe.scan('bereits vorhanden').size == ERWARTET.size,
+       'Zweiter Lauf erkennt alle vorhandenen Ziele')
     project = Xcodeproj::Project.open('ios/App/App.xcodeproj')
     app = project.targets.find { |t| t.name == 'App' }
-    ok(project.targets.count { |t| t.name == 'LernZeitMonitor' } == 1, 'Ziel bleibt genau einmal vorhanden')
-    ok(app.copy_files_build_phases.count { |p| p.symbol_dst_subfolder_spec == :plug_ins } == 1,
+    ok(project.targets.size == ERWARTET.size + 1, 'Keine Ziele verdoppelt')
+    ok(app.copy_files_build_phases.count { |ph| ph.symbol_dst_subfolder_spec == :plug_ins } == 1,
        'Keine zweite Embed-Phase')
 
-    # ---- Fall 3: Profil fehlt -> Erweiterung weglassen, Build bleibt gruen ----
-    FileUtils.rm_f(File.join(profil_dir, 'monitor.mobileprovision'))
-    File.write(File.join(profil_dir, 'haupt.mobileprovision'),
-               "<key>Name</key>\n<string>delernzeitapp_App_Store</string>\n")
-    FileUtils.rm_rf('ios/App/LernZeitMonitor')
+    # ---- Fall 3: ein Profil fehlt -> nur diese Erweiterung entfaellt ----
+    FileUtils.rm_f(File.join(profil_dir, 'p1.mobileprovision'))
+    ERWARTET.each { |e| FileUtils.rm_rf("ios/App/#{e[:target]}") }
     baue_testprojekt
     ausgabe = fuehre_aus
     ok(ausgabe.include?('WEGGELASSEN'), 'Fehlendes Profil: Erweiterung wird weggelassen')
     project = Xcodeproj::Project.open('ios/App/App.xcodeproj')
-    ok(project.targets.none? { |t| t.name == 'LernZeitMonitor' },
-       'Fehlendes Profil: kein Ziel im Projekt — der Build bleibt gruen')
+    ok(project.targets.none? { |t| t.name == 'LernZeitShield' },
+       'Fehlendes Profil: dieses Ziel fehlt — der Build bleibt gruen')
+    ok(project.targets.any? { |t| t.name == 'LernZeitMonitor' },
+       'Die uebrigen Erweiterungen kommen trotzdem mit')
 
     FileUtils.rm_rf(File.expand_path('~/Library/MobileDevice'))
   end
