@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Input validation schemas and helpers
-const VALID_ACTIONS = ['create_request', 'respond_to_request', 'get_requests'] as const;
+const VALID_ACTIONS = ['create_request', 'respond_to_request', 'get_requests', 'redeem_unlock', 'revoke_unlock'] as const;
 const VALID_STATUSES = ['approved', 'denied'] as const;
 const VALID_ROLES = ['child', 'parent'] as const;
 
@@ -52,6 +52,17 @@ function getSafeErrorMessage(error: Error): string {
   // Return generic error for unknown cases
   return 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.';
 }
+
+/**
+ * Wie lange eine Genehmigung einloesbar bleibt: 24 Stunden.
+ *
+ * Nicht "bis Mitternacht": Eine um 23:50 genehmigte Anfrage waere dann zehn
+ * Minuten spaeter wertlos.
+ */
+const REDEEM_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Wie lange sich eine gerade erteilte Freigabe zuruecknehmen laesst. */
+const REVOKE_WINDOW_MS = 5 * 60 * 1000;
 
 function getUtcDayRange(referenceDate = new Date()) {
   const start = new Date(referenceDate);
@@ -136,6 +147,10 @@ serve(async (req) => {
         return await respondToRequest(supabase, user.id, body);
       case 'get_requests':
         return await getRequests(supabase, user.id, body);
+      case 'redeem_unlock':
+        return await redeemUnlock(supabase, user.id, body);
+      case 'revoke_unlock':
+        return await revokeUnlock(supabase, user.id, body);
       default:
         return new Response(JSON.stringify({ error: 'Ungültige Aktion' }), {
           status: 400,
@@ -551,6 +566,153 @@ async function getRequests(supabase: any, userId: string, body: Record<string, u
   }
 
   return new Response(JSON.stringify({ requests }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+/**
+ * Loest eine genehmigte Anfrage ein: Das Kindgeraet darf jetzt entsperren.
+ *
+ * ── Warum das Geraet fragt und nicht der Server schiebt ──────────────────
+ *
+ * Eine Genehmigung sagt nicht, WANN die Zeit zu laufen beginnt. Eltern
+ * genehmigen oft, waehrend das Kind gar nicht am Geraet ist — liefe die Uhr
+ * ab dem Genehmigen, waere die Zeit verbraucht, bevor das Kind davon
+ * erfaehrt. Deshalb beginnt sie erst, wenn das Geraet sie abholt.
+ *
+ * ── Warum das hier und nicht direkt aus der App geschrieben wird ─────────
+ *
+ * Duerfte das Kind selbst in screen_time_unlocks schreiben, waere die ganze
+ * Sperre eine Empfehlung: Eine Zeile mit 600 Minuten, und das Telefon ist den
+ * Rest des Tages offen. Der Server prueft deshalb selbst, dass die Anfrage
+ * diesem Kind gehoert, genehmigt ist und noch nicht eingeloest wurde.
+ *
+ * Der eindeutige Index auf request_id macht das Doppelte unmoeglich — auch
+ * dann, wenn zwei Aufrufe gleichzeitig ankommen. Ein Konflikt ist deshalb
+ * kein Fehler, sondern die Antwort "schon eingeloest".
+ */
+async function redeemUnlock(supabase: any, childId: string, body: Record<string, unknown>) {
+  const requestId = body.requestId;
+
+  if (!isValidUUID(requestId as string)) {
+    return new Response(JSON.stringify({ error: 'Ungültige Anfrage-ID' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const { data: request } = await supabase
+    .from('screen_time_requests')
+    .select('id, child_id, status, requested_minutes, responded_at')
+    .eq('id', requestId)
+    .eq('child_id', childId)
+    .eq('status', 'approved')
+    .maybeSingle();
+
+  if (!request) {
+    return new Response(JSON.stringify({ error: 'Anfrage nicht gefunden oder nicht genehmigt' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Alte Genehmigungen laufen aus. Ohne diese Grenze koennte eine vor Wochen
+  // genehmigte Anfrage das Telefon heute aufschliessen — und die Minuten
+  // waeren in der Tagesabrechnung von damals gezaehlt, nicht in der von
+  // heute.
+  const respondedAt = request.responded_at ? new Date(request.responded_at) : null;
+  const zuAlt = !respondedAt || Date.now() - respondedAt.getTime() > REDEEM_WINDOW_MS;
+  if (zuAlt) {
+    return new Response(JSON.stringify({ error: 'Diese Genehmigung ist zu alt', expired: true }), {
+      status: 409,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const minutes = request.requested_minutes;
+  if (!isValidNumber(minutes, 1, 600)) {
+    return new Response(JSON.stringify({ error: 'Ungültige Minutenzahl' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const jetzt = new Date();
+  const ablauf = new Date(jetzt.getTime() + minutes * 60_000);
+
+  const { data: unlock, error } = await supabase
+    .from('screen_time_unlocks')
+    .insert({
+      child_id: childId,
+      minutes,
+      starts_at: jetzt.toISOString(),
+      expires_at: ablauf.toISOString(),
+      source: 'parent_approval',
+      request_id: requestId,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // 23505 = eindeutiger Index verletzt. Das ist der Normalfall, wenn das
+    // Geraet denselben Abruf zweimal macht — kein Fehler, sondern "hast du
+    // schon".
+    if (error.code === '23505') {
+      return new Response(JSON.stringify({ success: true, alreadyRedeemed: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    console.error('Unlock insert error:', error);
+    return new Response(JSON.stringify({ error: 'Freigabe konnte nicht erteilt werden' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  return new Response(JSON.stringify({ success: true, unlock }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+/**
+ * Nimmt eine gerade erteilte Freigabe zurueck.
+ *
+ * Gebraucht wird das genau einmal: Das Geraet hat eingeloest, und danach hat
+ * das Entsperren nicht geklappt. Bliebe die Zeile stehen, waere die Zeit
+ * verbraucht, ohne dass das Telefon je aufgegangen ist — das Kind haette
+ * gelernt und nichts dafuer bekommen.
+ *
+ * Eng begrenzt: nur die eigene Zeile, nur solange sie frisch ist. Sonst waere
+ * es ein Weg, eine laufende Freigabe zu verstecken.
+ */
+async function revokeUnlock(supabase: any, childId: string, body: Record<string, unknown>) {
+  const unlockId = body.unlockId;
+
+  if (!isValidUUID(unlockId as string)) {
+    return new Response(JSON.stringify({ error: 'Ungültige Freigabe-ID' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const frisch = new Date(Date.now() - REVOKE_WINDOW_MS).toISOString();
+
+  const { error } = await supabase
+    .from('screen_time_unlocks')
+    .delete()
+    .eq('id', unlockId)
+    .eq('child_id', childId)
+    .gte('created_at', frisch);
+
+  if (error) {
+    console.error('Unlock delete error:', error);
+    return new Response(JSON.stringify({ error: 'Freigabe konnte nicht zurückgenommen werden' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  return new Response(JSON.stringify({ success: true }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }

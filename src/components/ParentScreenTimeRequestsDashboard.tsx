@@ -14,6 +14,7 @@ import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
 import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import { ShieldAttemptsNotice } from '@/components/ShieldAttemptsNotice';
+import { ShieldSetupNotice } from '@/components/screenTime/ShieldSetupNotice';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
@@ -207,6 +208,11 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
             Lage beschreibt und nicht eine Entscheidung verlangt: Ein Druck auf
             "Eltern fragen" nennt keine Minuten und laesst sich nicht
             genehmigen. */}
+        {/* Steht die Sperre auf dem Kindgeraet ueberhaupt? Von hier aus laesst
+            sie sich nicht schalten — aber ob sie fehlt, gehoert an die
+            Stelle, an der Eltern ohnehin taeglich nachsehen. */}
+        <ShieldSetupNotice parentId={userId} />
+
         <ShieldAttemptsNotice parentId={userId} />
 
         {/* Pending Requests - Prominent Display */}

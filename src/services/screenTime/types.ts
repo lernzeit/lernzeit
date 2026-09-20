@@ -18,9 +18,8 @@
  *   Server       nur die Regel (Modus, Auto-Freigabe) und die erteilten
  *                Minuten mit Ablaufzeitpunkt
  *
- * Der Server erfaehrt deshalb auch im Modus 'selected' nie, welche App das
- * Kind gewaehlt hat. Diese Schnittstelle gibt niemals einen Token oder einen
- * App-Namen an die Web-Seite zurueck — nur Anzahlen und Zustaende.
+ * Diese Schnittstelle gibt niemals einen Token oder einen App-Namen an die
+ * Web-Seite zurueck — nur Anzahlen und Zustaende.
  *
  * ── Zwei Bedingungen an den Aufrufer ─────────────────────────────────────
  *
@@ -39,12 +38,18 @@
  *    Geraet.
  */
 
-/** Was die Familie mit der verdienten Zeit anfangen darf. */
-export type UnlockMode =
-  /** Die verdiente Zeit hebt die Sperre fuer ALLE gesperrten Apps auf. */
-  | 'all'
-  /** Das Kind waehlt beim Einloesen eine App aus der Sperrliste. */
-  | 'selected';
+/*
+ * Der frueher hier stehende `UnlockMode` mit den Werten 'all' und 'selected'
+ * ist am 20.09.2026 entfallen.
+ *
+ * 'selected' haette das Kind beim Einloesen eine einzelne App waehlen lassen.
+ * Die Entscheidung dagegen kam aus der Benutzung: Wer 15 Minuten verdient
+ * hat, will 15 Minuten — und nicht vorher eine Liste durchgehen. Jede
+ * Freigabe gilt seitdem fuer alles, was gesperrt ist.
+ *
+ * Die Spalte `child_settings.screen_time_unlock_mode` steht deshalb dauerhaft
+ * auf 'all'.
+ */
 
 export type AuthorizationState =
   /** Noch nie gefragt. */
@@ -72,14 +77,29 @@ export interface ShieldStatus {
    * stopManaging() oder bevor je eingerichtet wurde.
    */
   managing: boolean;
-  /** Wie viele Apps die Sperrliste umfasst. Nie WELCHE. */
+  /**
+   * true = es wird ALLES gesperrt, und `shieldedCount` zaehlt die AUSNAHMEN,
+   * die offen bleiben. false = es werden nur die ausgewaehlten Apps gesperrt.
+   *
+   * Vorgabe ist true. Das ist der Kern der Einrichtung: Wer nichts einstellt,
+   * bekommt die strengste Regel und muss dafuer nichts tun. Der
+   * Auswahldialog ist ein Angebot fuer Eltern, die einzelne Apps offenhalten
+   * wollen — keine Pflicht auf dem Weg zur Sperre.
+   */
+  shieldAll: boolean;
+  /**
+   * Wie viele Eintraege die Auswahl umfasst. Nie WELCHE.
+   *
+   * Je nach `shieldAll` sind das die gesperrten Apps (false) oder die
+   * Ausnahmen (true).
+   */
   shieldedCount: number;
   /**
    * Wie viele davon gerade freigegeben sind. 0 heisst: alles zu.
    *
-   * Bewusst eine Zahl statt eines Ja/Nein: Im Modus 'selected' ist genau eine
-   * App offen und der Rest gesperrt. Ein blosses "entsperrt: ja" haette diesen
-   * Zustand nicht abbilden koennen.
+   * Heute immer 0 oder gleich `shieldedCount` — die Freigabe gilt fuer
+   * alles. Die Zahl bleibt statt eines Ja/Nein, damit eine spaetere
+   * Teilfreigabe die Schnittstelle nicht bricht.
    */
   releasedCount: number;
   /** Ende der laufenden Freigabe, ISO-8601. null, wenn keine laeuft. */
@@ -88,13 +108,16 @@ export interface ShieldStatus {
 
 export interface ReleaseResult extends ShieldStatus {
   /**
-   * true, wenn das Kind den Auswahldialog abgebrochen hat (nur im Modus
-   * 'selected' moeglich).
+   * true, wenn die Freigabe nicht zustande kam.
    *
    * Der Aufrufer MUSS das auswerten: Bei cancelled darf die verdiente Zeit
    * NICHT abgebucht werden. Sonst verliert das Kind Minuten, die es sich
    * erarbeitet hat, und bekommt dafuer nichts — der sicherste Weg, jemanden
    * aus der App zu vertreiben.
+   *
+   * Seit dem Wegfall des Modus 'selected' gibt es keinen Auswahldialog mehr,
+   * der abgebrochen werden koennte; das Feld bleibt als Absicherung fuer
+   * kuenftige Faelle und ist heute immer false.
    */
   cancelled: boolean;
   /**
@@ -123,28 +146,28 @@ export interface ScreenTimePlugin {
    */
   pickShieldedApps(): Promise<{ shieldedCount: number; cancelled: boolean }>;
 
-  /** Legt die Sperre ueber die gespeicherte Auswahl. */
-  applyShield(): Promise<ShieldStatus>;
+  /**
+   * Schaltet die Sperre ein.
+   *
+   * `shieldAll: true` (die Vorgabe) sperrt ALLES; eine gespeicherte Auswahl
+   * gilt dann als Ausnahmenliste. `shieldAll: false` sperrt nur die
+   * ausgewaehlten Apps. Ohne Angabe bleibt der zuletzt gesetzte Modus.
+   */
+  applyShield(options?: { shieldAll?: boolean }): Promise<ShieldStatus>;
 
   /**
    * Hebt die Sperre fuer `minutes` Minuten auf und laesst sie danach von
    * einem DeviceActivityMonitor automatisch wieder zuschnappen.
    *
-   * mode 'all'      — alle gesperrten Apps
-   * mode 'selected' — das Kind waehlt eine App; der Auswahldialog laeuft
-   *                   nativ ueber der gespeicherten Liste, damit Name und
-   *                   Symbol angezeigt werden koennen, ohne dass unser Code
-   *                   die Identitaet erfaehrt.
+   * Die Freigabe gilt immer fuer ALLES, was gesperrt ist. Eine Auswahl beim
+   * Einloesen gibt es nicht mehr — siehe den Hinweis zu UnlockMode oben.
    *
    * VERLAENGERT eine laufende Freigabe, ersetzt sie nicht. Wer waehrend einer
    * laufenden Freigabe weiterlernt, bekommt die neuen Minuten hinten
    * angehaengt. Der umgekehrte Fall — neue Zeit loescht die alte — waere aus
    * Sicht des Kindes eine Bestrafung fuers Weiterlernen.
-   *
-   * Im Modus 'selected' bei laufender Freigabe wird NICHT erneut gefragt; die
-   * Verlaengerung gilt der bereits gewaehlten App.
    */
-  releaseFor(options: { minutes: number; mode: UnlockMode }): Promise<ReleaseResult>;
+  releaseFor(options: { minutes: number }): Promise<ReleaseResult>;
 
   /**
    * Beendet eine laufende Freigabe sofort und sperrt wieder — etwa wenn die
@@ -202,6 +225,10 @@ export const UNAVAILABLE: ScreenTimeAvailability = {
 export const EMPTY_STATUS: ShieldStatus = {
   authorization: 'notDetermined',
   managing: false,
+  // Der strengere Wert als Vorgabe. Faellt der Status aus — Web, Android, ein
+  // Plugin-Fehler — soll die Oberflaeche nicht behaupten, es seien nur
+  // einzelne Apps betroffen.
+  shieldAll: true,
   shieldedCount: 0,
   releasedCount: 0,
   releasedUntil: null,

@@ -107,6 +107,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         var payload: [String: Any] = [
             "authorization": authorization,
             "managing": managing,
+            "shieldAll": LernzeitScreenTime.shieldAll,
             "shieldedCount": shieldedCount,
             // Diese Fassung gibt immer alles frei; im Modus 'selected' waere
             // hier die Zahl der tatsaechlich offenen Apps zu fuehren.
@@ -190,8 +191,15 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    /// Schaltet die Sperre ein.
+    ///
+    /// `shieldAll` (Vorgabe true) sperrt ALLES und behandelt die Auswahl als
+    /// Ausnahmen. Ohne den Parameter bleibt der zuletzt gesetzte Modus.
     @objc func applyShield(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        if let alles = call.getBool("shieldAll") {
+            LernzeitScreenTime.shieldAll = alles
+        }
         managing = true
         releasedUntil = nil
         LernzeitScreenTime.stopMonitoring()

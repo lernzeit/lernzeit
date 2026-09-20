@@ -43,6 +43,7 @@ import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 import { StreakFireCard } from '@/components/StreakFireCard';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
+import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
 
 interface UserProfileProps {
   user: any;
@@ -127,6 +128,10 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // dem Gerät des Kindes — dort liegen sie in der App Group, und nur LernZeit
   // selbst kann sie weitergeben.
   useSyncShieldAttempts(user?.id, profile?.role === 'child');
+
+  // Genehmigte Zeit auf dem Gerät einlösen. Ebenfalls nur auf dem Kindgerät:
+  // Die Sperre liegt dort, und nur dort lässt sie sich öffnen.
+  useScreenTimeRelease(user?.id, profile?.role === 'child');
 
   // Check for parent-child relationship
   const checkParentLink = async () => {

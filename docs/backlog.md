@@ -18,17 +18,38 @@ Oberfläche, die Apps auswählen konnte, war die Test-Werkbank hinter
 Jetzt `ScreenTimeSetup` in den Einstellungen des Kindes, mit `ParentGate`
 davor. Im Eltern-Bereich steht ein Hinweis, wo die Einrichtung stattfindet.
 
-### Modus „ausgewählte Apps"
+### ~~Modus „ausgewählte Apps"~~ — gestrichen am 20.09.2026
 
-Das Kind sucht beim Einlösen aus, für welche App die verdiente Zeit gelten
-soll, statt „alles oder nichts". Beide Modi waren von Anfang an gewünscht;
-gebaut ist bisher nur `all`.
+Das Kind hätte beim Einlösen ausgesucht, für welche App die verdiente Zeit
+gelten soll. Gestrichen, nicht zurückgestellt: Wer 15 Minuten verdient hat,
+will 15 Minuten — und nicht vorher eine Liste durchgehen.
 
-Der Vertrag sieht den Modus schon vor (`UnlockMode = 'all' | 'selected'` in
-`src/services/screenTime/types.ts`), die Umsetzung fehlt.
+`UnlockMode` ist aus `src/services/screenTime/types.ts` entfernt, die Prüfung
+auf `child_settings.screen_time_unlock_mode` lässt nur noch `'all'` zu.
 
-*Zurückgestellt am 20.09.2026:* erst soll das Bestehende getestet werden.
-Braucht keine neuen Apple-Identifier.
+### ~~Gesperrte Apps auswählen müssen~~ — gestrichen am 20.09.2026
+
+Die erste Fassung verlangte, dass ein Elternteil auf dem Gerät des Kindes
+einzeln Apps antippt, bevor überhaupt etwas gesperrt war. Drei Schritte für
+eine Einstellung, die fast jeder gleich meint: „das Handy".
+
+Jetzt sperrt LernZeit vorgabemäßig alles
+(`ShieldSettings.ActivityCategoryPolicy.all(except:)`). Apples Auswahldialog
+ist geblieben, hat aber die Rolle gewechselt: Er bestimmt nicht mehr, was
+gesperrt wird, sondern was offen bleibt.
+
+### ~~Genehmigte Zeit öffnet das Gerät~~ — erledigt am 20.09.2026
+
+Die Kette endete beim Status `approved`; auf dem Telefon geschah nichts. Jetzt
+löst `useScreenTimeRelease` die Genehmigung auf dem Kindgerät ein:
+`redeem_unlock` bucht sie serverseitig, danach hebt `releaseFor` die Sperre
+auf. Ein eindeutiger Index auf `screen_time_unlocks.request_id` verhindert
+doppeltes Einlösen.
+
+**Noch offen und nur auf einem Gerät prüfbar:** ob LernZeit sich unter
+`.all()` selbst sperrt. Falls ja, kann das Kind die App nicht mehr öffnen und
+muss als Ausnahme gesetzt werden — dann wird der Auswahldialog beim
+Einrichten doch wieder Pflicht.
 
 ### ~~„Eltern fragen" sichtbar machen~~ — erledigt am 20.09.2026
 

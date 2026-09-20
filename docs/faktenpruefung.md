@@ -222,15 +222,26 @@ Erprobung. Vor einer Anzeige, die ihn bewirbt, selbst mehrfach durchspielen.
 | | |
 |---|---|
 | Fundstelle | `child_settings.screen_time_managed` Standard `false`, `screen_time_auto_release` Standard `false` |
-| Zustand | Die Gerätesperre über Apple Family Controls ist gebaut, aber nicht ausgeliefert |
+| Zustand | Die Gerätesperre über Apple Family Controls ist gebaut; ob sie auf einem echten Gerät greift, ist noch nicht belegt |
 
 Eltern geben die verdiente Zeit heute in Family Link beziehungsweise in Apples
 Bildschirmzeit selbst frei.
 
+**Was sich am 20.09.2026 geändert hat:** Genehmigte Zeit öffnet das Telefon
+jetzt selbst — aber nur dort, wo ein Elternteil die Sperre auf dem Gerät des
+Kindes eingerichtet hat, und nur nach einer Genehmigung. Ohne Genehmigung
+passiert weiterhin nichts; `screen_time_auto_release` steht unverändert auf
+`false`. Die Zusage „verdiente Zeit wird nicht automatisch freigegeben" bleibt
+damit richtig.
+
+**Noch nicht belegt:** Dass die Kette auf einem echten iPhone durchläuft. Das
+lässt sich nur auf einem Gerät mit der Apple-Berechtigung prüfen, nicht hier.
+Bis dahin darf kein Werbetext behaupten, LernZeit sperre das Handy.
+
 **Wichtig für die Werbung:** Das ist der Punkt, an dem Eltern erfahrungsgemäß
 abspringen, wenn sie etwas anderes erwartet haben. Er gehört offen kommuniziert,
-nicht versteckt. Sobald die automatische Freigabe ausgeliefert ist, ist diese
-Zeile neu zu prüfen — dann wird daraus das stärkste Argument überhaupt.
+nicht versteckt. Erst wenn die Sperre auf einem Gerät nachweislich greift, wird
+daraus ein Argument — diese Zeile ist dann erneut zu prüfen.
 
 ---
 

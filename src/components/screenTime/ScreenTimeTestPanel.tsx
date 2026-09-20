@@ -123,7 +123,7 @@ export function ScreenTimeTestPanel() {
           <Button
             variant="outline"
             disabled={busy !== null || !status.managing}
-            onClick={() => run('5 Minuten freigeben', () => ScreenTime.releaseFor({ minutes: 5, mode: 'all' }))}
+            onClick={() => run('5 Minuten freigeben', () => ScreenTime.releaseFor({ minutes: 5 }))}
           >
             {busy === '5 Minuten freigeben' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             3. 5 Minuten freigeben

@@ -33,6 +33,8 @@ public enum LernzeitScreenTime {
         /// Zeitpunkte, zu denen das Kind auf dem Sperrbildschirm "Eltern
         /// fragen" gedrueckt hat.
         public static let shieldRequests = "lernzeit.screentime.shieldRequests"
+        /// true = alles sperren, die Auswahl sind dann AUSNAHMEN.
+        public static let shieldAll = "lernzeit.screentime.shieldAll"
     }
 
     /// Faellt auf UserDefaults.standard zurueck, falls die App Group fehlt —
@@ -69,6 +71,29 @@ public enum LernzeitScreenTime {
         set { defaults.set(newValue, forKey: Keys.managing) }
     }
 
+    /**
+     Alles sperren, statt einzelne Apps auszuwaehlen.
+
+     Vorgabe ist `true`, und das ist der Kern der Vereinfachung: Wer nichts
+     einstellt, bekommt die strengste Regel — und muss dafuer nichts tun.
+
+     Die Auswahl (`selection`) kehrt in diesem Modus ihre Bedeutung um: Sie
+     sind nicht mehr die gesperrten Apps, sondern die AUSNAHMEN, die offen
+     bleiben. Eltern, die Nachrichten oder eine Schul-App freihalten wollen,
+     waehlen sie einmal aus; alle anderen fassen den Auswahldialog nie an.
+
+     Der Umweg ueber `object(forKey:)` unterscheidet "nie gesetzt" von
+     "ausdruecklich auf false gesetzt". `bool(forKey:)` allein liefert fuer
+     beides `false` und haette die Vorgabe still ins Gegenteil verkehrt.
+     */
+    public static var shieldAll: Bool {
+        get {
+            guard defaults.object(forKey: Keys.shieldAll) != nil else { return true }
+            return defaults.bool(forKey: Keys.shieldAll)
+        }
+        set { defaults.set(newValue, forKey: Keys.shieldAll) }
+    }
+
     /// Der WAHRE Ablaufzeitpunkt der Freigabe.
     ///
     /// Er kann frueher liegen als das Ende des ueberwachten Zeitfensters: Das
@@ -88,15 +113,32 @@ public enum LernzeitScreenTime {
     @available(iOS 16.0, *)
     public static func applyShield() {
         let store = ManagedSettingsStore()
-        guard managing, let selection = selection else {
+        guard managing else {
             store.shield.applications = nil
             store.shield.applicationCategories = nil
             return
         }
-        store.shield.applications = selection.applicationTokens.isEmpty
-            ? nil : selection.applicationTokens
-        store.shield.applicationCategories = selection.categoryTokens.isEmpty
-            ? nil : .specific(selection.categoryTokens)
+
+        if shieldAll {
+            // Alles sperren. Die Auswahl sind hier die Ausnahmen — ist keine
+            // getroffen, bleibt nichts offen. Apple laesst Telefon und
+            // Einstellungen ohnehin nie sperren.
+            store.shield.applications = nil
+            store.shield.applicationCategories = .all(except: selection?.applicationTokens ?? [])
+            return
+        }
+
+        // Nur ausgewaehlte Apps sperren — der Weg fuer Eltern, die
+        // ausdruecklich differenzieren wollen.
+        guard let auswahl = selection else {
+            store.shield.applications = nil
+            store.shield.applicationCategories = nil
+            return
+        }
+        store.shield.applications = auswahl.applicationTokens.isEmpty
+            ? nil : auswahl.applicationTokens
+        store.shield.applicationCategories = auswahl.categoryTokens.isEmpty
+            ? nil : .specific(auswahl.categoryTokens)
     }
 
     @available(iOS 16.0, *)

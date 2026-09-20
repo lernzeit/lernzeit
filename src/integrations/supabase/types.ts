@@ -2036,6 +2036,7 @@ export type Database = {
         Returns: undefined
       }
       set_own_platform: { Args: { p_platform: string }; Returns: undefined }
+      set_screen_time_managed: { Args: { ist_verwaltet: boolean }; Returns: undefined }
       spalten_vorgabe: {
         Args: { p_spalte: string; p_tabelle: string }
         Returns: string
