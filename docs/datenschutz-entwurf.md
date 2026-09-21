@@ -247,21 +247,26 @@ Dieser Abschnitt ist neu. Er beschreibt genau das, was die Technik tun wird.
 > **Widerruf:** jederzeit über „Cookie-Einstellungen" im Seitenfuß, mit
 > Wirkung für die Zukunft.
 >
-> **Speicherdauer:** Die Klick-Kennung löschen wir spätestens 90 Tage nach
-> Erhebung, sofern es nicht zu einer Anmeldung gekommen ist. Bei einer
-> Anmeldung bewahren wir die Zuordnung so lange auf, wie wir die Wirksamkeit
-> der Werbemaßnahme auswerten, längstens 13 Monate.
+> **Speicherdauer:** Wir bewahren die Zuordnung so lange auf, wie wir die
+> Wirksamkeit der Werbemaßnahme auswerten, längstens 13 Monate.
 >
 > **Empfänger:** Google Ireland Limited, Meta Platforms Ireland Limited. Eine
 > Übermittlung in die USA erfolgt auf Grundlage der Standardvertragsklauseln
 > und, soweit einschlägig, des EU-US Data Privacy Framework.
 
 **Diese Zusagen sind technisch bindend — und seit dem 14.09.2026 gedeckt.**
-Die Speicherfristen stehen nicht mehr nur hier, sondern in der Tabelle
-`ad_attribution`: Jede Zeile trägt eine Spalte `delete_after` (90 Tage beim
-Anlegen, 13 Monate ab einer Anmeldung), und der tägliche Auftrag
-`ad-attribution-retention` löscht, was abgelaufen ist. Geprüft: Von zwei
-Testzeilen wurde genau die abgelaufene entfernt.
+Die Speicherfrist steht nicht mehr nur hier, sondern in der Tabelle
+`ad_attribution`: Jede Zeile trägt eine Spalte `delete_after`, und der
+tägliche Auftrag `ad-attribution-retention` löscht, was abgelaufen ist.
+Geprüft: Von zwei Testzeilen wurde genau die abgelaufene entfernt.
+
+*Korrektur vom 21.09.2026:* Hier stand „90 Tage beim Anlegen, 13 Monate ab
+einer Anmeldung". Die kurze Frist ist am 20.09.2026 entfallen und war in
+diesem Text liegen geblieben. Sie galt für Klicks **ohne** Anmeldung — und
+die werden seitdem gar nicht mehr gespeichert, weil eine Zeile erst bei der
+Eltern-Registrierung entsteht. Der Vorgabewert der Spalte lautet heute
+`now() + interval '13 months'`; am 21.09.2026 in der Produktionsdatenbank
+nachgesehen.
 
 Ändert jemand die Fristen im Text, müssen die Vorgabewerte der Spalte
 mitgeändert werden — sonst sagt dieser Abschnitt wieder etwas anderes als die
@@ -278,7 +283,7 @@ Die Datenschutzerklärung beschreibt Verhalten. Dieses Verhalten muss es geben.
 | 1 | **Einwilligungsbanner (CMP).** Vor der Einwilligung lädt kein Werbe-Tag. Nicht vorausgewählt, Ablehnen genauso leicht wie Zustimmen. |
 | 2 | **Einwilligungsstatus bei der Conversion.** Da kein Google-Skript im Browser laeuft, tritt an die Stelle von Consent Mode v2 die Uebertragung des Einwilligungsstatus mit jeder einzelnen serverseitig gemeldeten Conversion. |
 | 3 | **Widerruf im Seitenfuß.** Ein Link „Cookie-Einstellungen", der die Auswahl erneut öffnet. |
-| ~~4~~ | ~~Automatische Löschung nach 90 Tagen beziehungsweise 13 Monaten~~ — **erledigt**, Spalte `delete_after` und Auftrag `ad-attribution-retention`. |
+| ~~4~~ | ~~Automatische Löschung nach 13 Monaten~~ — **erledigt**, Spalte `delete_after` und Auftrag `ad-attribution-retention`. |
 | ~~5~~ | ~~Hashing serverseitig~~ — **entfällt.** Auf Empfehlung der Kanzlei werden gar keine E-Mail-Adressen übermittelt. Das bereits gebaute Modul dafür ist entfernt. |
 | ~~6~~ | ~~Filter auf Elternkonten~~ — **erledigt**, zweifach: `analytics.ts` im Browser und `link_ad_attribution` in der Datenbank. |
 | 7 | **Werbe-Tags aus, sobald ein Kinderkonto angemeldet ist.** Siehe Abschnitt 7 — dies ist der offene Punkt mit den größten Folgen. |

@@ -84,7 +84,7 @@ globalThis.__sb = {
   }),
 };
 
-const { track, captureAdClick } = await import(bundle);
+const { track } = await import(bundle);
 const dataLayer = () => globalThis.window.dataLayer;
 const zuruecksetzen = () => {
   globalThis.window.dataLayer = [];
@@ -129,17 +129,29 @@ pruefe(dataLayer().length === 0, 'Elternkonto, aber Event nennt role=child: trot
 
 /* --- Anzeigenklicks -------------------------------------------------- */
 /*
- * Seit dem 20.09.2026 gilt: Beim Ankommen wird NICHTS gespeichert. Die
- * Kennung lebt nur im Arbeitsspeicher; geschrieben wird erst bei der
- * Registrierung eines Elternkontos, und nur nach Einwilligung.
+ * Vorgabe der Kanzlei vom 21.09.2026: vor der Einwilligung KEINE eigene
+ * Werbe-Zwischenablage — weder im localStorage noch im Arbeitsspeicher.
+ * Gelesen wird erst danach, und zwar aus der Adresszeile dieses Augenblicks.
+ *
+ * Diese Faelle pruefen genau das: dass beim Ankommen nichts entsteht, dass
+ * die Kennung verloren ist, wenn sie zum Zeitpunkt der Einwilligung nicht
+ * mehr in der Adresse steht, und dass Meta nirgends mehr auftaucht.
  */
 
-const { setWerbeEinwilligung } = await import(bundle);
+const { setWerbeEinwilligung, captureAttribution, getAttribution } = await import(bundle);
 
 zuruecksetzen(); speicher.clear();
-besuche('?gbraid=abc123&utm_campaign=test');
-captureAdClick();
-pruefe(klickZeilen.length === 0, 'Beim Ankommen wird nichts gespeichert');
+besuche('?gclid=abc123&gbraid=def456&utm_campaign=test');
+captureAttribution();
+pruefe(klickZeilen.length === 0, 'Beim Ankommen wird nichts verbucht');
+pruefe(
+  !JSON.stringify([...speicher.values()]).includes('abc123'),
+  'Die Klick-Kennung landet nirgends im Geraetespeicher',
+);
+pruefe(
+  getAttribution().utm_campaign === 'test' && !getAttribution().gclid,
+  'utm bleibt gespeichert, gclid nicht',
+);
 
 zuruecksetzen(); rolle = 'parent'; sitzung = 'eltern-9';
 setWerbeEinwilligung(false);
@@ -153,7 +165,9 @@ await track('sign_up_completed', { role: 'parent' });
 await warte();
 pruefe(klickZeilen.length === 1, 'Mit Einwilligung wird bei der Eltern-Registrierung verbucht');
 pruefe(klickZeilen[0]?.user_id === 'eltern-9', 'Die Zeile haengt direkt am Elternkonto');
-pruefe(klickZeilen[0]?.gbraid === 'abc123', 'gbraid landet in der Zeile — nicht nur gclid');
+pruefe(klickZeilen[0]?.gclid === 'abc123', 'gclid kommt aus der Adresszeile');
+pruefe(klickZeilen[0]?.gbraid === 'def456', 'gbraid ebenso — nicht nur gclid');
+pruefe(!('fbclid' in (klickZeilen[0] ?? {})), 'Meta ist abgeschaltet: kein fbclid in der Zeile');
 pruefe(!('anonymous_id' in (klickZeilen[0] ?? {})), 'Keine anonyme Kennung mehr');
 
 zuruecksetzen();
@@ -161,14 +175,35 @@ await track('page_view', {});
 await warte();
 pruefe(klickZeilen.length === 0, 'Ein zweites Ereignis verbucht nicht noch einmal');
 
+/* Der Preis der Vorgabe, hier ausdruecklich festgehalten. */
+zuruecksetzen(); speicher.clear();
+besuche('?gclid=nur-auf-der-landeseite');
+captureAttribution();
+besuche('?auth=true');
+rolle = 'parent'; sitzung = 'eltern-11';
+setWerbeEinwilligung(true);
+await track('sign_up_completed', { role: 'parent' });
+await warte();
+pruefe(
+  klickZeilen.length === 0,
+  'Ist die Kennung aus der Adresse verschwunden, wird nichts verbucht (gewollt)',
+);
+
 zuruecksetzen(); speicher.clear();
 besuche('?gclid=kind-klick');
-captureAdClick();
-zuruecksetzen(); rolle = 'child'; sitzung = 'kind-9';
+rolle = 'child'; sitzung = 'kind-9';
 setWerbeEinwilligung(true);
 await track('sign_up_completed', { role: 'child' });
 await warte();
 pruefe(klickZeilen.length === 0, 'Kinderkonto: nichts gespeichert, auch mit Einwilligung');
+
+zuruecksetzen(); speicher.clear();
+besuche('?fbclid=meta-klick');
+rolle = 'parent'; sitzung = 'eltern-12';
+setWerbeEinwilligung(true);
+await track('sign_up_completed', { role: 'parent' });
+await warte();
+pruefe(klickZeilen.length === 0, 'Ein reiner Meta-Klick erzeugt keine Zeile');
 
 zuruecksetzen(); speicher.clear();
 besuche('');

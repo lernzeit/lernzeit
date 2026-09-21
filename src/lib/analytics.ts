@@ -53,17 +53,36 @@ export interface Attribution {
   utm_campaign?: string | null;
   utm_content?: string | null;
   utm_term?: string | null;
+  /**
+   * Bleibt seit dem 21.09.2026 immer leer.
+   *
+   * Das Feld steht noch im Typ, weil `analytics_events` eine gleichnamige
+   * Spalte hat. Gefuellt wird sie nicht mehr: Eine Klick-Kennung im
+   * localStorage waere eine Speicherung ohne Einwilligung.
+   */
   gclid?: string | null;
   referrer?: string | null;
 }
 
+/**
+ * Was beim Ankommen dauerhaft gespeichert wird.
+ *
+ * `gclid` stand hier bis zum 21.09.2026 mit drin und landete damit im
+ * localStorage — ohne Einwilligung, bei jedem Besucher. Vorgabe der Kanzlei
+ * vom 21.09.2026: keine eigene Werbe-Zwischenablage vor der Zustimmung. Das
+ * gilt fuer den Arbeitsspeicher und erst recht fuer eine Ablage, die den
+ * Tab ueberlebt.
+ *
+ * Die Klick-Kennung wird seitdem ueberhaupt nicht mehr abgelegt, sondern
+ * erst im Moment der Einwilligung aus der Adresszeile gelesen — siehe
+ * `leseKlickAusAdresse()`.
+ */
 const ATTRIBUTION_FIELDS: (keyof Attribution)[] = [
   'utm_source',
   'utm_medium',
   'utm_campaign',
   'utm_content',
   'utm_term',
-  'gclid',
   'referrer',
 ];
 
@@ -202,48 +221,36 @@ function getPagePath(): string | null {
 /* ------------------------------------------------------------------ */
 
 /**
- * Die Kennungen, an denen eine Werbeplattform ihren eigenen Klick
- * wiedererkennt.
+ * Die Kennungen, an denen Google seinen eigenen Klick wiedererkennt.
  *
- * `gbraid` und `wbraid` treten bei Google an die Stelle von `gclid`, wenn auf
- * iOS keine Einwilligung fuer geraeteuebergreifende Messung vorliegt. Wer nur
- * `gclid` erfasst, verliert genau die Klicks, die aus der Zielgruppe kommen.
+ * `gbraid` und `wbraid` treten an die Stelle von `gclid`, wenn auf iOS keine
+ * Einwilligung fuer geraeteuebergreifende Messung vorliegt. Wer nur `gclid`
+ * erfasst, verliert genau die Klicks, die aus der Zielgruppe kommen.
  *
- * ── Warum hier nichts gespeichert wird ────────────────────────────────────
+ * ── Warum `fbclid` fehlt ──────────────────────────────────────────────────
  *
- * Empfehlung der Kanzlei vom 20.09.2026: Werbemessung nur in einem
- * abgegrenzten Erwachsenenbereich; oeffentliche Seiten und Kinderbereiche
- * bleiben frei davon. Nach Adressen laesst sich das nicht trennen — unter "/"
- * liegen Marketingseite, App und Kinderansicht, dazu ein Demo-Modus ohne
- * Konto.
+ * Meta ist abgeschaltet. Die Kanzlei hat am 21.09.2026 einen technischen
+ * Konflikt festgestellt: Metas dokumentierte Schnittstelle verlangt fuer
+ * Website-Ereignisse zusaetzlich Ereignis-URL und User-Agent. Beides ist von
+ * der abgestimmten Zielkonfiguration nicht gedeckt. Solange Meta nichts
+ * empfaengt, hat das Erfassen der Kennung keinen Zweck — und Daten ohne
+ * Zweck werden nicht erhoben.
  *
- * Abgegrenzt wird deshalb ueber den ZEITPUNKT: Beim Ankommen wird gar nichts
- * gespeichert. Die Kennung lebt nur in dieser Variablen, also im
- * Arbeitsspeicher der geoeffneten Seite, und ist mit dem Schliessen des Tabs
- * weg. Geschrieben wird erst, wenn sich jemand als ELTERNTEIL registriert.
- *
- * Wer sich nur umsieht, hinterlaesst nichts. Wer sich als Kind registriert,
- * ebenfalls nicht.
- *
- * Preis: Wer die Seite verlaesst und spaeter zurueckkommt, wird nicht mehr
- * zugeordnet. Wir zaehlen dadurch eher zu wenig als zu viel — die richtige
- * Richtung fuer einen Fehler.
+ * Die Spalten `fbclid`, `fbp` und `fbc` stehen weiter in `ad_attribution`.
+ * Sie bleiben leer; die Kanzlei hat eine ausdruecklich gekennzeichnete
+ * Erweiterungsvariante vorbereitet, fuer die sie wieder gebraucht wuerden.
  */
-const AD_CLICK_PARAMS = ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const;
+const AD_CLICK_PARAMS = ['gclid', 'gbraid', 'wbraid'] as const;
 
 type AdClick = Record<string, string | null>;
-
-/** Nur im Arbeitsspeicher. Bewusst kein localStorage, kein Cookie. */
-let klickImArbeitsspeicher: AdClick | null = null;
 
 /**
  * Einwilligung in die Werbemessung.
  *
- * Der Vorgabewert ist `false`, und das ist der heutige Zustand: Es gibt noch
- * kein Einwilligungsbanner, und die Anforderungen daran stehen bei der
- * Kanzlei aus. Solange niemand etwas anderes setzt, wird nichts gespeichert
- * und nichts uebermittelt — die Messung ist vollstaendig aus, nicht nur
- * ungenutzt.
+ * Der Vorgabewert ist `false`, und das ist der heutige Zustand: Die CMP
+ * steht noch nicht. Solange niemand etwas anderes setzt, wird nichts
+ * gespeichert und nichts uebermittelt — die Messung ist vollstaendig aus,
+ * nicht nur ungenutzt.
  *
  * Bewusst eine Variable und kein Import aus der CMP: Diese Datei soll nicht
  * wissen, welcher Anbieter die Einwilligung einholt. Wenn die CMP steht, ruft
@@ -260,43 +267,54 @@ function hatWerbeEinwilligung(): boolean {
 }
 
 /**
- * Liest die Klick-Kennungen aus Adresse und Cookies und legt genau EINE Zeile
- * je Klick an.
+ * Liest die Klick-Kennung aus der AKTUELLEN Adresszeile — in dem Moment, in
+ * dem sie gebraucht wird, und keine Sekunde vorher.
  *
- * Der Merkposten im localStorage verhindert, dass ein Neuladen derselben
- * Adresse — oder ein zurueckgeklickter Verlauf — denselben Klick mehrfach
- * einträgt. Ein spaeterer Klick auf eine andere Anzeige traegt eine andere
- * Kennung und wird deshalb als neue Zeile gezaehlt; beim Zuordnen gewinnt die
- * juengste.
+ * ── Warum es keine Zwischenablage mehr gibt ──────────────────────────────
+ *
+ * Bis zum 21.09.2026 lief es umgekehrt: Beim Ankommen wurde die Kennung
+ * gelesen und gemerkt — erst im localStorage, dann in einer Variablen im
+ * Arbeitsspeicher. Beides ist nach der Pruefung der Kanzlei vom 21.09.2026
+ * nicht haltbar: Auch der Arbeitsspeicher kann rechtlich Speicherung sein
+ * (§ 25 TDDDG, EDSA-Leitlinien 2/2023). Ihre Vorgabe lautet, vor der
+ * Zustimmung gar keine eigene Werbe-Zwischenablage zu fuehren und danach die
+ * noch vorhandene Kennung aus der aktuellen Browseradresse zu uebernehmen.
+ *
+ * Genau das tut diese Funktion. Sie wird ausschliesslich aus `resolveAdClick`
+ * gerufen, also nach geprueftem Elternkonto UND erteilter Einwilligung.
+ *
+ * ── Was das kostet ───────────────────────────────────────────────────────
+ *
+ * Steht die Kennung zu diesem Zeitpunkt nicht mehr in der Adresse, ist sie
+ * weg. In der heutigen Navigation ist das der Normalfall: Die Anzeige fuehrt
+ * auf `/start?gclid=…`, die Registrierung liegt auf `/`, und `/auth` leitet
+ * per `Navigate replace` auf `/?auth=true` um — dabei faellt die Abfrage weg.
+ *
+ * Ob die Kennung waehrend der Navigation IN DER ADRESSE mitgefuehrt werden
+ * darf (nicht in einer Ablage), ist die offene Frage an die Kanzlei. Bis zur
+ * Antwort misst dieser Weg bewusst eher nichts als zu viel.
  */
-/**
- * Liest die Klick-Kennung aus der Adresse — und merkt sie sich nur im
- * Arbeitsspeicher. Schreibt nichts, uebermittelt nichts.
- */
-export function captureAdClick(): void {
+function leseKlickAusAdresse(): AdClick | null {
   try {
-    if (typeof window === 'undefined') return;
-
+    if (typeof window === 'undefined') return null;
     const params = new URLSearchParams(window.location.search);
     const klick: AdClick = {};
     for (const name of AD_CLICK_PARAMS) {
       const wert = params.get(name);
       if (wert) klick[name] = wert.slice(0, 200);
     }
-    if (Object.keys(klick).length === 0) return;
-
-    klickImArbeitsspeicher = klick;
+    return Object.keys(klick).length > 0 ? klick : null;
   } catch {
-    /* Tracking darf die App nie blockieren. */
+    return null;
   }
 }
 
 /**
- * Verbucht den gemerkten Klick — aber nur fuer ein Elternkonto und nur nach
- * Einwilligung. Alles andere laesst die Kennung im Arbeitsspeicher verfallen.
+ * Verbucht den Anzeigenklick — nur fuer ein Elternkonto, nur nach
+ * Einwilligung, und nur aus der Adresszeile dieses Augenblicks.
  *
- * Kinderkonto: Es gibt nichts zu loeschen, weil nie etwas geschrieben wurde.
- * Die Kennung wird nur verworfen.
+ * Kinderkonto: Es gibt nichts zu loeschen und nichts zu verwerfen, weil nie
+ * etwas gelesen wurde. Die Funktion kehrt um, bevor sie die Adresse ansieht.
  *
  * Die Datenbank prueft die Rolle ein zweites Mal (Zugriffsregel auf
  * ad_attribution). Zwei Sperren an zwei Orten: Wer die eine umgeht, steht vor
@@ -304,19 +322,16 @@ export function captureAdClick(): void {
  */
 async function resolveAdClick(userId: string | null, audience: Audience | null): Promise<void> {
   try {
-    if (!klickImArbeitsspeicher) return;
-
-    if (audience === 'child') {
-      klickImArbeitsspeicher = null;
-      return;
-    }
-
+    // Reihenfolge ist hier die halbe Miete: erst Rolle und Einwilligung,
+    // DANN die Adresse lesen. Andersherum haette die Funktion die Kennung
+    // eines Kindes kurz in der Hand gehabt — genau das soll nicht passieren.
     if (audience !== 'parent' || !userId) return;
     if (!hatWerbeEinwilligung()) return;
     if (readLocal(AD_RECORDED_KEY) === userId) return;
 
-    const klick = klickImArbeitsspeicher;
-    klickImArbeitsspeicher = null;
+    const klick = leseKlickAusAdresse();
+    if (!klick) return;
+
     writeLocal(AD_RECORDED_KEY, userId);
 
     const attribution = getAttribution();
@@ -325,7 +340,6 @@ async function resolveAdClick(userId: string | null, audience: Audience | null):
       gclid: klick.gclid ?? null,
       gbraid: klick.gbraid ?? null,
       wbraid: klick.wbraid ?? null,
-      fbclid: klick.fbclid ?? null,
       utm_source: attribution.utm_source ?? null,
       utm_medium: attribution.utm_medium ?? null,
       utm_campaign: attribution.utm_campaign ?? null,
@@ -492,7 +506,10 @@ export function initAnalytics(): void {
   try {
     captureAttribution();
     getAnonymousId();
-    captureAdClick();
+    // captureAdClick() stand hier bis zum 21.09.2026 und legte die
+    // Klick-Kennung beim Ankommen ab. Nach der Vorgabe der Kanzlei gibt es
+    // vor der Einwilligung keine Zwischenablage mehr — gelesen wird erst in
+    // resolveAdClick, aus der Adresszeile dieses Augenblicks.
   } catch {
     /* ignore */
   }
