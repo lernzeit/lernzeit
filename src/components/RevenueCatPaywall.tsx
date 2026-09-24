@@ -16,7 +16,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { usePremium } from '@/hooks/usePremium';
 import { supabase } from '@/lib/supabase';
-import { trackFireAndForget } from '@/lib/analytics';
+import { track, trackFireAndForget } from '@/lib/analytics';
 
 /** Leitet aus der RevenueCat-Package-Kennung den Plan ab. */
 function planFromPackage(identifier: string, productIdentifier?: string): 'monthly' | 'yearly' {
@@ -158,7 +158,8 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
     setStripeFallbackLoading(plan);
     setActionError(null);
     trackEvent('paywall_stripe_fallback_started', { plan });
-    trackFireAndForget('checkout_started', { plan, channel: 'stripe_fallback' });
+    // Abgewartet: Gleich verlaesst der Browser die Seite Richtung Stripe.
+    await track('checkout_started', { plan, channel: 'stripe_fallback' });
     try {
       const priceId = plan === 'yearly' ? STRIPE_YEARLY_PRICE_ID : STRIPE_MONTHLY_PRICE_ID;
       if (!priceId || !priceId.startsWith('price_')) {
@@ -254,7 +255,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       price: pkg.priceString,
       platform,
     });
-    trackFireAndForget('checkout_started', {
+    await track('checkout_started', {
       plan: planFromPackage(pkg.identifier, pkg.productIdentifier),
       channel: 'revenuecat',
     });
@@ -279,7 +280,9 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
           platform,
         });
         trackEvent('entitlement_activated', { source: platform === 'web' ? 'revenuecat_web' : 'revenuecat_native' });
-        trackFireAndForget('subscription_purchased', {
+        // Das wichtigste Ereignis im ganzen System. Es wird abgewartet,
+        // bevor der Dialog schliesst.
+        await track('subscription_purchased', {
           plan: planFromPackage(pkg.identifier, pkg.productIdentifier),
           channel: 'revenuecat',
         });

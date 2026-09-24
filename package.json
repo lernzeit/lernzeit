@@ -18,7 +18,8 @@
     "test:edge": "node scripts/test-edge-functions.mjs",
     "test:ios": "ruby scripts/test-ios-extensions.rb",
     "typecheck": "tsc -b --noEmit",
-    "test:release": "node scripts/test-screen-time-release.mjs"
+    "test:release": "node scripts/test-screen-time-release.mjs",
+    "trichter": "node scripts/trichter.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

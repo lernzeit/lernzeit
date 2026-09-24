@@ -128,7 +128,32 @@ sondern sorgt dafür, dass der Test überhaupt ablesbar ist.
 | 1.1 | **Selbst einmal komplett kaufen** — fremde Karte, nicht das Betreiberkonto, von der Registrierung bis zur Abbuchung und zurück bis zur Kündigung. | Befund M2 und M3: Der Bezahlweg ist unerprobt, `checkout_started` nie ausgelöst. Bevor 250 € dorthin zeigen, muss er einmal nachweislich tragen. |
 | 1.2 | **Den Trichter lückenlos messbar machen.** Jede Stufe bekommt ein Ereignis: Zielseite gesehen, Registrierung begonnen, Registrierung abgeschlossen, Einladungscode erzeugt, Kind verknüpft, erste Aufgabe gelöst, Bezahlschranke gesehen, Bezahlvorgang begonnen. | Damit die Werbung sagen kann, **wo** es klemmt. Heute wissen wir das nicht — und dürfen es auch nicht aus den Testkonten raten. |
 | 1.3 | **Zählbericht bauen:** je Tag eine Zeile mit allen Stufen aus 1.2. | Damit du den Test täglich selbst liest, statt am Ende zu rätseln. |
-| 1.4 | **Bei der Eigenkaufprobe (1.1) mitschreiben,** ob jedes Ereignis aus 1.2 auch wirklich ankommt. | Ein Trichter, dessen Stufen nicht feuern, misst nichts. `sign_up_completed` ist im Code verdrahtet, taucht im Protokoll aber nicht auf — das gehört geprüft. |
+| 1.4 | **Bei der Eigenkaufprobe (1.1) mitschreiben,** ob jedes Ereignis aus 1.2 auch wirklich ankommt. | Ein Trichter, dessen Stufen nicht feuern, misst nichts. |
+
+**Stand 24.09.2026: 1.2 und 1.3 sind gebaut.**
+
+`funnel_report(tage)` in der Datenbank liefert eine Zeile je Tag mit neun
+Stufen, `npm run trichter` druckt sie als Tabelle. Zwei Entscheidungen darin
+sind wichtiger, als sie aussehen:
+
+* **Wo es eine Tabelle gibt, wird die Tabelle gezählt, nicht das Ereignis.**
+  Elternkonten aus `profiles`, Verknüpfungen aus
+  `parent_child_relationships`, erste Lernsitzung aus `game_sessions`, Abos
+  aus `subscriptions`. Ereignisse nur dort, wo keine Tabelle existiert:
+  Besuch der Zielseite, geöffnetes Formular, gesehene Bezahlschranke,
+  begonnener Bezahlvorgang.
+* **Der Grund dafür ist ein Fund.** Seit Messbeginn am 18.08.2026 sind 16
+  Konten entstanden — `sign_up_completed` steht null Mal im Protokoll. Ein
+  Ereignis, das im Browser abgeschickt wird, während die Ansicht wechselt,
+  kann unterwegs verloren gehen. Die vier kritischen Stellen
+  (`sign_up_completed` zweimal, `checkout_started` dreimal,
+  `subscription_purchased`) warten das Ereignis jetzt ab, bevor sie
+  weiterschalten.
+
+Die Ursache ist damit **wahrscheinlich** behoben, nicht nachweislich. Bewiesen
+ist sie erst, wenn bei der Eigenkaufprobe aus 1.1 alle neun Stufen im Bericht
+auftauchen. Bis dahin gilt: Der Bericht trägt auch ohne diese Ereignisse,
+weil die vier entscheidenden Stufen aus Tabellen kommen.
 
 Nichts davon ändert Produktversprechen, Preis oder App-Store-Text.
 

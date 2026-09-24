@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { trackFireAndForget } from '@/lib/analytics';
+import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
@@ -492,7 +492,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           description: `Dein Konto wurde erstellt. Merke dir deinen Benutzernamen: ${username.toLowerCase()}`,
         });
 
-        trackFireAndForget('sign_up_completed', { role: 'child', method: 'username' });
+        // Abgewartet, nicht nachgeworfen: Direkt danach wechselt die Ansicht.
+        // Ein Ereignis, das noch unterwegs ist, wenn die Seite umschaltet,
+        // kann verloren gehen — und genau das ist hier offenbar passiert.
+        // Seit Messbeginn am 18.08.2026 sind 16 Konten entstanden und
+        // `sign_up_completed` stand null Mal im Protokoll.
+        await track('sign_up_completed', { role: 'child', method: 'username' });
         if (invitationCode) {
           trackFireAndForget('invitation_code_redeemed', {});
         } else {
@@ -544,7 +549,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
 
       if (error) throw error;
-      trackFireAndForget('sign_up_completed', { role, method: 'email' });
+      // Abgewartet — siehe der Kind-Weg weiter oben. Unmittelbar danach wird
+      // auf die Bestaetigungsseite gewechselt.
+      await track('sign_up_completed', { role, method: 'email' });
       if (role === 'parent' && effectiveReferral) {
         localStorage.removeItem('lernzeit_referral_code');
       }

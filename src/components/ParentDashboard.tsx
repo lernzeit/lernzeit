@@ -23,7 +23,7 @@ import {
   STRIPE_MONTHLY_PRICE_LABEL,
   STRIPE_YEARLY_PRICE_LABEL,
 } from '@/config/pricing';
-import { trackFireAndForget } from '@/lib/analytics';
+import { track, trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
@@ -231,7 +231,11 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   };
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly' = 'monthly') => {
-    trackFireAndForget('checkout_started', { plan, channel: isNativeApp ? 'revenuecat' : 'stripe' });
+    // Abgewartet: Am Ende dieses Weges verlaesst der Browser die Seite in
+    // Richtung Stripe. Dieses eine Ereignis ist der einzige Hinweis darauf,
+    // dass jemand ueberhaupt bezahlen WOLLTE — es darf nicht unterwegs
+    // verloren gehen.
+    await track('checkout_started', { plan, channel: isNativeApp ? 'revenuecat' : 'stripe' });
     // Never route native app users to Stripe checkout – always use the
     // in-app RevenueCat paywall (Apple + Google policy).
     if (isNativeApp) {
