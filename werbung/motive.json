@@ -1,0 +1,227 @@
+{
+  "_hinweis": "Einzige Quelle fuer Werbemotive. Jede Aenderung laeuft durch `npm run motive:pruefen`. Status `freigegeben` setzt nur der Betreiber — der Generator schreibt ausschliesslich `entwurf`.",
+  "motive": [
+    {
+      "id": "M1",
+      "status": "freigegeben",
+      "freigegeben_am": "2026-09-24",
+      "herkunft": "handgeschrieben",
+      "ueberschrift": "18 Uhr. Das Handy soll weg. Sie wissen, wie der Abend jetzt läuft.",
+      "text": "Bei LernZeit verdient Ihr Kind sich die Zeit selbst: 30 Sekunden Handyzeit je richtig gelöster Aufgabe. 4 Wochen kostenlos.",
+      "gedeckt_durch": [
+        "V1",
+        "V2",
+        "V3"
+      ],
+      "format_vorschlag": "bildschirmaufnahme"
+    },
+    {
+      "id": "M2",
+      "status": "freigegeben",
+      "freigegeben_am": "2026-09-24",
+      "herkunft": "handgeschrieben",
+      "ueberschrift": "Ich habe aufgehört zu diskutieren.",
+      "text": "Meine Tochter rechnet jetzt zehn Aufgaben, wenn sie länger aufs Handy will. Die Zeit schreibt die App gut, nicht ich. 2,99 € im Monat.",
+      "gedeckt_durch": [
+        "V1",
+        "V4"
+      ],
+      "format_vorschlag": "text-auf-farbe",
+      "auflage": "Nur als Text auf Farbe. Kein Name, kein Foto, keine Anführungszeichen mit Quellenangabe — es darf nicht wie ein echtes Kundenzitat aussehen (positionierung.md 6.5)."
+    },
+    {
+      "id": "M3",
+      "status": "freigegeben",
+      "freigegeben_am": "2026-09-24",
+      "herkunft": "handgeschrieben",
+      "ueberschrift": "Nicht weniger Handy. Anders verdientes Handy.",
+      "text": "Richtige Antwort, Zeit aufs Konto. Klasse 1 bis 10, alle Fächer der jeweiligen Klassenstufe. 4 Wochen kostenlos testen.",
+      "gedeckt_durch": [
+        "V1",
+        "V3",
+        "V6"
+      ],
+      "format_vorschlag": "text-auf-farbe"
+    },
+    {
+      "id": "M4",
+      "status": "freigegeben",
+      "freigegeben_am": "2026-09-24",
+      "herkunft": "handgeschrieben",
+      "ueberschrift": "Wie viel Zeit eine Aufgabe wert ist, legen Sie fest.",
+      "text": "Standard sind 30 Sekunden. In Mathe mehr, in Deutsch weniger — Ihre Entscheidung, je Fach.",
+      "gedeckt_durch": [
+        "V2"
+      ],
+      "format_vorschlag": "bildschirmaufnahme"
+    },
+    {
+      "id": "M5",
+      "status": "freigegeben",
+      "freigegeben_am": "2026-09-24",
+      "herkunft": "handgeschrieben",
+      "ueberschrift": "Das Handy war schon immer die Währung. Jetzt hat sie einen Kurs.",
+      "text": "Aufgaben lösen, Zeit verdienen. Daten auf Servern in Frankfurt.",
+      "gedeckt_durch": [
+        "V1",
+        "V7"
+      ],
+      "format_vorschlag": "text-auf-farbe"
+    },
+    {
+      "id": "G1",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Nur noch fünf Minuten.",
+      "text": "Ihr Kind will mehr Bildschirmzeit. Mit der App verdient es sich diese Zeit durch richtige Antworten selbst. 2,99 € im Monat.",
+      "gedeckt_durch": [
+        "V1",
+        "V4"
+      ],
+      "einschaetzung": "empfohlen",
+      "pruefnotiz": "Starker Einstieg: der Satz, den jedes Elternteil kennt. Die Minutenzahl ist ein Kinderflehen, keine Tagesgrenze (6.2 nur als Hinweis). Text etwas lang."
+    },
+    {
+      "id": "G2",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Am Küchentisch wird nicht mehr diskutiert.",
+      "text": "Ihr Kind löst Aufgaben passend zur Klassenstufe und zum Schuljahresfortschritt. Dadurch verdient es Bildschirmzeit.",
+      "gedeckt_durch": [
+        "V1",
+        "V9"
+      ],
+      "einschaetzung": "mittel",
+      "pruefnotiz": "Szene trägt, der Text ist aber Datenblatt-Deutsch („Dadurch verdient es …“)."
+    },
+    {
+      "id": "G3",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Zwei Kinder, zwei unterschiedliche Klassen.",
+      "text": "Sie können beliebig viele Kinderprofile anlegen. Jedes Kind verdient Bildschirmzeit. 4 Wochen kostenlos testen.",
+      "gedeckt_durch": [
+        "V1",
+        "V3",
+        "V5"
+      ],
+      "einschaetzung": "mittel",
+      "pruefnotiz": "Einziges Motiv für Familien mit mehreren Kindern (V5). Der Text zählt auf statt zu erzählen."
+    },
+    {
+      "id": "G4",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Es ist 15 Uhr. Hausaufgabenzeit.",
+      "text": "Klasse 1 bis 10, alle Fächer der jeweiligen Klassenstufe. Richtige Antworten verdienen Bildschirmzeit.",
+      "gedeckt_durch": [
+        "V1",
+        "V6"
+      ],
+      "einschaetzung": "abraten",
+      "pruefnotiz": "Legt Hausaufgabenhilfe nahe. LernZeit stellt eigene Übungsaufgaben; ein Elternteil, das Hilfe bei den Hausaufgaben erwartet, wird enttäuscht."
+    },
+    {
+      "id": "G5",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Sie sitzen zusammen auf dem Sofa.",
+      "text": "Über einen Einladungscode verknüpfen Sie Ihre Geräte einmalig. Die Daten liegen auf Servern in Frankfurt.",
+      "gedeckt_durch": [
+        "V7",
+        "V8"
+      ],
+      "einschaetzung": "abraten",
+      "pruefnotiz": "Schwach, und leicht daneben: V8 verknüpft Konten, nicht Geräte. Kein Grund, weshalb jemand klicken sollte."
+    },
+    {
+      "id": "G6",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Mathe soll mehr wert sein als Englisch.",
+      "text": "Standard sind 30 Sekunden je richtiger Aufgabe. Sie können das je Fach ändern. 29,99 € im Jahr.",
+      "gedeckt_durch": [
+        "V2",
+        "V4"
+      ],
+      "einschaetzung": "empfohlen",
+      "pruefnotiz": "Konkret und überraschend. Zeigt die Einstellung je Fach (V2) als Elternentscheidung, nicht als Funktion."
+    },
+    {
+      "id": "G7",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Sonntagabend. Zeit für die Planung der Woche.",
+      "text": "Kinder verdienen sich ihre Bildschirmzeit durch richtige Antworten. 4 Wochen kostenlos testen, keine Zahlungsdaten nötig.",
+      "gedeckt_durch": [
+        "V1",
+        "V3"
+      ],
+      "einschaetzung": "abraten",
+      "pruefnotiz": "„Planung der Woche“ deutet eine Planungsfunktion an, nahe am KI-Lernplan, der nach 6.8 kein Werbeargument ist. Überschrift und Text hängen nicht zusammen."
+    },
+    {
+      "id": "G8",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Generatorlauf 2 (gemini-3.5-flash)",
+      "ueberschrift": "Wie lange darf ich heute am Handy spielen?",
+      "text": "Ihr Kind verdient sich die Zeit selbst. Standard sind 30 Sekunden Bildschirmzeit je richtiger Aufgabe.",
+      "gedeckt_durch": [
+        "V1",
+        "V2"
+      ],
+      "einschaetzung": "empfohlen",
+      "pruefnotiz": "Stärkster Einstieg des Laufs: die Frage des Kindes, wortwörtlich. Antwort im Text in einem Satz."
+    },
+    {
+      "id": "G9",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Funktionsprobe Version 3, Thema „Familien mit mehreren Kindern“ (gemini-3.5-flash)",
+      "ueberschrift": "Am Küchentisch lernt die Große, daneben der Kleine.",
+      "text": "Sie können beliebig viele Kinderprofile anlegen. Jedes Kind erhält Aufgaben passend zur Klassenstufe.",
+      "gedeckt_durch": [
+        "V5",
+        "V9"
+      ],
+      "einschaetzung": "mittel",
+      "pruefnotiz": "Gutes Bild für Geschwister. Der Text erklärt, statt die Szene weiterzuführen."
+    },
+    {
+      "id": "G10",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Funktionsprobe Version 3, Thema „Familien mit mehreren Kindern“ (gemini-3.5-flash)",
+      "ueberschrift": "Nach den Hausaufgaben wird weitergerechnet.",
+      "text": "Kinder verdienen Bildschirmzeit durch richtige Antworten. Standard sind 30 Sekunden, von Ihnen je Fach änderbar.",
+      "gedeckt_durch": [
+        "V1",
+        "V2"
+      ],
+      "einschaetzung": "mittel",
+      "pruefnotiz": "Der Hinweis „Hausaufgabe“ ist hier ein Fehlalarm: Gemeint ist Üben NACH den Hausaufgaben, keine Hausaufgabenhilfe. Trotzdem prüfen, ob es so gelesen wird."
+    },
+    {
+      "id": "G11",
+      "status": "entwurf",
+      "herkunft": "generator",
+      "erzeugt": "2026-09-24, Funktionsprobe Version 3, Thema „Familien mit mehreren Kindern“ (gemini-3.5-flash)",
+      "ueberschrift": "Um 17 Uhr wollen alle drei an ihre Handys.",
+      "text": "Sie können beliebig viele Kinderprofile anlegen. Testen Sie die App 4 Wochen kostenlos ohne Zahlungsdaten.",
+      "gedeckt_durch": [
+        "V5",
+        "V3"
+      ],
+      "einschaetzung": "empfohlen",
+      "pruefnotiz": "Bestes Motiv für Familien mit mehreren Kindern: sofort wiedererkennbar, V5 als Antwort."
+    }
+  ]
+}

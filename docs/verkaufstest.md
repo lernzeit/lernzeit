@@ -245,10 +245,19 @@ KI ist hier nützlich beim **Schreiben und Variieren**, nicht beim Bild.
 Die Regel dahinter: **Ein echter Mensch schreibt über eine bestimmte Situation
 am Dienstagabend, nicht über eine Produktkategorie.**
 
-### 4.3 Fünf Entwürfe
+### 4.3 Fünf Motive — freigegeben am 24.09.2026
 
-Gedeckt durch V1, V2, V3, V4 in `positionierung.md`. **Nichts davon wird ohne
-deine Freigabe geschaltet.**
+Gedeckt durch V1, V2, V3, V4, V6, V7 in `positionierung.md`. Seit der Freigabe
+liegen sie als M1 bis M5 in `werbung/motive.json`, der einzigen Quelle für
+Werbetexte; `npm run motive:pruefen` hält sie gegen die Regeln.
+
+**Beim Einrichten der Anzeigen zu beachten:** Vier der fünf Überschriften sind
+länger als die rund 40 Zeichen, die Meta im Überschriftenfeld auf dem Handy
+zeigt. Sie gehören deshalb **auf das Bild** (Text-auf-Farbe-Karte oder als
+Einblendung über der Bildschirmaufnahme), nicht in Metas Überschriftenfeld.
+Dort steht besser etwas Kurzes wie „4 Wochen kostenlos testen". M2 ist mit
+134 Zeichen Text knapp über der Grenze, ab der Meta „Mehr anzeigen" einblendet
+— der Preis im letzten Satz verschwindet dahinter.
 
 1. **„18 Uhr. Das Handy soll weg. Sie wissen, wie der Abend jetzt läuft."**
    Bei LernZeit verdient Ihr Kind sich die Zeit selbst: 30 Sekunden Handyzeit
@@ -284,13 +293,59 @@ und Zielgruppen optimiert, ist Optimierungsmaschinerie. Optimieren kann man
 erst, wenn etwas da ist, das sich lohnt. Bei 250 € Budget und fünf Motiven
 machst du das besser selbst — in zehn Minuten am Tag.
 
-Was ich dagegen sofort bauen kann und was sich rechnet:
+Was stattdessen gebaut ist, Stand 24.09.2026:
 
-| | Was | Nutzen |
+| | Was | Wo |
 |---|---|---|
-| A | **Täglicher Zählbericht.** Ein Aufruf, eine Tabelle: neue Elternkonten, gestartete Testphasen, abgeschlossene Abos, je Tag, letzte 14 Tage. | Du liest den Test, ohne mich zu fragen. |
-| B | **Motiv-Generator.** Aus `positionierung.md` und `faktenpruefung.md` neue Textvarianten, die nur belegte Aussagen verwenden — mit Prüfung gegen die Verbotsliste aus Abschnitt 6 der Positionierung. | Nachschub an Varianten, ohne dass eine unbelegte Behauptung durchrutscht. |
-| C | **Warnung bei Abweichung.** Meldet, wenn eine Zahl in einem Anzeigentext nicht mehr zur Datenbank passt. | Die Regel, die du selbst aufgestellt hast, durchgesetzt statt nur aufgeschrieben. |
+| A | **Zählbericht** — je Tag alle Stufen des Trichters | `npm run trichter`, Funktion `funnel_report` |
+| B | **Motiv-Generator** — neue Entwürfe, nur aus V1 bis V9, jeder vor der Rückgabe geprüft | Edge Function `generate-ad-motifs`, `npm run motive:erzeugen` |
+| C | **Regelprüfung** — jeder Text gegen Abschnitt 5, 6 und 8 der Positionierung | `supabase/functions/_shared/ad-rules.ts`, `npm run motive:pruefen` |
+
+### Was der Generator kann — und was nicht
+
+**Er kann:** Varianten schreiben, die mit einer konkreten Szene beginnen, nur
+belegte Fakten nennen und keine der verbotenen Formulierungen enthalten. Er
+schreibt nur Entwürfe; freigeben kann nur ein Mensch.
+
+**Er kann nicht:** beweisen, dass eine Aussage inhaltlich gedeckt ist. Die
+Regeln fangen Zahlen, Pflicht-Wortlaute und verbotene Wörter. Sie fangen
+nicht, wenn ein Satz unbelegt *klingt, ohne es zu sagen*.
+
+Beispiele aus den ersten drei Läufen, alle am 24.09.2026:
+
+| Entwurf | Problem | Gefangen? |
+|---|---|---|
+| „Die Einrichtung dauert nur einen Moment." | erfundene Eigenschaft | nach Lauf 1 als Regel ergänzt, jetzt Hinweis |
+| „Es ist 15 Uhr. Hausaufgabenzeit." | legt Hausaufgabenhilfe nahe | nach Lauf 2 als Regel ergänzt, jetzt Hinweis |
+| „Nur noch fünf Minuten." | 6.2 kannte „fünf" nicht — aber es ist gar keine Tagesgrenze | Regel 6.2 präzisiert: Verstoß nur mit Grenz-Zusammenhang |
+| „Sonntagabend. Zeit für die Planung der Woche." | deutet eine Planungsfunktion an, nahe am KI-Lernplan | **nein** — nur beim Lesen |
+| „…verknüpfen Sie Ihre Geräte einmalig." | V8 verknüpft Konten, nicht Geräte | **nein** — nur beim Lesen |
+
+Die letzten beiden Zeilen sind der Grund, warum die Freigabe beim Menschen
+bleibt. Jeder Entwurf in `werbung/motive.json` trägt deshalb eine
+`einschaetzung` (empfohlen / mittel / abraten) und eine `pruefnotiz`.
+
+**Qualität:** Lauf 1 war regelkonform, aber flach — Datenblatt-Sätze, fünf von
+acht mit derselben Schlussformel. Nach der Vorgabe „jedes Motiv beginnt mit
+einem Moment" kamen in Lauf 2 Einstiege wie „Wie lange darf ich heute am Handy
+spielen?" und „Mathe soll mehr wert sein als Englisch." Die Texte darunter
+bleiben schwächer als die Überschriften. Für den ersten Test sind die fünf
+handgeschriebenen Motive das bessere Material; der Generator lohnt sich, sobald
+feststeht, welches Motiv gewinnt — dann für Varianten genau davon.
+
+### Warum die Edge Function eigenständig ist
+
+Edge Functions werden in diesem Projekt **nicht** beim Merge ausgeliefert. Am
+24.09.2026 nachgesehen: Die repo-verwalteten Funktionen stammen aus einer
+Sammel-Auslieferung am 06.09.2026 um 20:44 UTC. Die einzige spätere Änderung
+an Produktionscode (`annual-grade-upgrade`, 14.09.) ist per Schnittstelle
+hochgeladen worden, nicht über den Merge. Heute steht nichts aus — aber jede
+künftige Änderung an einer Edge Function muss eigens ausgeliefert werden.
+
+Der Generator besteht deshalb nur aus zwei Dateien und wird einzeln
+hochgeladen.
+Wer `ad-rules.ts` ändert, muss die Funktion neu ausliefern — sonst prüft der
+Server nach alten Regeln und `npm run motive:pruefen` nach neuen.
 
 Der Agent, der eigenständig Budget verschiebt, kommt in Phase 3 — wenn es
 Budget gibt, das sich zu verschieben lohnt.
@@ -315,8 +370,11 @@ die Absprungstelle danach.
 1. **Meta-Werbekonto.** Muss von dir angelegt werden, mit Zahlungsmittel und
    verifizierter Seite. Ich lege keine Konten an — das ist deine Regel und sie
    ist richtig.
-2. **Freigabe der fünf Motive** aus Abschnitt 4.3, gern mit Änderungen.
-3. **Die Eigenkaufprobe aus Phase 1.1.** Die kann nur jemand mit einer echten
+2. ~~Freigabe der fünf Motive~~ — **erledigt am 24.09.2026**, M1 bis M5.
+3. **Durchsicht der elf Generator-Entwürfe** (G1 bis G11 in
+   `werbung/motive.json`). Jeder trägt eine Einschätzung; empfohlen sind G1,
+   G6, G8 und G11.
+4. **Die Eigenkaufprobe aus Phase 1.1.** Die kann nur jemand mit einer echten
    Karte machen, und der Weg ist seit Februar nicht gegangen worden.
 
 ---
