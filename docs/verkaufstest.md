@@ -37,100 +37,80 @@ Aber es war nicht der Weg zur Antwort.
 
 ---
 
-## 2. Der Befund, der den Plan ändert
+## 2. Was die Datenbank hergibt — und was nicht
 
-> **Korrektur vom 24.09.2026.** Die erste Fassung dieses Abschnitts nannte
-> „81 Testphasen" und „68 abgelaufene Testphasen, daraus 0 Abos". Das war
-> falsch: 69 dieser Zeilen gehören **Kinderkonten**, die bei der Anmeldung
-> automatisch eine Abo-Zeile bekommen. Ein Kind hat keine Testphase, die es
-> bezahlen könnte. Nachgerechnet nur über `profiles.role = 'parent'` ergibt
-> sich das Bild unten. Die Schlussfolgerungen in Abschnitt 3 ändern sich
-> dadurch — zum Besseren, nicht zum Schlechteren.
+> **Korrekturvermerk, 24.09.2026.** Dieser Abschnitt stand zweimal falsch da.
+> Erst zählte er Kinderkonten als Testphasen. Dann, nach der Korrektur, zog er
+> aus 19 Elternkonten Quoten und daraus einen Befund („der Trichter bricht bei
+> der Verknüpfung"). Beides war unzulässig, das zweite besonders: **Alle
+> bestehenden Konten sind Testkonten des Betreibers.** Aus ihnen lässt sich
+> über Nutzerverhalten nichts ableiten — auch nicht „vorsichtig", auch nicht
+> „als Rechenannahme".
+>
+> Die Warnzeile allein hat das nicht verhindert; sie stand schon da, als der
+> Fehler geschrieben wurde. Deshalb ist der Abschnitt jetzt anders gebaut: Die
+> Zahlen über Konten stehen gar nicht mehr im Fließtext, sondern nur in 2.1 —
+> unter der Überschrift, was aus ihnen **nicht** folgt.
 
-> **Einordnung vorweg:** Die bestehenden Konten sind der Betreiber und interne
-> Tester. Sie sind **kein Marktsignal** und werden hier nicht als solches
-> verwendet. Was sie zeigen, ist etwas anderes: ob die Maschine funktioniert
-> und wo sie klemmt.
+### 2.1 Über den Markt: nichts
 
-### 2.1 Der Eltern-Trichter, vollständig
+Sämtliche Konten in der Datenbank sind Testkonten des Betreibers. Daraus folgt
+**keine** Aussage über:
 
-| Stufe | Konten |
-|---|---|
-| Elternkonten insgesamt | **19** |
-| davon mit verknüpftem Kind | **7** |
-| davon Kind hat tatsächlich gelernt | **7** |
-| Testphase läuft noch | 3 |
-| Testphase abgelaufen | 9 |
-| gekündigt | 5 |
-| **zahlend** | **1** |
+* wie viele Besucher sich registrieren
+* wie viele Eltern ein Kind verknüpfen, und woran es scheitert, wenn nicht
+* wie viele die App nach einer Woche noch benutzen
+* wie viele zahlen, und was sie zu zahlen bereit wären
+* ob 2,99 € zu wenig, passend oder zu viel ist
 
-Zwei Dinge springen heraus.
+Diese fünf Zahlen sind unbekannt. Sie sind der Zweck des Tests in Phase 2.
+Jeder Plan, der sie vorab beziffert, beziffert eine Erfindung.
 
-**Erstens: Zwölf von neunzehn Eltern haben nie ein Kind verknüpft.** Sie haben
-sich registriert und danach nie erlebt, wofür das Produkt da ist — kein Kind,
-keine Aufgabe, keine verdiente Minute. Über einen Kauf konnten sie gar nicht
-nachdenken.
+### 2.2 Über die Maschine: einiges, und das ist nachprüfbar
 
-**Zweitens: Wer es einrichtet, benutzt es auch.** Alle 7, die ein Kind
-verknüpft haben, haben auch gelernt. Der Bruch liegt nicht im Produkt, er
-liegt **davor** — in der Einrichtung.
+Diese Aussagen hängen nicht an Nutzerverhalten. Sie stehen im Code oder in der
+Konfiguration und gelten für jeden, der morgen dazukommt.
 
-Das ist für einen Werbetest die wichtigste Zahl des ganzen Dokuments. Jeder
-Euro, der Eltern bringt, die an der Verknüpfung scheitern, ist verbrannt,
-bevor irgendetwas gemessen werden kann.
+| | Befund | Woher |
+|---|---|---|
+| M1 | Die Testphase berührt Stripe nie. Bei der Registrierung entsteht nur ein lokales Kennzeichen; Stripe wird erst beim Checkout angesprochen. | `subscriptions`-Zeilen ohne `stripe_customer_id`; Zielseite: „keine Zahlungsdaten nötig" |
+| M2 | Der Weg von der Bezahlschranke zu Stripe ist im echten Betrieb **nie gegangen worden**. `checkout_started` ist im Ereignis-Protokoll null Mal aufgetaucht. | `analytics_events` |
+| M3 | Ein einziger Stripe-Checkout ist je durchgelaufen, am 14.02.2026. | `subscriptions`, Status `active` |
+| M4 | Es gibt praktisch keinen organischen Zulauf. | 3 neue Elternkonten in 30 Tagen — und selbst die sind Testkonten. Der Zulauf von Fremden ist damit **null**, nicht „gering". |
+| M5 | Preis: 2,99 € im Monat, 29,99 € im Jahr. | `src/config/pricing.ts` |
 
-### 2.2 Der Zahlweg ist so gut wie unerprobt
+**M2 und M3 sind die wichtigsten.** Sie sagen nichts darüber, ob jemand zahlen
+*will* — sie sagen, dass der Bezahlweg **unerprobt** ist. Bevor 250 € auf ihn
+zeigen, muss er einmal nachweislich tragen. Das ist Phase 1.
 
-| | |
-|---|---|
-| Eltern-Zeilen mit Status `trialing` | 12 |
-| davon mit einer Stripe-Kundennummer | **0** |
-| Zeilen mit Status `active` | **1**, vom 14.02.2026 |
-| ist das der Betreiber? | nein, andere E-Mail als das Betreiberkonto |
-| Ereignis `checkout_started`, jemals ausgelöst | **0-mal** |
+**M4 ist der Grund, warum der Test ohne Messtechnik funktioniert.** Bei null
+Fremdzulauf ist jede Registrierung im Werbefenster der Werbung zuzuordnen.
 
-In sieben Monaten ist genau ein Stripe-Checkout durchgelaufen, und seit das
-Ereignis-Protokoll existiert, hat **niemand** den Bezahlvorgang auch nur
-begonnen. Die Testphase berührt Stripe nie — die Zielseite verspricht
-„4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig", und genau so
-verhält sich das Produkt.
+### 2.3 Was 250 € leisten können
 
-Der Weg von der Bezahlschranke zu Stripe ist damit in echtem Betrieb
-**unbewiesen**. Nicht „schwach" — unbewiesen.
-
-### 2.3 Was 250 € unter diesen Bedingungen leisten können
-
-Rechne es mit realistischen deutschen Meta-Werten durch:
+Die folgenden Spannen sind **Branchenwerte für deutsche Meta-Anzeigen**, keine
+Messwerte von LernZeit. Sie dienen der Budgetplanung, nicht der Prognose.
 
 ```
 250 €  bei 0,50–1,50 € je Klick        →    170–500 Klicks
-       bei 15 % Registrierungsquote    →     25–75 Elternkonten
-       bei 37 % Verknüpfungsquote *    →      9–28 eingerichtete Familien
-       bei 14 % Zahlerquote *          →       1–4 zahlende Kunden
-                                              …frühestens nach 30 Tagen
-
-* die beiden Sternchen-Quoten stammen aus 19 bzw. 7 Konten von Testern.
-  Sie sind Rechenannahmen, keine Messwerte.
+       bei 5–25 % Registrierungsquote  →      9–125 Elternkonten
 ```
 
-Die Zahlerzahl am Ende ist zu klein, um daraus ein Ja oder Nein zu lesen. Die
-**mittlere** Zeile ist es nicht: 9 bis 28 eingerichtete Familien sind genug,
-um „Kosten je eingerichteter Familie" belastbar zu messen — und das schon
-nach 14 Tagen, nicht nach sechs Wochen.
+Die Spanne ist absichtlich weit. Wie es bei LernZeit wirklich aussieht, ist
+unbekannt — das ist ja die Frage. Für die Planung heißt das nur eines: **250 €
+reichen, um die Registrierungsquote und die Kosten je Registrierung zu
+messen.** Ob sie reichen, um die Zahlerquote zu messen, entscheidet sich erst,
+wenn die erste Zahl da ist.
 
-Darauf baut Phase 2 jetzt auf.
-
-### 2.4 Die Preisrechnung bleibt, wie sie ist
+### 2.4 Die Preisrechnung
 
 2,99 € im Monat. Bei sechs Monaten Verweildauer sind das **18 €** Umsatz je
-Kunde, das Jahresabo bringt 29,99 €. Ein Kunde darf in der Anschaffung also
-höchstens etwa 6 bis 10 € kosten.
+Kunde; das Jahresabo bringt 29,99 €. Ein Kunde darf in der Anschaffung also
+höchstens etwa **6 bis 10 €** kosten.
 
 Du hast entschieden, beim Preis zu bleiben. Das ist notiert und wird nicht
-erneut aufgemacht — aber die Zahl gehört sichtbar ins Dokument, weil das
-Ergebnis von Phase 2 an ihr gemessen wird. Kommt die eingerichtete Familie auf
-25 € und zahlt davon jede siebte, kostet ein Kunde 175 €. Dann ist nicht die
-Anzeige das Problem.
+erneut aufgemacht — die Zahl steht hier, weil das Ergebnis von Phase 2 an ihr
+gemessen wird, nicht als erneuter Einwand.
 
 ---
 
@@ -140,17 +120,22 @@ Anzeige das Problem.
 
 Deine Entscheidungen vom 24.09.2026 sind eingearbeitet: **Preis bleibt bei
 2,99 €/29,99 €**, **keine Zahlungsdaten zu Beginn der Testphase**. Damit fällt
-die Zahlungsentscheidung weiterhin am Tag 30. Phase 1 zieht deshalb das
-Messbare nach vorn, statt am Preis oder an der Karte zu drehen.
+die Zahlungsentscheidung am Tag 30. Phase 1 dreht deshalb nicht am Produkt,
+sondern sorgt dafür, dass der Test überhaupt ablesbar ist.
 
 | | Maßnahme | Warum |
 |---|---|---|
-| 1.1 | **Die Verknüpfung Eltern–Kind reparieren.** 12 von 19 Eltern kommen hier nicht durch. Zuerst nachvollziehen, wo genau es hakt — Einladungscode, zweites Gerät, unklare Anleitung. | Der größte Leck im Trichter, und er sitzt vor allem anderen. Jeder Werbe-Euro, der hier versickert, ist doppelt verloren: kein Kunde und keine Erkenntnis. |
-| 1.2 | **Selbst einmal komplett kaufen** — fremde Karte, nicht das Betreiberkonto, bis zur Abbuchung und zurück bis zur Kündigung. Dabei prüfen, ob `checkout_started` und `sign_up_completed` im Ereignis-Protokoll ankommen. | Genau ein Mensch hat je gekauft, im Februar. `checkout_started` ist nie ausgelöst worden. Bevor 250 € auf diesen Weg zeigen, muss er nachweislich tragen. |
-| 1.3 | **Zählbericht bauen:** je Tag neue Elternkonten, verknüpfte Kinder, erste Lernsitzung, begonnene Bezahlvorgänge, Abos. | Damit du den Test selbst liest, ohne mich zu fragen — und zwar täglich, nicht am Ende. |
-| 1.4 | **Frühindikator festlegen.** Weil die Zahlung erst am Tag 30 kommt, wird in Phase 2 primär die **eingerichtete Familie** gezählt: Elternkonto + verknüpftes Kind + mindestens eine Lernsitzung. | Diese Zahl steht nach 14 Tagen fest und ist der beste verfügbare Vorbote der Zahlung. |
+| 1.1 | **Selbst einmal komplett kaufen** — fremde Karte, nicht das Betreiberkonto, von der Registrierung bis zur Abbuchung und zurück bis zur Kündigung. | Befund M2 und M3: Der Bezahlweg ist unerprobt, `checkout_started` nie ausgelöst. Bevor 250 € dorthin zeigen, muss er einmal nachweislich tragen. |
+| 1.2 | **Den Trichter lückenlos messbar machen.** Jede Stufe bekommt ein Ereignis: Zielseite gesehen, Registrierung begonnen, Registrierung abgeschlossen, Einladungscode erzeugt, Kind verknüpft, erste Aufgabe gelöst, Bezahlschranke gesehen, Bezahlvorgang begonnen. | Damit die Werbung sagen kann, **wo** es klemmt. Heute wissen wir das nicht — und dürfen es auch nicht aus den Testkonten raten. |
+| 1.3 | **Zählbericht bauen:** je Tag eine Zeile mit allen Stufen aus 1.2. | Damit du den Test täglich selbst liest, statt am Ende zu rätseln. |
+| 1.4 | **Bei der Eigenkaufprobe (1.1) mitschreiben,** ob jedes Ereignis aus 1.2 auch wirklich ankommt. | Ein Trichter, dessen Stufen nicht feuern, misst nichts. `sign_up_completed` ist im Code verdrahtet, taucht im Protokoll aber nicht auf — das gehört geprüft. |
 
-Nichts davon ändert das Produktversprechen, den Preis oder den App-Store-Text.
+Nichts davon ändert Produktversprechen, Preis oder App-Store-Text.
+
+**Ausdrücklich nicht in Phase 1:** „die Verknüpfung Eltern–Kind reparieren".
+In einer früheren Fassung stand das hier, abgeleitet aus den Testkonten. Ob
+dieser Schritt für echte Nutzer eine Hürde ist, weiß niemand. Phase 1.2 macht
+ihn messbar; repariert wird, was die Messung zeigt — nicht, was ich vermute.
 
 ### Phase 2 — 250 €, 14 Tage, eine Plattform
 
@@ -167,23 +152,29 @@ Rolle: Anzeigen schalten darf man, gezählt wird in der eigenen Datenbank.
 | Zielgruppe | Deutschland, Eltern von Kindern 6–16, keine Interessenverfeinerung |
 | Anzeigen | 5 Varianten, siehe Abschnitt 4 |
 | Zielseite | `lernzeit.app/start` |
-| Hauptkennzahl | **Kosten je eingerichteter Familie** (Elternkonto + Kind verknüpft + erste Lernsitzung) |
-| Nebenkennzahl | begonnene Bezahlvorgänge, Abos — abgelesen an Tag 45 |
+| Gezählt wird | jede Stufe aus 1.2, je Tag |
+
+**Was der Test beantwortet — und was nicht.**
+
+Nach 14 Tagen weißt du sicher: was ein Klick kostet, was eine Registrierung
+kostet, und an welcher Stufe die Leute abspringen. Das ist die eigentliche
+Ausbeute.
+
+Was du nach 14 Tagen **nicht** sicher weißt: die Zahlerquote. Sie kommt
+frühestens an Tag 45, weil die Testphase vier Wochen läuft. Ein Zwischensignal
+gibt es trotzdem — `checkout_started` und „Bezahlschranke gesehen" aus 1.2.
+Fällt in 14 Tagen keines davon ein einziges Mal, ist auch das eine Auskunft.
 
 **Vorher festlegen, was ein Ja ist.** Nachher festgelegte Schwellen sind keine
-Schwellen.
+Schwellen. Weil die Ausgangswerte unbekannt sind, wird die Schwelle an der
+Preisrechnung aus 2.4 aufgehängt, nicht an einer geratenen Quote:
 
 | Ergebnis nach 14 Tagen | Lesart |
 |---|---|
-| Eingerichtete Familie unter 10 € | Trägt. Anzeigen laufen lassen, an Tag 45 die Zahlerquote ablesen. |
-| 10–25 € | Grenzfall. Bei 2,99 € muss dann mindestens jede dritte Familie zahlen — unwahrscheinlich. Preis oder Zielseite. |
-| über 25 € | Über bezahlte Anzeigen nicht verkaufbar. Anderer Kanal oder anderer Preis. |
-| unter 20 Registrierungen insgesamt | Die Anzeige greift nicht. Das Produkt wurde noch gar nicht getestet — neue Motive, nicht aufgeben. |
-| viele Registrierungen, kaum Einrichtungen | Das Leck aus 1.1 ist nicht behoben. Kein Urteil über den Markt. |
-
-Die letzten beiden Zeilen sind wichtig: Ein schwaches Ergebnis kann an der
-Anzeige oder an der Einrichtung liegen und nicht am Produkt. Deshalb fünf
-Varianten — und deshalb Phase 1.1 zuerst.
+| Registrierung unter 3 € | Selbst bei einer schwachen Zahlerquote kann das aufgehen. Laufen lassen, an Tag 45 nachsehen. |
+| Registrierung 3–8 € | Offen. Entscheidet sich an Tag 45. |
+| Registrierung über 8 € | Bei 18 € Umsatz je Kunde müsste fast jeder Registrierte zahlen. Das tut niemand. Anderer Kanal, andere Zielseite oder anderer Preis. |
+| unter 20 Registrierungen insgesamt | Die Anzeige greift nicht. Das Produkt wurde nicht getestet — neue Motive, nicht aufgeben. |
 
 ### Phase 3 — erst wenn Phase 2 trägt
 
@@ -290,9 +281,9 @@ Budget gibt, das sich zu verschieben lohnt.
 | Preis | bleibt bei 2,99 €/Monat und 29,99 €/Jahr |
 | Zahlungsdaten zu Beginn der Testphase | nein, bleibt ohne Karte |
 
-Beides ist eingearbeitet. Die Folge steht in 2.4 und in Phase 2: Die
-Zahlungszahl kommt erst an Tag 45, gemessen wird bis dahin die eingerichtete
-Familie.
+Beides ist eingearbeitet. Die Folge steht in Phase 2: Die Zahlerquote kommt
+erst an Tag 45. Bis dahin gemessen werden die Stufen bis zur Registrierung und
+die Absprungstelle danach.
 
 **Noch offen:**
 
@@ -300,16 +291,24 @@ Familie.
    verifizierter Seite. Ich lege keine Konten an — das ist deine Regel und sie
    ist richtig.
 2. **Freigabe der fünf Motive** aus Abschnitt 4.3, gern mit Änderungen.
-3. **Phase 1.1:** Wo genau scheitert die Verknüpfung Eltern–Kind? Dafür brauche
-   ich einmal deine Beobachtung aus der Praxis — 12 von 19 Konten sind hier
-   hängengeblieben, aber die Datenbank sagt nicht, warum.
+3. **Die Eigenkaufprobe aus Phase 1.1.** Die kann nur jemand mit einer echten
+   Karte machen, und der Weg ist seit Februar nicht gegangen worden.
 
 ---
 
 ## 7. Was dieses Dokument bewusst nicht behauptet
 
 * Nicht, dass das Produkt sich verkaufen lässt. Das ist die offene Frage.
-* Nicht, dass es sich nicht verkaufen lässt. Die bestehenden Zahlen stammen
-  vom Betreiber und von Testern und sagen über den Markt nichts.
+* Nicht, dass es sich nicht verkaufen lässt. **Sämtliche bestehenden Konten
+  sind Testkonten des Betreibers.** Über den Markt sagen sie nichts — weder
+  Gutes noch Schlechtes, und auch nichts „Vorsichtiges".
 * Nicht, dass 250 € reichen, um ein Geschäft zu beweisen. Sie reichen, um zu
-  messen, was ein Kunde kostet — und das genügt für die Entscheidung.
+  messen, was eine Registrierung kostet und wo die Leute abspringen. Das
+  genügt für die nächste Entscheidung, nicht für alle.
+
+**Regel für alle künftigen Fassungen dieses Dokuments:** Eine Zahl aus der
+Datenbank darf hier nur stehen, wenn sie eine Eigenschaft der *Software*
+beschreibt (Abschnitt 2.2). Sobald sie etwas über *Menschen* behauptet, ist
+sie unzulässig, solange die einzigen Konten Testkonten sind. Diese Regel ist
+in diesem Dokument zweimal gebrochen worden, beide Male unabsichtlich, beide
+Male in eine Richtung, die nach einer Erkenntnis aussah.
