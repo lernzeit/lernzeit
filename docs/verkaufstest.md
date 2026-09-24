@@ -39,67 +39,98 @@ Aber es war nicht der Weg zur Antwort.
 
 ## 2. Der Befund, der den Plan ändert
 
+> **Korrektur vom 24.09.2026.** Die erste Fassung dieses Abschnitts nannte
+> „81 Testphasen" und „68 abgelaufene Testphasen, daraus 0 Abos". Das war
+> falsch: 69 dieser Zeilen gehören **Kinderkonten**, die bei der Anmeldung
+> automatisch eine Abo-Zeile bekommen. Ein Kind hat keine Testphase, die es
+> bezahlen könnte. Nachgerechnet nur über `profiles.role = 'parent'` ergibt
+> sich das Bild unten. Die Schlussfolgerungen in Abschnitt 3 ändern sich
+> dadurch — zum Besseren, nicht zum Schlechteren.
+
 > **Einordnung vorweg:** Die bestehenden Konten sind der Betreiber und interne
 > Tester. Sie sind **kein Marktsignal** und werden hier nicht als solches
-> verwendet. Was sie zeigen, ist etwas anderes: ob die Maschine funktioniert.
+> verwendet. Was sie zeigen, ist etwas anderes: ob die Maschine funktioniert
+> und wo sie klemmt.
 
-### 2.1 Der Zahlweg ist so gut wie unerprobt
+### 2.1 Der Eltern-Trichter, vollständig
+
+| Stufe | Konten |
+|---|---|
+| Elternkonten insgesamt | **19** |
+| davon mit verknüpftem Kind | **7** |
+| davon Kind hat tatsächlich gelernt | **7** |
+| Testphase läuft noch | 3 |
+| Testphase abgelaufen | 9 |
+| gekündigt | 5 |
+| **zahlend** | **1** |
+
+Zwei Dinge springen heraus.
+
+**Erstens: Zwölf von neunzehn Eltern haben nie ein Kind verknüpft.** Sie haben
+sich registriert und danach nie erlebt, wofür das Produkt da ist — kein Kind,
+keine Aufgabe, keine verdiente Minute. Über einen Kauf konnten sie gar nicht
+nachdenken.
+
+**Zweitens: Wer es einrichtet, benutzt es auch.** Alle 7, die ein Kind
+verknüpft haben, haben auch gelernt. Der Bruch liegt nicht im Produkt, er
+liegt **davor** — in der Einrichtung.
+
+Das ist für einen Werbetest die wichtigste Zahl des ganzen Dokuments. Jeder
+Euro, der Eltern bringt, die an der Verknüpfung scheitern, ist verbrannt,
+bevor irgendetwas gemessen werden kann.
+
+### 2.2 Der Zahlweg ist so gut wie unerprobt
 
 | | |
 |---|---|
-| Zeilen in `subscriptions` mit Status `trialing` | **81** |
+| Eltern-Zeilen mit Status `trialing` | 12 |
 | davon mit einer Stripe-Kundennummer | **0** |
-| davon mit einer Stripe-Abonummer | **0** |
 | Zeilen mit Status `active` | **1**, vom 14.02.2026 |
 | ist das der Betreiber? | nein, andere E-Mail als das Betreiberkonto |
+| Ereignis `checkout_started`, jemals ausgelöst | **0-mal** |
 
-In sieben Monaten ist **genau ein** Stripe-Checkout durchgelaufen. Die 81
-Testphasen haben Stripe nie berührt — sie sind ein lokales Kennzeichen, das
-bei der Registrierung gesetzt wird.
+In sieben Monaten ist genau ein Stripe-Checkout durchgelaufen, und seit das
+Ereignis-Protokoll existiert, hat **niemand** den Bezahlvorgang auch nur
+begonnen. Die Testphase berührt Stripe nie — die Zielseite verspricht
+„4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig", und genau so
+verhält sich das Produkt.
 
-Das ist nicht überraschend: Die Zielseite verspricht „4 Wochen alle Funktionen
-kostenlos – keine Zahlungsdaten nötig". Genau so verhält sich das Produkt.
+Der Weg von der Bezahlschranke zu Stripe ist damit in echtem Betrieb
+**unbewiesen**. Nicht „schwach" — unbewiesen.
 
-### 2.2 Und darum wäre der Test mit 250 € heute wertlos
+### 2.3 Was 250 € unter diesen Bedingungen leisten können
 
-| | |
-|---|---|
-| abgelaufene Testphasen | **68** |
-| daraus entstandene Abos | **0** |
-| Kinder, die nach Ablauf weiterlernten | **0** |
-
-Wer eine Anzeige klickt, registriert sich, testet vier Wochen gratis — und
-trifft die Zahlungsentscheidung **frühestens 30 Tage später**. Du gibst im
-Oktober Geld aus und weißt im Dezember, ob jemand zahlt. Nach einem Jahr
-Entwicklung ist das die falsche Reihenfolge.
-
-Rechne es durch, mit realistischen deutschen Meta-Werten:
+Rechne es mit realistischen deutschen Meta-Werten durch:
 
 ```
-250 €  bei 0,50–1,50 € je Klick      →    170–500 Klicks
-       bei 15 % Registrierungsquote  →     25–75 Elternkonten
-       bei 2–5 % Zahlerquote         →    0,5–4 zahlende Kunden
-                                           …in 30+ Tagen
+250 €  bei 0,50–1,50 € je Klick        →    170–500 Klicks
+       bei 15 % Registrierungsquote    →     25–75 Elternkonten
+       bei 37 % Verknüpfungsquote *    →      9–28 eingerichtete Familien
+       bei 14 % Zahlerquote *          →       1–4 zahlende Kunden
+                                              …frühestens nach 30 Tagen
+
+* die beiden Sternchen-Quoten stammen aus 19 bzw. 7 Konten von Testern.
+  Sie sind Rechenannahmen, keine Messwerte.
 ```
 
-Null bis vier. Aus so einem Ergebnis lässt sich nichts ablesen — weder ein Ja
-noch ein Nein. Du hättest 250 € ausgegeben und wüsstest so viel wie vorher.
+Die Zahlerzahl am Ende ist zu klein, um daraus ein Ja oder Nein zu lesen. Die
+**mittlere** Zeile ist es nicht: 9 bis 28 eingerichtete Familien sind genug,
+um „Kosten je eingerichteter Familie" belastbar zu messen — und das schon
+nach 14 Tagen, nicht nach sechs Wochen.
 
-### 2.3 Die eigentliche Frage ist der Preis, nicht die Werbung
+Darauf baut Phase 2 jetzt auf.
 
-2,99 € im Monat. Bleibt ein Kunde im Schnitt sechs Monate, sind das **18 €**
-Lebenszeitumsatz; das Jahresabo bringt 29,99 €. Damit darf ein Kunde in der
-Anschaffung **höchstens etwa 6 bis 10 €** kosten, sonst rechnet es sich nie.
+### 2.4 Die Preisrechnung bleibt, wie sie ist
 
-Bei 25–75 Registrierungen aus 250 € kostet eine Registrierung 3–10 €. Wenn
-davon jede zehnte zahlt, kostet ein Kunde 30–100 €. Bei 18 € Umsatz je Kunde
-ist das Geschäft dann tot — nicht wegen der Anzeigen, sondern wegen des
-Preises.
+2,99 € im Monat. Bei sechs Monaten Verweildauer sind das **18 €** Umsatz je
+Kunde, das Jahresabo bringt 29,99 €. Ein Kunde darf in der Anschaffung also
+höchstens etwa 6 bis 10 € kosten.
 
-**Das ist die unbequeme Erkenntnis dieses Dokuments:** Werbung kann einen zu
-niedrigen Preis nicht retten. Vergleichbare Elternkontroll-Apps liegen bei 5
-bis 10 € im Monat. Ob 2,99 € richtig ist, gehört auf den Tisch, bevor Geld in
-Anzeigen fließt.
+Du hast entschieden, beim Preis zu bleiben. Das ist notiert und wird nicht
+erneut aufgemacht — aber die Zahl gehört sichtbar ins Dokument, weil das
+Ergebnis von Phase 2 an ihr gemessen wird. Kommt die eingerichtete Familie auf
+25 € und zahlt davon jede siebte, kostet ein Kunde 175 €. Dann ist nicht die
+Anzeige das Problem.
 
 ---
 
@@ -107,30 +138,27 @@ Anzeigen fließt.
 
 ### Phase 1 — diese Woche, ohne einen Euro Werbebudget
 
-Ziel: den Zahlweg so umbauen, dass die Antwort in **Tagen** kommt, nicht in
-Wochen.
+Deine Entscheidungen vom 24.09.2026 sind eingearbeitet: **Preis bleibt bei
+2,99 €/29,99 €**, **keine Zahlungsdaten zu Beginn der Testphase**. Damit fällt
+die Zahlungsentscheidung weiterhin am Tag 30. Phase 1 zieht deshalb das
+Messbare nach vorn, statt am Preis oder an der Karte zu drehen.
 
 | | Maßnahme | Warum |
 |---|---|---|
-| 1.1 | **Zahlungsdaten zu Beginn der Testphase.** Die vier Wochen bleiben kostenlos wie versprochen, aber die Karte wird beim Start hinterlegt: „4 Wochen kostenlos, danach 2,99 €/Monat, jederzeit kündbar." | Die Entscheidung fällt am Tag 0 statt am Tag 30. Du siehst in einer Woche, ob jemand bereit ist zu zahlen. Das ist der Standardweg im Abo-Geschäft, und er wandelt um ein Vielfaches besser. |
-| 1.2 | **Selbst einmal komplett kaufen** — mit einer fremden Karte, nicht mit dem Betreiberkonto, bis zur Abbuchung und zurück bis zur Kündigung. | Genau ein Mensch hat das je getan, im Februar. Bevor du 250 € auf diesen Weg lenkst, muss er nachweislich tragen. |
-| 1.3 | **Preisfrage entscheiden** (Abschnitt 6, Frage 1). | Ändert alles Nachfolgende. |
-| 1.4 | Eine **Zählabfrage** bauen: neue Elternkonten und Abos je Tag, als eine Zahl. | Damit du den Test lesen kannst, ohne mich zu fragen. |
+| 1.1 | **Die Verknüpfung Eltern–Kind reparieren.** 12 von 19 Eltern kommen hier nicht durch. Zuerst nachvollziehen, wo genau es hakt — Einladungscode, zweites Gerät, unklare Anleitung. | Der größte Leck im Trichter, und er sitzt vor allem anderen. Jeder Werbe-Euro, der hier versickert, ist doppelt verloren: kein Kunde und keine Erkenntnis. |
+| 1.2 | **Selbst einmal komplett kaufen** — fremde Karte, nicht das Betreiberkonto, bis zur Abbuchung und zurück bis zur Kündigung. Dabei prüfen, ob `checkout_started` und `sign_up_completed` im Ereignis-Protokoll ankommen. | Genau ein Mensch hat je gekauft, im Februar. `checkout_started` ist nie ausgelöst worden. Bevor 250 € auf diesen Weg zeigen, muss er nachweislich tragen. |
+| 1.3 | **Zählbericht bauen:** je Tag neue Elternkonten, verknüpfte Kinder, erste Lernsitzung, begonnene Bezahlvorgänge, Abos. | Damit du den Test selbst liest, ohne mich zu fragen — und zwar täglich, nicht am Ende. |
+| 1.4 | **Frühindikator festlegen.** Weil die Zahlung erst am Tag 30 kommt, wird in Phase 2 primär die **eingerichtete Familie** gezählt: Elternkonto + verknüpftes Kind + mindestens eine Lernsitzung. | Diese Zahl steht nach 14 Tagen fest und ist der beste verfügbare Vorbote der Zahlung. |
 
-**Achtung bei 1.1:** „4 Wochen kostenlos" ist eine geführte Zusage (V3 in
-`positionierung.md`) und steht auf der Zielseite und im App Store. Die Zusage
-bleibt wortgleich — nur die Karte kommt dazu. Der Satz „keine Zahlungsdaten
-nötig" muss dann überall verschwinden, auch im App Store. Das ist der Preis
-dieser Änderung, und er ist nicht klein.
+Nichts davon ändert das Produktversprechen, den Preis oder den App-Store-Text.
 
 ### Phase 2 — 250 €, 14 Tage, eine Plattform
 
-**Meta zuerst, nicht Google.** Begründung: Wer nach „Handyzeit Kind App" sucht,
-kennt die Kategorie bereits — das sind sehr wenige. Das Problem ist verbreitet,
-die Lösung sucht niemand aktiv. Solche Produkte werden **unterbrochen**
-verkauft, nicht gesucht. Dafür ist Instagram/Facebook der Kanal. Dass die
-Kanzlei die Meta-*Messung* gesperrt hat, spielt keine Rolle: Anzeigen schalten
-darf man, gezählt wird in der eigenen Datenbank.
+**Meta zuerst, nicht Google.** Wer nach „Handyzeit Kind App" sucht, kennt die
+Kategorie bereits — das sind sehr wenige. Das Problem ist verbreitet, die
+Lösung sucht niemand aktiv. Solche Produkte werden **unterbrochen** verkauft,
+nicht gesucht. Dass die Kanzlei die Meta-*Messung* gesperrt hat, spielt keine
+Rolle: Anzeigen schalten darf man, gezählt wird in der eigenen Datenbank.
 
 | | |
 |---|---|
@@ -138,21 +166,24 @@ darf man, gezählt wird in der eigenen Datenbank.
 | Laufzeit | 14 Tage |
 | Zielgruppe | Deutschland, Eltern von Kindern 6–16, keine Interessenverfeinerung |
 | Anzeigen | 5 Varianten, siehe Abschnitt 4 |
-| Zielseite | `lernzeit.app/start`, unverändert |
-| Gemessen wird | neue Elternkonten und Abos je Tag, aus der eigenen Datenbank |
+| Zielseite | `lernzeit.app/start` |
+| Hauptkennzahl | **Kosten je eingerichteter Familie** (Elternkonto + Kind verknüpft + erste Lernsitzung) |
+| Nebenkennzahl | begonnene Bezahlvorgänge, Abos — abgelesen an Tag 45 |
 
 **Vorher festlegen, was ein Ja ist.** Nachher festgelegte Schwellen sind keine
-Schwellen. Vorschlag:
+Schwellen.
 
 | Ergebnis nach 14 Tagen | Lesart |
 |---|---|
-| Kunde kostet unter 15 € | Es trägt. Phase 3. |
-| Kunde kostet 15–40 € | Grenzfall. Preis erhöhen oder Zielseite verbessern, dann wiederholen. |
-| Kunde kostet über 40 € | Nicht über bezahlte Anzeigen verkaufbar. Anderer Weg oder anderer Preis. |
+| Eingerichtete Familie unter 10 € | Trägt. Anzeigen laufen lassen, an Tag 45 die Zahlerquote ablesen. |
+| 10–25 € | Grenzfall. Bei 2,99 € muss dann mindestens jede dritte Familie zahlen — unwahrscheinlich. Preis oder Zielseite. |
+| über 25 € | Über bezahlte Anzeigen nicht verkaufbar. Anderer Kanal oder anderer Preis. |
 | unter 20 Registrierungen insgesamt | Die Anzeige greift nicht. Das Produkt wurde noch gar nicht getestet — neue Motive, nicht aufgeben. |
+| viele Registrierungen, kaum Einrichtungen | Das Leck aus 1.1 ist nicht behoben. Kein Urteil über den Markt. |
 
-Die letzte Zeile ist wichtig: Ein schwaches Ergebnis kann an der Anzeige
-liegen und nicht am Produkt. Deshalb fünf Varianten und nicht eine.
+Die letzten beiden Zeilen sind wichtig: Ein schwaches Ergebnis kann an der
+Anzeige oder an der Einrichtung liegen und nicht am Produkt. Deshalb fünf
+Varianten — und deshalb Phase 1.1 zuerst.
 
 ### Phase 3 — erst wenn Phase 2 trägt
 
@@ -250,19 +281,28 @@ Budget gibt, das sich zu verschieben lohnt.
 
 ---
 
-## 6. Was ich von dir brauche
+## 6. Entschieden — und was noch offen ist
 
-1. **Der Preis.** Bleibt es bei 2,99 €/29,99 €, oder testen wir höher? Bei
-   2,99 € muss ein Kunde unter ~8 € in der Anschaffung kosten; das ist in
-   bezahlter Werbung sportlich. Meine Empfehlung: 4,99 €/Monat und
-   39,99 €/Jahr für neue Kunden, bestehende behalten ihren Preis.
-2. **Karte zu Beginn der Testphase — ja oder nein?** Das ist die Änderung mit
-   dem größten Hebel und dem größten Risiko. Ohne sie dauert der Test sechs
-   Wochen statt zwei.
-3. **Meta-Werbekonto.** Muss von dir angelegt werden, mit Zahlungsmittel und
+**Entschieden am 24.09.2026:**
+
+| | Entscheidung |
+|---|---|
+| Preis | bleibt bei 2,99 €/Monat und 29,99 €/Jahr |
+| Zahlungsdaten zu Beginn der Testphase | nein, bleibt ohne Karte |
+
+Beides ist eingearbeitet. Die Folge steht in 2.4 und in Phase 2: Die
+Zahlungszahl kommt erst an Tag 45, gemessen wird bis dahin die eingerichtete
+Familie.
+
+**Noch offen:**
+
+1. **Meta-Werbekonto.** Muss von dir angelegt werden, mit Zahlungsmittel und
    verifizierter Seite. Ich lege keine Konten an — das ist deine Regel und sie
    ist richtig.
-4. **Freigabe der fünf Motive** aus Abschnitt 4.3, gern mit Änderungen.
+2. **Freigabe der fünf Motive** aus Abschnitt 4.3, gern mit Änderungen.
+3. **Phase 1.1:** Wo genau scheitert die Verknüpfung Eltern–Kind? Dafür brauche
+   ich einmal deine Beobachtung aus der Praxis — 12 von 19 Konten sind hier
+   hängengeblieben, aber die Datenbank sagt nicht, warum.
 
 ---
 
