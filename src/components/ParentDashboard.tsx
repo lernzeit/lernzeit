@@ -161,6 +161,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const trialDaysLeft = rcActive ? null : sub.trialDaysLeft;
   const status = rcActive ? 'active' as const : sub.status;
   const currentPeriodEnd = rcActive ? null : sub.currentPeriodEnd;
+  const cancelAt = rcActive ? null : sub.cancelAt;
   const { monthly: rcMonthly, annual: rcAnnual, loading: offeringsLoading, error: offeringsError } = useOfferings();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -921,14 +922,18 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Status</p>
                       <Badge variant={isPremium ? 'default' : 'secondary'}>
-                        {status === 'active' ? 'Aktiv' : status === 'trialing' ? 'Testversion' : 'Inaktiv'}
+                        {/* Eine Kuendigung zum Laufzeitende laesst den
+                            Stripe-Status auf 'active' — erkennbar nur an cancelAt. */}
+                        {isPremium && cancelAt ? 'Gekündigt' : status === 'active' ? 'Aktiv' : status === 'trialing' ? 'Testversion' : 'Inaktiv'}
                       </Badge>
                     </div>
-                    {currentPeriodEnd && isPremium && (
+                    {isPremium && (cancelAt || (currentPeriodEnd && !isTrialing)) && (
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Gültig bis</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          {cancelAt ? 'Premium endet am' : 'Verlängert sich am'}
+                        </p>
                         <p className="font-medium">
-                          {new Date(currentPeriodEnd).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          {new Date((cancelAt ?? currentPeriodEnd)!).toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}
                         </p>
                       </div>
                     )}

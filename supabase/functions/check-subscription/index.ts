@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { aboZeiten, zugangsAbo, type StripeAboAusschnitt } from "../_shared/stripe-abo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,22 +190,13 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
+    // Eine Abfrage fuer alle Status statt je einer fuer active und trialing.
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      status: "all",
+      limit: 10,
     });
-
-    // Also check trialing
-    let activeSub = subscriptions.data.length > 0 ? subscriptions.data[0] : null;
-    if (!activeSub) {
-      const trialingSubs = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "trialing",
-        limit: 1,
-      });
-      activeSub = trialingSubs.data.length > 0 ? trialingSubs.data[0] : null;
-    }
+    const activeSub = zugangsAbo(subscriptions.data);
 
     if (!activeSub) {
       logStep("No active/trialing Stripe subscription found, checking local trial");
@@ -249,7 +241,10 @@ serve(async (req) => {
       });
     }
 
-    const subscriptionEnd = toISOString(activeSub.current_period_end);
+    // Laufzeit steht seit basil am Posten, nicht am Abo — siehe _shared/stripe-abo.ts.
+    const zeiten = aboZeiten(activeSub as unknown as StripeAboAusschnitt);
+    const subscriptionEnd = zeiten.periodeEnde;
+    const cancelAt = zeiten.kuendigungZum;
     const productId = activeSub.items.data[0].price.product;
     const isPremium = productId && PREMIUM_PRODUCT_IDS.includes(productId as string);
     const trialEnd = toISOString(activeSub.trial_end);
@@ -259,6 +254,7 @@ serve(async (req) => {
       productId,
       isPremium,
       subscriptionEnd,
+      cancelAt,
       trialEnd,
     });
 
@@ -271,8 +267,9 @@ serve(async (req) => {
         status: activeSub.status,
         stripe_customer_id: customerId,
         stripe_subscription_id: activeSub.id,
-        current_period_start: toISOString(activeSub.current_period_start),
+        current_period_start: zeiten.periodeStart,
         current_period_end: subscriptionEnd,
+        cancel_at: cancelAt,
         trial_end: trialEnd,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
@@ -315,6 +312,7 @@ serve(async (req) => {
       product_id: productId,
       status: activeSub.status,
       subscription_end: subscriptionEnd,
+      cancel_at: cancelAt,
       trial_end: trialEnd,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
