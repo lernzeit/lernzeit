@@ -3,8 +3,9 @@
  *
  *   npm run build && FFMPEG=/pfad/zu/ffmpeg npm run werbung:video
  *
- * Ergebnis: werbung/material/M1-demo-9x16.mp4 — 1080 × 1920, H.264, fuer
- * Reels und Stories.
+ * Ergebnis, beides H.264:
+ *   werbung/material/M1-demo-9x16.mp4       1080 × 1920, Reels und Stories
+ *   werbung/material/M1-demo-feed-4x5.mp4   1080 × 1350, Feed
  *
  * ── Was im Video zu sehen ist ────────────────────────────────────────────
  *
@@ -212,39 +213,62 @@ try {
   await writeFile(listenDatei, liste.join('\n') + '\n');
   const laenge = ende - anfang;
 
-  // ── Einstiegskarte ──────────────────────────────────────────────────────
-  const story = FORMATE.find((f) => f.name === 'story-9x16');
-  const karte = join(arbeit, 'einstieg.png');
+  // ── Einstiegskarten ─────────────────────────────────────────────────────
+  const karten = {};
   const kartenBrowser = await starteBrowser();
-  await rendereKarte(kartenBrowser, motiv, story, karte);
+  for (const format of FORMATE) {
+    karten[format.name] = join(arbeit, `einstieg-${format.name}.png`);
+    await rendereKarte(kartenBrowser, motiv, format, karten[format.name]);
+  }
   await kartenBrowser.close();
 
   // ── Zusammensetzen ──────────────────────────────────────────────────────
+  // Zwei Fassungen aus derselben Aufnahme. Das 9:16-Video in den Feed zu
+  // geben und Meta auf 4:5 beschneiden zu lassen, geht nicht: Der Schnitt
+  // kappt die erste Zeile der Einstiegskarte und oben die Kopfzeile der
+  // Demo (nachgeprueft am 25.09.2026). Im Feed steht die Demo darum
+  // verkleinert in der Mitte, links und rechts in der Hintergrundfarbe der
+  // App (#F9F8FF), und die Karte kommt im Feed-Format.
   const ffmpeg = process.env.FFMPEG || 'ffmpeg';
   const dauerKarte = lesezeit(motiv.ueberschrift).toFixed(1);
-  const ausgabe = `${ZIEL}/M1-demo-9x16.mp4`;
-  await new Promise((fertig, fehler) => {
-    const p = spawn(ffmpeg, [
-      '-y', '-hide_banner', '-loglevel', 'error',
-      '-loop', '1', '-t', dauerKarte, '-i', karte,
-      '-f', 'concat', '-safe', '0', '-i', listenDatei,
-      // Stumme Tonspur: Manche Platzierungen erwarten eine. Musik waere eine
-      // eigene Entscheidung — und eine Lizenzfrage.
-      '-f', 'lavfi', '-t', '90', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
-      '-filter_complex',
-      '[0:v]scale=1080:1920,setsar=1,fps=30,format=yuv420p[a];' +
-      `[1:v]scale=1080:1920:flags=lanczos,setsar=1,fps=30,trim=duration=${laenge.toFixed(2)},format=yuv420p[b];` +
-      '[a][b]concat=n=2:v=1:a=0[v]',
-      '-map', '[v]', '-map', '2:a',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '64k', '-shortest',
-      '-movflags', '+faststart',
-      ausgabe,
-    ], { stdio: 'inherit' });
-    p.on('error', fehler);
-    p.on('exit', (code) => (code === 0 ? fertig() : fehler(new Error(`ffmpeg endete mit ${code}`))));
-  });
-  console.log(`${ausgabe}  (Einstieg ${dauerKarte} s, Demo ${laenge.toFixed(1)} s aus ${auswahl.length} Bildern)`);
+  const fassungen = [
+    {
+      datei: `${ZIEL}/M1-demo-9x16.mp4`,
+      karte: karten['story-9x16'],
+      breite: 1080, hoehe: 1920,
+      demo: 'scale=1080:1920:flags=lanczos',
+    },
+    {
+      datei: `${ZIEL}/M1-demo-feed-4x5.mp4`,
+      karte: karten['feed-4x5'],
+      breite: 1080, hoehe: 1350,
+      demo: 'scale=-2:1350:flags=lanczos,pad=1080:1350:(ow-iw)/2:0:color=0xF9F8FF',
+    },
+  ];
+  for (const f of fassungen) {
+    await new Promise((fertig, fehler) => {
+      const p = spawn(ffmpeg, [
+        '-y', '-hide_banner', '-loglevel', 'error',
+        '-loop', '1', '-t', dauerKarte, '-i', f.karte,
+        '-f', 'concat', '-safe', '0', '-i', listenDatei,
+        // Stumme Tonspur: Manche Platzierungen erwarten eine. Musik waere eine
+        // eigene Entscheidung — und eine Lizenzfrage.
+        '-f', 'lavfi', '-t', '90', '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
+        '-filter_complex',
+        `[0:v]scale=${f.breite}:${f.hoehe},setsar=1,fps=30,format=yuv420p[a];` +
+        `[1:v]${f.demo},setsar=1,fps=30,trim=duration=${laenge.toFixed(2)},format=yuv420p[b];` +
+        '[a][b]concat=n=2:v=1:a=0[v]',
+        '-map', '[v]', '-map', '2:a',
+        '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', '-b:a', '64k', '-shortest',
+        '-movflags', '+faststart',
+        f.datei,
+      ], { stdio: 'inherit' });
+      p.on('error', fehler);
+      p.on('exit', (code) => (code === 0 ? fertig() : fehler(new Error(`ffmpeg endete mit ${code}`))));
+    });
+    console.log(`${f.datei}  (Einstieg ${dauerKarte} s, Demo ${laenge.toFixed(1)} s aus ${auswahl.length} Bildern)`);
+  }
 } finally {
   vorschau.kill();
   await rm(arbeit, { recursive: true, force: true });

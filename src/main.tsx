@@ -81,6 +81,15 @@ const isNativePlatform = () => {
 // Only register service worker on web, NOT on native Capacitor
 // Service workers conflict with Capacitor's WebView and can cause white screens
 if ('serviceWorker' in navigator && !isNativePlatform() && import.meta.env.PROD) {
+  // Vor der Registrierung festhalten, ob schon ein Worker die Seite steuert.
+  // Beim ERSTEN Besuch ist das nicht so — dann uebernimmt der neue Worker die
+  // Seite (clientsClaim) und loest `controllerchange` aus, obwohl sich nichts
+  // aktualisiert hat. Bis zum 25.09.2026 lud die Seite daraufhin neu: Jeder
+  // Erstbesucher bekam ein bis drei Sekunden nach dem Laden einen Neustart,
+  // und wer gerade die Demo begonnen hatte, stand wieder auf der
+  // Startseite. Erstbesucher sind genau die, die eine Anzeige bringt.
+  const warSchonGesteuert = !!navigator.serviceWorker.controller;
+
   const registerSW = () => {
     // A previous PWA version cached Supabase responses for up to one day.
     // Remove that runtime cache explicitly so dynamic question/auth data can
@@ -102,6 +111,8 @@ if ('serviceWorker' in navigator && !isNativePlatform() && import.meta.env.PROD)
         // (e.g. a missing new page like /konto-loeschen) refresh automatically.
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          // Erstbesuch: Es gibt keine alte Fassung, die ersetzt werden muesste.
+          if (!warSchonGesteuert) return;
           if (refreshing) return;
           refreshing = true;
           window.location.reload();

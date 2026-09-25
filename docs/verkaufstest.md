@@ -290,7 +290,7 @@ jederzeit neu erzeugbar. Geändert wird der Text dort, nie im Bild.
 
 | Datei | Motiv | Format | Erzeugt mit |
 |---|---|---|---|
-| `M1-demo-9x16.mp4` | M1 | Reels/Stories, 1080 × 1920, ~21 s | `npm run build && FFMPEG=… npm run werbung:video` |
+| `M1-demo-9x16.mp4`, `M1-demo-feed-4x5.mp4` | M1 | Reels/Stories 1080 × 1920, Feed 1080 × 1350, je ~21 s | `npm run build && FFMPEG=… npm run werbung:video` |
 | `M2-feed-4x5.png`, `M2-story-9x16.png` | M2 | Feed 1080 × 1350, Story 1080 × 1920 | `npm run werbung:karten` |
 | `M3-…`, `M5-…` | M3, M5 | dieselben | dieselben |
 
@@ -317,11 +317,17 @@ Was man wissen muss, bevor man es schaltet:
 - **Die Karten** (M2, M3, M5) halten im Story-Format die Meta-Schutzzone ein:
   oben 270 px und unten 672 px bleiben frei für Profilzeile und Schaltflächen.
 
+**Wie die Kampagne eingerichtet wird:** `docs/meta-kampagne.md`.
+
 Bei der Aufnahme aufgefallen und behoben: Über der Klassenwahl der Demo stand
 „MathTime 📱⏰", ein alter Arbeitsname, jetzt „LernZeit". Und jeder
 Fortschrittsbalken der App war leer schon voll grün (Spurfarbe `secondary`
 statt `muted`) — bei Frage 1 von 5 sah es aus wie fertig, in der
-Lernanalyse wirkten 20 % wie fast alles.
+Lernanalyse wirkten 20 % wie fast alles. Und am wichtigsten: **Jeder
+Erstbesucher bekam ein bis drei Sekunden nach dem Laden einen Neustart der
+Seite** (der Service Worker übernahm die Seite, die App hielt das für ein
+Update). Wer gerade die Demo begonnen hatte, stand wieder auf der
+Startseite. Behoben am 25.09.2026 in `src/main.tsx`.
 
 ---
 
