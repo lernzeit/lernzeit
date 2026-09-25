@@ -111,5 +111,15 @@ Eltern-Dashboard zeigt sie über den Anträgen an.
   dahin eine Fehlerzeile je Stunde und sonst nichts.
 - **Store-Stände und Stripe-Beträge** gegenlesen — zwei Kontrollen, an die
   die Arbeitsumgebung nicht herankommt (Faktenprüfung, Zeilen 5 bis 7).
+- **„Blitzschnell!"-Einblendung liegt über der nächsten Frage.** Sie bleibt
+  nach „Weiter" rund zwei Sekunden stehen und verdeckt dann das Antwortfeld
+  der neuen Aufgabe. Bei Auswahlfragen verdeckt sie außerdem genau die
+  gewählte Antwort. Gesehen am 25.09.2026 im Demo-Video. Nicht angefasst,
+  weil es in `LearningGame.tsx` liegt.
+- **Auswahlfragen: gewählte Antwort nach dem Prüfen kaum zu sehen.** Die
+  richtige Antwort ist danach hellblau auf fast weiß. Ebenfalls
+  `LearningGame.tsx`.
+- ~~„MathTime" über der Klassenwahl, voll grüne leere Fortschrittsbalken~~ —
+  behoben am 25.09.2026 (`GradeSelector.tsx`, `ui/progress.tsx`).
 - **Klassenwechsel 2026** wurde bewusst nicht nachgeholt; Eltern korrigieren
   selbst. Der reguläre Lauf am 01.08.2027 ist davon unberührt.

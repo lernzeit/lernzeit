@@ -29,8 +29,14 @@ export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
       <div className="page-container">
         {/* Header */}
         <div className="text-center mb-8">
+          {/* Hier stand bis zum 25.09.2026 „MathTime 📱⏰" — ein alter
+              Arbeitsname, den jeder Demo-Besucher als Erstes sah, waehrend
+              Anzeige und Startseite „LernZeit" sagen. Die Emojis sind mit
+              entfernt: In einer Ueberschrift mit Verlaufstext
+              (bg-clip-text, text-transparent) werden sie zu einfarbigen
+              Kloetzen. */}
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
-            MathTime 📱⏰
+            LernZeit
           </h1>
           <p className="text-lg text-muted-foreground mb-2">
             Löse Lernaufgaben und verdiene Handyzeit!

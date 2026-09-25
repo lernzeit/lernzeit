@@ -283,6 +283,46 @@ geschaltet und **darf nicht wie ein echtes Kundenzitat aussehen** — kein Name,
 kein Foto, keine Anführungszeichen mit Quellenangabe. Erfundene Testimonials
 sind ausgeschlossen, und zwar ausnahmslos.
 
+### 4.4 Material — erzeugt am 25.09.2026
+
+Alles unter `werbung/material/`, alles aus `werbung/motive.json` erzeugt und
+jederzeit neu erzeugbar. Geändert wird der Text dort, nie im Bild.
+
+| Datei | Motiv | Format | Erzeugt mit |
+|---|---|---|---|
+| `M1-demo-9x16.mp4` | M1 | Reels/Stories, 1080 × 1920, ~21 s | `npm run build && FFMPEG=… npm run werbung:video` |
+| `M2-feed-4x5.png`, `M2-story-9x16.png` | M2 | Feed 1080 × 1350, Story 1080 × 1920 | `npm run werbung:karten` |
+| `M3-…`, `M5-…` | M3, M5 | dieselben | dieselben |
+
+**Das Video (M1)** zeigt zuerst die Überschrift von M1 als Karte (3,7 s),
+dann die **echte Demo** der Startseite: fünf Mathe-Aufgaben der 3. Klasse,
+alle richtig, am Ende „5 von 5 richtig". Aufgenommen im Browser, nicht
+nachgestellt. Während der Aufnahme sind alle Aufrufe an Supabase gesperrt —
+die Demo nimmt ihren eingebauten Fragenpool, und kein Aufnahmebesuch landet
+im Trichterbericht. Stumme Tonspur; Musik wäre eine eigene Entscheidung und
+eine Lizenzfrage.
+
+Was man wissen muss, bevor man es schaltet:
+
+- **Die Demo zeigt keine Sekunden.** Sie zeigt Sterne und „In der echten App
+  wird daraus Bildschirmzeit". Die „30 Sekunden" stehen nur im Anzeigentext
+  von M1. Das ist gedeckt (V2), aber das Video selbst beweist es nicht.
+- **Die Anzeigen siezen, die App duzt.** Die Demo sagt „dein Kind", die
+  Motive sagen „Ihr Kind". Beides ist für sich stimmig; ob der Bruch stört,
+  ist deine Entscheidung.
+- **M4 fehlt als Material.** Die Einstellung „Sekunden je Fach" gibt es nur
+  im Elternbereich eines echten Kontos. Am besten nimmst du sie auf deinem
+  Telefon auf (Bildschirmaufnahme, Elternbereich → Einstellungen), 10 s
+  genügen.
+- **Die Karten** (M2, M3, M5) halten im Story-Format die Meta-Schutzzone ein:
+  oben 270 px und unten 672 px bleiben frei für Profilzeile und Schaltflächen.
+
+Bei der Aufnahme aufgefallen und behoben: Über der Klassenwahl der Demo stand
+„MathTime 📱⏰", ein alter Arbeitsname, jetzt „LernZeit". Und jeder
+Fortschrittsbalken der App war leer schon voll grün (Spurfarbe `secondary`
+statt `muted`) — bei Frage 1 von 5 sah es aus wie fertig, in der
+Lernanalyse wirkten 20 % wie fast alles.
+
 ---
 
 ## 5. Was der „Agent" sein sollte — und was nicht

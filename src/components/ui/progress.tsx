@@ -9,8 +9,14 @@ const Progress = React.forwardRef<
 >(({ className, value, ...props }, ref) => (
   <ProgressPrimitive.Root
     ref={ref}
+    // Die leere Spur ist `bg-muted`, nicht `bg-secondary`. In diesem Projekt
+    // ist `secondary` ein kraeftiges Gruen — damit sah ein LEERER Balken voll
+    // aus, und der blaue Fuellstand schob sich darueber. Bei Frage 1 von 5
+    // stand ein ganz gruener Balken da, und in der Lernanalyse wirkte eine
+    // Erfolgsquote von 20 % fast vollstaendig gruen. Aufgefallen am
+    // 25.09.2026 bei der Aufnahme des Demo-Videos.
     className={cn(
-      "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
+      "relative h-4 w-full overflow-hidden rounded-full bg-muted",
       className
     )}
     {...props}
