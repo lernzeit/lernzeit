@@ -270,6 +270,9 @@ serve(async (req) => {
         current_period_start: zeiten.periodeStart,
         current_period_end: subscriptionEnd,
         cancel_at: cancelAt,
+        // Kauftag fuer den Trichterbericht. Nie auf null zuruecksetzen: Ein
+        // Kauf bleibt ein Kauf, auch wenn spaeter gekuendigt wird.
+        ...(zeiten.bezahltSeit ? { bezahlt_seit: zeiten.bezahltSeit } : {}),
         trial_end: trialEnd,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });

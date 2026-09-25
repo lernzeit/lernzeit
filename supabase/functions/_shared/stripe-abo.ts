@@ -20,6 +20,8 @@ export interface StripeAboAusschnitt {
   cancel_at?: number | null;
   cancel_at_period_end?: boolean | null;
   trial_end?: number | null;
+  /** Wann das Abo bei Stripe angelegt wurde. */
+  start_date?: number | null;
   /** Nur bis API-Version 2025-02-24.acacia am Abo selbst. */
   current_period_start?: number | null;
   current_period_end?: number | null;
@@ -36,6 +38,12 @@ export interface AboZeiten {
   periodeEnde: string | null;
   /** Gesetzt, wenn gekündigt ist, das Abo aber noch läuft: der letzte Tag. */
   kuendigungZum: string | null;
+  /**
+   * Seit wann bezahlt wird — der Tag des Kaufs. Nur bei `active`; ein Abo in
+   * einer Stripe-Testphase ist noch kein Kauf. Endete vorher eine
+   * Stripe-Testphase, zählt deren Ende, nicht der Tag der Anlage.
+   */
+  bezahltSeit: string | null;
 }
 
 const alsIso = (sekunden: number | null | undefined): string | null =>
@@ -62,10 +70,18 @@ export function aboZeiten(abo: StripeAboAusschnitt): AboZeiten {
   if (typeof abo.cancel_at === 'number' && abo.cancel_at > 0) kuendigung = abo.cancel_at;
   else if (abo.cancel_at_period_end) kuendigung = ende;
 
+  let bezahlt: number | null = null;
+  if (abo.status === 'active') {
+    bezahlt = typeof abo.trial_end === 'number' && abo.trial_end > 0
+      ? abo.trial_end
+      : abo.start_date ?? null;
+  }
+
   return {
     periodeStart: alsIso(start),
     periodeEnde: alsIso(ende),
     kuendigungZum: alsIso(kuendigung),
+    bezahltSeit: alsIso(bezahlt),
   };
 }
 

@@ -64,7 +64,7 @@ Deno.test('leere oder unsinnige Werte ergeben null statt 1970', () => {
     current_period_end: null,
     items: { data: [{ current_period_end: 0 }] },
   });
-  assertEquals(z, { periodeStart: null, periodeEnde: null, kuendigungZum: null });
+  assertEquals(z, { periodeStart: null, periodeEnde: null, kuendigungZum: null, bezahltSeit: null });
 });
 
 Deno.test('Zugangsabo: active vor trialing, gekuendigte zaehlen nicht', () => {
@@ -75,4 +75,47 @@ Deno.test('Zugangsabo: active vor trialing, gekuendigte zaehlen nicht', () => {
   assertEquals(zugangsAbo([a, b])?.id, 'b');
   assertEquals(zugangsAbo([a, { id: 'd', status: 'past_due' }]), null);
   assertEquals(zugangsAbo([]), null);
+});
+
+Deno.test('Kauftag: Anlage bei Stripe, wenn ohne Stripe-Testphase gekauft', () => {
+  // Der Fall von LernZeit: Die 4 Wochen laufen lokal, der Checkout bucht
+  // sofort ab. Die Zeile in `subscriptions` stammt aber von der
+  // Registrierung — ihr created_at ist NICHT der Kauftag.
+  const z = aboZeiten({
+    status: 'active',
+    start_date: T0,
+    items: { data: [{ current_period_start: T0, current_period_end: T0 + MONAT }] },
+  });
+  assertEquals(z.bezahltSeit, iso(T0));
+});
+
+Deno.test('Kauftag: nach einer Stripe-Testphase zaehlt deren Ende', () => {
+  const z = aboZeiten({
+    status: 'active',
+    start_date: T0,
+    trial_end: T0 + 7 * 24 * 3600,
+    items: { data: [{ current_period_start: T0 + 7 * 24 * 3600, current_period_end: T0 + MONAT }] },
+  });
+  assertEquals(z.bezahltSeit, iso(T0 + 7 * 24 * 3600));
+});
+
+Deno.test('Kauftag: in einer Stripe-Testphase ist noch nichts gekauft', () => {
+  const z = aboZeiten({
+    status: 'trialing',
+    start_date: T0,
+    trial_end: T0 + 7 * 24 * 3600,
+    items: { data: [{}] },
+  });
+  assertEquals(z.bezahltSeit, null);
+});
+
+Deno.test('Kauftag bleibt bei gekuendigtem, noch laufendem Abo erhalten', () => {
+  const z = aboZeiten({
+    status: 'active',
+    start_date: T0,
+    cancel_at_period_end: true,
+    items: { data: [{ current_period_start: T0, current_period_end: T0 + MONAT }] },
+  });
+  assertEquals(z.bezahltSeit, iso(T0));
+  assertEquals(z.kuendigungZum, iso(T0 + MONAT));
 });

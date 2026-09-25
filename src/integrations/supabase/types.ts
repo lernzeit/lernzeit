@@ -1633,6 +1633,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          bezahlt_seit: string | null
           cancel_at: string | null
           created_at: string
           current_period_end: string | null
@@ -1647,6 +1648,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bezahlt_seit?: string | null
           cancel_at?: string | null
           created_at?: string
           current_period_end?: string | null
@@ -1661,6 +1663,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bezahlt_seit?: string | null
           cancel_at?: string | null
           created_at?: string
           current_period_end?: string | null
