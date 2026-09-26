@@ -116,6 +116,18 @@ export function ScreenTimeTestPanel() {
             {busy === 'Berechtigung anfragen' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             1. Berechtigung anfragen
           </Button>
+          {/* Auf dem eigenen iPhone scheitert Schritt 1: Apple verlangt dort
+              eine Kind-Apple-ID in der Familienfreigabe. Dieser Weg nutzt
+              Apples Zustimmung fuer das eigene Geraet — danach laesst sich
+              „Sperre einrichten" oben normal durchspielen. */}
+          <Button
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => run('Berechtigung als Erwachsener', () => ScreenTime.requestAuthorization({ individual: true }))}
+          >
+            {busy === 'Berechtigung als Erwachsener' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            1b. Berechtigung als Erwachsener (Test auf eigenem iPhone)
+          </Button>
           <Button
             variant="outline"
             disabled={busy !== null || status.authorization !== 'approved'}

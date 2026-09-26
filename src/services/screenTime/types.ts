@@ -153,7 +153,14 @@ export interface ScreenTimePlugin {
    * "invalidAccountType [FamilyControls.FamilyControlsError 2]". Aeltere
    * Builds liefern ihn nicht.
    */
-  requestAuthorization(): Promise<{ authorization: AuthorizationState; reason?: string }>;
+  requestAuthorization(options?: {
+    /**
+     * Nur Werkbank: Zustimmung fuer das eigene Geraet (Apples `.individual`)
+     * statt fuer ein Kindergeraet. Damit laesst sich auf dem iPhone eines
+     * Erwachsenen testen; ohne Kind-Apple-ID scheitert `.child` immer.
+     */
+    individual?: boolean;
+  }): Promise<{ authorization: AuthorizationState; reason?: string }>;
 
   /**
    * Oeffnet Apples FamilyActivityPicker. Die Auswahl wird auf dem Geraet
