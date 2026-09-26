@@ -148,7 +148,12 @@ export interface ScreenTimePlugin {
    * Elternteil auf dem KINDGERAET bestaetigt werden — Apple verlangt dafuer
    * die Bildschirmzeit-Kennung beziehungsweise die Familienfreigabe.
    */
-  requestAuthorization(): Promise<{ authorization: AuthorizationState }>;
+  /**
+   * `reason` nur bei Ablehnung: Apples Fehler als Text, z. B.
+   * "invalidAccountType [FamilyControls.FamilyControlsError 2]". Aeltere
+   * Builds liefern ihn nicht.
+   */
+  requestAuthorization(): Promise<{ authorization: AuthorizationState; reason?: string }>;
 
   /**
    * Oeffnet Apples FamilyActivityPicker. Die Auswahl wird auf dem Geraet

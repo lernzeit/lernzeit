@@ -66,6 +66,9 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
   const [gateOffen, setGateOffen] = useState(false);
   const [gateZweck, setGateZweck] = useState('');
   const [nachGate, setNachGate] = useState<(() => void) | null>(null);
+  // Apples Begruendung, falls die Zustimmung scheitert. Bleibt stehen, bis
+  // es neu versucht wird — damit man sie abfotografieren kann.
+  const [ablehnung, setAblehnung] = useState<string | null>(null);
 
   const laden = useCallback(async () => {
     const verfuegbar = await screenTimeAvailability();
@@ -111,9 +114,11 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
    */
   const einrichten = async () => {
     setBusy('Einrichten');
+    setAblehnung(null);
     try {
-      const { authorization } = await ScreenTime.requestAuthorization();
+      const { authorization, reason } = await ScreenTime.requestAuthorization();
       if (authorization !== 'approved') {
+        setAblehnung(reason ?? null);
         await laden();
         return;
       }
@@ -262,7 +267,14 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                   : <ShieldCheck className="h-4 w-4 mr-2" />}
                 Sperre einrichten
               </Button>
-              {status.authorization === 'denied' && (
+              {ablehnung ? (
+                <div className="text-sm text-destructive leading-relaxed space-y-1">
+                  <p>{erklaereAblehnung(ablehnung)}</p>
+                  {/* Der Rohtext bleibt sichtbar: Er ist das, was bei einer
+                      Rueckfrage weiterhilft. */}
+                  <p className="text-xs text-muted-foreground break-all">Apple: {ablehnung}</p>
+                </div>
+              ) : status.authorization === 'denied' && (
                 <p className="text-sm text-destructive leading-relaxed">
                   Die Berechtigung wurde abgelehnt oder später entzogen. Sie lässt sich
                   in den iOS-Einstellungen unter „Bildschirmzeit“ wieder erteilen.
@@ -353,6 +365,36 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
       />
     </>
   );
+}
+
+/**
+ * Übersetzt Apples Fehler bei der Zustimmung in einen Satz für Eltern.
+ *
+ * Die Namen sind die Fälle von `FamilyControlsError`. Unbekanntes wird nicht
+ * geraten, sondern als solches benannt — der Rohtext steht ohnehin darunter.
+ */
+function erklaereAblehnung(grund: string): string {
+  if (grund.includes('invalidAccountType')) {
+    return 'Dieses iPhone ist nicht als Gerät eines Kindes in der Apple-Familienfreigabe angemeldet. '
+      + 'Apple erlaubt die Sperre nur dort: Die Apple-ID auf dem iPhone muss die eines Kindes '
+      + '(unter 18) in der Familienfreigabe eines Elternteils sein.';
+  }
+  if (grund.includes('authorizationCanceled')) return 'Die Zustimmung wurde abgebrochen.';
+  if (grund.includes('authorizationConflict')) {
+    return 'Eine andere App verwaltet die Bildschirmzeit auf diesem Gerät bereits.';
+  }
+  if (grund.includes('restricted')) {
+    return 'Bildschirmzeit ist auf diesem Gerät eingeschränkt, zum Beispiel durch ein Verwaltungsprofil.';
+  }
+  if (grund.includes('authenticationMethodUnavailable')) {
+    return 'Apple kann die Zustimmung auf diesem Gerät nicht abfragen. Ist ein Gerätecode eingerichtet?';
+  }
+  if (grund.includes('networkError')) return 'Keine Verbindung zu Apple. Bitte mit Internet erneut versuchen.';
+  if (grund.includes('unavailable')) {
+    return 'Apple meldet die Funktion auf diesem Gerät als nicht verfügbar. '
+      + 'Häufigste Ursache: Diese App-Fassung hat Apples Berechtigung „Family Controls“ nicht.';
+  }
+  return 'Apple hat die Zustimmung abgelehnt, aus einem Grund, den LernZeit nicht kennt.';
 }
 
 /**

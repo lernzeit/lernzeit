@@ -159,7 +159,21 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
                 try await AuthorizationCenter.shared.requestAuthorization(for: .child)
                 call.resolve(["authorization": "approved"])
             } catch {
-                call.resolve(["authorization": "denied"])
+                // Den Grund mitgeben. Bis zum 26.09.2026 wurde hier jeder
+                // Fehler zu einem stummen "denied" — ein Kindgeraet ausserhalb
+                // der Familienfreigabe, eine fehlende Apple-Berechtigung und
+                // ein Tippen auf "Abbrechen" sahen gleich aus, und ein
+                // gescheiterter TestFlight-Test liess sich nicht aufklaeren.
+                //
+                // Bewusst ohne switch ueber FamilyControlsError: Welche Faelle
+                // es gibt, haengt von der SDK-Fassung ab, und ein unbekannter
+                // Fall wuerde den Build brechen. String(describing:) liefert
+                // den Namen des Falls, z. B. "invalidAccountType".
+                let ns = error as NSError
+                call.resolve([
+                    "authorization": "denied",
+                    "reason": "\(String(describing: error)) [\(ns.domain) \(ns.code)]"
+                ])
             }
         }
     }
