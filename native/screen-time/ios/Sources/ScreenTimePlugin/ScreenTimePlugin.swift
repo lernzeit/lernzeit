@@ -152,19 +152,11 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         guard #available(iOS 16.0, *) else {
             return call.resolve(["authorization": "denied"])
         }
-        // Nur fuer Tests auf dem eigenen iPhone (Werkbank): `.child` verlangt,
-        // dass die Apple-ID des Geraets ein Kind in der Familienfreigabe ist —
-        // auf dem iPhone eines Erwachsenen scheitert es immer. `.individual`
-        // ist Apples Weg fuer das eigene Geraet und laesst Sperre, Anfrage und
-        // Freigabe dort durchspielen. Die Eltern-Oberflaeche nutzt es nicht.
-        let alsErwachsener = call.getBool("individual") ?? false
         Task {
             do {
                 // .child: Ein Elternteil bestaetigt auf dem KINDGERAET, Apple
                 // verlangt dafuer die Bildschirmzeit-Kennung.
-                try await AuthorizationCenter.shared.requestAuthorization(
-                    for: alsErwachsener ? .individual : .child
-                )
+                try await AuthorizationCenter.shared.requestAuthorization(for: .child)
                 call.resolve(["authorization": "approved"])
             } catch {
                 // Den Grund mitgeben. Bis zum 26.09.2026 wurde hier jeder

@@ -116,12 +116,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
     setBusy('Einrichten');
     setAblehnung(null);
     try {
-      // Liegt die Zustimmung schon vor, nicht erneut fragen: Ein zweites
-      // `.child` scheitert auf einem Geraet, das ueber die Werkbank als
-      // Erwachsenengeraet zugestimmt hat — und fragt sonst unnoetig nach.
-      const { authorization, reason } = status.authorization === 'approved'
-        ? { authorization: 'approved' as const, reason: undefined }
-        : await ScreenTime.requestAuthorization();
+      const { authorization, reason } = await ScreenTime.requestAuthorization();
       if (authorization !== 'approved') {
         setAblehnung(reason ?? null);
         await laden();
@@ -304,15 +299,10 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
               </dl>
 
               <div className="grid gap-2">
-                {/* Auch hier mit Probelauf, wie beim ersten Einrichten: Ob
-                    LernZeit sich beim Sperren selbst mitsperrt, ist nicht
-                    geklaert. Ohne Probelauf waere ein Irrtum hier nur ueber
-                    die iOS-Einstellungen zu beheben. */}
                 {!status.managing && (
                   <Button
                     disabled={busy !== null}
-                    onClick={() => void fuehreAus('Sperre aktivieren', () =>
-                      ScreenTime.applyShield({ shieldAll: true, trialMinutes: PROBELAUF_MINUTEN }))}
+                    onClick={() => void fuehreAus('Sperre aktivieren', () => ScreenTime.applyShield({ shieldAll: true }))}
                   >
                     {busy === 'Sperre aktivieren'
                       ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
