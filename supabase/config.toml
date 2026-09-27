@@ -35,6 +35,8 @@ project_id = "fsmgynpdfxkaiiuguqyr"
   # Authorization-Wert (REVENUECAT_WEBHOOK_AUTH) in der Funktion.
   [functions.revenuecat-webhook]
     verify_jwt = false
+  [functions.modell-vergleich]
+    verify_jwt = false
   [functions.generate-learning-plan]
     verify_jwt = false
   [functions.screen-time-request]
