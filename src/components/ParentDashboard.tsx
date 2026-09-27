@@ -921,7 +921,13 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   <CardContent className="space-y-3">
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Status</p>
-                      <Badge variant={isPremium ? 'default' : 'secondary'}>
+                      {/* Ohne Premium grau statt `secondary`: Das ist in diesem
+                          Projekt ein kraeftiges Gruen, und „Inaktiv" in Gruen
+                          liest sich wie „alles in Ordnung". */}
+                      <Badge
+                        variant={isPremium ? 'default' : 'outline'}
+                        className={isPremium ? undefined : 'bg-muted text-muted-foreground'}
+                      >
                         {/* Eine Kuendigung zum Laufzeitende laesst den
                             Stripe-Status auf 'active' — erkennbar nur an cancelAt. */}
                         {isPremium && cancelAt ? 'Gekündigt' : status === 'active' ? 'Aktiv' : status === 'trialing' ? 'Testversion' : 'Inaktiv'}
