@@ -143,6 +143,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
   const { isPremium } = usePremiumZugang();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
+  // Antwortzeit der aktuellen Frage, festgehalten beim Absenden (checkAnswer).
+  const answerTimeRef = useRef(0);
   const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
   const [showStreakAnimation, setShowStreakAnimation] = useState(false);
@@ -227,12 +229,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     return () => cancelLoading();
   }, [cancelLoading]);
 
-  // Start timer when question is ready, stop when answered
+  // Start timer when question is ready, stop when answered.
+  // Waehrend der Nachpruefung (isValidatingAnswer) ist die Frage noch nicht
+  // beantwortet, der Timer aber schon angehalten — ohne diese Bedingung
+  // wuerde ihn dieser Effekt sofort wieder starten.
   useEffect(() => {
-    if (question && !hasAnswered && !isInitialLoading) {
+    if (question && !hasAnswered && !isInitialLoading && !isValidatingAnswer) {
       startTimer();
     }
-  }, [question, hasAnswered, isInitialLoading, startTimer]);
+  }, [question, hasAnswered, isInitialLoading, isValidatingAnswer, startTimer]);
 
   // Initialize answer state when question changes and scroll to top
   useEffect(() => {
@@ -340,6 +345,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   const checkAnswer = async () => {
     if (!question) return;
+
+    // Die Zeit endet mit dem Absenden. Bis 09/2026 hielt der Timer erst nach
+    // der Nachpruefung unten an — die Wartezeit auf den Server lief sichtbar
+    // weiter und zaehlte als Antwortzeit, auch fuer die Schwierigkeitsanpassung.
+    pauseTimer();
+    const answerTimeMs = Date.now() - questionStartTime;
+    answerTimeRef.current = answerTimeMs;
 
     let correct = false;
 
@@ -506,12 +518,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     if (demoMode) {
       trackFireAndForget('demo_question_answered', { correct });
     }
-    
-    // PAUSE timer when question is answered
-    pauseTimer();
 
     // Track performance for adaptive difficulty system
-    const answerTimeMs = Date.now() - questionStartTime;
     updateAdaptivePerformance(correct, answerTimeMs);
 
     if (correct) {
@@ -610,7 +618,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setCorrectStreak(prev => prev + 1);
 
     // Undo the "incorrect" penalty in the adaptive system
-    updateAdaptivePerformance(true, Math.max(1, Date.now() - questionStartTime));
+    // Mit der Zeit beim Absenden — nicht bis jetzt, sonst zaehlte das Lesen
+    // der Erklaerung als Antwortzeit.
+    updateAdaptivePerformance(true, Math.max(1, answerTimeRef.current));
 
     triggerSparkle();
     toast.success('Deine Antwort war doch richtig! Wird als korrekt gewertet. 🎉', {
