@@ -26,6 +26,10 @@ workflows:
   # Icons, Entitlements und Version gezielt wieder ein UND prueft das Ergebnis.
   # Genau dieses Wiedereinspielen und Pruefen fehlt hier. Vor der ersten
   # Nutzung nach dem iOS-Vorbild nachbauen — oder den Zweig entfernen.
+  # NICHT IN BENUTZUNG: Android wird in Android Studio aus dem Ordner
+  # android/ des Repos gebaut (siehe CLAUDE.md). Dieser Workflow wuerde
+  # android/ loeschen und neu erzeugen — dabei gingen App-Links und das
+  # Schema de.lernzeit.app im Manifest verloren.
   android-release:
     name: Android Release
     max_build_duration: 60

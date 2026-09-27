@@ -203,13 +203,11 @@ Sitzungsspeicherung sind unverändert.
    iOS fragt beim ersten Rücksprung „In ‚LernZeit' öffnen?" — das ist
    Apples Verhalten für App-Schemata aus einem Browserfenster.
 
-**Android, nicht angefasst:** Das Schema steht in
-`android/app/src/main/AndroidManifest.xml`. Der Codemagic-Workflow
-`android-release` löscht aber den Ordner `android` und erzeugt ihn mit
-`npx cap add android` neu — dabei gehen die Einträge im Manifest verloren
-(auch die App-Links für lernzeit.app). Wo die Play-Store-Fassung tatsächlich
-gebaut wird, ist zu klären, bevor Google-Anmeldung auf Android als behoben
-gilt.
+**Android:** Gebaut wird in Android Studio aus dem Ordner `android/` dieses
+Repos (Auskunft des Betreibers, 27.09.2026). Das Schema `de.lernzeit.app`
+steht dort im Manifest — mit dem nächsten Android-Studio-Build sollte die
+Google-Anmeldung auch auf Android in der App ankommen. Auf dem Gerät noch
+nicht geprüft.
 
 ---
 
