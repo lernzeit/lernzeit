@@ -171,8 +171,10 @@ async function erzeugeEine(
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
-    const dauer = Date.now() - start;
+    // Erst nach dem vollstaendigen Text messen: OpenRouter schickt die Header
+    // sofort und haelt die Verbindung offen, bis das Modell fertig ist.
     const text = await res.text();
+    const dauer = Date.now() - start;
     if (!res.ok) return { fehler: `HTTP ${res.status}: ${text.substring(0, 400)}`, dauer_ms: dauer };
     const data = JSON.parse(text);
     const u = data?.usage ?? {};
