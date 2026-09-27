@@ -33,14 +33,23 @@ export async function initDeepLinkHandler() {
       }
     };
 
+    // Rücksprung nach „Mit Google anmelden" (de.lernzeit.app://auth) zuerst:
+    // Er trägt Anmeldedaten und ist keine Seite, zu der navigiert wird.
+    // Siehe services/nativeOAuth.ts.
+    const { uebernimmOAuthRueckkehr } = await import('./nativeOAuth');
+    const verarbeite = async (rawUrl: string) => {
+      if (await uebernimmOAuthRueckkehr(rawUrl)) return;
+      handleUrl(rawUrl);
+    };
+
     App.addListener('appUrlOpen', (event: { url: string }) => {
-      if (event?.url) handleUrl(event.url);
+      if (event?.url) void verarbeite(event.url);
     });
 
     // Handle cold start launch URL
     try {
       const launch = await App.getLaunchUrl();
-      if (launch?.url) handleUrl(launch.url);
+      if (launch?.url) await verarbeite(launch.url);
     } catch { /* ignore */ }
   } catch (err) {
     console.warn('[deepLink] init failed:', err);

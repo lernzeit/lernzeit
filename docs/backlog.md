@@ -183,6 +183,36 @@ So wurde es eingerichtet:
 
 ---
 
+## Anmeldung
+
+### „Mit Google anmelden" in der App — behoben am 27.09.2026, Einrichtung offen
+
+In der iOS-App landete die Google-Anmeldung in Safari und blieb dort. Neuer
+Weg: Browserfenster in der App, Rücksprung an `de.lernzeit.app://auth`,
+Übernahme der Sitzung im Deep-Link-Handler (`src/services/nativeOAuth.ts`).
+Gilt auch für „Mit Apple anmelden" auf Android. `useAuth.ts` und die
+Sitzungsspeicherung sind unverändert.
+
+**Offen, beim Betreiber:**
+
+1. Supabase → Authentication → URL Configuration → Redirect URLs:
+   `de.lernzeit.app://auth` hinzufügen. Ohne den Eintrag verwirft Supabase
+   den Rücksprung und schickt auf die Website.
+2. Neuer iOS-Build (das Schema wird in `codemagic.yaml` in die Info.plist
+   geschrieben; der Build bricht ab, wenn es fehlt) und Test auf dem Gerät.
+   iOS fragt beim ersten Rücksprung „In ‚LernZeit' öffnen?" — das ist
+   Apples Verhalten für App-Schemata aus einem Browserfenster.
+
+**Android, nicht angefasst:** Das Schema steht in
+`android/app/src/main/AndroidManifest.xml`. Der Codemagic-Workflow
+`android-release` löscht aber den Ordner `android` und erzeugt ihn mit
+`npx cap add android` neu — dabei gehen die Einträge im Manifest verloren
+(auch die App-Links für lernzeit.app). Wo die Play-Store-Fassung tatsächlich
+gebaut wird, ist zu klären, bevor Google-Anmeldung auf Android als behoben
+gilt.
+
+---
+
 ## Werbung — wartet auf Dritte
 
 | | Wartet auf |

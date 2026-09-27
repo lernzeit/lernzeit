@@ -239,6 +239,29 @@ workflows:
             echo "--- Info.plist: Sprache ---"
             /usr/libexec/PlistBuddy -c "Print :CFBundleDevelopmentRegion" "$PLIST_PATH"
             /usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$PLIST_PATH"
+
+            # 8. URL-Schema de.lernzeit.app: Ruecksprung nach „Mit Google
+            # anmelden" (de.lernzeit.app://auth, src/services/nativeOAuth.ts).
+            # Ohne das Schema weiss iOS nicht, dass die Adresse zu LernZeit
+            # gehoert — die Anmeldung bliebe im Browserfenster haengen.
+            # Android registriert dasselbe Schema in AndroidManifest.xml.
+            echo "Registriere URL-Schema de.lernzeit.app..."
+            /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" >/dev/null 2>&1 \
+              || /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST_PATH"
+            if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" | grep -q "de.lernzeit.app$"; then
+              URL_TYPE_INDEX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" | grep -c "Dict {" || true)
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX dict" "$PLIST_PATH"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLName string de.lernzeit.app.auth" "$PLIST_PATH"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLSchemes array" "$PLIST_PATH"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLSchemes:0 string de.lernzeit.app" "$PLIST_PATH"
+            fi
+
+            echo "--- Info.plist: URL-Schemata ---"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH"
+            # Harte Pruefung: Ohne Schema ist „Mit Google anmelden" kaputt,
+            # und das faellt sonst erst auf dem Geraet auf.
+            /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" | grep -q "de.lernzeit.app$" \
+              || { echo "ERROR: URL-Schema de.lernzeit.app fehlt in Info.plist."; exit 1; }
           fi
 
       # WICHTIG: Der Entitlements-Patch MUSS nach `npx cap sync ios` und VOR `pod install`

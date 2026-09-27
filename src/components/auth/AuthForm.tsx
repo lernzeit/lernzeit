@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { istNativeApp, oauthImAppBrowser } from '@/services/nativeOAuth';
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
@@ -240,6 +241,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     return tokenToUse;
   };
 
+  // Das Anmeldefenster in der App wurde geschlossen. Mit Erfolg übernimmt
+  // der Deep-Link-Handler die Sitzung und dieser Bildschirm verschwindet;
+  // ohne Erfolg (Abbruch) darf er nicht im Ladezustand stehen bleiben.
+  const beiAbbruch = () => {
+    oauthRedirectPending.current = false;
+    setLoading(false);
+  };
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
@@ -247,11 +256,18 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       // Ab hier verlässt der Nutzer die Seite — beim Zurückkommen muss der
       // Ladezustand aufgelöst werden, sonst bleibt der Bildschirm gesperrt.
       oauthRedirectPending.current = true;
+      const queryParams = { access_type: 'offline', prompt: 'consent' };
+      // In der App nicht die eigene Ansicht umleiten — sie landete sonst in
+      // Safari und blieb dort. Siehe services/nativeOAuth.ts.
+      if (istNativeApp()) {
+        await oauthImAppBrowser('google', queryParams, beiAbbruch);
+        return;
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
-          queryParams: { access_type: 'offline', prompt: 'consent' },
+          queryParams,
         },
       });
       if (error) throw error;
@@ -313,6 +329,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       // Web-Weiterleitung (nicht der native iOS-Dialog oben): Der Nutzer
       // verlässt die Seite, deshalb wie bei Google markieren.
       oauthRedirectPending.current = true;
+      // Android: gleicher Fehler wie bei Google, gleicher Weg.
+      if (istNativeApp()) {
+        await oauthImAppBrowser('apple', undefined, beiAbbruch);
+        return;
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
