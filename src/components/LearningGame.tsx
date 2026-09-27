@@ -468,7 +468,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         setIsValidatingAnswer(true);
         const { data, error } = await supabase.functions.invoke('validate-answer', {
           body: {
-            question: question.questionText,
+            question: getAufgabeText(),
             correctAnswer: statedAnswerText,
             userAnswer: userAnswerText.trim(),
             grade,
@@ -563,7 +563,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     const userAnswerText = getUserAnswerText();
     
     const result = await fetchExplanation(
-      question.questionText,
+      getAufgabeText(),
       correctAnswerText,
       grade,
       subject,
@@ -592,7 +592,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     const correctAnswerText = getCorrectAnswerText();
     
     await fetchExplanation(
-      question.questionText,
+      getAufgabeText(),
       correctAnswerText,
       grade,
       subject,
@@ -640,6 +640,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       templateId: question.id,
     });
     markReviewReported(question.questionText);
+  };
+
+  // Bei Lueckentexten steht der Satz mit der Luecke in `task`; der Fragetext
+  // ist nur die Anweisung ("Ergaenze das fehlende Wort"). Nachpruefung,
+  // Erklaerung und Tutor bekamen bis 27.09.2026 nur die Anweisung und konnten
+  // die eigentliche Aufgabe nicht sehen.
+  const getAufgabeText = (): string => {
+    if (!question) return '';
+    const task = typeof question.task === 'string' ? question.task.trim() : '';
+    return question.questionType === 'FILL_BLANK' && task
+      ? `${question.questionText}\n${task}`
+      : question.questionText;
   };
 
   const getCorrectAnswerText = (): string => {
@@ -1410,7 +1422,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <KITutorDialog
           open={showTutorDialog}
           onOpenChange={setShowTutorDialog}
-          questionText={question.questionText}
+          questionText={getAufgabeText()}
           correctAnswer={getCorrectAnswerText()}
           userAnswer={getUserAnswerText()}
           grade={grade}

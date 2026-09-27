@@ -80,6 +80,11 @@ function toBase(value: number, unit: string | null): { value: number; dim: strin
 export function normalizeExpression(input: string): string {
   return input
     .replace(/[−–—]/g, '-')
+    // Deutsche Tausenderpunkte: "1.000.000" ist eine Million, nicht 1,0.
+    // Ohne das wurde "1.000.000 - 150.000" als 1 - 150 gerechnet und die
+    // richtige Antwort 850000 verworfen (Befund 27.09.2026). Nur Gruppen aus
+    // genau drei Ziffern — "2.5" und "1.25" bleiben Dezimalzahlen.
+    .replace(/\b(\d{1,3})((?:\.\d{3})+)(?![\d,.])/g, (_m, kopf: string, gruppen: string) => kopf + gruppen.replace(/\./g, ''))
     // Ausgeschriebene Rechenwoerter. Ohne sie faellt schon "Was ist 3 mal 4?"
     // durch die deterministische Pruefung und landet beim Modell — genau die
     // Klasse Aufgabe, bei der Nachrechnen verlaesslicher und kostenlos ist.
@@ -161,11 +166,24 @@ export function validateMath(question: string, statedAnswer: string): MathValida
   const answer = parseValueWithUnit(String(statedAnswer));
   if (!answer) return NOT_APPLICABLE('answer_not_numeric');
 
+  // Zahlen mit Leerzeichen als Tausendertrenner ("1 000 000") sind nicht
+  // eindeutig von einer Aufzaehlung ("12 345 678 sortieren") zu trennen.
+  // Im Zweifel entscheidet das Modell, nicht der Taschenrechner.
+  if (/(?<!\d)\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?!\d)/.test(question)) {
+    return NOT_APPLICABLE('space_grouped_number');
+  }
+
   const q = normalizeExpression(question);
+  // Mehr Zahlen, als ein Muster verbraucht, heisst: Textaufgabe mit weiteren
+  // Schritten ("6 Kisten zu je 6 Euro, bezahlt mit 50 Euro"). Das Muster
+  // wuerde nur den ersten Schritt nachrechnen und die richtige Antwort
+  // verwerfen.
+  const zahlen = q.match(/\d+(?:[.,]\d+)?/g) ?? [];
 
   // ── 1) Prozent: "20 % von 80" / "Wie viel sind 15% von 60?" ──
   const pct = q.match(/(-?\d+(?:\.\d+)?)\s*%\s*von\s*(-?\d+(?:\.\d+)?)/i);
   if (pct) {
+    if (zahlen.length > 2) return NOT_APPLICABLE('more_numbers_than_pattern');
     const expected = (Number(pct[1]) / 100) * Number(pct[2]);
     return compare(expected, answer, 'percent_of');
   }
@@ -173,6 +191,7 @@ export function validateMath(question: string, statedAnswer: string): MathValida
   // ── 2) "zu je": "6 Kisten zu je 12 Äpfeln" ──
   const perEach = q.match(/(-?\d+(?:\.\d+)?)\s*[^\d]{0,30}?\bzu\s+je\b\s*(-?\d+(?:\.\d+)?)/i);
   if (perEach) {
+    if (zahlen.length > 2) return NOT_APPLICABLE('more_numbers_than_pattern');
     const expected = Number(perEach[1]) * Number(perEach[2]);
     return compare(expected, answer, 'per_each_product');
   }
@@ -201,6 +220,14 @@ export function validateMath(question: string, statedAnswer: string): MathValida
   }
 
   const expr = q.match(EXPRESSION_RE);
+  // Ein Schraegstrich im Aufgabentext ist fast immer ein Bruch ("2/5 der
+  // Aepfel", "Zaehler von 3/7"), keine Rechenaufgabe. Bisher wurde er als
+  // Division gerechnet und die richtige Antwort verworfen. Divisionen, die
+  // mit ":" oder "geteilt durch" geschrieben sind, betrifft das nicht — sie
+  // stehen erst nach normalizeExpression als "/" da.
+  if (expr && expr[1].includes('/') && /\d\s*\/\s*\d/.test(question)) {
+    return NOT_APPLICABLE('fraction_notation');
+  }
   if (expr) {
     const value = safeEvaluate(expr[1]);
     if (value !== null) {

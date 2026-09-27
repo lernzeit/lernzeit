@@ -113,3 +113,17 @@ Deno.test('parseVerdict lehnt unbrauchbare Antworten ab', () => {
   assertEquals(parseVerdict('Ich bin mir nicht sicher.', 'm'), null);
   assertEquals(parseVerdict('{"issue":"fehlt das Feld"}', 'm'), null);
 });
+
+Deno.test('Lueckentext: der Satz mit der Luecke geht an die Pruefung', () => {
+  // Befund 27.09.2026: Ohne diesen Satz verwarf das Modell 64 richtige
+  // Lueckentexte als "unvollstaendig".
+  const prompt = buildUserPrompt(q({
+    question_type: 'FILL_BLANK',
+    question_text: 'Setze die richtige Form von "to be" ein.',
+    task: 'My sister ___ twelve years old.',
+    correct_answer: 'is',
+  }));
+  assert(prompt.includes('LÜCKENTEXT: My sister ___ twelve years old.'));
+  // Ohne task bleibt der Prompt wie bisher.
+  assert(!buildUserPrompt(q({ question_text: 'Was ist 12 + 7?', correct_answer: '19' })).includes('LÜCKENTEXT'));
+});

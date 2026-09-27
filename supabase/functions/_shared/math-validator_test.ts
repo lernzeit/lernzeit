@@ -124,3 +124,49 @@ Deno.test('Aufgaben mit Variablen sind nicht deterministisch pruefbar', () => {
   assertEquals(validateMath('Berechne 2 x 3 + x für x = 4', '10').applicable, false);
   assertEquals(validateMath('Löse die Gleichung 4 · x = 60 nach x auf.', '15').applicable, false);
 });
+
+// ── Fehlurteile aus der Produktion (Befund 27.09.2026) ──────────────────────
+// Alle diese Fragen sind richtig und wurden trotzdem aussortiert.
+
+Deno.test('Tausenderpunkte werden als deutsche Tausender gelesen', () => {
+  assertEquals(validateMath('Wie lautet das Ergebnis der Rechnung: 1.000.000 - 150.000?', '850000').valid, true);
+  assertEquals(validateMath('Wie lautet das Ergebnis der Rechnung: 320.000 + 320.000?', '640000').valid, true);
+  assertEquals(validateMath('Welches Ergebnis erhältst du, wenn du die Zahl 350.000 durch 5 teilst?', '70000').valid, true);
+  // Falsche Antworten bleiben falsch.
+  assertEquals(validateMath('Wie lautet das Ergebnis der Rechnung: 1.000.000 - 150.000?', '750000').valid, false);
+  // Dezimalpunkte mit weniger als drei Stellen bleiben Dezimalzahlen.
+  assertEquals(validateMath('Was ist 2.5 + 1.25?', '3.75').valid, true);
+});
+
+Deno.test('Leerzeichen als Tausendertrenner entscheidet das Modell', () => {
+  assertEquals(validateMath('Berechne: 1 000 000 – 350 000', '650000').applicable, false);
+  // Eine Jahreszahl vor einer Zahl ist kein Tausendertrenner.
+  assertEquals(validateMath('Im Jahr 2026 100 + 20 = ?', '120').applicable, true);
+});
+
+Deno.test('Schraegstrich im Text ist ein Bruch, keine Division', () => {
+  assertEquals(validateMath('Welche Zahl ist der Zähler des Bruches 3/7?', '3').applicable, false);
+  assertEquals(validateMath('Erweitere den Bruch 9/20 auf Hundertstel. Welcher Zähler steht dann über der 100?', '45').applicable, false);
+  assertEquals(validateMath('Wie viel Prozent entsprechen dem Bruch 3/4?', '75').applicable, false);
+  assertEquals(validateMath('Lena hat 30 Murmeln. Sie schenkt ihrem Freund 1/3 ihrer Murmeln. Wie viele Murmeln behält Lena?', '20').applicable, false);
+  // Division mit Doppelpunkt oder in Worten wird weiter nachgerechnet.
+  assertEquals(validateMath('Wie viel ist 56 : 8?', '7').valid, true);
+  assertEquals(validateMath('Was ist 56 geteilt durch 8?', '6').valid, false);
+});
+
+Deno.test('Textaufgabe mit mehr Zahlen als das Muster entscheidet das Modell', () => {
+  assertEquals(
+    validateMath('Ein Bauer verkauft 6 Kisten Äpfel zu je 6 Euro. Er bezahlt mit einem 50-Euro-Schein. Wie viel Euro bekommt er zurück?', '14').applicable,
+    false,
+  );
+  assertEquals(validateMath('20 % von 80 Schülern, davon 3 krank', '16').applicable, false);
+  // Das einfache Muster bleibt pruefbar.
+  assertEquals(validateMath('6 Kisten zu je 12 Äpfeln', '72').valid, true);
+});
+
+Deno.test('Echte Rechenfehler werden weiter erkannt', () => {
+  // Aus der Produktion: 50 - 10 - 8 ist 32, hinterlegt war 42.
+  const r = validateMath('Was ist das Ergebnis von 50 - 10 - 8?', '42');
+  assertEquals(r.valid, false);
+  assertEquals(r.expected, '32');
+});

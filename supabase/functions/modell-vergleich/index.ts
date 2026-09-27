@@ -277,6 +277,7 @@ async function pruefen(client: ReturnType<typeof createClient>, lauf: string) {
         category: z.category,
         correct_answer: f.correct_answer,
         options: f.options,
+        task: f.task,
       };
       let urteil = deterministicVerdict(q);
       if (!urteil) {
