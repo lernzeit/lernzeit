@@ -11,6 +11,10 @@
 
 Folgen daraus:
 
+- Vor jedem Android-Studio-Build: `git pull`, `npm install`, `npm run build`,
+  `npx cap sync android`. Der Web-Teil der App
+  (`android/app/src/main/assets/public`) steht nicht im Repo — ohne Build und
+  Sync läuft die Android-App mit altem Code, auch wenn `main` neu ist.
 - Für Android gilt, was in `android/` im Repo steht — auch
   `android/app/src/main/AndroidManifest.xml` (App-Links für lernzeit.app,
   Schema `de.lernzeit.app`). Der Codemagic-Workflow `android-release` wird

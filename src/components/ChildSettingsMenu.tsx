@@ -25,6 +25,7 @@ import { ScreenTimeTestPanel } from '@/components/screenTime/ScreenTimeTestPanel
 import { ScreenTimeSetup } from '@/components/screenTime/ScreenTimeSetup';
 import { ScreenTimeRequestWidget } from '@/components/ScreenTimeRequestWidget';
 import { supabase } from '@/lib/supabase';
+import { Capacitor } from '@capacitor/core';
 import { useToast } from '@/hooks/use-toast';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -49,6 +50,7 @@ interface ParentInfo {
 }
 
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSection }: ChildSettingsMenuProps) {
+  const istAndroid = Capacitor.getPlatform() === 'android';
   const [activeSection, setActiveSection] = useState<string | null>(initialSection || null);
   const [parentInfoList, setParentInfoList] = useState<ParentInfo[]>([]);
   const [loadingParentInfo, setLoadingParentInfo] = useState(true);
@@ -384,7 +386,10 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                 (ParentGate): Apple fragt nur beim ERSTEN Zustimmen nach der
                 Bildschirmzeit-Kennung, danach nie wieder.
               */}
-              <ScreenTimeSetup childId={user.id} />
+              {/* Auf Android gibt es keine Geraetesperre (Family Link bietet
+                  Dritten keine Schnittstelle). Statt einer Karte, die nur
+                  erklaert, dass es nicht geht, dort gar nichts. */}
+              {!istAndroid && <ScreenTimeSetup childId={user.id} />}
               {/*
                 Werkbank mit den Einzelschritten — nur zur Fehlersuche, hinter
                 einer Build-Variablen. Zum Erproben VITE_SCREENTIME_UI=1 setzen:
@@ -393,7 +398,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                 stand sie frueher fest und waere irgendwann in den Store
                 gegangen.
               */}
-              {import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
+              {!istAndroid && import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
             </>
           )}
           
