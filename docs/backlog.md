@@ -3,7 +3,7 @@
 Was bewusst zurückgestellt ist — mit dem Grund, damit in vier Wochen niemand
 rätselt, ob es vergessen wurde oder gewollt war.
 
-**Stand:** 20.09.2026
+**Stand:** 27.09.2026
 
 ---
 
@@ -89,6 +89,75 @@ betroffen.
 Der Weg ist geschlossen: Das Kindgerät holt die Drücke beim App-Start ab
 (`useSyncShieldAttempts`), schreibt sie nach `shield_attempts`, und das
 Eltern-Dashboard zeigt sie über den Anträgen an.
+
+---
+
+## Kundensupport
+
+Anlass: Am 23.09.2026 kamen zwei Mails von zahlenden bzw. kaufwilligen
+Kunden an info@lernzeit.app. Beantwortet wurden sie erst am 27.09.2026.
+Antworten und Hintergrund: `docs/support/antworten-2026-09-27.md`.
+
+### Autoresponder für info@lernzeit.app einrichten
+
+Jede Mail an den Support bekommt sofort eine Eingangsbestätigung — damit
+niemand vier Tage ohne Lebenszeichen wartet. Inhalt, kurz:
+
+- Nachricht ist angekommen, Antwort in der Regel innerhalb von 1–2
+  Werktagen (so steht es auch auf `/support`)
+- Selbsthilfe für die häufigsten Fälle: Abo verwalten und kündigen,
+  Konto löschen, Kind verknüpfen — mit Links auf `/support`
+- Bei Fragen zu einem Kauf gleich mitschicken: Gerät (Android, iPhone,
+  Browser), Anmelde-E-Mail, Kaufbestätigung
+- Signatur aus `docs/support/signatur.html`, unterschrieben mit
+  „Ihr LernZeit Kunden-Support"
+
+Einrichten im Postfach von info@lernzeit.app (Abwesenheits- bzw.
+Autoresponder-Funktion des Mailanbieters). Liegt beim Betreiber, weil nur
+er Zugang zum Postfach hat.
+
+### Signatur vervollständigen
+
+`docs/support/signatur.html` ist fertig bis auf die Geschäftsführung. Die
+steht nicht im Impressum, ist in geschäftlichen E-Mails einer UG aber
+Pflicht (§ 35a GmbHG). Name eintragen, dann in jedes Postfach übernehmen.
+
+### Impressum prüfen lassen
+
+Beim Bau der Signatur aufgefallen, nicht von einem Anwalt geprüft:
+
+- Die vertretungsberechtigte Person (Geschäftsführung) fehlt. Für eine UG
+  gehört sie ins Impressum.
+- Die Seite beruft sich auf § 5 TMG und § 55 Abs. 2 RStV. Beide Gesetze
+  sind abgelöst (heute DDG bzw. MStV).
+
+Zusammen mit den übrigen Fragen an die Kanzlei geben.
+
+### Erstattung Foltyn im September 2027
+
+Frau Foltyn hat das zweite Jahr Premium geschenkt bekommen (bis 23.09.2028,
+`premium_grants`). Ihr Google-Play-Abo verlängert sich aber am 08.09.2027
+automatisch. Hat sie die Verlängerung bis dahin nicht abgeschaltet: Betrag
+über die Google Play Console erstatten — so ist es ihr zugesagt.
+
+### RevenueCat-Käufe erreichen den Server nicht — als Nächstes
+
+Käufe im App Store und bei Google Play kennt nur RevenueCat. Die
+Premium-Sperren fragen aber den Server (`check-subscription`), und der kennt
+nur Stripe. Folge: Die App zeigt „Premium aktiv", die Funktionen bleiben zu.
+Frau Foltyn wurde am 27.09.2026 von Hand freigeschaltet.
+
+Behebung:
+
+1. RevenueCat-Webhook als Edge Function → schreibt Kauf, Verlängerung,
+   Kündigung und Ablauf in `subscriptions` (mit Quelle `revenuecat`)
+2. `check-subscription` darf ein solches Abo weder herabstufen noch die
+   Kind-Einstellungen zurücksetzen
+3. Der Webhook darf ein Ablaufdatum nie verkürzen, wenn `premium_grants`
+   ein späteres ergibt — sonst verliert Frau Foltyn ihr geschenktes Jahr,
+   sobald sie in Google Play kündigt
+4. Mit dem nächsten App-Build: die Sperren in der App berücksichtigen den
+   RevenueCat-Status zusätzlich
 
 ---
 
