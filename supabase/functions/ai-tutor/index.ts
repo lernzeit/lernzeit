@@ -1,4 +1,4 @@
-// ai-tutor: streaming KI-Tutor (Gemini 3.5 Flash → OpenRouter Fallback)
+// ai-tutor: streaming KI-Tutor (Gemini 3.8 Flash → OpenRouter Fallback)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI } from "../_shared/ai-client.ts";
 
@@ -66,7 +66,7 @@ serve(async (req) => {
     }, { once: true });
 
     const { response } = await callAI({
-      model: 'google/gemini-3.5-flash',
+      model: 'google/gemini-3.8-flash',
       messages: [
         { role: 'system', content: systemPrompt },
         ...safeMessages,

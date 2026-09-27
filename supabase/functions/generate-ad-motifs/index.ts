@@ -53,13 +53,13 @@ const ANBIETER = [
   {
     name: 'gemini_direct',
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    modell: 'gemini-3.5-flash',
+    modell: 'gemini-3.8-flash',
     schluessel: () => Deno.env.get('GEMINI_API_KEY'),
   },
   {
     name: 'openrouter',
     url: 'https://openrouter.ai/api/v1/chat/completions',
-    modell: 'google/gemini-3.5-flash',
+    modell: 'google/gemini-3.8-flash',
     schluessel: () => Deno.env.get('OPENROUTER_API_KEY'),
   },
 ] as const;

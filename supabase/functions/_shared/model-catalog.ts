@@ -51,7 +51,37 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     output_price_per_1m: 9.00,
     supports_tools: true,
     requires_default_temperature: true,
+    // Abgeloest durch 3.8 Flash (27.09.2026). Bleibt im Katalog, damit alte
+    // Messwerte weiter einen Preis haben.
+    recommended_for: [],
+  },
+  {
+    // Modellvergleich 27.09.2026 (30 Vorgaben, Blindbewertung durch den
+    // Betreiber): Qualitaet wie 3.5 Flash (Ø 3,50 gegen 3,43 Punkte), echte
+    // Kosten 4,48 statt 14,88 USD je 1.000 Fragen.
+    id: 'google/gemini-3.8-flash',
+    label: 'Gemini 3.8 Flash',
+    family: 'google',
+    gemini_id: 'gemini-3.8-flash',
+    openrouter_id: 'google/gemini-3.8-flash',
+    input_price_per_1m: 0.75,
+    output_price_per_1m: 3.75,
+    supports_tools: true,
+    requires_default_temperature: true,
     recommended_for: ['question_generator_batch', 'ai_tutor', 'analyze_feedback', 'learning_plan'],
+  },
+  {
+    // Bester im Modellvergleich (Ø 3,87), aber Vorschau-Modell.
+    id: 'google/gemini-3.1-pro-preview',
+    label: 'Gemini 3.1 Pro (Preview)',
+    family: 'google',
+    gemini_id: 'gemini-3.1-pro-preview',
+    openrouter_id: 'google/gemini-3.1-pro-preview',
+    input_price_per_1m: 2.00,
+    output_price_per_1m: 12.00,
+    supports_tools: true,
+    requires_default_temperature: true,
+    recommended_for: [],
   },
 
   // ── OpenRouter fallback (pinned to Groq via provider_routing) ──
