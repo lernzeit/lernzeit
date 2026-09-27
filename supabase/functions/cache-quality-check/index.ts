@@ -10,8 +10,11 @@
  *
  *   1. Tagesbudget über `ai_model_metrics`, siehe _shared/job-budget.ts
  *   2. Stufe 1 prüft deterministisch per validateMath() — kostet NICHTS
- *   3. Stufe 2 (LLM) nur für den Rest, auf einem kostenlosen Modell ohne
- *      bezahlten Fallback: lieber Lauf abbrechen als Geld ausgeben
+ *   3. Stufe 2 (LLM) nur für den Rest. Das Modell steht in `ai_model_config`
+ *      unter 'quality_check' (seit dem Wechsel weg vom Gratis-Kontingent ein
+ *      bezahltes Gemini-Modell).
+ *   4. Nur fällige Fragen: ungeprüfte und solche, deren letzte Prüfung älter
+ *      als RECHECK_AFTER_DAYS ist.
  *
  * Reihenfolge: ungeprüfte Fragen zuerst, danach die am längsten nicht
  * geprüften. Der Index `idx_aqc_quality_queue` (NULLS FIRST) bildet das ab.
@@ -45,12 +48,23 @@ const USE_CASE = 'quality_check';
  * Grenze nicht mehr, und bei 2526 ungeprueften Fragen haetten 80/Tag ueber
  * einen Monat gebraucht - solange blieben fehlerhafte Fragen im Umlauf.
  *
- * 600/Tag kosten bei gemini-3.1-flash-lite rund 1 USD pro Monat und raeumen den
- * Rueckstand in etwa vier Tagen ab. Danach faellt der Verbrauch von selbst,
- * weil nur noch neue Fragen und turnusmaessige Nachpruefungen anfallen.
+ * 600/Tag bleiben als Obergrenze, damit ein Schub neuer Fragen schnell
+ * geprueft ist.
  */
 const DEFAULT_MAX_PER_DAY = 600;
 const DEFAULT_MAX_CHECKS = 50;
+
+/**
+ * Nach so vielen Tagen kommt eine gepruefte Frage erneut dran.
+ *
+ * Bis zum 27.09.2026 gab es keinen Abstand: War der Bestand durchgeprueft,
+ * nahm der Job einfach die am laengsten nicht gepruefte Frage und prueft so
+ * jede der ~3.500 Fragen etwa alle sechs Tage neu — rund 16.500 Aufrufe
+ * und ~$5 im Monat, fast die Haelfte aller KI-Kosten. Eine unveraenderte
+ * Frage wird durch Wiederholung nicht richtiger; neu geprueft wird nur, um
+ * einen Modellwechsel oder ein Fehlurteil nachzuziehen. Dafuer reichen 60 Tage.
+ */
+const RECHECK_AFTER_DAYS = 60;
 
 /** Hintergrundjob — kostenlose Modelle brauchen regelmaessig mehr als 12s. */
 const LLM_TIMEOUT_MS = 60_000;
@@ -172,9 +186,11 @@ Deno.serve(async (req) => {
   // Haeufig ausgelieferte Fragen richten den groessten Schaden an und gehoeren
   // deshalb zuerst geprueft. Der Index idx_aqc_quality_queue_served bildet genau
   // diese Reihenfolge ab.
+  const faelligVor = new Date(Date.now() - RECHECK_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data: queue, error: queueErr } = await supabase
     .from('ai_question_cache')
     .select('id, grade, subject, question_text, question_type, category, correct_answer, options')
+    .or(`quality_checked_at.is.null,quality_checked_at.lt.${faelligVor}`)
     .order('quality_checked_at', { ascending: true, nullsFirst: true })
     .order('times_served', { ascending: false })
     .limit(maxChecks);

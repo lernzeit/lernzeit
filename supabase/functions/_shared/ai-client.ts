@@ -14,6 +14,7 @@
 
 import { resolveProviderModel, isModelAvailableOn, estimateCost, isGemini3, type ProviderId } from './model-catalog.ts';
 import { loadModelConfig, logMetric, type ThinkingLevel } from './model-config.ts';
+import { billedOutputTokens, StreamUsage, type Usage } from './ai-usage.ts';
 
 const GEMINI_GATEWAY = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const OPENROUTER_GATEWAY = 'https://openrouter.ai/api/v1/chat/completions';
@@ -215,15 +216,31 @@ async function tryProvider(
         cache_hit: options.cacheHit ?? false,
       };
 
+      // Tokens und Kosten für ai_model_metrics — Denk-Tokens eingeschlossen,
+      // siehe ai-usage.ts.
+      const tokenMetric = (usage: Usage | null) => {
+        const promptTokens = usage?.prompt_tokens ?? null;
+        const completionTokens = billedOutputTokens(usage);
+        return {
+          prompt_tokens: promptTokens,
+          completion_tokens: completionTokens,
+          total_tokens: usage?.total_tokens ?? null,
+          estimated_cost_usd: estimateCost(canonicalModel, promptTokens, completionTokens),
+        };
+      };
+
       // Streaming: measure TTFT at the first body chunk, log when the stream ends.
       if (options.stream && response.ok && response.body) {
         let firstChunkAt: number | null = null;
+        const streamUsage = new StreamUsage();
         const instrumented = response.body.pipeThrough(new TransformStream({
           transform(chunk, controller) {
             if (firstChunkAt === null) firstChunkAt = Date.now();
+            try { streamUsage.push(chunk); } catch { /* Zählung darf den Strom nie stören */ }
             controller.enqueue(chunk);
           },
           flush() {
+            try { streamUsage.end(); } catch { /* s.o. */ }
             const total = Date.now() - start;
             logMetric({
               ...baseMetric,
@@ -231,6 +248,7 @@ async function tryProvider(
               latency_ms: total, total_latency_ms: total,
               ttft_ms: firstChunkAt ? firstChunkAt - start : ttft,
               aborted: signal?.aborted ?? false,
+              ...tokenMetric(streamUsage.usage),
             });
           },
         }));
@@ -246,19 +264,13 @@ async function tryProvider(
       if (response.ok) {
         const clone = response.clone();
         clone.json().then((json) => {
-          const usage = json?.usage ?? {};
-          const promptTokens = usage.prompt_tokens ?? null;
-          const completionTokens = usage.completion_tokens ?? null;
           const total = Date.now() - start;
           logMetric({
             ...baseMetric,
             status_code: response.status, success: true,
             latency_ms: total, total_latency_ms: total, ttft_ms: ttft,
             aborted: signal?.aborted ?? false,
-            prompt_tokens: promptTokens,
-            completion_tokens: completionTokens,
-            total_tokens: usage.total_tokens ?? null,
-            estimated_cost_usd: estimateCost(canonicalModel, promptTokens, completionTokens),
+            ...tokenMetric(json?.usage ?? null),
           });
         }).catch(() => {
           const total = Date.now() - start;

@@ -1,6 +1,8 @@
 /**
  * Curated catalogue of AI models available for selection in the admin dashboard.
  * Pricing is best-effort (USD per 1M tokens) and may need periodic updates.
+ * Gemini-Preise zuletzt geprüft am 27.09.2026 (Standardtarif, ohne Batch-API).
+ * Denk-Tokens werden als Ausgabe abgerechnet — siehe ai-usage.ts.
  *
  * `id` is the canonical identifier used in `ai_model_config.primary_model`.
  * It maps to provider-specific names below.
@@ -33,8 +35,8 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     family: 'google',
     gemini_id: 'gemini-3.1-flash-lite',
     openrouter_id: 'google/gemini-3.1-flash-lite',
-    input_price_per_1m: 0.10,
-    output_price_per_1m: 0.40,
+    input_price_per_1m: 0.25,
+    output_price_per_1m: 1.50,
     supports_tools: true,
     requires_default_temperature: true,
     recommended_for: ['question_generator_live', 'validate_answer', 'validate_question', 'ai_explain', 'quality_check'],
@@ -45,8 +47,8 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
     family: 'google',
     gemini_id: 'gemini-3.5-flash',
     openrouter_id: 'google/gemini-3.5-flash',
-    input_price_per_1m: 0.30,
-    output_price_per_1m: 2.50,
+    input_price_per_1m: 1.50,
+    output_price_per_1m: 9.00,
     supports_tools: true,
     requires_default_temperature: true,
     recommended_for: ['question_generator_batch', 'ai_tutor', 'analyze_feedback', 'learning_plan'],
