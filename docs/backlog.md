@@ -140,7 +140,7 @@ Frau Foltyn hat das zweite Jahr Premium geschenkt bekommen (bis 23.09.2028,
 automatisch. Hat sie die Verlängerung bis dahin nicht abgeschaltet: Betrag
 über die Google Play Console erstatten — so ist es ihr zugesagt.
 
-### RevenueCat-Käufe erreichen den Server nicht — gebaut am 27.09.2026, wartet auf Einrichtung
+### RevenueCat-Käufe erreichen den Server nicht — behoben am 27.09.2026, App-Builds offen
 
 Käufe im App Store und bei Google Play kannte nur RevenueCat; die
 Premium-Sperren fragen den Server. Frau Foltyn wurde am 27.09.2026 von Hand
@@ -162,8 +162,12 @@ Gebaut und eingespielt:
 - `check-subscription` bleibt unverändert: Der Webhook setzt `trial_end`
   auf das Ablaufdatum, herabgestuft wird erst danach.
 
-**Offen, beim Betreiber** — solange das fehlt, lehnt der Webhook alles ab
-(503) und jeder Store-Kauf muss von Hand freigeschaltet werden:
+**Eingerichtet am 27.09.2026:** Secret gesetzt, Webhook in RevenueCat
+angelegt, Testereignis um 08:36 UTC angekommen (HTTP 200, protokolliert,
+korrekt übergangen). Die Schritte 1–4 unten sind damit erledigt; offen ist
+nur noch Schritt 5.
+
+So wurde es eingerichtet:
 
 1. Einen langen Zufallswert erzeugen (Passwortmanager, 40+ Zeichen).
 2. Supabase → Project Settings → Edge Functions → Secrets:
