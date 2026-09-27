@@ -156,7 +156,11 @@ export function aenderungAus(
     };
     // Kauftag für den Trichterbericht: einmal gesetzt, nie überschrieben.
     // Eine Store-Testphase ist noch kein Kauf; die erste RENEWAL danach schon.
-    if (!stand?.bezahlt_seit && !probe && IST_KAUF.has(e.type) && typeof e.purchased_at_ms === 'number') {
+    // Sandbox-Käufe (TestFlight, Play-Testkonten) kosten nichts und zählen
+    // nicht — sonst stünde jeder Test als Umsatz im Bericht. Den Zugang
+    // bekommen sie trotzdem, sonst ließe sich nichts testen.
+    const sandbox = (e.environment ?? '').toUpperCase() === 'SANDBOX';
+    if (!sandbox && !stand?.bezahlt_seit && !probe && IST_KAUF.has(e.type) && typeof e.purchased_at_ms === 'number') {
       felder.bezahlt_seit = alsIso(e.purchased_at_ms);
     }
     return { art: 'setzen', felder };

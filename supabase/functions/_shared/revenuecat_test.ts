@@ -92,3 +92,13 @@ Deno.test('Monate addieren kalendergenau', () => {
   assertEquals(new Date(plusMonate(JAHR_SPAETER, 12)).toISOString(), '2028-09-08T16:03:00.000Z');
   assertEquals(plusMonate(JAHR_SPAETER, 0), JAHR_SPAETER);
 });
+
+Deno.test('Sandbox-Kauf: Zugang ja, Kauftag nein', () => {
+  const a = aenderungAus(ereignis({ environment: 'SANDBOX' }), null, 0, 'premium');
+  if (a.art !== 'setzen') throw new Error();
+  assertEquals(a.felder.status, 'active');
+  assertEquals(a.felder.bezahlt_seit, undefined);
+  const echt = aenderungAus(ereignis({ environment: 'PRODUCTION' }), null, 0, 'premium');
+  if (echt.art !== 'setzen') throw new Error();
+  assertEquals(echt.felder.bezahlt_seit, new Date(KAUF).toISOString());
+});
