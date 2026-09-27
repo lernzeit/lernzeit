@@ -3,7 +3,7 @@ import { Check, X, ArrowRight, Flag, AlertTriangle, Loader2, Sparkles, Crown } f
 import { KITutorDialog } from './KITutorDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import {
   Dialog,
   DialogContent,
@@ -56,7 +56,7 @@ export function GameFeedback({
   const [reportDetails, setReportDetails] = useState('');
   const [showTutorDialog, setShowTutorDialog] = useState(false);
   const { isReporting, reportQuestion } = useQuestionReport();
-  const { isPremium } = useSubscription();
+  const { isPremium } = usePremiumZugang();
   
   if (!feedback) return null;
 

@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { useQuestionReport } from '@/hooks/useQuestionReport';
 import { QuestionReportDialog } from '@/components/game/QuestionReportDialog';
 import { KITutorDialog } from '@/components/game/KITutorDialog';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
 import { StreakAnimation } from '@/components/game/StreakAnimation';
@@ -141,7 +141,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [correctStreak, setCorrectStreak] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [gameAnimation, setGameAnimation] = useState<{ type: AnimationType; message: string } | null>(null);
-  const { isPremium } = useSubscription();
+  const { isPremium } = usePremiumZugang();
   const [isValidatingAnswer, setIsValidatingAnswer] = useState(false);
   const [spellingHint, setSpellingHint] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);

@@ -140,24 +140,42 @@ Frau Foltyn hat das zweite Jahr Premium geschenkt bekommen (bis 23.09.2028,
 automatisch. Hat sie die Verlängerung bis dahin nicht abgeschaltet: Betrag
 über die Google Play Console erstatten — so ist es ihr zugesagt.
 
-### RevenueCat-Käufe erreichen den Server nicht — als Nächstes
+### RevenueCat-Käufe erreichen den Server nicht — gebaut am 27.09.2026, wartet auf Einrichtung
 
-Käufe im App Store und bei Google Play kennt nur RevenueCat. Die
-Premium-Sperren fragen aber den Server (`check-subscription`), und der kennt
-nur Stripe. Folge: Die App zeigt „Premium aktiv", die Funktionen bleiben zu.
-Frau Foltyn wurde am 27.09.2026 von Hand freigeschaltet.
+Käufe im App Store und bei Google Play kannte nur RevenueCat; die
+Premium-Sperren fragen den Server. Frau Foltyn wurde am 27.09.2026 von Hand
+freigeschaltet.
 
-Behebung:
+Gebaut und eingespielt:
 
-1. RevenueCat-Webhook als Edge Function → schreibt Kauf, Verlängerung,
-   Kündigung und Ablauf in `subscriptions` (mit Quelle `revenuecat`)
-2. `check-subscription` darf ein solches Abo weder herabstufen noch die
-   Kind-Einstellungen zurücksetzen
-3. Der Webhook darf ein Ablaufdatum nie verkürzen, wenn `premium_grants`
-   ein späteres ergibt — sonst verliert Frau Foltyn ihr geschenktes Jahr,
-   sobald sie in Google Play kündigt
-4. Mit dem nächsten App-Build: die Sperren in der App berücksichtigen den
-   RevenueCat-Status zusätzlich
+- Edge Function `revenuecat-webhook` (Version 1, live): schreibt Kauf,
+  Verlängerung, Kündigung und Ablauf in `subscriptions` (`quelle` =
+  revenuecat), protokolliert jedes Ereignis in `revenuecat_events`. Logik
+  und 8 Tests in `_shared/revenuecat.ts`.
+- Geschenkte Monate (`premium_grants`) werden auf das Ablaufdatum aus
+  RevenueCat aufgeschlagen — Frau Foltyns zweites Jahr bleibt, auch wenn
+  sie in Google Play kündigt.
+- Die App-Sperren fragen `usePremiumZugang`: Server ODER RevenueCat. Wirkt
+  im Web sofort, in den Apps mit dem nächsten Build.
+- Trichterbericht zählt Store-Käufe über `bezahlt_seit`, nicht mehr
+  zusätzlich über das Ereignis.
+- `check-subscription` bleibt unverändert: Der Webhook setzt `trial_end`
+  auf das Ablaufdatum, herabgestuft wird erst danach.
+
+**Offen, beim Betreiber** — solange das fehlt, lehnt der Webhook alles ab
+(503) und jeder Store-Kauf muss von Hand freigeschaltet werden:
+
+1. Einen langen Zufallswert erzeugen (Passwortmanager, 40+ Zeichen).
+2. Supabase → Project Settings → Edge Functions → Secrets:
+   `REVENUECAT_WEBHOOK_AUTH` = dieser Wert.
+3. RevenueCat → Project → Integrations → Webhooks → neuer Webhook:
+   URL `https://fsmgynpdfxkaiiuguqyr.supabase.co/functions/v1/revenuecat-webhook`,
+   Authorization header value = derselbe Wert. Umgebung: Production und
+   Sandbox.
+4. In RevenueCat „Send test event" — danach steht in `revenuecat_events`
+   eine Zeile vom Typ TEST.
+5. Neue App-Builds (iOS und Android), damit die Sperren auch in den Apps
+   RevenueCat berücksichtigen.
 
 ---
 

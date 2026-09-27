@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Crown } from 'lucide-react';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { trackFireAndForget } from '@/lib/analytics';
 
 /** Feuert `trial_ended_paywall_seen`, sobald ein Nicht-Premium-Nutzer die Sperre sieht. */
@@ -32,7 +32,7 @@ export function PremiumGate({
   showUpgradeButton = true,
   onUpgradeClick,
 }: PremiumGateProps) {
-  const { isPremium, isTrialing, loading } = useSubscription();
+  const { isPremium, isTrialing, loading } = usePremiumZugang();
   const blocked = !loading && !isPremium && !isTrialing;
   usePaywallSeen(blocked, featureName);
 
@@ -98,7 +98,7 @@ export function PremiumFeature({
   featureName = 'Diese Funktion',
   onUpgradeClick,
 }: PremiumFeatureProps) {
-  const { isPremium, isTrialing, loading } = useSubscription();
+  const { isPremium, isTrialing, loading } = usePremiumZugang();
   const blocked = !loading && !isPremium && !isTrialing;
   usePaywallSeen(blocked, featureName);
 

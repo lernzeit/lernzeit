@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { 
   TrendingUp, 
@@ -125,7 +125,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isPremium, isTrialing } = useSubscription();
+  const { isPremium, isTrialing } = usePremiumZugang();
 
   useEffect(() => {
     loadAnalysis();

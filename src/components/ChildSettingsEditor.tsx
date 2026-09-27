@@ -27,7 +27,7 @@ import {
   Crown,
   Info
 } from 'lucide-react';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
@@ -122,7 +122,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { isPremium, isTrialing } = useSubscription();
+  const { isPremium, isTrialing } = usePremiumZugang();
   const hasPremiumAccess = isPremium || isTrialing;
   const [hasExplicitVisibility, setHasExplicitVisibility] = useState(false);
 

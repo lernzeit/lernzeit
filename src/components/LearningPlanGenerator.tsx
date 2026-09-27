@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { useSubscription } from '@/hooks/useSubscription';
+import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { toGermanCategory, isSubjectAvailableForGrade } from '@/lib/category';
 import {
   Sparkles,
@@ -78,7 +78,7 @@ const ALL_SUBJECTS = [
 
 export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: Props) {
   const { toast } = useToast();
-  const { isPremium, isTrialing } = useSubscription();
+  const { isPremium, isTrialing } = usePremiumZugang();
   const hasPremiumAccess = isPremium || isTrialing;
 
   const [selectedChildId, setSelectedChildId] = useState<string>(fixedChildId || '');
