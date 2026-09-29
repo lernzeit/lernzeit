@@ -36,7 +36,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { useOneSignal } from '@/hooks/useOneSignal';
+import { useOneSignal, unregisterPushDevice } from '@/hooks/useOneSignal';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
@@ -417,6 +417,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
 
   const handleSignOut = async () => {
+    await unregisterPushDevice(user?.id);
     await supabase.auth.signOut();
     onSignOut();
   };

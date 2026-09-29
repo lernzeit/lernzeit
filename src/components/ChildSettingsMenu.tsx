@@ -32,6 +32,7 @@ import { useAchievements } from '@/hooks/useAchievements';
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { NotificationSettings } from '@/components/NotificationSettings';
+import { unregisterPushDevice } from '@/hooks/useOneSignal';
 
 interface ChildSettingsMenuProps {
   user: any;
@@ -186,6 +187,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
   };
 
   const handleSignOut = async () => {
+    await unregisterPushDevice(user?.id);
     await supabase.auth.signOut();
     onSignOut();
   };
