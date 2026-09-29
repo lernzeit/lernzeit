@@ -105,16 +105,14 @@ class ParentalControlsService {
     }
 
     if (childPlatform === 'ios') {
-      // Kein Absprung: Apple hat keinen öffentlichen Link zur Bildschirmzeit.
-      // Der frühere Link `app-settings:` öffnete nur die LernZeit-Seite in den
-      // Einstellungen (Siri, Mitteilungen, …) — Rückmeldung vom 29.09.2026.
+      // Absprung über einen nicht dokumentierten Link — siehe parentalControls/ios.ts.
       if (native && parent === 'ios') {
         return {
           kind: 'screen_time',
           appName: 'Bildschirmzeit',
-          buttonLabel: '',
-          hint: `Gib die Zeit in Apples Bildschirmzeit frei: Einstellungen → Bildschirmzeit → ${childName} → App-Limits. Einen direkten Link dorthin lässt Apple nicht zu.`,
-          canOpen: false,
+          buttonLabel: 'Bildschirmzeit öffnen',
+          hint: `In Bildschirmzeit unter „Familie“: ${childName} → App-Limits → Zeit gewähren`,
+          canOpen: true,
         };
       }
       return {
