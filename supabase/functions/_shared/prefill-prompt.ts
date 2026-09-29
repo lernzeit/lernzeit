@@ -15,6 +15,7 @@ import {
   THEORY_SUBJECTS,
   type QuestionCategory,
 } from './question-prompt.ts';
+import { cleanHint, hatCodeReste, parseChoiceOptions } from './choice-options.ts';
 // ── Subject Domain Hints: all 10 subjects with open thematic categories ──
 // Instead of fixed skill lists, we provide broad domain hints.
 // Gemini autonomously selects a concrete sub-topic appropriate for the grade.
@@ -349,10 +350,13 @@ export function parseAndValidate(
 
   // Type-specific validation
   if (qt === 'MULTIPLE_CHOICE') {
-    const options = parsed.options as unknown[];
+    // Klammer- und Anfuehrungszeichenreste entfernen (Befund 29.09.2026:
+    // Kinder sahen `[„Taiga“` als Antwort). Bleiben Reste, wird verworfen.
+    const options = parseChoiceOptions(parsed.options);
     const answer = parsed.correct_answer;
-    if (!Array.isArray(options) || options.length !== 4) return null;
+    if (options.length !== 4 || hatCodeReste(options)) return null;
     if (typeof answer !== 'number' || answer < 0 || answer > 3) return null;
+    parsed.options = options;
   }
 
   if (qt === 'SORT') {
@@ -383,7 +387,7 @@ export function parseAndValidate(
     correct_answer: parsed.correct_answer,
     options: parsed.options ?? null,
     task: parsed.task ?? null,
-    hint: (parsed.hint as string)?.substring(0, 200) ?? null,
+    hint: cleanHint(parsed.hint),
   };
 }
 

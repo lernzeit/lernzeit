@@ -12,6 +12,7 @@ import {
   THEORY_SUBJECTS,
   type QuestionCategory,
 } from "../_shared/question-prompt.ts";
+import { cleanHint, hatCodeReste, parseChoiceOptions } from '../_shared/choice-options.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -375,7 +376,7 @@ serve(async (req) => {
               questionType: picked.question_type,
               correctAnswer: tryParseStructuredValue(picked.correct_answer),
               options: tryParseStructuredValue(picked.options),
-              hint: picked.hint,
+              hint: cleanHint(picked.hint),
               task: picked.task,
               createdAt: new Date().toISOString(),
               source: 'cache'
@@ -657,7 +658,7 @@ serve(async (req) => {
               questionType: picked.question_type,
               correctAnswer: tryParseStructuredValue(picked.correct_answer),
               options: tryParseStructuredValue(picked.options),
-              hint: picked.hint,
+              hint: cleanHint(picked.hint),
               task: picked.task,
               createdAt: new Date().toISOString(),
               source: 'cache-fallback'
@@ -696,7 +697,7 @@ serve(async (req) => {
       questionType: rawType,
       correctAnswer: rawCorrectAnswer,
       options: rawOptions,
-      hint: question.hint || null,
+      hint: cleanHint(question.hint),
       task: typeof question.task === 'string' ? question.task : null,
       createdAt: new Date().toISOString()
     };
@@ -780,24 +781,13 @@ function sanitizeStringArray(value: unknown): string[] {
   );
 }
 
+/**
+ * Optionen einer Auswahlfrage. Liest auch Programmtext wie
+ * `options = ["2", "3"]` oder `['my', 'mine']` richtig — bis 29.09.2026 wurde
+ * er an Kommas zerschnitten, und Kinder sahen `['my'` als Antwort.
+ */
 function extractChoiceOptions(value: unknown): string[] {
-  const parsed = tryParseStructuredValue(value);
-
-  if (Array.isArray(parsed)) {
-    return sanitizeStringArray(parsed);
-  }
-
-  if (typeof parsed !== 'string') return [];
-
-  return Array.from(
-    new Set(
-      parsed
-        .replace(/\r/g, '\n')
-        .split(/[\n,;|]+/)
-        .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
-        .filter(Boolean)
-    )
-  );
+  return parseChoiceOptions(tryParseStructuredValue(value));
 }
 
 function extractFillBlankAnswers(value: unknown): string[] {
@@ -845,6 +835,7 @@ function isRenderableQuestionPayload(
     case 'MULTIPLE_CHOICE': {
       const choiceOptions = extractChoiceOptions(options);
       if (choiceOptions.length < 2) return false;
+      if (hatCodeReste(choiceOptions)) return false;
 
       if (typeof correctAnswer === 'number') {
         return correctAnswer >= 0 && correctAnswer < choiceOptions.length;
