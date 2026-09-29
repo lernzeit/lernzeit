@@ -7,7 +7,7 @@
 | Web | Push auf `main` → Lovable übernimmt → Veröffentlichen per Lovable (`deploy_project`) |
 | iOS | Codemagic, Workflow `ios-release`, **von Hand gestartet** → TestFlight |
 | Android | **Android Studio beim Betreiber**, aus dem Ordner `android/` dieses Repos |
-| Edge Functions | Lovable spielt sie **selbst** neu ein, sobald es einen Commit übernimmt, der `supabase/functions/` ändert — dann alle Funktionen aus `main` (beobachtet am 27.09.2026, 10:01 und 18:41 UTC). Sofort per Supabase-MCP (`deploy_edge_function`, mit allen importierten Dateien aus `_shared/`) nur, wenn es nicht warten kann |
+| Edge Functions | Lovable spielt sie **manchmal** selbst neu ein, wenn es einen Commit übernimmt, der `supabase/functions/` ändert (am 27.09.2026 ja, am 29.09.2026 nicht: Commit um 17:24 übernommen, Funktion nach 80 min noch alt). Deshalb nach jedem Commit per `get_edge_function` prüfen; fehlt die Änderung, per Supabase-MCP (`deploy_edge_function`, mit allen importierten Dateien aus `_shared/`) einspielen und danach gegen `main` vergleichen |
 
 Folgen daraus:
 
