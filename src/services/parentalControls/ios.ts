@@ -4,16 +4,25 @@ import type { OpenParentalControlsResult } from './types';
 /**
  * Öffnet auf dem iPhone der Eltern die Bildschirmzeit in den Einstellungen.
  *
- * `App-prefs:SCREEN_TIME` ist nicht von Apple dokumentiert — einen öffentlichen
- * Link zur Bildschirmzeit gibt es nicht. Der Betreiber hat sich am 29.09.2026
- * bewusst dafür entschieden, weil er genau dort landen will. Bei der
- * App-Prüfung kann Apple nicht öffentliche URL-Schemata beanstanden
- * (Richtlinie 2.5.1); dann diesen Link entfernen, der Text-Rückfall bleibt.
+ * Einen öffentlichen Link dorthin gibt es nicht; die Adressen unten sind nicht
+ * von Apple dokumentiert. Der Betreiber hat sich am 29.09.2026 bewusst dafür
+ * entschieden. Bei der App-Prüfung kann Apple nicht öffentliche URL-Schemata
+ * beanstanden (Richtlinie 2.5.1); dann die Liste leeren, der Text-Rückfall
+ * bleibt.
  *
- * Nicht mehr verwendet: `app-settings:`. Der öffnet nur die Seite der eigenen
- * App in den Einstellungen (Siri, Mitteilungen, …).
+ * Getestet vom Betreiber am 29.09.2026 unter iOS 26 (Kurzbefehle → „URL öffnen“):
+ *   settings-navigation://com.apple.Settings.ScreenTime  → Bildschirmzeit ✓
+ *   prefs:root=SCREEN_TIME                               → Bildschirmzeit ✓
+ *   App-prefs:SCREEN_TIME                                → nur Liste „Apps“ ✗
+ *   app-settings:                                        → LernZeit-Seite ✗
+ *
+ * Reihenfolge: die neue Schreibweise zuerst; kennt ein älteres iOS sie nicht,
+ * meldet openUrl `completed: false`, und die zweite wird versucht.
  */
-const SCREEN_TIME_URL = 'App-prefs:SCREEN_TIME';
+const SCREEN_TIME_URLS = [
+  'settings-navigation://com.apple.Settings.ScreenTime',
+  'prefs:root=SCREEN_TIME',
+];
 
 export async function openScreenTimeSettings(minutes?: number): Promise<OpenParentalControlsResult> {
   const minutesMsg = minutes
@@ -22,19 +31,21 @@ export async function openScreenTimeSettings(minutes?: number): Promise<OpenPare
 
   const launcher = await getAppLauncher();
   if (launcher) {
-    try {
-      const result = await launcher.openUrl({ url: SCREEN_TIME_URL });
-      if (result?.completed !== false) {
-        return {
-          success: true,
-          opened: true,
-          platform: 'ios',
-          appName: 'Bildschirmzeit',
-          message: `Bildschirmzeit geöffnet. Unter „Familie“ Ihr Kind wählen → App-Limits. ${minutesMsg}`.trim(),
-        };
+    for (const url of SCREEN_TIME_URLS) {
+      try {
+        const result = await launcher.openUrl({ url });
+        if (result?.completed !== false) {
+          return {
+            success: true,
+            opened: true,
+            platform: 'ios',
+            appName: 'Bildschirmzeit',
+            message: `Einstellungen geöffnet. Zum Kind: Einstellungen → Familie → [Kind] → Bildschirmzeit. ${minutesMsg}`.trim(),
+          };
+        }
+      } catch (e) {
+        console.warn(`[ParentalControls] iOS ${url} ließ sich nicht öffnen:`, e);
       }
-    } catch (e) {
-      console.warn('[ParentalControls] iOS Bildschirmzeit ließ sich nicht öffnen:', e);
     }
   }
 
@@ -43,6 +54,6 @@ export async function openScreenTimeSettings(minutes?: number): Promise<OpenPare
     opened: false,
     platform: 'ios',
     appName: 'Bildschirmzeit',
-    message: `Bitte manuell öffnen: Einstellungen → Bildschirmzeit → [Kind] → App-Limits. ${minutesMsg}`.trim(),
+    message: `Bitte manuell öffnen: Einstellungen → Familie → [Kind] → Bildschirmzeit. ${minutesMsg}`.trim(),
   };
 }
