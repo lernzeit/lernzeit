@@ -1088,7 +1088,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               <div className="flex items-center justify-between">
                 {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
                 {question.questionType !== 'FILL_BLANK' && (
-                  <CardTitle className={grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed"}>{question.questionText}</CardTitle>
+                  <CardTitle className={cn("frage-text", grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed")}>{question.questionText}</CardTitle>
                 )}
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
               </div>
@@ -1243,12 +1243,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                     )}
                   </div>
                   {isCorrect && spellingHint && (
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    <p className="frage-text text-sm text-green-600 dark:text-green-400 mt-1">
                       ✏️ Richtige Schreibweise: <strong>{spellingHint}</strong>
                     </p>
                   )}
                   {!isCorrect && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="frage-text text-sm text-muted-foreground">
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
@@ -1333,7 +1333,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       <span>Erklärung wird erstellt...</span>
                     </div>
                   ) : (
-                    <p className="text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
+                    <p className="frage-text text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
                   )}
                 </div>
               )}
@@ -1487,7 +1487,7 @@ const MultipleChoiceRenderer: React.FC<{
           onClick={() => !hasAnswered && onSelect(option)}
           disabled={hasAnswered}
         >
-          <span className="flex-1">{option}</span>
+          <span className="frage-text min-w-0 flex-1">{option}</span>
           {richtig && <Check className="ml-2 h-5 w-5 shrink-0 text-green-600" />}
           {falschGewaehlt && <X className="ml-2 h-5 w-5 shrink-0 text-red-500" />}
         </Button>
@@ -1567,7 +1567,7 @@ const SortRenderer: React.FC<{
             )}>
               {index + 1}
             </span>
-            <span className="flex-1 font-medium">{item}</span>
+            <span className="frage-text min-w-0 flex-1 font-medium">{item}</span>
             {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-green-600 flex-shrink-0" />}
             {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-red-500 flex-shrink-0" />}
           </button>
@@ -1597,7 +1597,7 @@ const HintToggle: React.FC<{ hint: string }> = ({ hint }) => {
         <ChevronDown className={cn("w-4 h-4 transition-transform", showHint && "rotate-180")} />
       </button>
       {showHint && (
-        <p className="text-sm text-muted-foreground mt-2 pl-5 border-l-2 border-primary/30">
+        <p className="frage-text text-sm text-muted-foreground mt-2 pl-5 border-l-2 border-primary/30">
           {hint}
         </p>
       )}
@@ -1650,7 +1650,7 @@ const MatchRenderer: React.FC<{
                   disabled={hasAnswered}
                 >
                   <div className="flex w-full items-center justify-between gap-2">
-                    <span>{item}</span>
+                    <span className="frage-text min-w-0">{item}</span>
                     {matches[item] && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
                   </div>
                 </Button>
@@ -1684,7 +1684,7 @@ const MatchRenderer: React.FC<{
                   disabled={hasAnswered || !selectedLeft}
                 >
                   <div className="flex w-full items-center justify-between gap-2">
-                    <span>{item}</span>
+                    <span className="frage-text min-w-0">{item}</span>
                     {isUsed && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
                   </div>
                 </Button>
@@ -1714,9 +1714,9 @@ const MatchRenderer: React.FC<{
                     !hasAnswered && "bg-muted/50"
                   )}
                 >
-                  <span className="font-medium flex-shrink-0">{left}</span>
+                  <span className="frage-text min-w-0 max-w-[45%] font-medium">{left}</span>
                   <span className="text-muted-foreground">→</span>
-                  <span className="flex-1">{right}</span>
+                  <span className="frage-text min-w-0 flex-1">{right}</span>
                   {!hasAnswered && (
                     <button
                       onClick={() => onMatch(left, '')}
@@ -1826,7 +1826,7 @@ const FillBlankRenderer: React.FC<{
         onClick={() => handleGapClick(index)}
         disabled={hasAnswered}
         className={cn(
-          "inline-flex items-center justify-center min-w-20 px-3 py-1 mx-1 rounded-md border-2 border-dashed transition-all",
+          "frage-text inline-flex max-w-full items-center justify-center min-w-20 px-3 py-1 mx-1 rounded-md border-2 border-dashed transition-all",
           "text-base font-medium",
           !value && !isActive && "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
           !value && isActive && "border-primary bg-primary/10 text-primary animate-pulse",
@@ -1904,7 +1904,7 @@ const FillBlankRenderer: React.FC<{
                   onClick={() => isAvailable && handleChipSelect(option)}
                   disabled={isUsed || activeGapIndex === null}
                   className={cn(
-                    "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                    "frage-text max-w-full px-3 py-1.5 rounded-full text-sm font-medium transition-all",
                     isAvailable && "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-sm hover:shadow-md active:scale-95",
                     isUsed && "bg-muted text-muted-foreground/50 line-through cursor-not-allowed",
                     !isUsed && activeGapIndex === null && "bg-secondary text-secondary-foreground opacity-60"
@@ -1922,7 +1922,7 @@ const FillBlankRenderer: React.FC<{
       {hasAnswered && correctAnswers.some((correct, i) => 
         answers[i]?.toLowerCase().trim() !== correct?.toLowerCase().trim()
       ) && (
-        <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-lg">
+        <div className="frage-text text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-lg">
           <strong>Richtige Lösung:</strong> {correctAnswers.join(', ')}
         </div>
       )}
@@ -1958,6 +1958,7 @@ const DragDropRenderer: React.FC<{
               key={item}
               variant={selectedItem === item ? 'default' : 'outline'}
               size="sm"
+              className="frage-text h-auto max-w-full whitespace-normal py-1.5 text-left"
               onClick={() => !hasAnswered && setSelectedItem(item)}
               disabled={hasAnswered}
             >
