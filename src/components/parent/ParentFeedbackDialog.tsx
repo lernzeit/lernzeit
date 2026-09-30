@@ -216,6 +216,13 @@ export function ParentFeedbackDialog({ open, onOpenChange, defaultEmail, isFound
               </>
             )}
           </Button>
+
+          <p className="text-xs text-center text-muted-foreground">
+            Lieber per E-Mail?{' '}
+            <a href="mailto:info@lernzeit.app?subject=LernZeit%20Feedback" className="underline">
+              info@lernzeit.app
+            </a>
+          </p>
         </div>
       </DialogContent>
     </Dialog>

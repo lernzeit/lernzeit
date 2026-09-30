@@ -1121,7 +1121,12 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   Feedback
                 </CardTitle>
                 <CardDescription>
-                  Schreib uns, was gut läuft oder besser werden kann.
+                  Schreib uns, was gut läuft oder besser werden kann. Fehler gefunden oder eine Idee?
+                  Über das Formular oder per E-Mail an{' '}
+                  <a href="mailto:info@lernzeit.app?subject=LernZeit%20Feedback" className="underline">
+                    info@lernzeit.app
+                  </a>
+                  .
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">

@@ -9,6 +9,7 @@ import { Smartphone, Clock, MessageSquare, CheckCircle, XCircle, AlertCircle, Ba
 import { useScreenTimeRequests, ScreenTimeRequest } from '@/hooks/useScreenTimeRequests';
 import { useToast } from '@/hooks/use-toast';
 import { parentalControlsService } from '@/services/parentalControlsService';
+import { vielleichtUmBewertungBitten } from '@/lib/reviewPrompt';
 import { useChildPlatforms } from '@/hooks/useChildPlatforms';
 import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
 import { trackFireAndForget } from '@/lib/analytics';
@@ -82,6 +83,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
     if (!pendingApprovalRequest) return;
     const reqId = pendingApprovalRequest.id;
     const reqMinutes = pendingApprovalRequest.requested_minutes;
+    const reqChildId = pendingApprovalRequest.child_id;
 
     setRespondingId(reqId);
     try {
@@ -99,12 +101,14 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
         // Then try to open the parental control app for THIS child's platform
         if (openApp && target.canOpen) {
           const openResult = await parentalControlsService.openForChild(pendingChildPlatform, reqMinutes);
+          void vielleichtUmBewertungBitten(reqChildId, openResult.opened);
 
           toast({
             title: "Anfrage genehmigt! ✅",
             description: openResult.message,
           });
         } else {
+          void vielleichtUmBewertungBitten(reqChildId, false);
           toast({
             title: "Anfrage genehmigt! ✅",
             description: `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
