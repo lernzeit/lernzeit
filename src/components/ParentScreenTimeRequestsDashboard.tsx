@@ -177,7 +177,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
     return (
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <Smartphone className="w-5 h-5" />
             Bildschirmzeit-Anfragen
           </CardTitle>
@@ -195,7 +195,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
   return (
     <Card className="shadow-card">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center gap-2">
             <Smartphone className="w-5 h-5 text-blue-600" />
             Bildschirmzeit-Anfragen
@@ -296,7 +296,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                       </DialogHeader>
                       <div className="space-y-4">
                         <p className="text-sm text-gray-600">
-                          Möchten Sie Ihrem Kind eine Erklärung für die Ablehnung mitgeben?
+                          Möchtest du deinem Kind erklären, warum du ablehnst?
                         </p>
                         
                         <div>
@@ -335,7 +335,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
             <Smartphone className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <h4 className="font-medium text-gray-900 mb-2">Keine neuen Anfragen</h4>
             <p className="text-sm text-gray-600">
-              Ihre Kinder haben derzeit keine Bildschirmzeit-Anfragen gestellt.
+              Deine Kinder haben gerade keine Bildschirmzeit angefragt.
             </p>
           </div>
         )}
@@ -380,7 +380,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
             <div className="space-y-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-sm text-green-800">
-                  Sie genehmigen <strong>{pendingApprovalRequest.requested_minutes} Minuten</strong> Bildschirmzeit für {getChildName(pendingApprovalRequest.child_id)}.
+                  Du genehmigst <strong>{pendingApprovalRequest.requested_minutes} Minuten</strong> Bildschirmzeit für {getChildName(pendingApprovalRequest.child_id)}.
                 </p>
               </div>
               

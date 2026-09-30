@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { istNativeApp, oauthImAppBrowser } from '@/services/nativeOAuth';
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Sparkles, BookOpen, KeyRound } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
 import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
 
@@ -641,37 +641,30 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   // beides verhindert, dass die Seite scrollt, sobald der Inhalt hoeher ist als
   // der sichtbare Bereich (z. B. wenn die Tastatur aufgeht). Stattdessen
   // `flex-col` + `my-auto` am Inhalt: zentriert bei genug Platz, scrollt sauber,
-  // sobald es eng wird. Die animierten Blobs clippt ihr eigener
-  // `absolute inset-0 overflow-hidden`-Container.
+  // sobald es eng wird.
+  //
+  // Bis 30.09.2026 pulsierten hier drei verschwommene Farbkreise im
+  // Hintergrund, dazu Funkel-Symbole und „Dein persönlicher Lern-Assistent" —
+  // der typische KI-Baukasten-Look. Der erste Bildschirm der App soll ruhig
+  // sein und sagen, worum es geht.
   return (
-    <div className="min-h-screen bg-gradient-bg flex flex-col p-4 pt-safe-top pb-safe-bottom relative">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/20 rounded-full animate-pulse blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/20 rounded-full animate-pulse blur-3xl" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/3 left-1/4 w-20 h-20 bg-accent/30 rounded-full animate-pulse blur-xl" style={{animationDelay: '2s'}}></div>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col p-4 pt-safe-top pb-safe-bottom relative">
 
       <div className="relative z-10 w-full max-w-md lg:max-w-lg mx-auto my-auto">
         {/* Header with logo animation */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-primary to-secondary rounded-3xl mb-4 shadow-lg animate-scale-in">
-            <BookOpen className="w-10 h-10 text-white" />
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl mb-4">
+            <BookOpen className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">
             LernZeit
           </h1>
-          <p className="text-muted-foreground text-lg">
-            Dein persönlicher Lern-Assistent
+          <p className="text-muted-foreground">
+            Löse Aufgaben und verdiene Handyzeit
           </p>
-          <div className="flex items-center justify-center gap-2 mt-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span>Löse Aufgaben und verdiene Handyzeit</span>
-            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-          </div>
         </div>
 
-        <Card className="shadow-card backdrop-blur-sm bg-card/95 border-0 animate-slide-up">
+        <Card className="shadow-card">
           <CardContent className="p-6">
             <Tabs defaultValue="signup" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
@@ -1079,7 +1072,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             Empfehlungs-Code <span className="text-muted-foreground font-normal">(optional)</span>
                           </Label>
                           <div className="relative">
-                            <Sparkles className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                            <Gift className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                             <Input
                               id="tester-code"
                               type="text"
@@ -1138,7 +1131,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
+                        <UserPlus className="w-4 h-4" />
                         Konto erstellen
                       </div>
                     )}

@@ -26,7 +26,7 @@ const SCREEN_TIME_URLS = [
 
 export async function openScreenTimeSettings(minutes?: number): Promise<OpenParentalControlsResult> {
   const minutesMsg = minutes
-    ? `Bitte ${minutes} Minuten zusätzliche Zeit für Ihr Kind freigeben.`
+    ? `Bitte ${minutes} Minuten zusätzliche Zeit für dein Kind freigeben.`
     : '';
 
   const launcher = await getAppLauncher();

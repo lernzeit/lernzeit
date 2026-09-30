@@ -348,7 +348,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const handleGenerateCode = async () => {
     if (!emailVerified) {
-      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.", variant: "destructive" });
+      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätige zuerst deine E-Mail-Adresse.", variant: "destructive" });
       return;
     }
     if (!consentChecked) {
@@ -570,7 +570,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               </div>
               <div>
                 <p className="font-semibold text-sm">🎁 Testphase: noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} kostenlos</p>
-                <p className="text-xs text-muted-foreground">Sichern Sie sich jetzt Premium – monatlich kündbar.</p>
+                <p className="text-xs text-muted-foreground">Sichere dir jetzt Premium – monatlich kündbar.</p>
               </div>
             </div>
             <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
@@ -646,28 +646,30 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       </Card>
 
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
-          <TabsTrigger value="requests" className="flex items-center gap-1.5">
+        {/* Beschriftung auch auf dem Handy: Nur Symbole (Handy, Personen, Krone,
+            Geschenk) liessen raten, was dahinter liegt (Durchsicht 30.09.2026). */}
+        <TabsList className={`grid h-auto w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsTrigger value="requests" className="relative flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
             <Smartphone className="h-4 w-4" />
-            <span className="hidden sm:inline">Anfragen</span>
+            <span className="text-[11px] leading-tight sm:text-sm">Anfragen</span>
             {totalPendingRequests > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 text-[10px]">
+              <Badge variant="secondary" className="absolute right-1 top-0.5 h-4 min-w-4 px-1 text-[10px] sm:static sm:ml-1 sm:h-5 sm:min-w-5">
                 {totalPendingRequests}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="children" className="flex items-center gap-1.5">
+          <TabsTrigger value="children" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Kinder</span>
+            <span className="text-[11px] leading-tight sm:text-sm">Kinder</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-1.5">
+          <TabsTrigger value="subscription" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
             <Crown className="h-4 w-4" />
-            <span className="hidden sm:inline">Abo</span>
+            <span className="text-[11px] leading-tight sm:text-sm">Abo</span>
           </TabsTrigger>
           {isPaidPremium && (
-            <TabsTrigger value="referral" className="flex items-center gap-1.5">
+            <TabsTrigger value="referral" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
               <Gift className="h-4 w-4" />
-              <span className="hidden sm:inline">Verschenken</span>
+              <span className="text-[11px] leading-tight sm:text-sm">Verschenken</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -1238,7 +1240,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <p className="text-xs text-foreground/90 leading-relaxed">
                 <Crown className="inline h-3.5 w-3.5 text-primary mr-1 -mt-0.5" />
                 Das Programm steht <strong>ausschließlich Premium-Mitgliedern</strong> zur Verfügung –
-                nicht während der kostenlosen Testphase. Schließen Sie Ihre Premium-Mitgliedschaft ab,
+                nicht während der kostenlosen Testphase. Schließ deine Premium-Mitgliedschaft ab,
                 um den Verschenken-Reiter freizuschalten.
               </p>
             </div>
@@ -1295,7 +1297,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 Neu freigeschaltet: Empfehlungsprogramm
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Verschenken Sie 2 Monate Premium an Freunde und sichern Sie sich bis zu
+                Verschenke 2 Monate Premium an Freunde und sichere dir bis zu
                 6 Bonus-Monate gratis.
               </p>
             </div>

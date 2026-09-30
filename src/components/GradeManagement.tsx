@@ -84,7 +84,7 @@ export function GradeManagement({ linkedChildren, onGradeUpdate }: GradeManageme
           Klassenmanagement
         </CardTitle>
         <CardDescription>
-          Verwalten Sie die Klassenstufen Ihrer verknüpften Kinder
+          Verwalte die Klassenstufen deiner verknüpften Kinder
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

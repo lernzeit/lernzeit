@@ -299,7 +299,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
 
   const handleGenerateCode = async () => {
     if (!emailVerified) {
-      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.", variant: "destructive" });
+      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätige zuerst deine E-Mail-Adresse.", variant: "destructive" });
       return;
     }
     if (!consentChecked) {
@@ -405,7 +405,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                 Familienverwaltung
               </CardTitle>
               <CardDescription>
-                Verwalten Sie Ihre verknüpften Kinder
+                Verwalte deine verknüpften Kinder
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -549,7 +549,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             <CardContent className="space-y-4">
               {emailVerified === false && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-                  Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse, bevor Sie einen Einladungscode erstellen können.
+                  Bitte bestätige zuerst deine E-Mail-Adresse, bevor du einen Einladungscode erstellst.
                 </div>
               )}
 

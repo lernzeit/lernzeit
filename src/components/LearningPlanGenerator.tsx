@@ -175,7 +175,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
       toast({
         title: '🎉 Lernplan erstellt!',
-        description: `Der 5-Tage-Lernplan für ${selectedChild?.name || 'Ihr Kind'} ist fertig.`,
+        description: `Der 5-Tage-Lernplan für ${selectedChild?.name || 'dein Kind'} ist fertig.`,
       });
 
       // Reset form

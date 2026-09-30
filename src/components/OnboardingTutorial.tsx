@@ -76,13 +76,13 @@ const parentSteps: Step[] = [
   {
     emoji: '👋',
     title: 'Willkommen bei LernZeit!',
-    description: 'Mit LernZeit lernt Ihr Kind spielerisch und verdient sich dabei kontrollierte Bildschirmzeit. Sie behalten den vollen Überblick.',
+    description: 'Mit LernZeit lernt dein Kind spielerisch und verdient sich dabei kontrollierte Bildschirmzeit. Du behältst den vollen Überblick.',
     icon: <BookOpen className="w-8 h-8" />,
   },
   {
     emoji: '🔗',
     title: 'Kind verknüpfen',
-    description: 'Generieren Sie einen Einladungscode und geben Sie ihn an Ihr Kind weiter. So verknüpfen Sie die Konten und behalten die Kontrolle.',
+    description: 'Erstelle einen Einladungscode und gib ihn deinem Kind. So verknüpfst du die Konten und behältst die Kontrolle.',
     icon: <Link className="w-8 h-8" />,
   },
   {
@@ -94,7 +94,7 @@ const parentSteps: Step[] = [
   {
     emoji: '📊',
     title: 'Lernfortschritte verfolgen',
-    description: 'Im Analyse-Dashboard sehen Sie genau, in welchen Fächern Ihr Kind Fortschritte macht und wo es Unterstützung braucht.',
+    description: 'Im Analyse-Dashboard siehst du genau, in welchen Fächern dein Kind Fortschritte macht und wo es Unterstützung braucht.',
     icon: <BarChart3 className="w-8 h-8" />,
   },
 ];
