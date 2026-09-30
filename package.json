@@ -19,6 +19,7 @@
     "test:ios": "ruby scripts/test-ios-extensions.rb",
     "typecheck": "tsc -b --noEmit",
     "test:release": "node scripts/test-screen-time-release.mjs",
+    "test:streak": "node scripts/test-streak.mjs",
     "trichter": "node scripts/trichter.mjs",
     "motive:pruefen": "node scripts/pruefe-motive.mjs",
     "motive:erzeugen": "node scripts/erzeuge-motive.mjs",

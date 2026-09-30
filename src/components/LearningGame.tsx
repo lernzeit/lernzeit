@@ -29,6 +29,7 @@ import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 import { useReviewQueue } from '@/hooks/useReviewQueue';
 import { useStreak } from '@/hooks/useStreak';
+import { berechneStreak, lokalerTag } from '@/lib/streak';
 
 interface LearningGameProps {
   grade: number;
@@ -154,12 +155,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const isStreakRecovery = mode === 'streak_recovery';
 
   // Track streak before session starts
-  const { streak: currentStreak, inactiveDays: currentInactiveDays } = useStreak(user?.id);
+  const { streak: currentStreak, inactiveDays: currentInactiveDays, loading: streakLoading } = useStreak(user?.id);
+  // Erst nach dem Laden merken. Vorher liefert useStreak seinen Startwert 0 —
+  // bis 30.09.2026 wurde genau der gemerkt, und nach jeder Runde stand der
+  // Streak auf 1 (0 + 1).
   useEffect(() => {
-    if (streakBeforeSession.current === null && currentStreak !== undefined) {
+    if (streakBeforeSession.current === null && !streakLoading) {
       streakBeforeSession.current = currentStreak;
     }
-  }, [currentStreak]);
+  }, [currentStreak, streakLoading]);
 
   // Save emoji feedback to question_feedback table
   const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
@@ -769,7 +773,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             user_id: user.id,
             streak_value: neuerStreak,
             status: 'active',
-            last_activity_date: new Date().toISOString().split('T')[0],
+            last_activity_date: lokalerTag(new Date()),
             last_reactivated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' });
           
@@ -818,24 +822,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               supabase.from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
               supabase.from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
             ]);
-            const allDates = new Set<string>();
-            lsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
-            gsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
-            const sorted = Array.from(allDates).sort((a, b) => b.localeCompare(a));
-            let freshStreak = 0;
-            if (sorted.length > 0) {
-              const today = new Date().toISOString().split('T')[0];
-              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-              if (sorted[0] === today || sorted[0] === yesterday) {
-                let checkDate = new Date();
-                if (sorted[0] === yesterday) checkDate = new Date(Date.now() - 86400000);
-                for (let i = 0; i < sorted.length; i++) {
-                  const expected = new Date(checkDate.getTime() - i * 86400000).toISOString().split('T')[0];
-                  if (sorted[i] === expected) freshStreak++;
-                  else break;
-                }
-              }
-            }
+            const zeitpunkte: string[] = [];
+            lsRes.data?.forEach(s => { if (s.session_date) zeitpunkte.push(s.session_date); });
+            gsRes.data?.forEach(s => { if (s.session_date) zeitpunkte.push(s.session_date); });
+            const frisch = berechneStreak(zeitpunkte);
+            const freshStreak = frisch.inaktiveTage <= 1 ? frisch.streak : 0;
             const previousStreak = streakBeforeSession.current ?? 0;
             if (freshStreak > previousStreak) {
               setNewStreakValue(freshStreak);
