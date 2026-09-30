@@ -156,6 +156,8 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
         ? 'Dafür wird mindestens iOS 16 gebraucht.'
         : availability.reason === 'entitlement-missing'
           ? 'Diese App-Fassung hat die nötige Apple-Berechtigung nicht.'
+          : availability.reason === 'plugin-missing'
+            ? 'In dieser App-Fassung fehlt der Baustein für die Sperre. Bitte LernZeit aktualisieren.'
           : 'Das geht nur auf einem iPhone oder iPad, nicht im Browser und nicht auf Android.';
     return (
       <Card>

@@ -62,8 +62,13 @@ export async function screenTimeAvailability(): Promise<ScreenTimeAvailability> 
   if (!screenTimeSupportedPlatform()) return UNAVAILABLE;
   try {
     return await ScreenTime.isAvailable();
-  } catch {
-    return { available: false, reason: 'entitlement-missing' };
+  } catch (e) {
+    // UNIMPLEMENTED heisst: Der native Teil ist gar nicht in der App. So war
+    // es in 1.3.0 (Plugin ohne Package.swift, siehe native/screen-time).
+    // Vorher lief das unter "Berechtigung fehlt" und fuehrte auf die falsche
+    // Spur.
+    const code = (e as { code?: string } | null)?.code;
+    return { available: false, reason: code === 'UNIMPLEMENTED' ? 'plugin-missing' : 'entitlement-missing' };
   }
 }
 

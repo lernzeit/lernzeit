@@ -174,6 +174,14 @@ workflows:
           echo "Syncing web assets..."
           npx cap sync ios
 
+          # Capacitor 8 baut iOS mit dem Swift Package Manager und laesst
+          # Plugins ohne Package.swift STILL weg (nur eine Warnung). So fehlte
+          # die Bildschirmzeit-Sperre von 1.3.0 an in jedem Build, und auf dem
+          # Kind-iPhone stand nur "Diese App-Fassung hat die noetige
+          # Apple-Berechtigung nicht" (Befund 30.09.2026). Lieber rot hier.
+          grep -q 'LernzeitScreenTime' ios/App/CapApp-SPM/Package.swift \
+            || { echo "ERROR: Bildschirmzeit-Plugin fehlt in ios/App/CapApp-SPM/Package.swift."; exit 1; }
+
           # 1. ERZWINGEN: Manuell hochgeladenes Podfile an die richtige Stelle setzen
           if [ -f "ios-icons/Podfile" ]; then
             echo "Injeziere stabiles Git-Podfile..."

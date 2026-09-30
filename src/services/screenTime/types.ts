@@ -67,7 +67,7 @@ export interface ScreenTimeAvailability {
    */
   available: boolean;
   /** Grund, wenn nicht verfuegbar — fuer eine ehrliche Meldung an die Eltern. */
-  reason?: 'platform' | 'os-version' | 'entitlement-missing';
+  reason?: 'platform' | 'os-version' | 'entitlement-missing' | 'plugin-missing';
 }
 
 export interface ShieldStatus {
