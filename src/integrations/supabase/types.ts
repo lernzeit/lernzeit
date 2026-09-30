@@ -870,6 +870,7 @@ export type Database = {
           duration_seconds: number | null
           grade: number
           id: string
+          learning_plan_id: string | null
           question_source: string | null
           score: number | null
           session_date: string | null
@@ -885,6 +886,7 @@ export type Database = {
           duration_seconds?: number | null
           grade: number
           id?: string
+          learning_plan_id?: string | null
           question_source?: string | null
           score?: number | null
           session_date?: string | null
@@ -900,6 +902,7 @@ export type Database = {
           duration_seconds?: number | null
           grade?: number
           id?: string
+          learning_plan_id?: string | null
           question_source?: string | null
           score?: number | null
           session_date?: string | null

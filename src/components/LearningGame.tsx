@@ -38,6 +38,8 @@ interface LearningGameProps {
   onBack: () => void;
   totalQuestions?: number;
   topicHint?: string;
+  /** Lernplan, aus dem die Runde gestartet wurde — zaehlt nur dann als Plan-Fortschritt. */
+  learningPlanId?: string;
   mode?: 'normal' | 'streak_recovery';
   demoMode?: boolean;
 }
@@ -60,6 +62,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   onBack,
   totalQuestions = 5,
   topicHint,
+  learningPlanId,
   mode = 'normal',
   demoMode = false
 }) => {
@@ -736,7 +739,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           timeSpentSeconds,
           earnedSeconds,
           questionSource: isStreakRecovery ? 'streak-recovery' : 'template-bank',
-          suppressEarnedMinutes: isStreakRecovery
+          suppressEarnedMinutes: isStreakRecovery,
+          learningPlanId: learningPlanId ?? null
         });
         
         if (result.success) {
