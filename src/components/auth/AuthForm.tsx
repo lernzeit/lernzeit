@@ -840,10 +840,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                       <button
                         type="button"
                         role="radio"
-                        aria-checked={pendingRole === 'parent'}
-                        onClick={() => setPendingRole('parent')}
+                        aria-checked={role === 'parent'}
+                        onClick={() => { setRole('parent'); setChildNoEmail(false); }}
                         className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
-                          pendingRole === 'parent'
+                          role === 'parent'
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-primary/50'
                         }`}
@@ -857,17 +857,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             Du verbindest dein Kind und gibst Bildschirmzeit frei.
                           </div>
                         </div>
-                        {pendingRole === 'parent' && (
-                          <Check className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
-                        )}
                       </button>
                       <button
                         type="button"
                         role="radio"
-                        aria-checked={pendingRole === 'child'}
-                        onClick={() => setPendingRole('child')}
+                        aria-checked={role === 'child'}
+                        onClick={() => setRole('child')}
                         className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
-                          pendingRole === 'child'
+                          role === 'child'
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-primary/50'
                         }`}
@@ -881,33 +878,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             Du löst Aufgaben und verdienst Bildschirmzeit. Deine Eltern brauchen ein eigenes Konto.
                           </div>
                         </div>
-                        {pendingRole === 'child' && (
-                          <Check className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
-                        )}
                       </button>
                     </div>
-                    {pendingRole === 'child' && (
-                      <p className="text-sm text-muted-foreground text-center" role="note">
-                        Tipp: Am besten legen zuerst deine Eltern ihr Konto an und erstellen einen Code für dich.
-                      </p>
-                    )}
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="w-full"
-                      disabled={!pendingRole}
-                      onClick={() => {
-                        if (pendingRole === 'parent') {
-                          setRole('parent');
-                          setChildNoEmail(false);
-                        } else if (pendingRole === 'child') {
-                          setRole('child');
-                        }
-                        setPendingRole(null);
-                      }}
-                    >
-                      Weiter
-                    </Button>
                   </div>
                 ) : (
                 <>
@@ -920,7 +892,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </p>
                   <button
                     type="button"
-                    onClick={() => { setRole(null); setPendingRole(null); }}
+                    onClick={() => setRole(null)}
                     className="mt-2 text-xs text-primary hover:underline"
                   >
                     Rolle ändern
