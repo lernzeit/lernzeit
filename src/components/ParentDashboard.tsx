@@ -396,7 +396,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       setProfileSaving(true);
       const { error } = await supabase.from('profiles').update({ name: profileName.trim() }).eq('id', userId);
       if (error) throw error;
-      toast({ title: "Profil aktualisiert", description: "Ihr Name wurde erfolgreich gespeichert." });
+      toast({ title: "Profil aktualisiert", description: "Dein Name wurde gespeichert." });
     } catch {
       toast({ title: "Fehler", description: "Name konnte nicht gespeichert werden.", variant: "destructive" });
     } finally {
@@ -1079,7 +1079,16 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
       {/* Konto-Dialog (vom Header geöffnet) */}
       <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Kein Fokus auf das Namensfeld beim Oeffnen: Auf dem iPhone sprang
+            sonst sofort die Tastatur auf und verdeckte den Dialog
+            (Bildschirmaufnahme Betreiber, 03.10.2026). */}
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement | null)?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
@@ -1096,14 +1105,15 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="profile-name">Ihr Name</Label>
+                  <Label htmlFor="profile-name">Dein Name</Label>
                   <div className="flex gap-2">
                     <Input
                       id="profile-name"
                       type="text"
+                      autoComplete="name"
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Ihr Name"
+                      placeholder="Dein Name"
                       className="flex-1"
                     />
                     <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
@@ -1154,11 +1164,11 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-password">Neues Passwort</Label>
-                  <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
+                  <Input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-                  <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
+                  <Input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
                 </div>
                 <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
                   {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
