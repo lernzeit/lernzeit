@@ -21,7 +21,8 @@ import {
   Sparkles,
   MessageSquareHeart,
   Gift,
-  Percent
+  Percent,
+  Megaphone
 } from 'lucide-react';
 import { ApiStatusPanel } from './ApiStatusPanel';
 import { CacheGroupItem } from './CacheGroupItem';
@@ -35,6 +36,7 @@ import { AIModelPlayground } from './AIModelPlayground';
 import { AIModelOptimizationPanel } from './AIModelOptimizationPanel';
 import { FeedbackInbox } from './FeedbackInbox';
 import { ReferralsPanel } from './ReferralsPanel';
+import { MarketingPanel } from './MarketingPanel';
 
 interface CacheStats {
   totalCached: number;
@@ -195,10 +197,14 @@ export function AdminDashboard() {
 
         {/* Main Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-10 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 lg:grid-cols-12 h-auto">
             <TabsTrigger value="overview" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
               Übersicht
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="flex items-center gap-2 text-xs sm:text-sm py-2">
+              <Megaphone className="w-3 h-3 sm:w-4 sm:h-4" />
+              Marketing
             </TabsTrigger>
             <TabsTrigger value="cache" className="flex items-center gap-2 text-xs sm:text-sm py-2">
               <Database className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -357,6 +363,10 @@ export function AdminDashboard() {
           <TabsContent value="feedback" className="space-y-4">
             <FeedbackInbox />
           </TabsContent>
+          <TabsContent value="marketing" className="space-y-4">
+            <MarketingPanel />
+          </TabsContent>
+
           <TabsContent value="referrals" className="space-y-4">
             <ReferralsPanel />
           </TabsContent>

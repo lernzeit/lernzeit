@@ -1943,6 +1943,36 @@ export type Database = {
       }
     }
     Functions: {
+      admin_marketing_kanalbericht: {
+        Args: { p_tage: number }
+        Returns: {
+          anzeige: string
+          besucher: number
+          demo_starts: number
+          kampagne: string
+          kanal: string
+          medium: string
+          registrierung_begonnen: number
+          registrierung_klicks: number
+          seitenaufrufe: number
+          store_klicks: number
+        }[]
+      }
+      admin_marketing_verlauf: {
+        Args: { p_anzahl: number; p_raster: string }
+        Returns: {
+          erstoeffnungen_android: number
+          erstoeffnungen_ios: number
+          periode: string
+          registrierung_klicks: number
+          registrierungen_eltern: number
+          registrierungen_kinder: number
+          store_klicks_android: number
+          store_klicks_ios: number
+          website_aufrufe: number
+          website_besucher: number
+        }[]
+      }
       apply_premium_grant: {
         Args: {
           p_months: number
