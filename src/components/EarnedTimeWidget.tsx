@@ -55,6 +55,12 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
 
   // Get pending requests - separate today's from older ones
   const today = new Date().toISOString().split('T')[0];
+  const pendingRequests = requests.filter(r => r.status === 'pending');
+  // Ruhiger Hinweis oben: die neueste offene Anfrage (Kind-Sicht, Daten sind
+  // bereits geladen — kein zusätzlicher Serveraufruf).
+  const latestPendingRequest = pendingRequests.length > 0
+    ? pendingRequests.reduce((a, b) => (new Date(b.created_at).getTime() > new Date(a.created_at).getTime() ? b : a))
+    : null;
   const todayPendingRequests = requests.filter(r => 
     r.status === 'pending' && r.created_at.startsWith(today)
   );

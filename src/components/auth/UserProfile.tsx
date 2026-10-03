@@ -731,14 +731,6 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   setShowSettingsMenu(true);
                 }} 
               />
-              <StreakFireCard
-                streak={streak}
-                status={streakStatus}
-                inactiveDays={inactiveDays}
-                loading={streakLoading}
-                reactivationTrigger={streakReactivationTrigger}
-                onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
-              />
             </div>
           )}
 
