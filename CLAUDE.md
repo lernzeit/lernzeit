@@ -43,7 +43,11 @@ Lovable. An Lovable hängen nur noch:
   plus alte OneSignal-DKIM-Einträge unter `mail`. Ändern deaktiviert die ganze Gruppe samt
   Website – beim Hosting-Umzug erst den Service lösen, dann neu eintragen.
   E-Mail-Versand (OneSignal) deshalb über `post.lernzeit.app`, nicht `mail`.
-- DMARC-Berichte von lernzeit.app an `dmarcreports@lovable.dev`.
+  Die alten OneSignal-Einträge unter `mail` (SPF, os1/os2, `_osauth`, `email.mail`) beim
+  Umzug mit aufräumen. Erledigt am 03.10.2026: NS-Delegation von `mail` an Lovable,
+  Resend- und SES-Einträge gelöscht; DMARC berichtet an `info@lernzeit.app`.
+- OneSignal-Standardabsender ist noch `mail@lernzeit.app` (nicht eingerichtet): jede
+  Versand-Funktion gibt `email_from_address: hallo@post.lernzeit.app` selbst an.
 - Das gelegentliche Einspielen der Edge Functions (siehe oben).
 `LOVABLE_API_KEY` erst aus den Supabase-Secrets löschen, wenn die Fassungen von
 `analyze-feedback`, `ai-question-generator` und `generate-learning-plan` vom 03.10.2026
