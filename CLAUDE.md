@@ -39,7 +39,10 @@ OpenRouter, 0 Aufrufe ans Lovable-Gateway in 30 Tagen), Cron und Push hängen ni
 Lovable. An Lovable hängen nur noch:
 - Hosting von lernzeit.app und www (A-Records auf 185.158.133.1, TXT `_lovable`),
   einschließlich `public/.well-known/` (App-Links für iOS und Android) und SPA-Fallback.
-- Die NS-Delegation von `mail.lernzeit.app` an `ns3/ns4.lovable.cloud` (ungenutzt).
+- Bei IONOS ein verknüpfter „Third Party Service“: A-Einträge `@` und `www` der Website
+  plus alte OneSignal-DKIM-Einträge unter `mail`. Ändern deaktiviert die ganze Gruppe samt
+  Website – beim Hosting-Umzug erst den Service lösen, dann neu eintragen.
+  E-Mail-Versand (OneSignal) deshalb über `post.lernzeit.app`, nicht `mail`.
 - DMARC-Berichte von lernzeit.app an `dmarcreports@lovable.dev`.
 - Das gelegentliche Einspielen der Edge Functions (siehe oben).
 `LOVABLE_API_KEY` erst aus den Supabase-Secrets löschen, wenn die Fassungen von

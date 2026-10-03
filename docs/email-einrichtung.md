@@ -2,8 +2,15 @@
 
 Stand 03.10.2026. Entscheidungen des Betreibers:
 
-- Versand über **OneSignal** (dieselbe App wie Push), Absender-Domain **`mail.lernzeit.app`**
-- Absender: **LernZeit `<hallo@mail.lernzeit.app>`**, Antworten an **`info@lernzeit.app`**
+- Versand über **OneSignal** (dieselbe App wie Push), Absender-Domain **`post.lernzeit.app`**
+- Absender: **LernZeit `<hallo@post.lernzeit.app>`**, Antworten an **`info@lernzeit.app`**
+
+> **Planänderung 03.10.2026:** Zuerst war `mail.lernzeit.app` vorgesehen. Die alten
+> OneSignal-DKIM-Einträge darunter gehören bei IONOS zu einem verknüpften
+> „Third Party Service“ – zusammen mit den A-Einträgen `@` und `www` der Website. Sie
+> lassen sich nicht löschen, und beim Ändern deaktiviert IONOS den ganzen Service samt
+> Website. Deshalb eine neue, unbelastete Subdomain **`post`**. Unter `mail` bleibt alles,
+> wie es ist (Ausnahme: die bereits gelöschten Lovable-NS- und Resend/SES-Einträge).
 - Nur **Service-Mails** (Hilfe beim Einrichten, Testphase endet bald) – keine Werbung,
   keine Feedback-Anfragen per Mail
 
@@ -17,7 +24,8 @@ Cloud-Sitzung, die den Versand programmiert, hat keinen Browser und kommt nicht 
 2. In OneSignal **nur** den Bereich E-Mail anfassen. Push, iOS/APNs, Android/FCM,
    Segmente, Nachrichten, Abrechnung: nicht ändern.
 3. Bei IONOS **keinen bestehenden Eintrag für `lernzeit.app` selbst ändern oder löschen**
-   (A, AAAA, MX, TXT/SPF, `_lovable`, `www`) – sie tragen Website und Postfach; ein Fehler
+   (A, AAAA, MX, TXT/SPF, `_lovable`, `www`) und **nichts an einem verknüpften
+   „Third Party Service“ ändern** – IONOS deaktiviert sonst die ganze Gruppe samt Website – sie tragen Website und Postfach; ein Fehler
    dort legt beides lahm. Ausnahmen, jeweils erst nach Bestätigung des Betreibers:
    die Altlasten unter `mail.lernzeit.app` (Schritt 0) und der DMARC-Eintrag (Schritt 2.3).
 4. Keine Schlüssel, Passwörter oder API-Keys in den Chat kopieren oder irgendwo notieren.
@@ -45,8 +53,8 @@ betroffen. Solange die Delegation steht, kann OneSignal die Subdomain nicht prü
    → **Settings** → **Email** (je nach Oberfläche auch unter „Platforms“ oder „Channels“).
 2. E-Mail einrichten mit dem **eingebauten Versand von OneSignal** (nicht Mailgun,
    SendGrid o. Ä.).
-3. Sending domain: `mail.lernzeit.app`
-4. Default from name: `LernZeit` · from address: `hallo@mail.lernzeit.app` ·
+3. Sending domain: `post.lernzeit.app` (falls `mail.lernzeit.app` dort schon angelegt ist: entfernen oder ungenutzt lassen)
+4. Default from name: `LernZeit` · from address: `hallo@post.lernzeit.app` ·
    reply-to: `info@lernzeit.app`
 5. OneSignal zeigt danach die nötigen DNS-Einträge (typisch: TXT für SPF, CNAME für DKIM,
    MX für Rückläufer, evtl. CNAME für Link-Tracking). Die Liste vollständig abschreiben
@@ -57,7 +65,7 @@ betroffen. Solange die Delegation steht, kann OneSignal die Subdomain nicht prü
 1. ionos.de → Domains & SSL → **lernzeit.app** → **DNS**.
 2. Für jeden Eintrag aus Schritt 1: **Eintrag hinzufügen** → Typ wählen → bei
    Hostname **nur den Teil vor `.lernzeit.app`** eintragen (IONOS hängt die Domain selbst
-   an; aus `s1._domainkey.mail.lernzeit.app` wird `s1._domainkey.mail`) → Wert exakt
+   an; aus `os1._domainkey.post.lernzeit.app` wird `os1._domainkey.post`) → Wert exakt
    übernehmen → TTL Standard → speichern.
 3. **DMARC:** Der TXT-Eintrag `_dmarc.lernzeit.app` schickt die Berichte heute an
    `dmarcreports@lovable.dev`. Nach Bestätigung des Betreibers **nur die Berichtsadresse**
