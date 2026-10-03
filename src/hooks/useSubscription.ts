@@ -56,6 +56,10 @@ const speicher: {
   laufend: Promise<void> | null;
   hoerer: Set<(s: SubscriptionState) => void>;
   takt: ReturnType<typeof setInterval> | null;
+  /** Fehlgeschlagene Abgleiche in Folge (nur gueltig:false-Ergebnisse). */
+  versuche: number;
+  /** Geplanter Wiederholungsversuch nach fehlgeschlagenem Abgleich. */
+  wiederholung: ReturnType<typeof setTimeout> | null;
 } = {
   userId: null,
   state: LEER,
@@ -63,7 +67,14 @@ const speicher: {
   laufend: null,
   hoerer: new Set(),
   takt: null,
+  versuche: 0,
+  wiederholung: null,
 };
+
+/** So viele Versuche in Folge, bevor "abgemeldet" endgueltig gilt. */
+const MAX_VERSUCHE = 3;
+/** Abstand zwischen den Wiederholungsversuchen. */
+const WIEDERHOLUNG_MS = 1_500;
 
 function setze(state: SubscriptionState) {
   speicher.state = state;
@@ -76,6 +87,11 @@ function aktualisiere(userId: string): Promise<void> {
     speicher.userId = userId;
     speicher.stand = 0;
     speicher.laufend = null;
+    speicher.versuche = 0;
+    if (speicher.wiederholung) {
+      clearTimeout(speicher.wiederholung);
+      speicher.wiederholung = null;
+    }
     setze(LEER);
   }
   if (speicher.laufend) return speicher.laufend;
@@ -84,9 +100,24 @@ function aktualisiere(userId: string): Promise<void> {
   const lauf: Promise<void> = lade(userId)
     .then(({ state, gueltig }) => {
       if (speicher.userId !== userId) return;
-      // Ohne Sitzung ist das Ergebnis kein Befund: nicht zwischenspeichern,
-      // damit die naechste Komponente es gleich wieder versucht.
-      speicher.stand = gueltig ? Date.now() : 0;
+      if (!gueltig) {
+        // Ergebnis ohne Befund (z. B. Sitzung fehlt kurz): nicht anzeigen und
+        // nicht zwischenspeichern, sondern fuer dasselbe Konto wiederholen.
+        speicher.stand = 0;
+        speicher.versuche += 1;
+        if (speicher.versuche >= MAX_VERSUCHE) {
+          // Erst nach dem letzten Versuch gilt "abgemeldet" (wie bisher).
+          setze(ABGEMELDET);
+        } else if (!speicher.wiederholung) {
+          speicher.wiederholung = setTimeout(() => {
+            speicher.wiederholung = null;
+            if (speicher.userId === userId) aktualisiere(userId);
+          }, WIEDERHOLUNG_MS);
+        }
+        return;
+      }
+      speicher.versuche = 0;
+      speicher.stand = Date.now();
       setze(state);
     })
     .finally(() => {
@@ -123,9 +154,15 @@ export function useSubscription(): SubscriptionState {
     }
     return () => {
       speicher.hoerer.delete(setState);
-      if (speicher.hoerer.size === 0 && speicher.takt) {
-        clearInterval(speicher.takt);
-        speicher.takt = null;
+      if (speicher.hoerer.size === 0) {
+        if (speicher.takt) {
+          clearInterval(speicher.takt);
+          speicher.takt = null;
+        }
+        if (speicher.wiederholung) {
+          clearTimeout(speicher.wiederholung);
+          speicher.wiederholung = null;
+        }
       }
     };
   }, [userId]);
@@ -136,8 +173,11 @@ export function useSubscription(): SubscriptionState {
 async function lade(userId: string): Promise<{ state: SubscriptionState; gueltig: boolean }> {
   // Ensure we have a valid session before calling the edge function
   const { data: { session } } = await supabase.auth.getSession();
+  // Die Sperre blitzte bei fehlender Sitzung auf (Anmeldung/Token-Erneuerung):
+  // Kein Befund zurueckgeben (LEER = loading), damit PremiumGate nicht kurz
+  // "kein Abo" sieht. Der Aufrufer wiederholt den Abgleich. (03.10.2026)
   if (!session?.access_token) {
-    return { state: ABGEMELDET, gueltig: false };
+    return { state: LEER, gueltig: false };
   }
 
   try {
