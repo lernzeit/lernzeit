@@ -1,7 +1,8 @@
-// Service-Mails an Eltern ueber OneSignal: Hilfe beim Einrichten und Hinweis
-// auf das Ende der Testphase. Auswahl und Protokoll in der Datenbank
-// (Migration 20261003230000_service_mails.sql), Texte in
-// _shared/service-mail-vorlagen.ts.
+// Service-Mails an Eltern ueber OneSignal: Hilfe beim Einrichten, eine
+// Erinnerung eine Woche spaeter und Hinweis auf das Ende der Testphase (mit
+// oder ohne verbundenes Kind). Auswahl in service_mail_auswahl() (Migration
+// 20261004000000_service_mails_varianten.sql), Protokoll in
+// service_mail_versand, Texte in _shared/service-mail-vorlagen.ts.
 //
 // Aufruf nur mit dem Service-Role-Schluessel (Cron). Body:
 //   {}                        Probelauf: zeigt, wer heute eine Mail bekaeme
@@ -11,7 +12,7 @@
 //   { "test_an": "x@lernzeit.app", "art": "einrichtung" }
 //                             Beispielmail an eine eigene Adresse
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type Art, vorlage } from "../_shared/service-mail-vorlagen.ts";
+import { ARTEN, type Art, vorlage } from "../_shared/service-mail-vorlagen.ts";
 
 const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID") ?? "";
 const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY") ?? "";
@@ -27,8 +28,10 @@ interface Kandidat {
   user_id: string;
   email: string;
   name: string | null;
-  art: Art;
+  /** Protokoll: art und bezug. Text: vorlage. */
+  art: string;
   bezug: string;
+  vorlage: Art;
   testphase_ende: string | null;
 }
 
@@ -98,7 +101,8 @@ Deno.serve(async (req) => {
     if (!an.endsWith("@lernzeit.app")) {
       return json({ error: "Beispielmails nur an Adressen unter lernzeit.app" }, 400);
     }
-    const arten: Art[] = body.art ? [body.art] : ["einrichtung", "testphase_endet"];
+    if (body.art && !ARTEN.includes(body.art)) return json({ error: "Unbekannte Vorlage" }, 400);
+    const arten: Art[] = body.art ? [body.art] : ARTEN;
     const ende = new Date(Date.now() + 3 * 86_400_000).toISOString();
     const ergebnisse = [];
     for (const art of arten) {
@@ -108,7 +112,7 @@ Deno.serve(async (req) => {
   }
 
   // nachholen_ab: einmalig auch aeltere Konten ohne Kind (Hilfe-Mail), z. B. "2026-09-01".
-  const { data, error } = await supabase.rpc("service_mail_kandidaten",
+  const { data, error } = await supabase.rpc("service_mail_auswahl",
     body.nachholen_ab ? { p_einrichtung_ab: body.nachholen_ab } : {});
   if (error) return json({ error: error.message }, 500);
   const kandidaten = (data ?? []) as Kandidat[];
@@ -117,7 +121,7 @@ Deno.serve(async (req) => {
     return json({
       probelauf: true,
       anzahl: kandidaten.length,
-      kandidaten: kandidaten.map((k) => ({ art: k.art, name: k.name, email: k.email, bezug: k.bezug })),
+      kandidaten: kandidaten.map((k) => ({ vorlage: k.vorlage, name: k.name, email: k.email, bezug: k.bezug })),
     });
   }
 
@@ -135,7 +139,7 @@ Deno.serve(async (req) => {
       continue;
     }
     try {
-      const r = await onesignalSenden(k.email, k.art, { name: k.name, testphaseEnde: k.testphase_ende }, { idempotenz: zeile.id });
+      const r = await onesignalSenden(k.email, k.vorlage, { name: k.name, testphaseEnde: k.testphase_ende }, { idempotenz: zeile.id });
       await supabase.from("service_mail_versand").update({
         status: r.ok ? "gesendet" : "fehler",
         onesignal_id: r.id,

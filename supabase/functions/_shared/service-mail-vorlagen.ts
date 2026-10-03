@@ -6,7 +6,9 @@
 //
 // Pflichtangaben der UG im Fuss (§ 35a GmbHG, § 37a HGB) — Stand Impressum.
 
-export type Art = 'einrichtung' | 'testphase_endet';
+/** Welche Mail. Im Protokoll stehen nur art und bezug (siehe service_mail_auswahl). */
+export type Art = 'einrichtung' | 'einrichtung_erinnerung' | 'testphase_endet' | 'testphase_endet_ohne_kind';
+export const ARTEN: Art[] = ['einrichtung', 'einrichtung_erinnerung', 'testphase_endet', 'testphase_endet_ohne_kind'];
 
 export interface MailDaten {
   name: string | null;
@@ -161,6 +163,43 @@ function testphaseEndet(d: MailDaten): Mail {
   return { betreff: titel, vorschau, html: rahmen(titel, vorschau, inhalt) };
 }
 
+function einrichtungErinnerung(d: MailDaten): Mail {
+  const titel = 'Es fehlt nur noch dein Kind';
+  const vorschau = 'Kurze Erinnerung: So verbindest du LernZeit mit deinem Kind.';
+  const inhalt = [
+    p(anrede(d.name)),
+    p('vor einer Woche hast du von uns eine kurze Anleitung bekommen. Mit deinem Konto ist noch immer kein Kind verbunden – deshalb noch einmal in Kürze:'),
+    liste([
+      'In LernZeit bei <strong>„Kind einladen“</strong> die Einwilligung bestätigen und <strong>„Code erstellen“</strong> tippen.',
+      'Mit <strong>„Link teilen“</strong> den Link an dein Kind schicken. Es öffnet ihn auf seinem eigenen Handy oder gibt den Code in der App ein.',
+    ], true),
+    knopf('LernZeit öffnen', APP_URL),
+    p('Klappt etwas nicht? Antworte einfach auf diese Mail, wir helfen dir. Und wenn LernZeit gerade nicht passt, musst du nichts tun.'),
+    signatur,
+  ].join('\n');
+  return { betreff: titel, vorschau, html: rahmen(titel, vorschau, inhalt) };
+}
+
+function testphaseEndetOhneKind(d: MailDaten): Mail {
+  const datum = d.testphaseEnde ? datumDeutsch(d.testphaseEnde) : 'in wenigen Tagen';
+  const titel = `Deine Testphase endet am ${datum}`;
+  const vorschau = 'Du musst nichts tun – LernZeit bleibt kostenlos nutzbar.';
+  const inhalt = [
+    p(anrede(d.name)),
+    p(`deine kostenlose Testphase von LernZeit endet am <strong>${esc(datum)}</strong>. Mit deinem Konto ist bisher kein Kind verbunden.`),
+    p('Du musst nichts tun: Es wird nichts abgebucht, denn du hast keine Zahlungsdaten hinterlegt. LernZeit bleibt auch danach kostenlos nutzbar – Aufgaben lösen, Bildschirmzeit verdienen, alle Fächer der Klassenstufe und beliebig viele Kinderprofile. Ein Kind verbinden kannst du jederzeit unter <strong>„Kind einladen“</strong>.'),
+    knopf('LernZeit öffnen', APP_URL),
+    p('Brauchst du dein Konto nicht mehr, kannst du es in der App unter <strong>„Konto-Einstellungen“</strong> → <strong>„Account löschen“</strong> selbst löschen. Klappt etwas nicht? Antworte einfach auf diese Mail, wir helfen dir.'),
+    signatur,
+  ].join('\n');
+  return { betreff: titel, vorschau, html: rahmen(titel, vorschau, inhalt) };
+}
+
 export function vorlage(art: Art, d: MailDaten): Mail {
-  return art === 'einrichtung' ? einrichtung(d) : testphaseEndet(d);
+  switch (art) {
+    case 'einrichtung': return einrichtung(d);
+    case 'einrichtung_erinnerung': return einrichtungErinnerung(d);
+    case 'testphase_endet': return testphaseEndet(d);
+    case 'testphase_endet_ohne_kind': return testphaseEndetOhneKind(d);
+  }
 }
