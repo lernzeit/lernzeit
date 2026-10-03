@@ -190,6 +190,18 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Ruhiger Hinweis auf eine offene Anfrage */}
+        {latestPendingRequest && (
+          <div className="rounded-lg bg-muted/60 border border-border px-3 py-2">
+            <p className="text-sm text-foreground">
+              Deine Anfrage über {latestPendingRequest.requested_minutes} Minuten wartet auf deine Eltern.
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Du kannst in der Zwischenzeit weiterlernen.
+            </p>
+          </div>
+        )}
+
         {/* Compact breakdown */}
         <div className="flex justify-between text-sm">
           <div className="flex items-center gap-1">
