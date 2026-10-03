@@ -94,6 +94,8 @@ interface LinkedChild {
 export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>('requests');
   const [accountOpen, setAccountOpen] = useState(false);
+  const [familyLoadedFor, setFamilyLoadedFor] = useState<string | null>(null);
+  const [entryDeferred, setEntryDeferred] = useState({ userId: '', until: 0 });
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const inviteRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
@@ -217,11 +219,40 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const isNativeApp = Capacitor.isNativePlatform();
 
   useEffect(() => {
+    let cancelled = false;
+    setFamilyLoadedFor(null);
+    // Die Pause gilt nur für dieses Elternkonto; gesperrter Speicher ist unkritisch.
+    let until = 0;
+    try {
+      const saved = Number(window.localStorage.getItem(`parentEntryDeferred:${userId}`));
+      if (Number.isFinite(saved) && saved > Date.now()) until = saved;
+    } catch {}
+    setEntryDeferred({ userId, until });
     if (userId) {
-      loadFamilyData(userId);
+      loadFamilyData(userId).then(() => {
+        if (!cancelled) setFamilyLoadedFor(userId);
+      });
       loadProfileName();
     }
-  }, [userId]);
+    return () => { cancelled = true; };
+  }, [userId, loadFamilyData]);
+
+  useEffect(() => {
+    if (entryDeferred.userId !== userId || entryDeferred.until <= Date.now()) return;
+    // Auch bei geöffnetem Dashboard läuft die Pause nach 24 Stunden ab.
+    const timer = window.setTimeout(() => {
+      setEntryDeferred({ userId, until: 0 });
+    }, entryDeferred.until - Date.now());
+    return () => window.clearTimeout(timer);
+  }, [entryDeferred, userId]);
+
+  const deferParentEntry = () => {
+    const until = Date.now() + 24 * 60 * 60 * 1000;
+    setEntryDeferred({ userId, until });
+    try {
+      window.localStorage.setItem(`parentEntryDeferred:${userId}`, String(until));
+    } catch {}
+  };
 
   const toggleChild = (childId: string) => {
     setOpenChildren(prev => {
@@ -450,6 +481,84 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     }
   }, [totalPendingRequests]);
 
+  // Derselbe Einladungsablauf wird im Einstieg und im Kinder-Reiter verwendet.
+  const invitationSection = (
+          <Card ref={inviteRef}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Key className="h-4 w-4 text-primary" />
+                {linkedChildren.length === 0 ? 'Kind einladen' : 'Weiteres Kind einladen'}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Erstelle einen Einladungslink, den dein Kind auf dem eigenen Handy öffnet. Der Link ist 7 Tage gültig – der Code funktioniert auch manuell.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {emailVerified === false && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Bitte bestätige zuerst deine E-Mail-Adresse.
+                </p>
+              )}
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="consent-children-tab"
+                  checked={consentChecked}
+                  onCheckedChange={(v) => setConsentChecked(!!v)}
+                  disabled={emailVerified === false}
+                />
+                <label htmlFor="consent-children-tab" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  Ich stimme den{' '}
+                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
+                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
+                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
+                </label>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleGenerateCode}
+                disabled={newCodeLoading || !consentChecked || emailVerified === false}
+              >
+                {newCodeLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                Code erstellen
+              </Button>
+              {activeCodes.length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground">Aktive Einladungen:</p>
+                  {activeCodes.map((code) => (
+                    <div key={code.id} className="bg-muted/50 rounded-md px-3 py-2 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({formatTimeRemaining(code.expires_at)})
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code kopieren" onClick={() => copyToClipboard(code.code)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code zurückziehen" onClick={() => handleRevokeCode(code.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground break-all">{buildInviteLink(code.code)}</p>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => handleShareInvite(code.code)}>
+                        <Share2 className="h-3.5 w-3.5 mr-2" />
+                        Link teilen
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+  );
+  const familyReady = familyLoadedFor === userId && !loading;
+  const showFocusedEntry = familyReady && linkedChildren.length === 0
+    && !(entryDeferred.userId === userId && entryDeferred.until > Date.now());
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Welcome Header */}
@@ -502,6 +611,32 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         </CardContent>
       </Card>
 
+      {!familyReady ? (
+        <div role="status" className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          <span>Familiendaten werden geladen …</span>
+        </div>
+      ) : showFocusedEntry ? (
+        <section aria-labelledby="parent-entry-title" className="mx-auto w-full max-w-xl min-w-0 space-y-6">
+          <div className="space-y-4">
+            <h2 id="parent-entry-title" className="text-2xl font-bold break-words">
+              Lege jetzt das Profil deines Kindes an
+            </h2>
+            <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+              <li>Dein Kind meldet sich auf seinem eigenen Gerät an.</li>
+              <li>Es löst Aufgaben und sammelt Bildschirmzeit.</li>
+              <li>Es fragt Bildschirmzeit an, du gibst sie frei.</li>
+            </ul>
+          </div>
+          {invitationSection}
+          <div className="text-center">
+            <Button variant="link" className="text-muted-foreground" onClick={deferParentEntry}>
+              Später
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <>
       {/* Section Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -837,78 +972,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </div>
           )}
 
-          {/* Kind einladen – unter den verknüpften Kindern */}
-          <Card ref={inviteRef}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Key className="h-4 w-4 text-primary" />
-                Weiteres Kind einladen
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Erstelle einen Einladungslink, den dein Kind auf dem eigenen Handy öffnet. Der Link ist 7 Tage gültig – der Code funktioniert auch manuell.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {emailVerified === false && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  Bitte bestätige zuerst deine E-Mail-Adresse.
-                </p>
-              )}
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="consent-children-tab"
-                  checked={consentChecked}
-                  onCheckedChange={(v) => setConsentChecked(!!v)}
-                  disabled={emailVerified === false}
-                />
-                <label htmlFor="consent-children-tab" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-                  Ich stimme den{' '}
-                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
-                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
-                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
-                </label>
-              </div>
-              <Button
-                size="sm"
-                onClick={handleGenerateCode}
-                disabled={newCodeLoading || !consentChecked || emailVerified === false}
-              >
-                {newCodeLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                Code erstellen
-              </Button>
-              {activeCodes.length > 0 && (
-                <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground">Aktive Einladungen:</p>
-                  {activeCodes.map((code) => (
-                    <div key={code.id} className="bg-muted/50 rounded-md px-3 py-2 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({formatTimeRemaining(code.expires_at)})
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code kopieren" onClick={() => copyToClipboard(code.code)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code zurückziehen" onClick={() => handleRevokeCode(code.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground break-all">{buildInviteLink(code.code)}</p>
-                      <Button size="sm" variant="outline" className="w-full" onClick={() => handleShareInvite(code.code)}>
-                        <Share2 className="h-3.5 w-3.5 mr-2" />
-                        Link teilen
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {invitationSection}
         </TabsContent>
 
         {/* Tab: Abo */}
@@ -1085,6 +1149,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         )}
 
       </Tabs>
+        </>
+      )}
 
       {/* Konto-Dialog (vom Header geöffnet) */}
       <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
@@ -1123,7 +1189,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
                       placeholder="Dein Name"
-                      className="flex-1"
+                      className="flex-1 min-w-0 text-base"
                     />
                     <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
                       {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Speichern"}
@@ -1173,11 +1239,11 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-password">Neues Passwort</Label>
-                  <Input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
+                  <Input className="text-base" id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-                  <Input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
+                  <Input className="text-base" id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
                 </div>
                 <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
                   {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
@@ -1239,7 +1305,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         isFoundingFamily={isFoundingFamily}
       />
 
-      <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />
+      <RatingPromptDialog open={familyReady && !showFocusedEntry && ratingShouldShow} onResponse={ratingDismiss} />
 
       {/* Info-Kachel: erklärt das Empfehlungsprogramm für Nicht-Premium-Eltern */}
       <Dialog open={referralInfoOpen} onOpenChange={setReferralInfoOpen}>
@@ -1284,7 +1350,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       </Dialog>
 
       {/* Einmaliges Intro-Pop-up nach Abschluss der Premium-Mitgliedschaft */}
-      <Dialog open={referralIntroOpen} onOpenChange={(o) => { if (!o) dismissReferralIntro(); }}>
+      <Dialog open={familyReady && !showFocusedEntry && referralIntroOpen} onOpenChange={(o) => { if (!o) dismissReferralIntro(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
