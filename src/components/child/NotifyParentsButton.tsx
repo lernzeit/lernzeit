@@ -14,6 +14,7 @@ const SHARE_URL = 'https://lernzeit.app';
 
 interface NotifyParentsButtonProps {
   className?: string;
+  variant?: 'default' | 'outline';
 }
 
 /**
