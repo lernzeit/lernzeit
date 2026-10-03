@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
-import { UserPlus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, Shield, CheckCircle } from 'lucide-react';
+import { NotifyParentsButton } from '@/components/child/NotifyParentsButton';
 import { trackFireAndForget } from '@/lib/analytics';
 
 interface ChildLinkingProps {
@@ -74,6 +75,26 @@ export function ChildLinking({ userId, onLinked }: ChildLinkingProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <NotifyParentsButton className="w-full" />
+          <p className="text-xs text-muted-foreground text-center">
+            Keinen Code? Schick eine Nachricht an deine Eltern, damit sie einen erstellen.
+          </p>
+        </div>
+
+        <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <h4 className="font-medium mb-2">So geht's:</h4>
+              <ol className="text-sm space-y-1 list-decimal list-inside">
+                <li>Deine Eltern laden LernZeit und registrieren sich als Elternteil.</li>
+                <li>Sie erstellen einen 6-stelligen Code.</li>
+                <li>Du gibst den Code hier ein.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmitCode} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="invitation-code">Einladungscode</Label>
@@ -110,24 +131,9 @@ export function ChildLinking({ userId, onLinked }: ChildLinkingProps) {
           </Button>
         </form>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div className="space-y-2">
-              <h4 className="font-medium text-blue-900">So funktioniert's:</h4>
-              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                <li>Deine Eltern erstellen einen 6-stelligen Code</li>
-                <li>Sie geben dir diesen Code</li>
-                <li>Du gibst den Code hier ein</li>
-                <li>Eure Konten werden sicher verknüpft</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
         <div className="text-center">
           <p className="text-xs text-muted-foreground">
-            🔒 Die Verknüpfung ist sicher und kann jederzeit von den Eltern aufgehoben werden.
+            Die Verknüpfung ist sicher und kann jederzeit von den Eltern aufgehoben werden.
           </p>
         </div>
       </CardContent>
