@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      abwanderung_umfrage: {
+        Row: {
+          anlass: string
+          created_at: string
+          freitext: string | null
+          gruende: string[]
+          id: string
+          plattform: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anlass: string
+          created_at?: string
+          freitext?: string | null
+          gruende?: string[]
+          id?: string
+          plattform?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anlass?: string
+          created_at?: string
+          freitext?: string | null
+          gruende?: string[]
+          id?: string
+          plattform?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       achievements_template: {
         Row: {
           category: Database["public"]["Enums"]["achievement_category"]

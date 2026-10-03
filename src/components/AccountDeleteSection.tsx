@@ -16,14 +16,18 @@ import {
 import { Trash2, AlertTriangle, Loader2, Crown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { GruendeAuswahl, umfrageSpeichern } from '@/components/parent/AbwanderungUmfrage';
 
 interface AccountDeleteSectionProps {
   isPremium?: boolean;
   onDeleted: () => void;
+  /** Nur bei Eltern: freiwillig nach dem Grund fragen (abwanderung_umfrage). */
+  umfrageUserId?: string;
 }
 
-export function AccountDeleteSection({ isPremium = false, onDeleted }: AccountDeleteSectionProps) {
+export function AccountDeleteSection({ isPremium = false, onDeleted, umfrageUserId }: AccountDeleteSectionProps) {
   const [step, setStep] = useState<'initial' | 'confirm'>('initial');
+  const [gruende, setGruende] = useState<string[]>([]);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,6 +45,12 @@ export function AccountDeleteSection({ isPremium = false, onDeleted }: AccountDe
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('Keine Sitzung gefunden');
+
+      // Grund vor dem Loeschen speichern; die Antwort bleibt danach ohne
+      // Personenbezug (user_id wird beim Loeschen des Kontos NULL).
+      if (umfrageUserId && gruende.length > 0) {
+        await umfrageSpeichern(umfrageUserId, 'konto_loeschen', gruende, '').catch(() => { /* freiwillig */ });
+      }
 
       const { data, error } = await supabase.functions.invoke('delete-account', {
         headers: { Authorization: `Bearer ${token}` },
@@ -82,6 +92,7 @@ export function AccountDeleteSection({ isPremium = false, onDeleted }: AccountDe
     if (!open) {
       setStep('initial');
       setConfirmText('');
+      setGruende([]);
     }
   };
 
@@ -94,7 +105,7 @@ export function AccountDeleteSection({ isPremium = false, onDeleted }: AccountDe
             Account löschen
           </button>
         </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -127,6 +138,14 @@ export function AccountDeleteSection({ isPremium = false, onDeleted }: AccountDe
                   </>
                 ) : (
                   <>
+                    {umfrageUserId && (
+                      <div className="space-y-2">
+                        <p className="text-sm">
+                          Freiwillig: Warum gehst du? Die Antwort bleibt ohne Bezug zu dir gespeichert.
+                        </p>
+                        <GruendeAuswahl anlass="konto_loeschen" gewaehlt={gruende} onChange={setGruende} />
+                      </div>
+                    )}
                     <p>
                       Tippe <strong>LÖSCHEN</strong> ein, um die Löschung zu bestätigen.
                     </p>

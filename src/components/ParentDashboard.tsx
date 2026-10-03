@@ -48,6 +48,7 @@ import { MessageSquareHeart } from 'lucide-react';
 import { useOfferings } from '@/hooks/useOfferings';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { OnboardingNextStepCard } from '@/components/parent/OnboardingNextStepCard';
+import { AbwanderungNachfrage } from '@/components/parent/AbwanderungUmfrage';
 import { shareInviteLink, buildInviteLink } from '@/lib/inviteLink';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
@@ -522,6 +523,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         activeCodes={activeCodes}
         onCreateCode={goToInviteSection}
         onShowCode={goToInviteSection}
+      />
+
+      {/* Warum stockt es? Nur wenn etwas stockt (siehe AbwanderungUmfrage.tsx) */}
+      <AbwanderungNachfrage
+        parentId={userId}
+        kindIds={linkedChildren.map((c) => c.id)}
+        bereit={!sub.loading && !loading}
+        testphaseVorbei={!isPremium && !isTrialing && !!sub.trialEnd && new Date(sub.trialEnd) < new Date()}
       />
 
       {totalPendingRequests > 0 && (
@@ -1178,6 +1187,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
             <AccountDeleteSection
               isPremium={isPremium}
+              umfrageUserId={userId}
               onDeleted={() => window.location.href = '/'}
             />
           </div>
