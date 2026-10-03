@@ -837,36 +837,78 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         Bitte wähle aus – danach zeigen wir dir die passenden Felder.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => { setRole('parent'); setChildNoEmail(false); }}
-                      className="w-full flex items-center gap-4 p-5 border-2 border-border rounded-2xl text-left transition-all duration-200 hover:border-primary hover:bg-primary/5"
-                    >
-                      <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                        <Shield className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-semibold">Ich bin Elternteil</div>
-                        <div className="text-xs text-muted-foreground">
-                          Konto anlegen, Kind verbinden und Belohnungen festlegen
+                    <div role="radiogroup" aria-label="Rolle auswählen" className="space-y-3">
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={pendingRole === 'parent'}
+                        onClick={() => setPendingRole('parent')}
+                        className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
+                          pendingRole === 'parent'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                          <Shield className="w-6 h-6 text-white" />
                         </div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('child')}
-                      className="w-full flex items-center gap-4 p-5 border-2 border-border rounded-2xl text-left transition-all duration-200 hover:border-primary hover:bg-primary/5"
-                    >
-                      <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <Heart className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-semibold">Ich bin Kind</div>
-                        <div className="text-xs text-muted-foreground">
-                          Üben und Zeit verdienen – mit den Eltern verbinden geht auch später
+                        <div className="flex-1">
+                          <div className="font-semibold text-base">Ich bin Elternteil</div>
+                          <div className="text-sm text-muted-foreground">
+                            Du verbindest dein Kind und gibst Bildschirmzeit frei.
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                        {pendingRole === 'parent' && (
+                          <Check className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={pendingRole === 'child'}
+                        onClick={() => setPendingRole('child')}
+                        className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
+                          pendingRole === 'child'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                          <Heart className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-base">Ich bin ein Kind</div>
+                          <div className="text-sm text-muted-foreground">
+                            Du löst Aufgaben und verdienst Bildschirmzeit. Deine Eltern brauchen ein eigenes Konto.
+                          </div>
+                        </div>
+                        {pendingRole === 'child' && (
+                          <Check className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
+                    {pendingRole === 'child' && (
+                      <p className="text-sm text-muted-foreground text-center" role="note">
+                        Tipp: Am besten legen zuerst deine Eltern ihr Konto an und erstellen einen Code für dich.
+                      </p>
+                    )}
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="w-full"
+                      disabled={!pendingRole}
+                      onClick={() => {
+                        if (pendingRole === 'parent') {
+                          setRole('parent');
+                          setChildNoEmail(false);
+                        } else if (pendingRole === 'child') {
+                          setRole('child');
+                        }
+                        setPendingRole(null);
+                      }}
+                    >
+                      Weiter
+                    </Button>
                   </div>
                 ) : (
                 <>
