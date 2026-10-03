@@ -25,8 +25,8 @@ Cloud-Sitzung, die den Versand programmiert, hat keinen Browser und kommt nicht 
    Segmente, Nachrichten, Abrechnung: nicht ändern.
 3. Bei IONOS **keinen bestehenden Eintrag für `lernzeit.app` selbst ändern oder löschen**
    (A, AAAA, MX, TXT/SPF, `_lovable`, `www`) und **nichts an einem verknüpften
-   „Third Party Service“ ändern** – IONOS deaktiviert sonst die ganze Gruppe samt Website – sie tragen Website und Postfach; ein Fehler
-   dort legt beides lahm. Ausnahmen, jeweils erst nach Bestätigung des Betreibers:
+   „Third Party Service“ ändern** (IONOS deaktiviert sonst die ganze Gruppe samt Website).
+   Diese Einträge tragen Website und Postfach; ein Fehler dort legt beides lahm. Ausnahmen, jeweils erst nach Bestätigung des Betreibers:
    die Altlasten unter `mail.lernzeit.app` (Schritt 0) und der DMARC-Eintrag (Schritt 2.3).
 4. Keine Schlüssel, Passwörter oder API-Keys in den Chat kopieren oder irgendwo notieren.
 5. Nichts kaufen, keinen Tarif ändern.
