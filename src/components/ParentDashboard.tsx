@@ -555,7 +555,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </CardContent>
           </Card>
   );
-  const familyReady = familyLoadedFor === userId;
+  const familyReady = familyLoadedFor === userId && !loading;
   const showFocusedEntry = familyReady && linkedChildren.length === 0
     && !(entryDeferred.userId === userId && entryDeferred.until > Date.now());
 
