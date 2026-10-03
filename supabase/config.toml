@@ -83,5 +83,7 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.send-push]
     verify_jwt = false
+  [functions.service-mails]
+    verify_jwt = false
   [functions.test-ai-model]
     verify_jwt = false
