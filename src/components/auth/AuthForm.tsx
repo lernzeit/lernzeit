@@ -921,7 +921,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setRole(null)}
+                    onClick={() => { setRole(null); setPendingRole(null); }}
                     className="mt-2 text-xs text-primary hover:underline"
                   >
                     Rolle ändern
