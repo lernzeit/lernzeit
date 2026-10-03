@@ -724,13 +724,16 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
                 </CardContent>
               </Card>
-              <AchievementQuickView 
-                userId={user.id} 
-                onClick={() => {
-                  setSettingsInitialSection('achievements');
-                  setShowSettingsMenu(true);
-                }} 
-              />
+              {/* Erfolge über beide Spalten, damit keine Karte allein in der Reihe steht */}
+              <div className="col-span-2 lg:col-span-1">
+                <AchievementQuickView
+                  userId={user.id}
+                  onClick={() => {
+                    setSettingsInitialSection('achievements');
+                    setShowSettingsMenu(true);
+                  }}
+                />
+              </div>
             </div>
           )}
 
