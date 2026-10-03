@@ -7,7 +7,7 @@
 | Web | Push auf `main` → Lovable übernimmt → Veröffentlichen per Lovable (`deploy_project`) |
 | iOS | Codemagic, Workflow `ios-release`, **von Hand gestartet** → TestFlight |
 | Android | **Android Studio beim Betreiber**, aus dem Ordner `android/` dieses Repos |
-| Edge Functions | Lovable spielt sie **manchmal** selbst neu ein, wenn es einen Commit übernimmt, der `supabase/functions/` ändert (am 27.09.2026 ja, am 29.09.2026 nicht: Commit um 17:24 übernommen, Funktion nach 80 min noch alt). Deshalb nach jedem Commit per `get_edge_function` prüfen; fehlt die Änderung, per Supabase-MCP (`deploy_edge_function`, mit allen importierten Dateien aus `_shared/`) einspielen und danach gegen `main` vergleichen |
+| Edge Functions | GitHub-Workflow `deploy-supabase.yml` spielt bei jedem Push auf `main`, der `supabase/functions/` ändert, alle Funktionen ein (seit 03.10.2026 mit gültigem `SUPABASE_ACCESS_TOKEN`; erster Lauf erfolgreich). Danach den Lauf prüfen (`actions_list` → Ergebnis `success`). Änderungen nur an `supabase/config.toml` lösen ihn nicht aus – dann von Hand starten (`workflow_dispatch`). Lovable spielt daneben manchmal selbst ein |
 
 Folgen daraus:
 
@@ -27,9 +27,10 @@ Folgen daraus:
 - Eine Edge Function, die nur per MCP eingespielt wurde und nicht in `main`
   steht, überschreibt Lovable beim nächsten Commit auf `supabase/functions/`.
   Was live laufen soll, gehört deshalb immer auch nach `main`.
-- Der GitHub-Workflow `deploy-supabase.yml` (Edge Functions bei Push auf `main`)
-  scheitert seit Wochen mit 401: Das Secret `SUPABASE_ACCESS_TOKEN` in GitHub fehlt
-  oder ist ungültig. Bis es erneuert ist, gilt nur der Weg über MCP.
+- Jede Edge Function braucht einen Eintrag `[functions.<name>]` mit `verify_jwt` in
+  `supabase/config.toml`. Fehlt er, spielt die CLI sie mit `verify_jwt = true` ein (bis
+  03.10.2026 fehlten 9, u. a. `send-push`). Gelöschte Funktionen entfernt der Workflow nicht
+  aus Supabase (z. B. `auth-email-hook` läuft dort noch, ungenutzt).
 
 ## Lovable ablösen (Stand 03.10.2026)
 
@@ -48,7 +49,6 @@ Lovable. An Lovable hängen nur noch:
   Resend- und SES-Einträge gelöscht; DMARC berichtet an `info@lernzeit.app`.
 - OneSignal-Standardabsender ist noch `mail@lernzeit.app` (nicht eingerichtet): jede
   Versand-Funktion gibt `email_from_address: hallo@post.lernzeit.app` selbst an.
-- Das gelegentliche Einspielen der Edge Functions (siehe oben).
-`LOVABLE_API_KEY` erst aus den Supabase-Secrets löschen, wenn die Fassungen von
-`analyze-feedback`, `ai-question-generator` und `generate-learning-plan` vom 03.10.2026
-eingespielt sind – die älteren prüfen noch auf den Schlüssel.
+Die Fassungen von `analyze-feedback`, `ai-question-generator` und `generate-learning-plan`
+ohne Lovable-Schlüssel sind seit 03.10.2026 eingespielt; `LOVABLE_API_KEY` kann aus den
+Supabase-Secrets gelöscht werden.
