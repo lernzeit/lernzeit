@@ -2370,12 +2370,67 @@ export type Database = {
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
       link_referral: { Args: { p_code: string }; Returns: Json }
+      lz_nutzung_familien: {
+        Args: never
+        Returns: {
+          abo_quelle: string
+          abo_status: string
+          anfragen_28: number
+          art: string
+          eltern_tage_14: number
+          eltern_zuletzt: string
+          email: string
+          erste_runde: string
+          freigaben_28: number
+          id: string
+          kauf_begonnen: boolean
+          kinder: number
+          kinder_mit_runden: number
+          lernminuten_28: number
+          lerntage_14: number
+          lerntage_28: number
+          lerntage_7: number
+          letzte_runde: string
+          name: string
+          paywall_gesehen: boolean
+          plattform: string
+          registriert_am: string
+          runden_28: number
+          testkonto: boolean
+          testkonto_grund: string
+          testphase_ende: string
+        }[]
+      }
+      lz_nutzung_kohorten: {
+        Args: { p_ohne_test: boolean; p_wochen: number }
+        Returns: {
+          aktiv: number[]
+          kinder: number
+          kohorte: string
+        }[]
+      }
+      lz_nutzung_verlauf: {
+        Args: { p_ohne_test: boolean; p_tage: number }
+        Returns: {
+          eltern_aktiv: number
+          eltern_aktiv_7t: number
+          kinder_aktiv: number
+          kinder_aktiv_7t: number
+          runden: number
+          tag: string
+        }[]
+      }
       lz_testkonten: {
         Args: never
         Returns: {
           grund: string
           user_id: string
         }[]
+      }
+      produkt_cockpit: { Args: { p_namen?: boolean }; Returns: Json }
+      produkt_cockpit_ab: {
+        Args: { p_ab: string; p_namen: boolean }
+        Returns: Json
       }
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
