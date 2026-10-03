@@ -154,9 +154,15 @@ export function useSubscription(): SubscriptionState {
     }
     return () => {
       speicher.hoerer.delete(setState);
-      if (speicher.hoerer.size === 0 && speicher.takt) {
-        clearInterval(speicher.takt);
-        speicher.takt = null;
+      if (speicher.hoerer.size === 0) {
+        if (speicher.takt) {
+          clearInterval(speicher.takt);
+          speicher.takt = null;
+        }
+        if (speicher.wiederholung) {
+          clearTimeout(speicher.wiederholung);
+          speicher.wiederholung = null;
+        }
       }
     };
   }, [userId]);
