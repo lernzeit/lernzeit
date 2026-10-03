@@ -17,7 +17,7 @@ interface NotifyParentsButtonProps {
 }
 
 /**
- *Bringt ein Kind ohne Elternverknuepfung seine Eltern ins Spiel: Der Text wird
+ * Bringt ein Kind ohne Elternverknuepfung seine Eltern ins Spiel: Der Text wird
  * ueber den System-Teilen-Dialog geschickt, sonst in die Zwischenablage kopiert.
  */
 export function NotifyParentsButton({ className }: NotifyParentsButtonProps) {
