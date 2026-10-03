@@ -21,8 +21,9 @@ export interface Mail {
 }
 
 /**
- * Wer die UG vertritt, gehoert in jede geschaeftliche Mail. Solange hier
- * nichts steht, verweigert service-mails den echten Versand.
+ * Geschaeftsfuehrer ist Thomas Brösicke. Auf Wunsch des Betreibers
+ * (03.10.2026) steht der Name vorerst nicht im Fuss; zum Einblenden hier
+ * eintragen.
  */
 export const GESCHAEFTSFUEHRUNG = '';
 

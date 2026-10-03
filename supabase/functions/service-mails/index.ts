@@ -6,10 +6,12 @@
 // Aufruf nur mit dem Service-Role-Schluessel (Cron). Body:
 //   {}                        Probelauf: zeigt, wer heute eine Mail bekaeme
 //   { "senden": true }        verschickt sie und protokolliert jede Mail
+//   { "senden": true, "nachholen_ab": "2026-09-01" }
+//                             Hilfe-Mail einmalig auch fuer aeltere Konten ohne Kind
 //   { "test_an": "x@lernzeit.app", "art": "einrichtung" }
 //                             Beispielmail an eine eigene Adresse
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { type Art, GESCHAEFTSFUEHRUNG, vorlage } from "../_shared/service-mail-vorlagen.ts";
+import { type Art, vorlage } from "../_shared/service-mail-vorlagen.ts";
 
 const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID") ?? "";
 const ONESIGNAL_REST_API_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY") ?? "";
@@ -87,7 +89,7 @@ Deno.serve(async (req) => {
     return json({ error: "OneSignal ist nicht eingerichtet" }, 500);
   }
 
-  let body: { senden?: boolean; test_an?: string; art?: Art } = {};
+  let body: { senden?: boolean; test_an?: string; art?: Art; nachholen_ab?: string } = {};
   try { body = await req.json(); } catch { /* leerer Body = Probelauf */ }
 
   // Beispielmail an eine eigene Adresse, ohne Protokoll.
@@ -105,7 +107,9 @@ Deno.serve(async (req) => {
     return json({ test: true, ergebnisse });
   }
 
-  const { data, error } = await supabase.rpc("service_mail_kandidaten");
+  // nachholen_ab: einmalig auch aeltere Konten ohne Kind (Hilfe-Mail), z. B. "2026-09-01".
+  const { data, error } = await supabase.rpc("service_mail_kandidaten",
+    body.nachholen_ab ? { p_einrichtung_ab: body.nachholen_ab } : {});
   if (error) return json({ error: error.message }, 500);
   const kandidaten = (data ?? []) as Kandidat[];
 
@@ -115,10 +119,6 @@ Deno.serve(async (req) => {
       anzahl: kandidaten.length,
       kandidaten: kandidaten.map((k) => ({ art: k.art, name: k.name, email: k.email, bezug: k.bezug })),
     });
-  }
-
-  if (!GESCHAEFTSFUEHRUNG) {
-    return json({ error: "Geschäftsführung fehlt in der Signatur (_shared/service-mail-vorlagen.ts)" }, 409);
   }
 
   const ergebnis = { gesendet: 0, fehler: 0, uebersprungen: 0, ausgelassen: Math.max(0, kandidaten.length - HOECHSTENS) };
