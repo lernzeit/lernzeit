@@ -899,6 +899,13 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </button>
                 </div>
 
+                {/* Tipp für Kinder: Eltern legen zuerst ihr Konto an */}
+                {role === 'child' && (
+                  <p className="text-sm text-muted-foreground text-center" role="note">
+                    Tipp: Am besten legen zuerst deine Eltern ihr Konto an und erstellen einen Code für dich.
+                  </p>
+                )}
+
                 {/* Social sign-up (fast path) — shown above the manual form */}
                 <div className="space-y-3">
                   <Button
