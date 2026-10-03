@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { istNativeApp, oauthImAppBrowser } from '@/services/nativeOAuth';
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound, Check } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
 import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
 
@@ -69,10 +69,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [name, setName] = useState('');
   // Bewusst KEIN Standardwert: Eltern, die schnell durchklicken, landeten
   // sonst weiter im Kind-Modus. Die Rolle muss aktiv gewählt werden.
+  // Ein Tipp auf eine Karte setzt die Rolle sofort — jeder Zusatzschritt
+  // kostet Anmeldungen (Korrektur, 03.10.2026).
   const [role, setRole] = useState<'parent' | 'child' | null>(null);
-  // Zwischenstand der Rollenwahl: Erst die Karte markieren, dann mit
-  // "Weiter" bestätigen. Erst dadurch erscheinen Rahmen, Häkchen und Tipp.
-  const [pendingRole, setPendingRole] = useState<'parent' | 'child' | null>(null);
   const [grade, setGrade] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
