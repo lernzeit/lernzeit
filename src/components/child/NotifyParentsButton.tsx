@@ -72,7 +72,7 @@ export function NotifyParentsButton({ className }: NotifyParentsButtonProps) {
   };
 
   return (
-    <Button onClick={handleShare} disabled={isSharing} className={className}>
+    <Button onClick={handleShare} disabled={isSharing} className={className} variant={variant}>
       <Megaphone className="h-4 w-4 mr-2" />
       Eltern Bescheid geben
     </Button>
