@@ -21,7 +21,7 @@ interface NotifyParentsButtonProps {
  * Bringt ein Kind ohne Elternverknuepfung seine Eltern ins Spiel: Der Text wird
  * ueber den System-Teilen-Dialog geschickt, sonst in die Zwischenablage kopiert.
  */
-export function NotifyParentsButton({ className }: NotifyParentsButtonProps) {
+export function NotifyParentsButton({ className, variant = 'default' }: NotifyParentsButtonProps) {
   const { toast } = useToast();
   const [isSharing, setIsSharing] = useState(false);
 
