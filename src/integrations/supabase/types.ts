@@ -1973,6 +1973,60 @@ export type Database = {
           website_besucher: number
         }[]
       }
+      admin_nutzung_familien: {
+        Args: never
+        Returns: {
+          abo_quelle: string | null
+          abo_status: string
+          anfragen_28: number
+          art: string
+          eltern_tage_14: number
+          eltern_zuletzt: string | null
+          email: string | null
+          erste_runde: string | null
+          freigaben_28: number
+          id: string
+          kauf_begonnen: boolean
+          kinder: number
+          kinder_mit_runden: number
+          lernminuten_28: number
+          lerntage_14: number
+          lerntage_28: number
+          lerntage_7: number
+          letzte_runde: string | null
+          name: string | null
+          paywall_gesehen: boolean
+          plattform: string | null
+          registriert_am: string
+          runden_28: number
+          testkonto: boolean
+          testkonto_grund: string | null
+          testphase_ende: string | null
+        }[]
+      }
+      admin_nutzung_kohorten: {
+        Args: { p_ohne_test: boolean; p_wochen: number }
+        Returns: {
+          aktiv: (number | null)[]
+          kinder: number
+          kohorte: string
+        }[]
+      }
+      admin_nutzung_verlauf: {
+        Args: { p_ohne_test: boolean; p_tage: number }
+        Returns: {
+          eltern_aktiv: number
+          eltern_aktiv_7t: number
+          kinder_aktiv: number
+          kinder_aktiv_7t: number
+          runden: number
+          tag: string
+        }[]
+      }
+      admin_testkonto_setzen: {
+        Args: { p_test: boolean; p_user: string }
+        Returns: undefined
+      }
       apply_premium_grant: {
         Args: {
           p_months: number
