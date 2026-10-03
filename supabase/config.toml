@@ -21,8 +21,6 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.annual-grade-upgrade]
     verify_jwt = false
-  [functions.auth-email-hook]
-    verify_jwt = false
   [functions.cache-prefill]
     verify_jwt = false
   [functions.check-subscription]

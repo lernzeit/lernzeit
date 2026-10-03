@@ -170,7 +170,7 @@ serve(async (req) => {
     // the function/API key is reachable. Return immediately without invoking AI
     // so the request doesn't run the full pipeline (which would hit the 150s idle limit).
     if (body.test === true) {
-      const hasKey = !!(Deno.env.get('LOVABLE_API_KEY') || Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY'));
+      const hasKey = !!(Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY'));
       return new Response(JSON.stringify({ success: hasKey, test: true, ok: hasKey }), {
         status: hasKey ? 200 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -272,10 +272,9 @@ serve(async (req) => {
     
     console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
-      console.error('Neither LOVABLE_API_KEY nor GEMINI_API_KEY is configured');
+    // KI ueber callAI: Gemini direkt, sonst OpenRouter (kein Lovable mehr).
+    if (!Deno.env.get('GEMINI_API_KEY') && !Deno.env.get('OPENROUTER_API_KEY')) {
+      console.error('Neither GEMINI_API_KEY nor OPENROUTER_API_KEY is configured');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Konfigurationsfehler. Bitte kontaktiere den Support.' 

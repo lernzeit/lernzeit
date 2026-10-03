@@ -27,3 +27,21 @@ Folgen daraus:
 - Eine Edge Function, die nur per MCP eingespielt wurde und nicht in `main`
   steht, überschreibt Lovable beim nächsten Commit auf `supabase/functions/`.
   Was live laufen soll, gehört deshalb immer auch nach `main`.
+- Der GitHub-Workflow `deploy-supabase.yml` (Edge Functions bei Push auf `main`)
+  scheitert seit Wochen mit 401: Das Secret `SUPABASE_ACCESS_TOKEN` in GitHub fehlt
+  oder ist ungültig. Bis es erneuert ist, gilt nur der Weg über MCP.
+
+## Lovable ablösen (Stand 03.10.2026)
+
+Geprüft im Code, in Supabase und per Rückfrage an Lovable: Datenbank (eigene
+Supabase-Organisation „LernZeit“), Auth, Login-Mails (IONOS-SMTP), KI (Gemini/
+OpenRouter, 0 Aufrufe ans Lovable-Gateway in 30 Tagen), Cron und Push hängen nicht an
+Lovable. An Lovable hängen nur noch:
+- Hosting von lernzeit.app und www (A-Records auf 185.158.133.1, TXT `_lovable`),
+  einschließlich `public/.well-known/` (App-Links für iOS und Android) und SPA-Fallback.
+- Die NS-Delegation von `mail.lernzeit.app` an `ns3/ns4.lovable.cloud` (ungenutzt).
+- DMARC-Berichte von lernzeit.app an `dmarcreports@lovable.dev`.
+- Das gelegentliche Einspielen der Edge Functions (siehe oben).
+`LOVABLE_API_KEY` erst aus den Supabase-Secrets löschen, wenn die Fassungen von
+`analyze-feedback`, `ai-question-generator` und `generate-learning-plan` vom 03.10.2026
+eingespielt sind – die älteren prüfen noch auf den Schlüssel.

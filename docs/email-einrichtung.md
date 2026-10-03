@@ -16,12 +16,28 @@ Cloud-Sitzung, die den Versand programmiert, hat keinen Browser und kommt nicht 
    wird, und auf seine Bestätigung warten.
 2. In OneSignal **nur** den Bereich E-Mail anfassen. Push, iOS/APNs, Android/FCM,
    Segmente, Nachrichten, Abrechnung: nicht ändern.
-3. Bei IONOS **keinen bestehenden Eintrag ändern oder löschen** – nur neue Einträge für
-   `mail.lernzeit.app` anlegen. Einträge für `lernzeit.app` selbst (A, AAAA, MX, TXT/SPF,
-   `www`) tragen Website und Postfach; ein Fehler dort legt beides lahm.
-   Einzige Ausnahme: DMARC, siehe unten.
+3. Bei IONOS **keinen bestehenden Eintrag für `lernzeit.app` selbst ändern oder löschen**
+   (A, AAAA, MX, TXT/SPF, `_lovable`, `www`) – sie tragen Website und Postfach; ein Fehler
+   dort legt beides lahm. Ausnahmen, jeweils erst nach Bestätigung des Betreibers:
+   die Altlasten unter `mail.lernzeit.app` (Schritt 0) und der DMARC-Eintrag (Schritt 2.3).
 4. Keine Schlüssel, Passwörter oder API-Keys in den Chat kopieren oder irgendwo notieren.
 5. Nichts kaufen, keinen Tarif ändern.
+
+## Schritt 0 – Altlasten unter `mail.lernzeit.app` entfernen (IONOS)
+
+Befund 03.10.2026 (Lovable selbst und eigene Prüfung): `mail.lernzeit.app` ist per
+**NS-Einträgen an Lovables Nameserver delegiert** (`ns3.lovable.cloud`, `ns4.lovable.cloud`).
+Die Mail-Einrichtung von Lovable dahinter ist abgelaufen und wird nicht genutzt; die
+Login-Mails laufen über IONOS-SMTP von `noreply@lernzeit.app` und sind davon nicht
+betroffen. Solange die Delegation steht, kann OneSignal die Subdomain nicht prüfen.
+
+1. ionos.de → Domains & SSL → **lernzeit.app** → **DNS**.
+2. Alle Einträge auflisten, deren Name `mail` ist oder auf `.mail` endet (NS, CNAME, TXT,
+   MX – auch alte Resend-, SES- oder OneSignal-Einträge aus dem März). Liste dem Betreiber
+   zeigen.
+3. Nach seiner Bestätigung **nur diese Einträge** löschen. Nichts anderes.
+4. Ist `mail.lernzeit.app` bei IONOS als eigene Subdomain mit eigener DNS-Verwaltung
+   angelegt, dort entsprechend vorgehen.
 
 ## Schritt 1 – OneSignal
 
@@ -43,9 +59,11 @@ Cloud-Sitzung, die den Versand programmiert, hat keinen Browser und kommt nicht 
    Hostname **nur den Teil vor `.lernzeit.app`** eintragen (IONOS hängt die Domain selbst
    an; aus `s1._domainkey.mail.lernzeit.app` wird `s1._domainkey.mail`) → Wert exakt
    übernehmen → TTL Standard → speichern.
-3. **DMARC:** Gibt es für `_dmarc.lernzeit.app` noch keinen TXT-Eintrag, einen anlegen:
-   Host `_dmarc`, Wert `v=DMARC1; p=none; rua=mailto:info@lernzeit.app`.
-   Gibt es schon einen: **nicht ändern**, nur notieren, was drinsteht.
+3. **DMARC:** Der TXT-Eintrag `_dmarc.lernzeit.app` schickt die Berichte heute an
+   `dmarcreports@lovable.dev`. Nach Bestätigung des Betreibers **nur die Berichtsadresse**
+   ändern: `rua=mailto:info@lernzeit.app`; alle anderen Teile (z. B. `p=`) unverändert lassen.
+   Gibt es keinen Eintrag, anlegen: Host `_dmarc`, Wert
+   `v=DMARC1; p=none; rua=mailto:info@lernzeit.app`.
 4. Zeigt IONOS einen Konflikt (Eintrag existiert schon mit anderem Wert): nicht
    überschreiben, dem Betreiber melden.
 
