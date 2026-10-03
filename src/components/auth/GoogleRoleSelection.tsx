@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Shield, Heart, GraduationCap, Loader2, Sparkles } from 'lucide-react';
+import { Shield, Heart, GraduationCap, Loader2, Sparkles, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
@@ -106,7 +106,7 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
       <Card className="w-full max-w-md shadow-card">
         <CardContent className="p-6 space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold text-foreground">Willkommen bei LernZeit! 🎉</h2>
+            <h2 className="text-2xl font-bold text-foreground">Willkommen bei LernZeit!</h2>
             <p className="text-muted-foreground">Bitte wähle deine Rolle, um fortzufahren.</p>
           </div>
 
@@ -116,25 +116,7 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
             className="space-y-3"
           >
             <div
-              className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                role === 'child'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/40'
-              }`}
-              onClick={() => setRole('child')}
-            >
-              <RadioGroupItem value="child" id="role-child" />
-              <Label htmlFor="role-child" className="flex items-center gap-2 cursor-pointer flex-1">
-                <Heart className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="font-semibold">Kind / Schüler</p>
-                  <p className="text-sm text-muted-foreground">Ich möchte lernen und Bildschirmzeit verdienen</p>
-                </div>
-              </Label>
-            </div>
-
-            <div
-              className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`flex items-center gap-3 p-5 border-2 rounded-2xl cursor-pointer transition-all ${
                 role === 'parent'
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/40'
@@ -142,15 +124,45 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
               onClick={() => setRole('parent')}
             >
               <RadioGroupItem value="parent" id="role-parent" />
-              <Label htmlFor="role-parent" className="flex items-center gap-2 cursor-pointer flex-1">
-                <Shield className="w-5 h-5 text-primary" />
+              <Label htmlFor="role-parent" className="flex items-center gap-3 cursor-pointer flex-1">
+                <Shield className="w-6 h-6 text-primary shrink-0" />
                 <div>
-                  <p className="font-semibold">Elternteil</p>
-                  <p className="text-sm text-muted-foreground">Ich möchte das Lernen meines Kindes begleiten</p>
+                  <p className="font-semibold text-base">Ich bin Elternteil</p>
+                  <p className="text-sm text-muted-foreground">Du verbindest dein Kind und gibst Bildschirmzeit frei.</p>
                 </div>
               </Label>
+              {role === 'parent' && (
+                <Check className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+              )}
+            </div>
+
+            <div
+              className={`flex items-center gap-3 p-5 border-2 rounded-2xl cursor-pointer transition-all ${
+                role === 'child'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/40'
+              }`}
+              onClick={() => setRole('child')}
+            >
+              <RadioGroupItem value="child" id="role-child" />
+              <Label htmlFor="role-child" className="flex items-center gap-3 cursor-pointer flex-1">
+                <Heart className="w-6 h-6 text-primary shrink-0" />
+                <div>
+                  <p className="font-semibold text-base">Ich bin ein Kind</p>
+                  <p className="text-sm text-muted-foreground">Du löst Aufgaben und verdienst Bildschirmzeit. Deine Eltern brauchen ein eigenes Konto.</p>
+                </div>
+              </Label>
+              {role === 'child' && (
+                <Check className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+              )}
             </div>
           </RadioGroup>
+
+          {role === 'child' && (
+            <p className="text-sm text-muted-foreground text-center" role="note">
+              Tipp: Am besten legen zuerst deine Eltern ihr Konto an und erstellen einen Code für dich.
+            </p>
+          )}
 
           {role === 'child' && (
             <div className="space-y-2">
