@@ -17,7 +17,7 @@ const mitVerweisen = (text: string) =>
         <a
           href={`#quelle-${treffer[1]}`}
           aria-label={`Quelle ${treffer[1]}`}
-          className="rounded px-1 text-[0.75em] font-bold text-[var(--lp-blau)] no-underline ring-1 ring-inset ring-[var(--lp-karo)] hover:bg-[var(--lp-heft)]"
+          className="text-[0.7em] font-semibold text-[var(--lp-leise)] no-underline hover:text-[var(--lp-blau)]"
         >
           {treffer[1]}
         </a>
@@ -79,7 +79,7 @@ const RatgeberArtikel = () => {
           <p className="mt-6 text-[0.9375rem] text-[var(--lp-leise)]">
             {formatiereDatum(a.datum)}
             {a.aktualisiert && <>, aktualisiert {formatiereDatum(a.aktualisiert)}</>}
-            {', '}{a.lesezeitMinuten} Min. Lesezeit, {a.quellen.length} {a.quellen.length === 1 ? 'Quelle' : 'Quellen'}
+            {', '}{a.lesezeitMinuten} Min. Lesezeit
           </p>
         </div>
       </header>
@@ -105,20 +105,17 @@ const RatgeberArtikel = () => {
           ))}
 
           {a.quellen.length > 0 && (
-            <section aria-labelledby="quellen" className="mt-14 rounded-3xl bg-[var(--lp-heft)] p-6 sm:p-8">
-              <h2 id="quellen" className="text-[1.25rem] font-extrabold">Quellen</h2>
-              <ol className="mt-5 space-y-4 text-[0.9375rem] leading-relaxed">
+            <section aria-labelledby="quellen" className="mt-14 border-t border-[var(--lp-karo)] pt-8">
+              <h2 id="quellen" className="text-[1rem] font-bold">Quellen</h2>
+              <ol className="mt-4 space-y-3 text-[0.875rem] leading-relaxed text-[var(--lp-leise)]">
                 {[...a.quellen].sort((x, y) => x.nr - y.nr).map((q) => (
-                  <li key={q.nr} id={`quelle-${q.nr}`} className="grid scroll-mt-24 grid-cols-[2rem_1fr] break-words">
-                    <span className="font-bold text-[var(--lp-tinte)]">{q.nr}</span>
+                  <li key={q.nr} id={`quelle-${q.nr}`} className="grid scroll-mt-24 grid-cols-[1.5rem_1fr] break-words">
+                    <span>{q.nr}</span>
                     <span>
                       {q.herausgeber}: {q.titel}{q.jahr ? ` (${q.jahr})` : ''}.{' '}
                       <a href={q.url} target="_blank" rel="noopener" className="text-[var(--lp-blau)] underline-offset-4 hover:underline">
-                        {q.url}
+                        Zur Quelle
                       </a>
-                      {q.geprueftAm && (
-                        <span className="block text-[var(--lp-leise)]">Am Original geprüft am {formatiereDatum(q.geprueftAm)}</span>
-                      )}
                     </span>
                   </li>
                 ))}

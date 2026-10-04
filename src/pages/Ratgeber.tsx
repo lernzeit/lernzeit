@@ -11,7 +11,7 @@ const Ratgeber = () => {
     <Unterseite position="ratgeber">
       <Seo
         title="Ratgeber – LernZeit"
-        description="Artikel für Eltern rund um Bildschirmzeit und Lernen. Jede Zahl mit Quelle, vor der Veröffentlichung am Original geprüft."
+        description="Artikel für Eltern rund um Bildschirmzeit, Smartphone und Lernen: was Fachleute empfehlen und was Studien zeigen."
         path="/ratgeber"
       />
       {liste.length === 0 && (
@@ -34,18 +34,19 @@ const Ratgeber = () => {
               Kurz erklärt, ohne erhobenen Zeigefinger.
             </p>
           </div>
-          <div className="hidden lg:col-span-4 lg:flex lg:items-end lg:justify-end lg:pb-2">
-            <Randnotiz farbe="gruen" drehung={-4} verzug={300} className="w-[15rem] text-[1.3125rem]">
-              Jede Zahl mit Quelle – vor der Veröffentlichung am Original geprüft.
+          {/* Wortlaut der Leitlinie, Empfehlung 33 (S. 30), geprueft am 04.10.2026 */}
+          <figure className="lg:col-span-4 lg:flex lg:flex-col lg:items-end lg:justify-end lg:pb-2">
+            <Randnotiz farbe="gruen" drehung={-3} verzug={300} className="w-[17rem] text-[1.25rem] sm:text-[1.3125rem]">
+              „maximal 1-2 Stunden am Tag und bis spätestens 21 Uhr“
             </Randnotiz>
-          </div>
+            <figcaption className="mt-3 w-[17rem] text-[0.875rem] leading-snug text-[var(--lp-leise)]">
+              Leitlinie der Kinder- und Jugendmedizin (2023) für 12- bis 16-Jährige
+            </figcaption>
+          </figure>
         </div>
       </header>
 
       <div className="lp-container">
-        <p className="mb-8 text-[0.9375rem] text-[var(--lp-leise)] lg:hidden">
-          Jede Zahl ist mit einer Quelle belegt, die wir vor der Veröffentlichung am Original geprüft haben.
-        </p>
         {liste.length === 0 ? (
           <p className="text-[var(--lp-leise)]">Hier erscheinen bald Artikel rund um Bildschirmzeit und Lernen.</p>
         ) : (
@@ -69,7 +70,6 @@ const Ratgeber = () => {
                     <p>
                       {formatiereDatum(a.datum)}, {a.lesezeitMinuten} Min. Lesezeit
                     </p>
-                    <p className="mt-1">Quellen: {[...new Set(a.quellen.map((q) => q.herausgeber))].join(', ')}</p>
                     <p className="mt-4 font-bold text-[var(--lp-blau)]">Artikel lesen</p>
                   </div>
                 </Link>
