@@ -42,7 +42,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Feste Version: "latest" fragt die GitHub-API ohne Anmeldung ab und
+          # scheiterte zweimal (Bad Gateway 03.10., rate limit 04.10.2026).
+          version: 2.119.0
 
       - name: Funktionen auflisten
         run: |
@@ -113,7 +115,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Feste Version: "latest" fragt die GitHub-API ohne Anmeldung ab und
+          # scheiterte zweimal (Bad Gateway 03.10., rate limit 04.10.2026).
+          version: 2.119.0
 
       - name: Mit dem Projekt verbinden und pushen
         env:
