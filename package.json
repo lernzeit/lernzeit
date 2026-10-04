@@ -25,7 +25,8 @@
     "motive:pruefen": "node scripts/pruefe-motive.mjs",
     "motive:erzeugen": "node scripts/erzeuge-motive.mjs",
     "werbung:karten": "node scripts/erzeuge-karten.mjs",
-    "werbung:video": "node scripts/nimm-demo-auf.mjs"
+    "werbung:video": "node scripts/nimm-demo-auf.mjs",
+    "werbung:erklaervideo": "node scripts/erzeuge-erklaervideo.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
