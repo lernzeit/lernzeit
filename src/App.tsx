@@ -21,6 +21,7 @@ const Impressum = lazy(() => import("./pages/Impressum"));
 const Support = lazy(() => import("./pages/Support"));
 const IdeaForum = lazy(() => import("./pages/IdeaForum"));
 const KontoLoeschen = lazy(() => import("./pages/KontoLoeschen"));
+const Faq = lazy(() => import("./pages/Faq"));
 const Ratgeber = lazy(() => import("./pages/Ratgeber"));
 const RatgeberArtikel = lazy(() => import("./pages/RatgeberArtikel"));
 
@@ -80,6 +81,11 @@ const App = () => (
           } />
           <Route path="/account-loeschen" element={<Navigate to="/konto-loeschen" replace />} />
           <Route path="/delete-account" element={<Navigate to="/konto-loeschen" replace />} />
+          <Route path="/faq" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <Faq />
+            </Suspense>
+          } />
           <Route path="/ratgeber" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
               <Ratgeber />
