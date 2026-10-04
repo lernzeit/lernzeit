@@ -254,10 +254,10 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         return { skipped: true, reason: "missing_streak_or_child" };
       }
       const titles: Record<number, string> = {
-        3: "🔥 3 Tage in Folge!",
-        7: "🌟 Eine Woche Streak!",
-        14: "💪 2 Wochen am Stück!",
-        30: "🏆 30-Tage-Streak!",
+        3: "🌱 3 Tage in Folge!",
+        7: "🌼 Eine Woche: Deine Pflanze blüht!",
+        14: "🌳 2 Wochen: ein Bäumchen!",
+        30: "🍎 30 Tage: ein ganzer Baum!",
         60: "🚀 60 Tage Lern-Power!",
         100: "💎 100 Tage – Legende!",
         200: "👑 200 Tage – Wahnsinn!",
@@ -265,10 +265,10 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         365: "🎊 1 Jahr Streak – Champion!",
       };
       const messages: Record<number, string> = {
-        3: "Du hast 3 Tage in Folge gelernt. Super gemacht – weiter so!",
-        7: "Eine ganze Woche jeden Tag gelernt! Du bist auf einem tollen Weg.",
-        14: "14 Tage am Stück – das ist echte Disziplin. Stark!",
-        30: "30 Tage durchgehalten! Du bist ein wahres Lern-Vorbild.",
+        3: "Du hast 3 Tage in Folge gelernt. Aus dem Keimling wird eine kleine Pflanze!",
+        7: "Eine ganze Woche jeden Tag gelernt. Deine Lernpflanze blüht!",
+        14: "14 Tage am Stück. Aus deiner Pflanze ist ein Bäumchen geworden!",
+        30: "30 Tage durchgehalten. Deine Lernpflanze ist ein Baum mit Äpfeln!",
         60: "60 Tage in Folge – deine Ausdauer ist beeindruckend!",
         100: "100 Tage Streak! Das schaffen nur die Allerbesten.",
         200: "200 Tage – du bist unaufhaltsam!",
@@ -277,7 +277,7 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       };
       return sendOneSignalPush({
         userIds: [childId],
-        title: titles[streak] || `🔥 ${streak}-Tage-Streak!`,
+        title: titles[streak] || `🌳 ${streak} Tage in Folge!`,
         message: messages[streak] || `Du lernst seit ${streak} Tagen in Folge. Mach weiter so!`,
         data: { type: "streak_milestone", streak },
       });
@@ -410,16 +410,16 @@ const GENERAL_REMINDERS = [
 ];
 
 const STREAK_REMINDERS = [
-  { title: (s: number) => `🔥 ${s}-Tage-Streak in Gefahr!`, message: (s: number) => `Dein ${s}-Tage-Streak lebt! Nur noch heute und er wächst weiter!` },
+  { title: (s: number) => `🌱 Deine Pflanze wartet`, message: (s: number) => `${s} Tage hat sie schon. Lern heute, dann wächst sie weiter!` },
   { title: (s: number) => `🏅 Fast geschafft!`, message: (s: number) => `${s} Tage am Stück – du bist unaufhaltsam! Mach weiter!` },
   { title: (s: number) => `💪 Streak-Power!`, message: (s: number) => `Du bist im Flow! ${s} Tage. Heute wird's ${s + 1}!` },
   { title: (s: number) => `🦸 Lern-Held!`, message: (s: number) => `Mit ${s} Tagen Streak bist du ein echter Champion. Weiter so!` },
-  { title: (s: number) => `🔥 Nicht aufhören!`, message: (s: number) => `Der ${s}-Tage-Streak will weiter. Gib ihm heute Nahrung!` },
+  { title: (s: number) => `💧 Nicht aufhören!`, message: (s: number) => `${s} Tage in Folge. Gib deiner Pflanze heute Wasser!` },
   { title: (s: number) => `🎯 Rekordjagd!`, message: (s: number) => `Du jagst deinen eigenen Rekord: ${s} Tage. Heute macht's ${s + 1}!` },
 ];
 
 const STREAK_START_REMINDERS = [
-  { title: "🔥 Streak gestartet!", message: "Tag 1 ist geschafft. Heute wird's Tag 2 – du hast den Dreh raus!" },
+  { title: "🌱 Der Samen keimt!", message: "Tag 1 ist geschafft. Heute wird's Tag 2 – dann wächst ein Keimling!" },
   { title: "🌱 Keimt gerade!", message: "Dein Streak ist klein aber oho! Bewässere ihn mit Lernen." },
   { title: "🚀 Start durch!", message: "Gestern war der erste Schritt. Heute der zweite. Leg los!" },
   { title: "✨ Aufbau-Modus!", message: "Tag 1 war super. Tag 2 wird noch besser. Starte jetzt!" },
@@ -466,13 +466,13 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
     let type = "child_learning_reminder";
     let isStreakPush = false;
     if (streakInfo.inactiveDays === 1 && streak > 0) {
-      title = "🔥 Deine Flamme wird kleiner";
-      message = "Löse heute ein paar Aufgaben, damit dein Streak weiter brennt!";
+      title = "💧 Deine Lernpflanze hat Durst";
+      message = "Löse heute ein paar Aufgaben, damit sie weiter wächst!";
       type = "streak_dim";
       isStreakPush = true;
     } else if (streakInfo.inactiveDays === 2 && streak > 0) {
-      title = "🪵 Dein Lernfeuer ist aus";
-      message = "Entfache es wieder: Löse 3 Aufgaben richtig und rette deinen Streak!";
+      title = "🥀 Deine Lernpflanze welkt";
+      message = "Gieß sie wieder: Spiel eine Runde in der App und rette sie!";
       type = "streak_frozen";
       isStreakPush = true;
     } else if (streak >= 2) {
