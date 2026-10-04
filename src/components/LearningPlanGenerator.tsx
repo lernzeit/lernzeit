@@ -84,7 +84,9 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
   const hasPremiumAccess = isPremium || isTrialing;
 
   const [selectedChildId, setSelectedChildId] = useState<string>(fixedChildId || '');
-  const [subject, setSubject] = useState('');
+  // 'auto': Die KI erkennt das Fach aus Thema oder Fotos (04.10.2026).
+  const [subject, setSubject] = useState('auto');
+  const [fachFehlt, setFachFehlt] = useState(false);
   const [topic, setTopic] = useState('');
   const [testDate, setTestDate] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
@@ -138,10 +140,10 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
   const [fotos, setFotos] = useState<string[]>([]);
 
   const handleGenerate = async () => {
-    if (!selectedChildId || !subject || (!topic.trim() && fotos.length === 0)) {
+    if (!selectedChildId || (!topic.trim() && fotos.length === 0)) {
       toast({
         title: 'Fehlende Angaben',
-        description: 'Bitte wähle ein Kind, ein Fach und gib das Thema ein oder füge Fotos hinzu.',
+        description: 'Bitte gib das Thema ein oder füge Fotos hinzu.',
         variant: 'destructive',
       });
       return;
@@ -169,7 +171,9 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
         // Fehlertext der Funktion anzeigen (z. B. "kein Unterrichtsstoff zu erkennen").
         let text: string | undefined;
         try {
-          text = (await (resp.error as { context?: Response }).context?.json())?.error;
+          const antwort = await (resp.error as { context?: Response }).context?.json();
+          text = antwort?.error;
+          if (antwort?.fachFehlt) setFachFehlt(true);
         } catch { /* egal */ }
         throw new Error(text || resp.error.message);
       }
@@ -186,7 +190,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
       toast({
         title: '🎉 Lernplan erstellt!',
-        description: `Der 5-Tage-Lernplan für ${selectedChild?.name || 'dein Kind'} ist fertig.`,
+        description: `Der Lernplan für ${selectedChild?.name || 'dein Kind'} ist fertig.`,
       });
 
       // Reset form
@@ -227,7 +231,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           </div>
           <h3 className="text-lg font-bold">KI-Lernplan-Generator</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Lass die KI einen persönlichen 5-Tage-Lernplan erstellen – passend
+            Lass die KI einen persönlichen Lernplan (bis zu 5 Tage) erstellen – passend
             zur Klassenstufe und zum Prüfungsthema deines Kindes.
           </p>
           <Badge variant="secondary" className="gap-1">
@@ -260,7 +264,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
             KI-Lernplan erstellen
           </CardTitle>
           <CardDescription>
-            Beschreibe die Prüfung oder das Thema – die KI erstellt einen 5-Tage-Lernplan.
+            Beschreibe die Prüfung oder lade Fotos hoch – die KI erstellt einen Lernplan bis zum Test, höchstens 5 Tage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -286,16 +290,18 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           {/* Subject */}
           <div className="space-y-2">
             <Label>Fach</Label>
-            <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger>
+            <Select value={subject} onValueChange={(v) => { setSubject(v); setFachFehlt(false); }}>
+              <SelectTrigger className={fachFehlt ? 'border-destructive ring-2 ring-destructive/20' : undefined}>
                 <SelectValue placeholder="Fach wählen..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="auto">Automatisch erkennen</SelectItem>
                 {availableSubjects.map(s => (
                   <SelectItem key={s.key} value={s.key}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {fachFehlt && <p className="text-xs text-destructive">Aus dem Thema geht das Fach nicht hervor – bitte wähle es aus.</p>}
           </div>
 
           {/* Topic */}
@@ -324,8 +330,18 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
             <Input
               type="date"
               value={testDate}
+              min={new Date().toLocaleDateString('sv-SE')}
               onChange={e => setTestDate(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              {(() => {
+                if (!testDate) return 'Ohne Datum hat der Plan 5 Tage.';
+                const tage = Math.round((Date.parse(testDate) - Date.parse(new Date().toLocaleDateString('sv-SE'))) / 86400000);
+                if (Number.isNaN(tage) || tage < 0) return 'Das Datum liegt in der Vergangenheit.';
+                const n = Math.min(5, Math.max(1, tage));
+                return n === 1 ? 'Der Plan hat 1 Tag: eine kompakte Wiederholung.' : `Der Plan hat ${n} Tage – bis zum Test.`;
+              })()}
+            </p>
           </div>
 
           {/* Additional Info */}
@@ -341,7 +357,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           <Button
             className="w-full"
             onClick={handleGenerate}
-            disabled={generating || !selectedChildId || !subject || (!topic.trim() && fotos.length === 0)}
+            disabled={generating || !selectedChildId || (!topic.trim() && fotos.length === 0)}
           >
             {generating ? (
               <>

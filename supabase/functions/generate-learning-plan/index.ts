@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { callAI } from "../_shared/ai-client.ts";
 import { fotosPruefen, lernstoffAlsText, lernstoffAuswerten } from "../_shared/lernstoff-fotos.ts";
+import { FAECHER_KLASSEN, fachAusText, fachPasst, heuteInDeutschland, planTage } from "../_shared/lernplan-regeln.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,7 +89,8 @@ serve(async (req) => {
     }
 
     // Thema ist Pflicht – ausser es gibt Fotos, dann liest die KI es aus.
-    if (!childId || !grade || !subject || (!topic && fotos.length === 0)) {
+    // Das Fach ist freiwillig (04.10.2026): Es wird erkannt, s. unten.
+    if (!childId || !grade || (!topic && fotos.length === 0)) {
       return new Response(JSON.stringify({ error: "Fehlende Pflichtfelder" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -118,20 +120,16 @@ serve(async (req) => {
       });
     }
 
-    const subjectNames: Record<string, string> = {
-      math: "Mathematik",
-      german: "Deutsch",
-      english: "Englisch",
-      science: "Sachkunde",
-      geography: "Geographie",
-      history: "Geschichte",
-      physics: "Physik",
-      biology: "Biologie",
-      chemistry: "Chemie",
-      latin: "Latein",
-    };
+    const json = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const subjectDE = subjectNames[safeSubject] || safeSubject;
+    // Laenge: so viele Tage wie bis zum Test, hoechstens 5 (Wunsch 04.10.2026).
+    const tage = planTage(safeTestDate, heuteInDeutschland());
+    if (tage === null) return json({ error: "Das Testdatum liegt in der Vergangenheit." }, 400);
+
+    // Fach: gewaehlt, sonst aus Fotos, Stichworten oder einer kurzen KI-Einordnung.
+    const gewaehlt = safeSubject && safeSubject !== "auto" && FAECHER_KLASSEN[safeSubject] ? safeSubject : null;
+    let fach: string | null = gewaehlt;
 
     // Fotos von Heft, Buch oder Arbeitsblatt: erst den Stoff auslesen. Die
     // Fotos werden danach verworfen, nur der Text bleibt.
@@ -139,35 +137,46 @@ serve(async (req) => {
     let fotoThema = "";
     if (fotos.length > 0) {
       try {
-        const l = await lernstoffAuswerten(fotos, { fach: subjectDE, klasse: safeGrade, thema: safeTopic || undefined });
+        const l = await lernstoffAuswerten(fotos, {
+          fach: fach ? FAECHER_KLASSEN[fach].name : "noch unbekannt",
+          klasse: safeGrade,
+          thema: safeTopic || undefined,
+        });
         if (!l.lesbar) {
-          return new Response(JSON.stringify({ error: "Auf den Fotos war kein Unterrichtsstoff zu erkennen. Bitte fotografiere die Seiten gerade und gut beleuchtet." }), {
-            status: 422,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return json({ error: "Auf den Fotos war kein Unterrichtsstoff zu erkennen. Bitte fotografiere die Seiten gerade und gut beleuchtet." }, 422);
         }
         lernstoff = lernstoffAlsText(l);
         fotoThema = l.thema;
+        if (!fach && l.fach && fachPasst(l.fach, safeGrade)) fach = l.fach;
       } catch (e) {
         console.error("Bildauswertung:", e);
-        return new Response(JSON.stringify({ error: "Die Fotos konnten gerade nicht ausgewertet werden. Bitte versuch es noch einmal." }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ error: "Die Fotos konnten gerade nicht ausgewertet werden. Bitte versuch es noch einmal." }, 502);
       }
     }
+    if (!fach) fach = fachAusText(`${safeTopic} ${safeAdditionalInfo} ${fotoThema}`, safeGrade);
+    if (!fach) fach = await fachPerKi(`${safeTopic}\n${safeAdditionalInfo}\n${lernstoff ?? ""}`, safeGrade);
+    if (!fach) {
+      return json({ error: "Aus dem Thema geht das Fach nicht hervor. Bitte wähle es aus.", fachFehlt: true }, 422);
+    }
+    const subjectDE = FAECHER_KLASSEN[fach].name;
+
     const themaFuerPlan = safeTopic || fotoThema || "Stoff von den Fotos";
-    const testDateStr = safeTestDate ? `Der Test findet am ${safeTestDate} statt.` : "Kein konkretes Testdatum angegeben.";
+    const testDateStr = safeTestDate
+      ? `Der Test findet am ${safeTestDate} statt; bis dahin bleiben ${tage} Lerntag${tage === 1 ? "" : "e"}.`
+      : "Kein konkretes Testdatum angegeben.";
     const extraInfo = safeAdditionalInfo ? `Zusätzliche Infos vom Elternteil: "${safeAdditionalInfo}"` : "";
+    const ablauf = tage === 1
+      ? "Der Plan hat genau 1 Tag: eine kompakte Wiederholung der wichtigsten Inhalte mit gemischten Aufgaben wie in der Prüfung."
+      : `Die Schwierigkeit steigert sich von Tag 1 (Grundlagen wiederholen) bis Tag ${tage}. Tag ${tage} ist IMMER ein Wiederholungs-/Testtag mit gemischten Aufgaben.`;
 
     const systemPrompt = `Du bist ein erfahrener Nachhilfelehrer und Lernplan-Experte für deutsche Schulen.
-Du erstellst strukturierte 5-Tage-Lernpläne für Schüler.
+Du erstellst strukturierte Lernpläne mit ${tage} Tag${tage === 1 ? "" : "en"} für Schüler.
 
 WICHTIGE REGELN:
 1. Der Lernplan muss EXAKT zum deutschen Lehrplan der angegebenen Klassenstufe passen.
 2. Jeder Tag hat ein klares Thema, konkrete Lernziele und empfohlene Übungen.
-3. Die Schwierigkeit steigert sich von Tag 1 (Grundlagen wiederholen) bis Tag 5 (Prüfungssimulation).
-4. Tag 5 ist IMMER ein Wiederholungs-/Testtag mit gemischten Aufgaben.
+3. ${ablauf}
+4. Jeder Tag gehört zum Fach ${subjectDE}; "appCategory" ist immer "${fach}".
 5. Gib für jeden Tag eine geschätzte Lernzeit in Minuten an (15-30 Min pro Tag).
 6. Formuliere altersgerecht für die Klassenstufe.
 7. Nutze die App "Lernzeit" als Übungsplattform – verweise auf passende Fächer/Kategorien in der App.
@@ -185,7 +194,7 @@ Jedes Element hat diese Struktur:
   "tip": "Motivations-/Lerntipp für Eltern"
 }`;
 
-    const userPrompt = `Erstelle einen 5-Tage-Lernplan für folgende Situation:
+    const userPrompt = `Erstelle einen Lernplan mit ${tage} Tag${tage === 1 ? "" : "en"} für folgende Situation:
 
 Kind: ${safeChildName || "Schüler/in"}
 Klassenstufe: ${safeGrade}
@@ -194,7 +203,7 @@ Thema/Prüfung: ${themaFuerPlan}
 ${testDateStr}
 ${extraInfo}
 ${lernstoff ? `\nUNTERRICHTSSTOFF (aus Fotos von Heft/Buch/Arbeitsblatt ausgelesen):\n${lernstoff}\n\nRichte den Plan genau an diesem Stoff aus: gleiche Begriffe, gleiche Aufgabentypen, gleiche Schwierigkeit. Übungen sollen sich auf diese Inhalte beziehen.\n` : ""}
-Erstelle den Plan als JSON-Array mit 5 Tagen.`;
+Erstelle den Plan als JSON-Array mit genau ${tage} Element${tage === 1 ? "" : "en"}.`;
 
     const { response: aiResponse } = await callAI({
       model: "google/gemini-3.8-flash",
@@ -230,6 +239,11 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
       throw new Error("KI-Antwort konnte nicht verarbeitet werden");
     }
 
+    // Hoechstens so viele Tage wie geplant, Fach einheitlich.
+    if (Array.isArray(planData)) {
+      planData = planData.slice(0, tage).map((t: Record<string, unknown>, i: number) => ({ ...t, day: i + 1, appCategory: fach }));
+    }
+
     // Save to DB
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -243,7 +257,7 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
         child_id: childId,
         child_name: safeChildName || "Kind",
         grade: safeGrade,
-        subject: safeSubject,
+        subject: fach,
         topic: themaFuerPlan.slice(0, 200),
         test_date: safeTestDate || null,
         plan_data: planData,
@@ -271,3 +285,30 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
     );
   }
 });
+
+/**
+ * Kurze Einordnung des Fachs, wenn weder gewaehlt noch eindeutig erkennbar
+ * (Gemini 3.1 Flash Lite, wenige Tokens). "unklar" → die App fragt nach.
+ */
+async function fachPerKi(text: string, klasse: number): Promise<string | null> {
+  const erlaubt = Object.entries(FAECHER_KLASSEN)
+    .filter(([k]) => fachPasst(k, klasse))
+    .map(([k, f]) => `${k} (${f.name})`)
+    .join(", ");
+  try {
+    const { response } = await callAI({
+      model: "google/gemini-3.1-flash-lite",
+      messages: [
+        { role: "system", content: `Ordne eine Prüfungsbeschreibung einem Schulfach zu. Erlaubt: ${erlaubt}. Antworte nur mit dem Schlüssel (z. B. math) oder mit "unklar", wenn das Fach nicht sicher hervorgeht.` },
+        { role: "user", content: `Klasse ${klasse}. Beschreibung:\n${text.slice(0, 1500)}` },
+      ],
+      timeoutMs: 15000,
+    }, undefined, "lernplan_fach");
+    if (!response.ok) return null;
+    const antwort = String((await response.json()).choices?.[0]?.message?.content ?? "").trim().toLowerCase();
+    const schluessel = antwort.match(/[a-z]+/)?.[0] ?? "";
+    return fachPasst(schluessel, klasse) ? schluessel : null;
+  } catch {
+    return null;
+  }
+}

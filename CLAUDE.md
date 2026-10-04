@@ -112,3 +112,6 @@ Supabase-Secrets gelöscht werden.
 - `ai-question-generator` holt den Stoff über `learningPlanId` (nur Kind/Elternteil des Plans);
   solche Fragen gehen nicht in `ai_question_cache`.
 - Prüfen mit den künstlichen Seiten in `docs/testdaten/` (Prüfzugang nur mit Service-Rolle).
+- Länge: so viele Tage wie bis zum Test, höchstens 5 (ohne Datum 5). Fach ist freiwillig
+  („Automatisch erkennen“): gewählt → Fotos → Stichworte → Flash Lite (`lernplan_fach`) →
+  sonst fragt die App. Regeln mit Tests in `_shared/lernplan-regeln.ts`.

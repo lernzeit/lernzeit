@@ -29,6 +29,8 @@ export function fotosPruefen(roh: unknown): string[] | string {
 
 export interface Lernstoff {
   lesbar: boolean;
+  /** Schluessel wie "math", "english" – oder leer, wenn unklar */
+  fach: string;
   thema: string;
   zusammenfassung: string;
   themen: string[];
@@ -49,7 +51,8 @@ REGELN
 6. Vokabeln nur bei Sprachen, im Format "Fremdwort – Deutsch", höchstens 30.
 
 Antworte AUSSCHLIESSLICH mit JSON in dieser Form:
-{"lesbar": true, "thema": "kurzes Oberthema", "zusammenfassung": "2–4 Sätze, worum es geht", "themen": ["…"], "begriffe": ["Fachbegriff: kurze Erklärung"], "beispielaufgaben": ["…"], "vokabeln": ["…"]}
+{"lesbar": true, "fach": "math", "thema": "kurzes Oberthema", "zusammenfassung": "2–4 Sätze, worum es geht", "themen": ["…"], "begriffe": ["Fachbegriff: kurze Erklärung"], "beispielaufgaben": ["…"], "vokabeln": ["…"]}
+"fach" ist einer dieser Schlüssel: math, german, english, latin, science (Sachkunde), geography, history, physics, biology, chemistry – oder "" wenn unklar.
 Ist auf den Fotos kein Unterrichtsstoff erkennbar, setze "lesbar": false und lass die Listen leer.`;
 
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -91,6 +94,7 @@ export async function lernstoffAuswerten(
   }
   return {
     lesbar: j.lesbar !== false,
+    fach: text(j.fach, 20).toLowerCase(),
     thema: text(j.thema, 120),
     zusammenfassung: text(j.zusammenfassung, 700),
     themen: liste(j.themen, 12, 160),
