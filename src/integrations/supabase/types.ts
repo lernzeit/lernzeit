@@ -1773,6 +1773,39 @@ export type Database = {
           },
         ]
       }
+      service_mail_versand: {
+        Row: {
+          art: string
+          bezug: string
+          created_at: string
+          fehler: string | null
+          id: string
+          onesignal_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          art: string
+          bezug?: string
+          created_at?: string
+          fehler?: string | null
+          id?: string
+          onesignal_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          art?: string
+          bezug?: string
+          created_at?: string
+          fehler?: string | null
+          id?: string
+          onesignal_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shield_attempts: {
         Row: {
           attempted_at: string
@@ -1876,6 +1909,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      support_postfach_protokoll: {
+        Row: {
+          aktion: string
+          an: string | null
+          betreff: string | null
+          created_at: string
+          gesendet_id: string | null
+          id: string
+          message_id: string
+          text: string | null
+          uid: number | null
+        }
+        Insert: {
+          aktion: string
+          an?: string | null
+          betreff?: string | null
+          created_at?: string
+          gesendet_id?: string | null
+          id?: string
+          message_id: string
+          text?: string | null
+          uid?: number | null
+        }
+        Update: {
+          aktion?: string
+          an?: string | null
+          betreff?: string | null
+          created_at?: string
+          gesendet_id?: string | null
+          id?: string
+          message_id?: string
+          text?: string | null
+          uid?: number | null
+        }
+        Relationships: []
       }
       tester_codes: {
         Row: {
@@ -2237,6 +2306,10 @@ export type Database = {
           tag: string
         }[]
       }
+      admin_registrierungs_trichter: {
+        Args: { p_tage?: number }
+        Returns: Json
+      }
       admin_testkonto_setzen: {
         Args: { p_test: boolean; p_user: string }
         Returns: undefined
@@ -2435,6 +2508,41 @@ export type Database = {
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
       revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
+      service_mail_auswahl: {
+        Args: { p_einrichtung_ab?: string }
+        Returns: {
+          art: string
+          bezug: string
+          email: string
+          name: string
+          testphase_ende: string
+          user_id: string
+          vorlage: string
+        }[]
+      }
+      service_mail_kandidaten:
+        | {
+            Args: never
+            Returns: {
+              art: string
+              bezug: string
+              email: string
+              name: string
+              testphase_ende: string
+              user_id: string
+            }[]
+          }
+        | {
+            Args: { p_einrichtung_ab: string }
+            Returns: {
+              art: string
+              bezug: string
+              email: string
+              name: string
+              testphase_ende: string
+              user_id: string
+            }[]
+          }
       set_child_platform: {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined
