@@ -4,10 +4,8 @@
  *
  *   FFMPEG=/pfad/zu/ffmpeg npm run werbung:landing-loops
  *
- * Ergebnis in public/videos/: loop-<szene>.mp4 (H.264) und .webm (VP9), je
- * 720 × 900, ohne Ton, nahtlos, dazu loop-<szene>.jpg als Poster. LoopVideo
- * bietet H.264 zuerst an (Safari/iOS); WebM ist fuer Browser ohne H.264
- * (z. B. manches Chromium unter Linux), die sonst nur das Standbild zeigen. Die Loops enthalten keinen Text ausser der
+ * Ergebnis in public/videos/: loop-<szene>.mp4 (720 × 900, ohne Ton, nahtlos)
+ * und loop-<szene>.jpg als Poster. Die Loops enthalten keinen Text ausser der
  * nachgestellten App-Oberflaeche; Aussagen stehen auf der Seite selbst.
  */
 import { chromium } from 'playwright';
@@ -71,17 +69,10 @@ try {
       ], { stdio: 'inherit' });
       execFileSync(FFMPEG, [
         '-hide_banner', '-loglevel', 'error', '-y',
-        '-framerate', String(FPS), '-i', join(bilder, 'f%03d.png'),
-        '-vf', AUSSCHNITT,
-        '-c:v', 'libvpx-vp9', '-crf', '36', '-b:v', '0', '-row-mt', '1', '-pix_fmt', 'yuv420p', '-an',
-        join(ZIEL, `loop-${name}.webm`),
-      ], { stdio: 'inherit' });
-      execFileSync(FFMPEG, [
-        '-hide_banner', '-loglevel', 'error', '-y',
         '-i', join(bilder, 'poster.png'), '-vf', AUSSCHNITT, '-q:v', '4',
         join(ZIEL, `loop-${name}.jpg`),
       ], { stdio: 'inherit' });
-      console.log(`Fertig: public/videos/loop-${name}.webm/.mp4 (${dauer} s)`);
+      console.log(`Fertig: public/videos/loop-${name}.mp4 (${dauer} s)`);
     } finally {
       rmSync(bilder, { recursive: true, force: true });
     }
