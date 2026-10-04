@@ -2194,6 +2194,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vertragserklaerungen: {
+        Row: {
+          bearbeitet_am: string | null
+          bestaetigung_fehler: string | null
+          bestaetigung_gesendet_am: string | null
+          eingegangen_am: string
+          email: string
+          erklaerung: string
+          grund: string | null
+          id: string
+          kuendigungsart: string | null
+          name: string
+          notiz: string | null
+          nutzer_id: string | null
+          vertrag: string
+          zum: string | null
+        }
+        Insert: {
+          bearbeitet_am?: string | null
+          bestaetigung_fehler?: string | null
+          bestaetigung_gesendet_am?: string | null
+          eingegangen_am?: string
+          email: string
+          erklaerung: string
+          grund?: string | null
+          id?: string
+          kuendigungsart?: string | null
+          name: string
+          notiz?: string | null
+          nutzer_id?: string | null
+          vertrag: string
+          zum?: string | null
+        }
+        Update: {
+          bearbeitet_am?: string | null
+          bestaetigung_fehler?: string | null
+          bestaetigung_gesendet_am?: string | null
+          eingegangen_am?: string
+          email?: string
+          erklaerung?: string
+          grund?: string | null
+          id?: string
+          kuendigungsart?: string | null
+          name?: string
+          notiz?: string | null
+          nutzer_id?: string | null
+          vertrag?: string
+          zum?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       ads_funnel: {
@@ -2559,7 +2610,6 @@ export type Database = {
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
       revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
-      sticker_vergeben: { Args: never; Returns: string }
       service_mail_auswahl: {
         Args: { p_einrichtung_ab?: string }
         Returns: {
@@ -2608,6 +2658,7 @@ export type Database = {
         Args: { p_spalte: string; p_tabelle: string }
         Returns: string
       }
+      sticker_vergeben: { Args: never; Returns: string }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {
