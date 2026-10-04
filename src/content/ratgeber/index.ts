@@ -1,7 +1,9 @@
 import type { RatgeberArtikel } from './types';
+import { bildschirmzeitNachAlter } from './bildschirmzeit-nach-alter';
+import { eigenesSmartphone } from './eigenes-smartphone';
 
-// Artikel werden hier als Daten eingetragen (vorerst leer).
-export const artikel: RatgeberArtikel[] = [];
+// Alle Artikel, auch Entwuerfe. Sichtbar ist nur, was sichtbareArtikel() liefert.
+export const artikel: RatgeberArtikel[] = [bildschirmzeitNachAlter, eigenesSmartphone];
 
 // Nur veröffentlichte Artikel, deren Quellen alle geprüft sind, werden
 // angezeigt, verlinkt, vorgerendert und in die Sitemap geschrieben.

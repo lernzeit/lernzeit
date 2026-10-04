@@ -73,7 +73,7 @@ const RatgeberArtikel = () => {
             <ol className="space-y-2 text-sm text-muted-foreground">
               {[...a.quellen].sort((x, y) => x.nr - y.nr).map((q) => (
                 <li key={q.nr} id={`quelle-${q.nr}`} className="scroll-mt-20 break-words">
-                  [{q.nr}] {q.herausgeber}: {q.titel} ({q.jahr}).{' '}
+                  [{q.nr}] {q.herausgeber}: {q.titel}{q.jahr ? ` (${q.jahr})` : ''}.{' '}
                   <a href={q.url} target="_blank" rel="noopener" className="text-primary hover:underline">{q.url}</a>
                 </li>
               ))}
