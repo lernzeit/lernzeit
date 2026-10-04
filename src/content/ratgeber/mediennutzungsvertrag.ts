@@ -1,10 +1,9 @@
 import type { RatgeberArtikel } from './types';
 
 /*
- * Entwurf vom 04.10.2026. Quelle [2] ist dieselbe Leitlinie wie im Artikel
- * zur Bildschirmzeit nach Alter (dort am 04.10.2026 geprüft, Zeilen 1.5–1.7).
- * Quelle [1] ist noch am Original zu prüfen, siehe
- * docs/ratgeber/quellenpruefung.md, Artikel 3. Erst danach veroeffentlichen.
+ * Quellen am 04.10.2026 am Original geprüft, Befunde in
+ * docs/ratgeber/quellenpruefung.md, Artikel 3. [3] ist dieselbe Leitlinie wie
+ * im Artikel zur Bildschirmzeit nach Alter (Zeilen 1.5–1.7).
  */
 
 export const mediennutzungsvertrag: RatgeberArtikel = {
@@ -12,7 +11,7 @@ export const mediennutzungsvertrag: RatgeberArtikel = {
   titel: 'Regeln für Bildschirmzeit: So hilft ein Mediennutzungsvertrag',
   beschreibung:
     'Wie Familien Regeln für Handy, Internet und Spiele gemeinsam festhalten, welche Zeiten Kinderärzte empfehlen und wie die Abmachung im Alltag hält.',
-  veroeffentlicht: false,
+  veroeffentlicht: true,
   datum: '2026-10-04',
   lesezeitMinuten: 4,
   abschnitte: [
@@ -24,18 +23,19 @@ export const mediennutzungsvertrag: RatgeberArtikel = {
     {
       ueberschrift: 'Was ein Mediennutzungsvertrag ist',
       absaetze: [
-        'Ein Mediennutzungsvertrag ist eine schriftliche Vereinbarung zwischen Eltern und Kind. Darin steht, welche Medien das Kind wie lange und wofür nutzen darf. Die Initiativen klicksafe und Internet-ABC bieten dafür ein kostenloses Online-Werkzeug an [1].',
-        'Es gibt zwei Fassungen, eine für Kinder von 6 bis 12 Jahren und eine für ältere Kinder ab 12 [1]. Für Bereiche wie Nutzungszeiten, Handy und Smartphone, Internet, Fernsehen und Computerspiele stehen Regeln zur Auswahl, die sich ändern und durch eigene ergänzen lassen [1]. Am Ende wird der Vertrag ausgedruckt und von allen unterschrieben [1].',
-        'Der Vertrag enthält auch Regeln für die Eltern [1]. Das ist kein Detail: Wer selbst beim Essen aufs Handy schaut, kann es dem Kind schlecht verbieten.',
+        'Ein Mediennutzungsvertrag ist eine schriftliche Vereinbarung zwischen Eltern und Kind. Darin steht, welche Medien das Kind wie lange und wofür nutzen darf. Die Initiativen klicksafe und Internet-ABC haben dafür ein Online-Werkzeug entwickelt [1].',
+        'Es gibt Regelvorlagen für Kinder bis zwölf und für Kinder über zwölf Jahren [1]. Sie sind nach Bereichen geordnet: allgemeine Regeln, zeitliche Regelung, Handy und Smartphone, Internet, Fernsehen und Online-Videos, digitale Spiele und sonstige Verabredungen [2]. Jede Vorlage lässt sich anpassen, und eigene Regeln können dazukommen [1].',
+        'Am Ende lässt sich der Vertrag drucken oder als PDF speichern. Unten ist Platz für die Unterschriften der Erwachsenen und des Kindes [2].',
+        'Der Vertrag enthält auch Regeln für die Eltern, ausdrücklich wegen ihrer Vorbildfunktion [1]. Das ist kein Detail: Wer selbst beim Essen aufs Handy schaut, kann es dem Kind schlecht verbieten.',
       ],
     },
     {
       ueberschrift: 'Wie viel Zeit hineingehört',
       absaetze: [
-        'Für die Zeiten können sich Eltern an der Leitlinie der Kinder- und Jugendmedizin von 2023 orientieren. Sie nennt für die Freizeit Obergrenzen [2].',
-        'Zwischen 6 und 9 Jahren sind es höchstens 30 bis 45 Minuten an einzelnen Tagen [2].',
-        'Zwischen 9 und 12 Jahren höchstens 45 bis 60 Minuten täglich, ins Internet nur unter Aufsicht [2].',
-        'Zwischen 12 und 16 Jahren höchstens ein bis zwei Stunden am Tag und nicht nach 21 Uhr [2].',
+        'Für die Zeiten können sich Eltern an der Leitlinie der Kinder- und Jugendmedizin von 2023 orientieren. Sie nennt für die Freizeit Obergrenzen [3].',
+        'Zwischen 6 und 9 Jahren sind es höchstens 30 bis 45 Minuten an einzelnen Tagen [3].',
+        'Zwischen 9 und 12 Jahren höchstens 45 bis 60 Minuten täglich, ins Internet nur unter Aufsicht [3].',
+        'Zwischen 12 und 16 Jahren höchstens ein bis zwei Stunden am Tag und nicht nach 21 Uhr [3].',
         'Mehr zu den Empfehlungen, auch für jüngere Kinder, steht im Artikel „Wie viel Bildschirmzeit ist für Kinder in Ordnung?“ hier im Ratgeber.',
       ],
     },
@@ -60,13 +60,21 @@ export const mediennutzungsvertrag: RatgeberArtikel = {
     {
       nr: 1,
       titel: 'Mediennutzungsvertrag',
-      herausgeber: 'klicksafe und Internet-ABC',
+      herausgeber: 'Internet-ABC',
       jahr: '',
-      url: 'https://www.mediennutzungsvertrag.de/',
-      geprueftAm: null,
+      url: 'https://www.internet-abc.de/eltern/familie-medien/mediennutzungsvertrag/',
+      geprueftAm: '2026-10-04',
     },
     {
       nr: 2,
+      titel: 'Mediennutzungsvertrag (Online-Werkzeug)',
+      herausgeber: 'klicksafe und Internet-ABC',
+      jahr: '',
+      url: 'https://www.mediennutzungsvertrag.de/',
+      geprueftAm: '2026-10-04',
+    },
+    {
+      nr: 3,
       titel: 'S2k-Leitlinie zur Prävention dysregulierten Bildschirmmediengebrauchs in Kindheit und Jugend (AWMF-Register 027-075)',
       herausgeber: 'Deutsche Gesellschaft für Kinder- und Jugendmedizin u. a.',
       jahr: '2023',
