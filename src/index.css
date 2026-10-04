@@ -221,3 +221,32 @@ html {
 #root {
   overflow-x: clip;
 }
+
+/* Startseite (/start): Bewegung, siehe useScrollEffekte und LoopVideo */
+@keyframes lz-schweben {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes lz-verlauf {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+.lz-schweben {
+  animation: lz-schweben 6s ease-in-out infinite;
+}
+.lz-verlauf {
+  background-size: 200% auto;
+  animation: lz-verlauf 5s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lz-landing .scroll-fade {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .lz-landing .lz-schweben,
+  .lz-landing .lz-verlauf,
+  .lz-landing .animate-pulse {
+    animation: none !important;
+  }
+}

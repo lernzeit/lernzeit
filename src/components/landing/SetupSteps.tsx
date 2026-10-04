@@ -48,9 +48,13 @@ const SetupSteps = () => {
           </h2>
         </div>
 
-        <ol className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid gap-5 sm:grid-cols-3">
+        <ol className="grid gap-5 sm:grid-cols-3">
           {steps.map((step, i) => (
-            <li key={step.title} className="bg-card rounded-2xl border shadow-sm p-6">
+            <li
+              key={step.title}
+              className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 bg-card rounded-2xl border shadow-sm p-6"
+              style={{ transitionDelay: `${150 + i * 120}ms` }}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
                   <step.icon className="w-5 h-5" />
