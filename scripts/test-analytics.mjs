@@ -30,7 +30,7 @@ const stubs = {
         supabase: 'export const supabase = globalThis.__sb;',
         capacitor: 'export const Capacitor = { isNativePlatform: () => false, getPlatform: () => "web" };',
         preferences: 'export const Preferences = { get: async () => ({ value: null }), set: async () => {} };',
-        types: 'export {};',
+        types: 'export const SUPABASE_PROJECT_URL = "https://beispiel.supabase.co"; export const SUPABASE_ANON_KEY = "anon";',
       }[path],
     }));
   },
@@ -59,7 +59,7 @@ globalThis.localStorage = {
   setItem: (k, v) => speicher.set(k, v),
   removeItem: (k) => speicher.delete(k),
 };
-globalThis.window = { location: { pathname: '/', search: '' }, dataLayer: [] };
+globalThis.window = { location: { pathname: '/', search: '', hostname: 'lernzeit.app' }, dataLayer: [] };
 globalThis.document = { referrer: '' };
 
 let rolle = 'parent';
@@ -126,6 +126,24 @@ pruefe(nachEltern === 1 && dataLayer().length === 0, 'Kontowechsel im selben Bro
 zuruecksetzen(); rolle = 'parent'; sitzung = 'eltern-2';
 await track('page_view', { role: 'child' });
 pruefe(dataLayer().length === 0, 'Elternkonto, aber Event nennt role=child: trotzdem gesperrt');
+
+/* --- Nur echte Besuche (seit 04.10.2026) ------------------------------ */
+
+zuruecksetzen(); rolle = 'parent'; sitzung = null;
+globalThis.window.location.hostname = 'id-preview--abc.lovable.app';
+await track('page_view', {});
+pruefe(geschrieben.length === 0, 'Lovable-Vorschau: nichts gemessen');
+globalThis.window.location.hostname = 'lernzeit.app';
+
+zuruecksetzen();
+Object.defineProperty(globalThis.navigator, 'webdriver', { value: true, configurable: true });
+await track('page_view', {});
+pruefe(geschrieben.length === 0, 'Automatisch gesteuerter Browser (Vorrendern beim Build): nichts gemessen');
+Object.defineProperty(globalThis.navigator, 'webdriver', { value: false, configurable: true });
+
+zuruecksetzen();
+await track('page_view', {});
+pruefe(geschrieben.length === 1 && geschrieben[0].properties.geraet === 'desktop', 'lernzeit.app: gemessen, mit Geraeteklasse');
 
 /* --- Anzeigenklicks -------------------------------------------------- */
 /*

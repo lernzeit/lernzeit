@@ -444,6 +444,32 @@ function pushToDataLayer(eventName: string, properties: AnalyticsProperties): vo
 }
 
 /* ------------------------------------------------------------------ */
+/* Nur echte Besuche messen                                            */
+/* ------------------------------------------------------------------ */
+
+/** Hosts der Website, auf denen gemessen wird. */
+const MESS_HOSTS = ['lernzeit.app', 'www.lernzeit.app'];
+
+/**
+ * Misst nur echte Besuche. Bis 04.10.2026 landeten auch diese in
+ * analytics_events und blaehten die Besucherzahl auf:
+ *  - das Vorrendern beim Build (Puppeteer ruft /start, /impressum usw. auf;
+ *    27 Builds in vier Wochen ergaben rund 95 "Besucher")
+ *  - die Lovable-Vorschau (id-preview--….lovable.app) und lokale Entwicklung
+ * Automatisch gesteuerte Browser melden sich ueber navigator.webdriver.
+ * Die Apps (Capacitor) laufen unter localhost und werden immer gemessen.
+ */
+function messungAktiv(): boolean {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.webdriver) return false;
+    if (getPlatform() !== 'web') return true;
+    return MESS_HOSTS.includes(window.location.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Geraeteklasse und Besuchsdauer                                      */
 /* ------------------------------------------------------------------ */
 
@@ -483,6 +509,7 @@ export function sekundenSeitErstemAufruf(): number {
  */
 export function trackBeimVerlassen(eventName: AnalyticsEventName, properties: AnalyticsProperties = {}): void {
   try {
+    if (!messungAktiv()) return;
     const platform = getPlatform();
     const attribution = getAttribution();
     const payload: AnalyticsEventInsert = {
@@ -531,6 +558,7 @@ export async function track(
   properties: AnalyticsProperties = {}
 ): Promise<void> {
   try {
+    if (!messungAktiv()) return;
     const attribution = getAttribution();
     const platform = getPlatform();
     const pagePath = getPagePath();
