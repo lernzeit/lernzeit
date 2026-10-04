@@ -152,7 +152,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
         })()}
 
         <HeftRegal
-          titel={activePlan ? 'Oder ein Heft' : 'Deine Hefte'}
+          titel={activePlan ? 'Oder ein anderes Fach' : 'Wähle ein Fach zum Lernen'}
           hefte={hefte.hefte}
           onWaehlen={(fach) => onCategorySelect(fach)}
         />

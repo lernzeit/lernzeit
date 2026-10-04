@@ -236,8 +236,9 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   };
 
   // Sofort speichern (App-Redesign, Wunsch 04.10.2026): keine Speichern-Taste
-  // mehr. Jede Aenderung wird nach kurzer Pause gespeichert, danach erscheint
-  // "Gespeichert" mit "Rueckgaengig".
+  // mehr. Jede Aenderung wird nach kurzer Pause gespeichert. Ohne Meldung
+  // (Wunsch 04.10.2026 abends: die Toasts nervten bei Plus/Minus); der Stand
+  // steht leise unter den Regeln ("Wird gespeichert …"). Nur Fehler melden sich.
   const einstellungenRef = useRef(settings);
   einstellungenRef.current = settings;
   const ausstehend = useRef<{ vorher: ChildSettings | null; timer: number | null }>({ vorher: null, timer: null });
@@ -262,20 +263,6 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     }
   };
 
-  const gespeichert = (rueckgaengig: () => Promise<void>) => {
-    sonnerToast('Gespeichert', {
-      duration: 4000,
-      action: {
-        label: 'Rückgängig',
-        onClick: () => {
-          void rueckgaengig()
-            .then(() => sonnerToast('Rückgängig gemacht', { duration: 2500 }))
-            .catch(() => sonnerToast.error('Konnte nicht rückgängig gemacht werden.'));
-        },
-      },
-    });
-  };
-
   const fehler = () => sonnerToast.error('Konnte nicht gespeichert werden. Bitte versuch es noch einmal.');
 
   const updateSetting = (key: keyof ChildSettings, value: number) => {
@@ -296,13 +283,6 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
         // Seite bei jedem Plus/Minus flackern. Grenzen und Sekunden braucht das
         // Eltern-Dashboard nicht.
         await schreibeEinstellungen(werte);
-        if (vorher) {
-          gespeichert(async () => {
-            await schreibeEinstellungen(vorher);
-            setSettings(vorher);
-            einstellungenRef.current = vorher;
-          });
-        }
       } catch (error) {
         console.error('Error saving child settings:', error);
         if (vorher) { setSettings(vorher); einstellungenRef.current = vorher; }
@@ -326,7 +306,6 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     try {
       await schreiben(neu);
       onSettingsChanged?.();
-      gespeichert(async () => { await schreiben(vorher); setGrade(vorher); onSettingsChanged?.(); });
     } catch (error) {
       console.error('Error saving grade:', error);
       setGrade(vorher);
@@ -376,11 +355,6 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
       } else {
         await schreibeFach(fach, neueSicht[fach], neuePrio[fach]);
       }
-      gespeichert(async () => {
-        await alleSchreiben(vorherSicht, vorherPrio);
-        setVisibility(vorherSicht);
-        setPriorities(vorherPrio);
-      });
     } catch (error) {
       console.error('Error saving subject:', error);
       setVisibility(vorherSicht);

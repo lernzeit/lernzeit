@@ -31,12 +31,13 @@ pro Tag, Honigtopf-Feld). Ausführung in Stripe von Hand, siehe
 
 ## Vom Betreiber zu bestätigen
 
-1. **Vertretungsberechtigter im Impressum:** eingetragen ist „Geschäftsführer
-   Thomas Brösicke“ – bitte mit dem Handelsregister abgleichen.
-2. **USt-IdNr.:** Falls vorhanden, gehört sie ins Impressum.
-3. **Telefonnummer:** Das Muster der Widerrufsbelehrung sieht eine
-   Telefonnummer vor (Hinweis [2]); es gibt keine. Falls eine Nummer
-   existiert, ergänzen.
+1. **Vertretungsberechtigter im Impressum:** „Geschäftsführer Thomas
+   Brösicke“ – vom Betreiber bestätigt (04.10.2026).
+2. **USt-IdNr. und Telefonnummer:** gibt es beide nicht (Betreiber,
+   04.10.2026). Impressum und Widerrufsbelehrung bleiben ohne.
+3. **Telefonnummer / zweiter Kontaktweg:** siehe 2; als zweiter schneller Weg
+   neben der E-Mail böte sich ein echtes Kontaktformular an (heute öffnet es
+   nur das E-Mail-Programm).
 4. **Jahresabo nach dem ersten Jahr:** Stripe verlängert ein Jahresabo um ein
    weiteres Jahr. Gegenüber Verbrauchern ist eine stillschweigende
    Verlängerung nur auf unbestimmte Zeit mit monatlicher Kündigungsmöglichkeit
@@ -50,6 +51,12 @@ pro Tag, Honigtopf-Feld). Ausführung in Stripe von Hand, siehe
    den vollen Betrag erstatten.
 
 ## Für die Kanzlei (bewusst nicht entschieden)
+
+0. **Ort von Kündigungs- und Widerrufsbutton:** Auf Wunsch des Betreibers
+   (04.10.2026) nicht mehr im Seitenfuß, sondern oben auf der Support-Seite
+   (Fuß → „Support“ → Knopf) und im Abo-Bereich. § 312k verlangt „ständig
+   verfügbar sowie unmittelbar und leicht zugänglich“, § 356a „hervorgehoben
+   platziert“. Reicht das? Wenn nicht: ein schlichter Textlink im Fuß.
 
 1. **Bestellknopf (§ 312j Abs. 3 BGB):** Stripe Checkout beschriftet ihn im
    Abo-Modus mit „Abonnieren“. Reicht das, oder braucht es „zahlungspflichtig

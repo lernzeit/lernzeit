@@ -90,7 +90,7 @@ Supabase-Secrets gelöscht werden.
   (Tabellen `kind_hefte`, `kind_sticker`, Vergabe nur über `sticker_vergeben()`).
 - Spiel: Kästchen-Fortschritt, eigenes Ziffernfeld für Zahlenaufgaben, Haken/Rotstift.
 - Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Regeln speichern sofort mit
-  „Rückgängig“ (kein Speichern-Knopf).
+  leisem Hinweis „Wird gespeichert …“ (kein Speichern-Knopf, keine Toasts).
 - Website-Bilder nach App-Änderungen neu aufnehmen: `npm run build`, dann
   `npm run werbung:app-bilder` und `npm run werbung:landing` (FFMPEG/CHROMIUM setzen).
 

@@ -81,27 +81,36 @@ export function HeftUmschlag({
   );
 }
 
-/** Regal mit allen Heften; antippen startet das Fach. */
+/**
+ * Regal mit allen Heften; antippen startet das Fach. Ueberschrift sagt, was
+ * passiert (bis 04.10.2026 "Meine Hefte" – Kinder wussten nicht, dass es dort
+ * zu den Aufgaben geht).
+ */
 export function HeftRegal({
   hefte,
   onWaehlen,
   onGestalten,
-  titel = 'Meine Hefte',
+  titel = 'Wähle ein Fach zum Lernen',
+  hinweis = 'Tipp auf ein Heft und löse Aufgaben.',
 }: {
   hefte: Heft[];
   onWaehlen: (fach: FachId) => void;
   onGestalten?: () => void;
   titel?: string;
+  hinweis?: string;
 }) {
   return (
     <section aria-labelledby="hefte-titel">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 id="hefte-titel" className="text-base font-extrabold">{titel}</h2>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="hefte-titel" className="text-lg font-extrabold leading-tight">{titel}</h2>
+          {hinweis && <p className="mt-0.5 text-sm text-muted-foreground">{hinweis}</p>}
+        </div>
         {onGestalten && (
           <button
             type="button"
             onClick={onGestalten}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-primary hover:bg-primary/10"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-primary hover:bg-primary/10"
           >
             <Paintbrush className="h-4 w-4" />
             Gestalten

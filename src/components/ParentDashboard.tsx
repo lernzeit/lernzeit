@@ -99,6 +99,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const inviteRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
+  // Fuer die Kopfzeile: der gespeicherte Name, nicht das Eingabefeld.
+  const [anzeigeName, setAnzeigeName] = useState('');
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [referralBannerDismissed, setReferralBannerDismissed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -361,7 +363,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         .select('name, is_founding_family')
         .eq('id', userId)
         .single();
-      if (data?.name) setProfileName(data.name);
+      if (data?.name) { setProfileName(data.name); setAnzeigeName(data.name); }
       setIsFoundingFamily(!!data?.is_founding_family);
     } catch {}
   };
@@ -430,6 +432,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       setProfileSaving(true);
       const { error } = await supabase.from('profiles').update({ name: profileName.trim() }).eq('id', userId);
       if (error) throw error;
+      setAnzeigeName(profileName.trim());
       toast({ title: "Profil aktualisiert", description: "Dein Name wurde gespeichert." });
     } catch {
       toast({ title: "Fehler", description: "Name konnte nicht gespeichert werden.", variant: "destructive" });
@@ -575,8 +578,32 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   // App-Redesign (Etappe 4): Navigation unten, "Heute" zuerst, Kind-Details in
   // vier Bereichen. Begruessung, Rollen-Abzeichen und Banner oben entfallen;
   // Ideen-Forum, Empfehlung und Konto stehen unter "Konto".
+  const stunde = new Date().getHours();
+  const gruss = stunde < 11 ? 'Guten Morgen' : stunde < 17 ? 'Hallo' : 'Guten Abend';
+  const vorname = anzeigeName.trim().split(/\s+/)[0];
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-28">
+      {/* Kopfzeile mit Logo und Konto (Wunsch 04.10.2026: in der Eltern-App
+          fehlte jeder Hinweis, wo man ist und wer angemeldet ist). */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-primary" aria-hidden="true">
+            <BookOpen className="h-5 w-5 text-white" strokeWidth={2.25} />
+          </span>
+          <span className="text-[1.1875rem] font-extrabold tracking-[-0.02em] text-tinte">LernZeit</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">Eltern</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('konto')}
+          aria-label="Konto"
+          className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-base font-extrabold text-primary ring-1 ring-inset ring-primary/15 transition-colors hover:bg-primary/15"
+        >
+          {vorname ? vorname[0].toUpperCase() : <User className="h-5 w-5" />}
+        </button>
+      </div>
+
       {!familyReady ? (
         <div role="status" className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -639,6 +666,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         {!kindImDetail && (
           <header className="flex items-end justify-between gap-3">
             <div className="min-w-0">
+              {activeTab === 'requests' && (
+                <p className="font-hand text-lg text-gruen-text">{gruss}{vorname ? `, ${vorname}` : ''}!</p>
+              )}
               <h1 className="text-[1.75rem] font-extrabold leading-tight">{reiterTitel[activeTab] ?? 'Heute'}</h1>
               {activeTab === 'requests' && <p className="text-sm text-muted-foreground">{heuteText}</p>}
             </div>

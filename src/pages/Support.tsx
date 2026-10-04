@@ -32,7 +32,8 @@ import {
   Download,
   Loader2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Seo from '@/components/Seo';
@@ -313,6 +314,26 @@ const Support = () => {
               </a>
             </section>
 
+            {/* Kuendigen (§ 312k BGB) und Widerrufen (§ 356a BGB): seit 04.10.2026
+                hier statt im Seitenfuss (Wunsch des Betreibers, im Fuss zu
+                praesent). Nur im Web; in den Apps wird ueber die Stores gekauft. */}
+            {!Capacitor.isNativePlatform() && (
+              <section aria-labelledby="vertrag-titel" className="rounded-2xl bg-muted p-5">
+                <h2 id="vertrag-titel" className="text-xl font-semibold">Abo kündigen oder widerrufen</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Ohne Anmeldung, mit sofortiger Bestätigung per E-Mail.
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Button asChild variant="outline" className="bg-card">
+                    <Link to="/kuendigen">Verträge hier kündigen</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="bg-card">
+                    <Link to="/widerruf#widerrufen">Vertrag widerrufen</Link>
+                  </Button>
+                </div>
+              </section>
+            )}
+
             <section>
               <h2 className="text-xl font-semibold mb-3">Häufige Fragen</h2>
               <div className="space-y-4 text-muted-foreground">
@@ -323,8 +344,9 @@ const Support = () => {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground">Wie kündige ich Premium?</h3>
-                  <p>Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten".
-                  In der iOS-App öffnet sich die Apple-Abo-Verwaltung, im Web das Kundenportal.</p>
+                  <p>Im Eltern-Bereich unter „Abo" → „Abo verwalten" oder ohne Anmeldung
+                  über „Verträge hier kündigen" oben auf dieser Seite. Ein Abo aus dem App Store
+                  oder von Google Play beendest du in den Abo-Einstellungen des Stores.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground">Wie lösche ich mein Konto und alle Daten?</h3>
