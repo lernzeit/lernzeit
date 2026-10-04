@@ -2,8 +2,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Seo from '@/components/Seo';
 import LegalFooter from '@/components/layout/LegalFooter';
-import { FaqListe } from '@/components/landing/FaqSection';
-import { FAQ_JSON_LD } from '@/content/faq';
+import { FAQ, FAQ_JSON_LD } from '@/content/faq';
 
 const Faq = () => (
   <main className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
@@ -18,8 +17,15 @@ const Faq = () => (
     <div className="max-w-3xl mx-auto px-4 py-16">
       <Link to="/start" className="text-sm text-muted-foreground hover:text-foreground">LernZeit</Link>
       <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2 mb-10">Häufige Fragen</h1>
-      <section data-abschnitt="faq">
-        <FaqListe />
+      {/* Alle Antworten offen: Auf der eigenen FAQ-Seite sollen sie ohne Klick
+          lesbar sein und im vorgerenderten HTML stehen (Suchmaschinen). */}
+      <section data-abschnitt="faq" className="space-y-8">
+        {FAQ.map(({ f, a }) => (
+          <div key={f}>
+            <h2 className="text-lg sm:text-xl font-bold mb-2">{f}</h2>
+            <p className="text-base text-muted-foreground leading-relaxed">{a}</p>
+          </div>
+        ))}
       </section>
       <div className="mt-10 space-y-3 text-base">
         <p>

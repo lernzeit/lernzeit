@@ -20,7 +20,11 @@ const Ratgeber = () => {
       )}
       <div className="max-w-2xl mx-auto px-4 py-16">
         <Link to="/start" className="text-sm text-muted-foreground hover:text-foreground">LernZeit</Link>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2 mb-10">Ratgeber</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2 mb-4">Ratgeber</h1>
+        <p className="text-muted-foreground mb-10">
+          Artikel für Eltern rund um Bildschirmzeit und Lernen. Jede Zahl ist mit einer Quelle belegt,
+          die wir vor der Veröffentlichung am Original geprüft haben.
+        </p>
         {liste.length === 0 ? (
           <p className="text-muted-foreground">Hier erscheinen bald Artikel rund um Bildschirmzeit und Lernen.</p>
         ) : (
@@ -32,6 +36,9 @@ const Ratgeber = () => {
                   <p className="text-muted-foreground mt-1">{a.beschreibung}</p>
                   <p className="text-xs text-muted-foreground mt-2">
                     {formatiereDatum(a.datum)} · {a.lesezeitMinuten} Min. Lesezeit
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Quellen: {[...new Set(a.quellen.map((q) => q.herausgeber))].join(' · ')}
                   </p>
                 </Link>
               </li>
