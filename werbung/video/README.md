@@ -19,11 +19,3 @@ Hinweise:
   und die Aufgaben sind Beispiele.
 - Schrift: Inter (SIL Open Font License, liegt als `inter-latin-wght.woff2` bei).
 - Farben aus `src/index.css`: Blau `#3B82F6`, Grün (Sekundärfarbe), Amber `#F59E0B`.
-
-# Landing-Loops (ohne Text)
-
-Dateien: `public/videos/loop-kind.mp4` (6 s) und `loop-eltern.mp4` (3,2 s), je 720 × 900,
-ohne Ton, nahtlos wiederholbar, dazu Poster `loop-*.jpg`. Quelle `lernzeit-loops.html` +
-`loops.js`, neu erzeugen mit `FFMPEG=… npm run werbung:landing-loops`.
-Nachgestellte Oberfläche wie in V1 („Mia“, Aufgaben sind Beispiele). Für die Website
-gedacht, nicht als Anzeige.

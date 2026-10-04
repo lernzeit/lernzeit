@@ -1,103 +1,72 @@
-import { BookOpen, Brain, Clock } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import Handy from './Handy';
 
+// Texte unveraendert; die Bilder sind Standbilder der echten Demo
+// (public/landing, erzeugt mit `npm run werbung:landing`).
 const steps = [
   {
-    icon: BookOpen,
     number: '01',
     title: 'Fach wählen',
     description: 'Mathe, Deutsch, Englisch und viele weitere Fächer – von Klasse 1 bis 10.',
-    gradient: 'from-primary to-primary/70',
+    bild: '/landing/fach.webp',
+    alt: 'Fachwahl: Mathe, Deutsch, Sachkunde, Englisch',
   },
   {
-    icon: Brain,
     number: '02',
     title: 'Aufgaben lösen',
     description: 'Altersgerechte Fragen beantworten – bei Fehlern hilft der KI-Tutor mit Erklärungen.',
-    gradient: 'from-secondary to-secondary/70',
+    bild: '/landing/aufgabe.webp',
+    alt: 'Aufgabe „Wie viel ist 7 · 6?“ mit eingegebener Antwort',
   },
   {
-    icon: Clock,
     number: '03',
     title: 'Zeit verdienen',
     description: 'Pro richtige Antwort erhalten Kinder Bildschirmzeit – Eltern legen die Sekunden pro Fach fest.',
-    gradient: 'from-accent to-accent/70',
+    bild: '/landing/richtig.webp',
+    alt: 'Rückmeldung „Super!“ nach der richtigen Antwort',
   },
 ];
 
-const HowItWorks = () => {
-  const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
-      { threshold: 0.1 }
-    );
-    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <section ref={sectionRef} data-abschnitt="so_funktionierts" className="py-24 px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
-          <span className="text-sm font-semibold text-primary uppercase tracking-wider">So einfach geht's</span>
-          <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
-            In drei Schritten zur{' '}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              verdienten Zeit
-            </span>
+const HowItWorks = () => (
+  <section data-abschnitt="so_funktionierts" id="so-funktionierts" className="scroll-mt-20 px-3 py-6 sm:px-5 sm:py-10">
+    <div className="lp-dunkel relative overflow-hidden rounded-[28px] bg-[var(--lp-ink)] py-20 text-slate-300 sm:rounded-[36px] lg:py-28">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_45%_at_15%_0%,rgba(59,130,246,0.22),transparent_70%),radial-gradient(40%_40%_at_100%_100%,rgba(18,183,106,0.14),transparent_70%)]"
+      />
+      <div className="lp-container relative">
+        <div data-zeigen className="max-w-2xl">
+          <p className="lp-eyebrow !text-blue-300">So einfach geht's</p>
+          <h2 className="mt-4 text-[2.125rem] font-extrabold leading-[1.08] sm:text-5xl">
+            In drei Schritten zur verdienten Zeit
           </h2>
         </div>
 
-        {/* Desktop: 3-column grid */}
-        <div className="hidden md:grid md:grid-cols-3 gap-8">
-          {steps.map((step, i) => (
-            <div
-              key={step.title}
-              className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 group relative bg-card rounded-3xl p-10 border shadow-sm hover:shadow-xl hover:-translate-y-2`}
-              style={{ transitionDelay: `${i * 150}ms` }}
+        <ol className="mt-14 grid gap-5 md:grid-cols-3 lg:mt-16 lg:gap-6">
+          {steps.map((s, i) => (
+            <li
+              key={s.number}
+              data-zeigen
+              style={{ '--lp-verzug': `${i * 120}ms` } as React.CSSProperties}
+              className="group relative flex flex-col overflow-hidden rounded-3xl bg-white/[0.04] ring-1 ring-inset ring-white/10"
             >
-              <span className="text-7xl font-black text-muted absolute top-5 right-7">
-                {step.number}
-              </span>
-              <div className={`w-16 h-16 bg-gradient-to-br ${step.gradient} rounded-2xl flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                <step.icon className="w-8 h-8 text-primary-foreground" />
+              <div className="p-7 pb-0 sm:p-8 sm:pb-0">
+                <span className="lp-display text-sm font-bold tracking-[0.08em] text-blue-300">{s.number}</span>
+                <h3 className="mt-3 text-[1.375rem] font-bold">{s.title}</h3>
+                <p className="mt-2 text-[0.9375rem] leading-relaxed text-slate-400">{s.description}</p>
               </div>
-              <h3 className="font-bold text-2xl mb-3">{step.title}</h3>
-              <p className="text-muted-foreground text-base leading-relaxed">{step.description}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Mobile: compact horizontal list */}
-        <div className="md:hidden space-y-4">
-          {steps.map((step, i) => (
-            <div
-              key={step.title}
-              className={`scroll-fade opacity-0 translate-y-4 transition-all duration-700 flex items-start gap-4 bg-card rounded-2xl p-4 border shadow-sm`}
-              style={{ transitionDelay: `${i * 100}ms` }}
-            >
-              <div className={`w-12 h-12 shrink-0 bg-gradient-to-br ${step.gradient} rounded-xl flex items-center justify-center shadow-md`}>
-                <step.icon className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <h3 className="font-bold text-base">{step.title}</h3>
-                  <span className="text-xs font-bold text-muted-foreground">{step.number}</span>
+              {/* Handy ragt unten aus der Karte */}
+              <div className="relative mt-auto flex h-[290px] justify-center overflow-hidden pt-8">
+                <div className="transition-transform duration-700 ease-out group-hover:-translate-y-2">
+                  <Handy bild={s.bild} alt={s.alt} className="text-[2.4px]" />
                 </div>
-                <p className="text-muted-foreground text-sm leading-relaxed mt-0.5">{step.description}</p>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0f1626] to-transparent" />
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
-
-      <style>{`
-        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
-      `}</style>
-    </section>
-  );
-};
+    </div>
+  </section>
+);
 
 export default HowItWorks;

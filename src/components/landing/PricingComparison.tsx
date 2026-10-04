@@ -1,6 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { Check, X, Crown, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check, Minus, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { trackFireAndForget } from '@/lib/analytics';
@@ -17,7 +15,6 @@ const features = [
 
 const PricingComparison = () => {
   const navigate = useNavigate();
-  const sectionRef = useRef<HTMLElement>(null);
 
   // In the native app (iOS/Android) we must not show web pricing or link to
   // the Stripe checkout. Purchases go exclusively through the RevenueCat
@@ -26,103 +23,102 @@ const PricingComparison = () => {
     return null;
   }
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
-      { threshold: 0.1 }
-    );
-    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <section ref={sectionRef} data-abschnitt="preise" className="py-24 px-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background pointer-events-none" />
-
-      <div className="relative max-w-4xl mx-auto">
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
-          <span className="text-sm font-semibold text-accent uppercase tracking-wider">Preise</span>
-          <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
-            Jetzt starten,{' '}
-            <span className="bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-              jederzeit upgraden
-            </span>
+    <section data-abschnitt="preise" id="preise" className="scroll-mt-20 border-t border-slate-200/80 bg-[var(--lp-soft)] py-24 lg:py-32">
+      <div className="lp-container">
+        <div data-zeigen className="mx-auto max-w-2xl text-center">
+          <p className="lp-eyebrow">Preise</p>
+          <h2 className="mt-4 text-[2.125rem] font-extrabold leading-[1.08] sm:text-5xl">
+            Jetzt starten, jederzeit upgraden
           </h2>
-          <p className="text-muted-foreground mt-4 text-lg max-w-xl mx-auto">
+          <p className="mt-5 text-lg leading-relaxed">
             Nach der Anmeldung stehen dir 4 Wochen lang alle Premium-Funktionen kostenlos zur Verfügung.
           </p>
-          <p className="mt-3 text-sm font-medium text-foreground">
+          <p className="mt-2 text-[0.9375rem] font-medium text-[var(--lp-ink)]">
             4 Wochen alle Funktionen kostenlos – keine Zahlungsdaten nötig.
           </p>
         </div>
 
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid sm:grid-cols-2 gap-6">
-          {/* Free */}
-          <div className="bg-card rounded-3xl border p-8 shadow-sm">
-            <h3 className="text-xl font-bold mb-1">Kostenlos</h3>
-            <p className="text-muted-foreground text-sm mb-6">Für immer gratis</p>
-            <div className="text-4xl font-extrabold mb-8">0 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
-            <ul className="space-y-4">
+        <div className="mx-auto mt-14 grid max-w-4xl gap-5 md:grid-cols-2 lg:mt-16 lg:gap-6">
+          {/* Kostenlos */}
+          <div data-zeigen className="flex flex-col rounded-[28px] bg-white p-8 ring-1 ring-slate-200 sm:p-10">
+            <h3 className="text-xl font-bold">Kostenlos</h3>
+            <p className="mt-1 text-[0.9375rem] text-slate-500">Für immer gratis</p>
+            <p className="mt-8 flex items-baseline gap-1.5">
+              <span className="lp-display text-5xl font-extrabold tracking-[-0.03em] text-[var(--lp-ink)]">0 €</span>
+              <span className="text-[0.9375rem] text-slate-500">/Monat</span>
+            </p>
+            <ul className="mt-8 space-y-3.5 border-t border-slate-100 pt-8">
               {features.map((f) => (
-                <li key={f.name} className="flex items-center gap-3 text-sm">
+                <li key={f.name} className={`flex items-center gap-3 text-[0.9375rem] ${f.free ? 'text-slate-700' : 'text-slate-400'}`}>
                   {f.free ? (
-                    <Check className="w-5 h-5 text-secondary shrink-0" />
+                    <Check className="h-[18px] w-[18px] shrink-0 text-[var(--lp-green)]" strokeWidth={2.5} />
                   ) : (
-                    <X className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <Minus className="h-[18px] w-[18px] shrink-0 text-slate-300" strokeWidth={2.5} />
                   )}
-                  <span className={f.free ? '' : 'text-muted-foreground'}>{f.name}</span>
+                  {f.name}
                 </li>
               ))}
             </ul>
-            <Button
+            <button
+              type="button"
               onClick={() => {
                 trackFireAndForget('landing_cta_click', { position: 'pricing_free' });
                 navigate('/?auth=true');
               }}
-              variant="outline"
-              className="w-full mt-8 h-12 rounded-full font-semibold"
+              className="mt-10 inline-flex h-12 items-center justify-center rounded-full bg-white text-[0.9375rem] font-semibold text-[var(--lp-ink)] ring-1 ring-slate-300 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lp-blue)]"
             >
               Jetzt starten
-            </Button>
+            </button>
           </div>
 
           {/* Premium */}
-          <div className="relative bg-card rounded-3xl border-2 border-primary/30 p-8 shadow-xl">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-secondary text-primary-foreground text-xs font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5">
-              <Crown className="w-3.5 h-3.5" />
-              4 Wochen gratis
+          <div
+            data-zeigen
+            style={{ '--lp-verzug': '120ms' } as React.CSSProperties}
+            className="lp-dunkel relative flex flex-col overflow-hidden rounded-[28px] bg-[var(--lp-ink)] p-8 text-slate-300 shadow-[0_30px_60px_-30px_rgba(11,18,32,0.6)] sm:p-10"
+          >
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_100%_0%,rgba(59,130,246,0.35),transparent_70%)]" />
+            <div className="relative flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold">Premium</h3>
+                <p className="mt-1 text-[0.9375rem] text-slate-400">Volle Kontrolle über Zeit und Fächer</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-[0.8125rem] font-semibold text-white ring-1 ring-inset ring-white/15">
+                4 Wochen gratis
+              </span>
             </div>
-            <h3 className="text-xl font-bold mb-1">Premium</h3>
-            <p className="text-muted-foreground text-sm mb-6">Volle Kontrolle über Zeit und Fächer</p>
-            <div className="mb-8">
-              <div className="text-4xl font-extrabold">2,99 €<span className="text-base font-normal text-muted-foreground"> /Monat</span></div>
-              <div className="mt-1 text-sm text-muted-foreground">oder <span className="font-semibold text-foreground">29,99 € /Jahr</span> <span className="text-xs">(spare ~16 %)</span></div>
+            <div className="relative mt-8">
+              <p className="flex items-baseline gap-1.5">
+                <span className="lp-display text-5xl font-extrabold tracking-[-0.03em] text-white">2,99 €</span>
+                <span className="text-[0.9375rem] text-slate-400">/Monat</span>
+              </p>
+              <p className="mt-2 text-[0.9375rem] text-slate-400">
+                oder <span className="font-semibold text-white">29,99 € /Jahr</span> (spare ~16 %)
+              </p>
             </div>
-            <ul className="space-y-4">
+            <ul className="relative mt-8 space-y-3.5 border-t border-white/10 pt-8">
               {features.map((f) => (
-                <li key={f.name} className="flex items-center gap-3 text-sm">
-                  <Check className="w-5 h-5 text-primary shrink-0" />
-                  <span>{f.name}</span>
+                <li key={f.name} className="flex items-center gap-3 text-[0.9375rem] text-slate-200">
+                  <Check className="h-[18px] w-[18px] shrink-0 text-blue-300" strokeWidth={2.5} />
+                  {f.name}
                 </li>
               ))}
             </ul>
-            <Button
+            <button
+              type="button"
               onClick={() => {
                 trackFireAndForget('landing_cta_click', { position: 'pricing_premium' });
                 navigate('/?auth=true');
               }}
-              className="w-full mt-8 h-12 rounded-full font-semibold"
+              className="group relative mt-10 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--lp-blue)] text-[0.9375rem] font-semibold text-white transition-colors hover:bg-[#1d4ed8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               Jetzt testen
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
-      `}</style>
     </section>
   );
 };

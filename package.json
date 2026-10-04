@@ -27,7 +27,7 @@
     "werbung:karten": "node scripts/erzeuge-karten.mjs",
     "werbung:video": "node scripts/nimm-demo-auf.mjs",
     "werbung:erklaervideo": "node scripts/erzeuge-erklaervideo.mjs",
-    "werbung:landing-loops": "node scripts/erzeuge-landing-loops.mjs"
+    "werbung:landing": "node scripts/nimm-landing-auf.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

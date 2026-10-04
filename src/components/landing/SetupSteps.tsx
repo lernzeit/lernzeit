@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { UserPlus, Share2, Smartphone } from 'lucide-react';
 
 // Die Einrichtung besteht aus ZWEI Konten – deinem und dem deines Kindes.
@@ -22,58 +21,47 @@ const steps = [
   },
 ];
 
-const SetupSteps = () => {
-  const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('animate-in')),
-      { threshold: 0.1 }
-    );
-    sectionRef.current?.querySelectorAll('.scroll-fade').forEach(el => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <section ref={sectionRef} className="py-24 px-4 relative overflow-hidden">
-      <div className="relative max-w-4xl mx-auto">
-        <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-14">
-          <span className="text-sm font-semibold text-primary uppercase tracking-wider">Einrichtung</span>
-          <h2 className="text-4xl sm:text-5xl font-extrabold mt-3 tracking-tight">
-            So richtest du es in{' '}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              3 Minuten
-            </span>{' '}
-            ein
-          </h2>
-        </div>
-
-        <ol className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-200 grid gap-5 sm:grid-cols-3">
-          {steps.map((step, i) => (
-            <li key={step.title} className="bg-card rounded-2xl border shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-                  <step.icon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-bold text-muted-foreground">Schritt {i + 1}</span>
-              </div>
-              <h3 className="font-bold mb-2">{step.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{step.text}</p>
-            </li>
-          ))}
-        </ol>
-
-        <p className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 delay-300 mt-8 text-center text-sm text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+const SetupSteps = () => (
+  <section className="py-24 lg:py-32">
+    <div className="lp-container grid gap-12 lg:grid-cols-12 lg:gap-8">
+      <div data-zeigen className="lg:col-span-5">
+        <p className="lp-eyebrow">Einrichtung</p>
+        <h2 className="mt-4 text-[2.125rem] font-extrabold leading-[1.08] sm:text-5xl">
+          So richtest du es in 3 Minuten ein
+        </h2>
+        <p className="mt-6 max-w-md text-[0.9375rem] leading-relaxed">
           Dein Kind kann die App auch auf deinem Gerät nutzen. Der Sinn der verdienten
           Bildschirmzeit entfaltet sich aber erst, wenn es ein eigenes Gerät hat.
         </p>
       </div>
 
-      <style>{`
-        .animate-in { opacity: 1 !important; transform: translateY(0) !important; }
-      `}</style>
-    </section>
-  );
-};
+      <ol className="relative lg:col-span-7 lg:pl-8">
+        {steps.map((step, i) => (
+          <li
+            key={step.title}
+            data-zeigen
+            style={{ '--lp-verzug': `${i * 110}ms` } as React.CSSProperties}
+            className="relative flex gap-5 pb-10 last:pb-0 sm:gap-7"
+          >
+            {/* Verbindungslinie zum naechsten Schritt */}
+            {i < steps.length - 1 && (
+              <span aria-hidden="true" className="absolute left-[23px] top-14 bottom-2 w-px bg-gradient-to-b from-slate-300 to-slate-200" />
+            )}
+            <span className="lp-display relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[0.9375rem] font-bold text-[var(--lp-ink)] ring-1 ring-slate-200 shadow-sm">
+              {i + 1}
+            </span>
+            <div className="min-w-0 pt-1.5">
+              <div className="flex items-center gap-2.5">
+                <step.icon className="h-[18px] w-[18px] text-[var(--lp-blue)]" strokeWidth={2.1} />
+                <h3 className="text-lg font-bold">{step.title}</h3>
+              </div>
+              <p className="mt-2 max-w-xl text-[0.9375rem] leading-relaxed">{step.text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+);
 
 export default SetupSteps;
