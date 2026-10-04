@@ -251,6 +251,8 @@ interface UseQuestionPreloaderOptions {
   totalQuestions: number;
   initialDifficulty?: 'easy' | 'medium' | 'hard';
   topicHint?: string;
+  /** Lernplan aus Fotos: Der Server holt dazu den ausgelesenen Stoff. */
+  learningPlanId?: string;
   difficultySequence?: ('easy' | 'medium' | 'hard')[];
   demoMode?: boolean;
   enabled?: boolean;
@@ -271,6 +273,7 @@ export const useQuestionPreloader = ({
   totalQuestions,
   initialDifficulty = 'medium',
   topicHint,
+  learningPlanId,
   difficultySequence,
   demoMode = false,
   enabled = true,
@@ -298,6 +301,8 @@ export const useQuestionPreloader = ({
   const subjectRef = useRef(subject);
   const totalQuestionsRef = useRef(totalQuestions);
   const topicHintRef = useRef(topicHint);
+  const learningPlanIdRef = useRef(learningPlanId);
+  learningPlanIdRef.current = learningPlanId;
   const difficultySequenceRef = useRef(difficultySequence);
   
   useEffect(() => {
@@ -366,7 +371,8 @@ export const useQuestionPreloader = ({
           // sie von sich aus frisch.
           forceFresh: attempt > 0,
           requestNonce: crypto.randomUUID(),
-          topicHint: topicHintRef.current || undefined
+          topicHint: topicHintRef.current || undefined,
+          learningPlanId: learningPlanIdRef.current || undefined
         }
       });
 

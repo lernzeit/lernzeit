@@ -12,6 +12,7 @@ import { differenceInCalendarDays } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
+import { FotoAuswahl } from '@/components/parent/FotoAuswahl';
 import { toGermanCategory, isSubjectAvailableForGrade } from '@/lib/category';
 import {
   Sparkles,
@@ -134,11 +135,13 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
     }
   };
 
+  const [fotos, setFotos] = useState<string[]>([]);
+
   const handleGenerate = async () => {
-    if (!selectedChildId || !subject || !topic.trim()) {
+    if (!selectedChildId || !subject || (!topic.trim() && fotos.length === 0)) {
       toast({
         title: 'Fehlende Angaben',
-        description: 'Bitte wähle ein Kind, ein Fach und gib das Thema ein.',
+        description: 'Bitte wähle ein Kind, ein Fach und gib das Thema ein oder füge Fotos hinzu.',
         variant: 'destructive',
       });
       return;
@@ -158,10 +161,18 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           topic: topic.trim(),
           testDate: testDate || null,
           additionalInfo: additionalInfo.trim() || null,
+          fotos: fotos.length ? fotos : undefined,
         },
       });
 
-      if (resp.error) throw resp.error;
+      if (resp.error) {
+        // Fehlertext der Funktion anzeigen (z. B. "kein Unterrichtsstoff zu erkennen").
+        let text: string | undefined;
+        try {
+          text = (await (resp.error as { context?: Response }).context?.json())?.error;
+        } catch { /* egal */ }
+        throw new Error(text || resp.error.message);
+      }
 
       const result = resp.data;
       if (result?.error) {
@@ -182,6 +193,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
       setTopic('');
       setTestDate('');
       setAdditionalInfo('');
+      setFotos([]);
       loadSavedPlans();
     } catch (err: any) {
       console.error('Generate error:', err);
@@ -288,13 +300,19 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
           {/* Topic */}
           <div className="space-y-2">
-            <Label>Thema / Prüfung</Label>
+            <Label>Thema / Prüfung{fotos.length > 0 && <span className="font-normal text-muted-foreground"> (bei Fotos optional)</span>}</Label>
             <Textarea
               placeholder="z.B. 'Mathe-Test über Bruchrechnung' oder 'Deutscharbeit: Erörterung schreiben'"
               value={topic}
               onChange={e => setTopic(e.target.value)}
               rows={2}
             />
+          </div>
+
+          {/* Fotos von Heft, Buch, Arbeitsblatt (04.10.2026) */}
+          <div className="space-y-2">
+            <Label>Fotos vom Heft oder Buch (optional)</Label>
+            <FotoAuswahl fotos={fotos} onChange={setFotos} disabled={generating} />
           </div>
 
           {/* Test Date */}
@@ -323,12 +341,12 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           <Button
             className="w-full"
             onClick={handleGenerate}
-            disabled={generating || !selectedChildId || !subject || !topic.trim()}
+            disabled={generating || !selectedChildId || !subject || (!topic.trim() && fotos.length === 0)}
           >
             {generating ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                KI erstellt Lernplan...
+                {fotos.length ? 'KI liest die Fotos und erstellt den Lernplan …' : 'KI erstellt Lernplan...'}
               </>
             ) : (
               <>

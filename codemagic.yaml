@@ -207,6 +207,12 @@ workflows:
             echo "Füge NSLocationWhenInUseUsageDescription zur Info.plist hinzu..."
             /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Diese App benötigt keinen aktiven Zugriff auf Ihren Standort. Die Schnittstelle wird von System-Frameworks bereitgestellt.'" "$PLIST_PATH" || true
 
+            # Lernplan aus Fotos (04.10.2026): Eltern waehlen Fotos aus der
+            # Mediathek oder nehmen sie mit der Kamera auf (Datei-Auswahl im
+            # WebView). Ohne diese Texte beendet iOS die App beim Kamera-Zugriff.
+            /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Für den Lernplan kannst du Heft- und Buchseiten fotografieren. Die Fotos werden nur ausgewertet, nicht gespeichert.'" "$PLIST_PATH" || true
+            /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Für den Lernplan kannst du Fotos von Heft- und Buchseiten auswählen. Die Fotos werden nur ausgewertet, nicht gespeichert.'" "$PLIST_PATH" || true
+
             # 5. Export-Compliance: App nutzt ausschließlich Standard-TLS (HTTPS) → exempt.
             # Setzt ITSAppUsesNonExemptEncryption=false, damit TestFlight-Upload nicht
             # mehr mit 422 "Build is missing export compliance" abbricht.

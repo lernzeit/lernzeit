@@ -47,6 +47,11 @@ const Datenschutz = () => (
         <li>Lerntage (Lernpflanze), Sticker und gestaltete Hefte</li>
         <li>Meldungen zu fehlerhaften Aufgaben und Bewertungen von Aufgaben</li>
         <li>Eingaben an den KI-Tutor und für den KI-Lernplan</li>
+        <li>
+          Fotos von Heft, Buch oder Arbeitsblatt, die Eltern für den KI-Lernplan hochladen: Die App verkleinert sie
+          vorher und entfernt dabei Bildangaben wie den Aufnahmeort. Wir speichern die Fotos nicht, sondern nur den
+          Unterrichtsstoff, den die KI daraus ausliest (ohne Namen, Noten oder Bemerkungen der Lehrkraft).
+        </li>
       </ul>
       <h3>2.3 Abo und Verträge</h3>
       <ul>
@@ -163,7 +168,7 @@ const Datenschutz = () => (
         <li><strong>Apple</strong> und <strong>Google</strong>: Bereitstellung der Apps und Abrechnung von In-App-Käufen (eigene Verantwortung)</li>
         <li>
           <strong>Google (Gemini)</strong> und <strong>OpenRouter</strong>: Erstellen von Aufgaben, Erklärungen,
-          KI-Tutor und Lernplan. Übermittelt werden die Aufgabe und die Eingabe, ohne personenbezogene
+          KI-Tutor und Lernplan, Auswertung von Lernplan-Fotos. Übermittelt werden die Aufgabe und die Eingabe bzw. die Fotos, ohne personenbezogene
           Kennungen wie Name oder E-Mail-Adresse.
         </li>
         <li><strong>OneSignal, Inc.</strong> (USA): Push-Benachrichtigungen und Service-E-Mails an Eltern</li>

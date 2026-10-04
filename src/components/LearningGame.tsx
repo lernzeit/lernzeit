@@ -109,6 +109,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     subject,
     totalQuestions,
     topicHint,
+    learningPlanId,
     difficultySequence: adaptiveDifficultySequence,
     // Index has already resolved auth before it can render a signed-in game.
     // Do not derive demo mode from this component's second useAuth instance:

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { callAI } from "../_shared/ai-client.ts";
+import { fotosPruefen, lernstoffAlsText, lernstoffAuswerten } from "../_shared/lernstoff-fotos.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,6 +27,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
     );
+
+    // Pruefzugang fuer die Bildauswertung (nur Service-Rolle, z. B. per
+    // pg_net aus der Datenbank): wertet Fotos aus, speichert nichts.
+    if (token && token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+      const b = await req.json().catch(() => ({}));
+      const fotos = fotosPruefen(b.fotos);
+      if (typeof fotos === "string" || fotos.length === 0) {
+        return new Response(JSON.stringify({ error: typeof fotos === "string" ? fotos : "Keine Fotos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const start = Date.now();
+      const l = await lernstoffAuswerten(fotos, { fach: String(b.fach ?? "Mathematik"), klasse: Number(b.klasse ?? 5), thema: b.thema });
+      return new Response(JSON.stringify({ lernstoff: l, text: lernstoffAlsText(l), ms: Date.now() - start }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { data: userData } = await supabase.auth.getUser(token);
     if (!userData?.user) {
@@ -53,9 +67,17 @@ serve(async (req) => {
       });
     }
 
-    const { childId, childName, grade, subject, topic, testDate, additionalInfo } = await req.json();
+    const { childId, childName, grade, subject, topic, testDate, additionalInfo, fotos: fotosRoh } = await req.json();
+    const fotos = fotosPruefen(fotosRoh);
+    if (typeof fotos === "string") {
+      return new Response(JSON.stringify({ error: fotos }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (!childId || !grade || !subject || !topic) {
+    // Thema ist Pflicht – ausser es gibt Fotos, dann liest die KI es aus.
+    if (!childId || !grade || !subject || (!topic && fotos.length === 0)) {
       return new Response(JSON.stringify({ error: "Fehlende Pflichtfelder" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -99,6 +121,31 @@ serve(async (req) => {
     };
 
     const subjectDE = subjectNames[safeSubject] || safeSubject;
+
+    // Fotos von Heft, Buch oder Arbeitsblatt: erst den Stoff auslesen. Die
+    // Fotos werden danach verworfen, nur der Text bleibt.
+    let lernstoff: string | null = null;
+    let fotoThema = "";
+    if (fotos.length > 0) {
+      try {
+        const l = await lernstoffAuswerten(fotos, { fach: subjectDE, klasse: safeGrade, thema: safeTopic || undefined });
+        if (!l.lesbar) {
+          return new Response(JSON.stringify({ error: "Auf den Fotos war kein Unterrichtsstoff zu erkennen. Bitte fotografiere die Seiten gerade und gut beleuchtet." }), {
+            status: 422,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        lernstoff = lernstoffAlsText(l);
+        fotoThema = l.thema;
+      } catch (e) {
+        console.error("Bildauswertung:", e);
+        return new Response(JSON.stringify({ error: "Die Fotos konnten gerade nicht ausgewertet werden. Bitte versuch es noch einmal." }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+    const themaFuerPlan = safeTopic || fotoThema || "Stoff von den Fotos";
     const testDateStr = safeTestDate ? `Der Test findet am ${safeTestDate} statt.` : "Kein konkretes Testdatum angegeben.";
     const extraInfo = safeAdditionalInfo ? `Zusätzliche Infos vom Elternteil: "${safeAdditionalInfo}"` : "";
 
@@ -132,10 +179,10 @@ Jedes Element hat diese Struktur:
 Kind: ${safeChildName || "Schüler/in"}
 Klassenstufe: ${safeGrade}
 Fach: ${subjectDE}
-Thema/Prüfung: ${safeTopic}
+Thema/Prüfung: ${themaFuerPlan}
 ${testDateStr}
 ${extraInfo}
-
+${lernstoff ? `\nUNTERRICHTSSTOFF (aus Fotos von Heft/Buch/Arbeitsblatt ausgelesen):\n${lernstoff}\n\nRichte den Plan genau an diesem Stoff aus: gleiche Begriffe, gleiche Aufgabentypen, gleiche Schwierigkeit. Übungen sollen sich auf diese Inhalte beziehen.\n` : ""}
 Erstelle den Plan als JSON-Array mit 5 Tagen.`;
 
     const { response: aiResponse } = await callAI({
@@ -186,9 +233,10 @@ Erstelle den Plan als JSON-Array mit 5 Tagen.`;
         child_name: safeChildName || "Kind",
         grade: safeGrade,
         subject: safeSubject,
-        topic: safeTopic,
+        topic: themaFuerPlan.slice(0, 200),
         test_date: safeTestDate || null,
         plan_data: planData,
+        lernstoff,
       })
       .select()
       .single();
