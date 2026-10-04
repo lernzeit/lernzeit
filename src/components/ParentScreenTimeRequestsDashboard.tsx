@@ -175,142 +175,78 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
 
   if (loading) {
     return (
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Smartphone className="w-5 h-5" />
-            Bildschirmzeit-Anfragen
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-3">
-            <div className="h-16 bg-gray-200 rounded-lg"></div>
-            <div className="h-16 bg-gray-200 rounded-lg"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-3" aria-label="Anfragen werden geladen">
+        <div className="h-40 animate-pulse rounded-[24px] bg-card" />
+      </div>
     );
   }
 
+  const vorMinuten = (iso: string) => {
+    const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (min < 60) return `vor ${min} Min.`;
+    const std = Math.round(min / 60);
+    if (std < 24) return `vor ${std} Std.`;
+    return new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+  };
+
+  // App-Redesign: Jede offene Anfrage ist ein Blatt mit allem, was fuer die
+  // Entscheidung noetig ist. Genehmigen ist der Normalfall, Ablehnen leiser.
   return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between text-lg">
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-blue-600" />
-            Bildschirmzeit-Anfragen
-          </div>
-          {pendingRequests.length > 0 && (
-            <Badge className="bg-red-100 text-red-800 border-red-200">
-              {pendingRequests.length} neu
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Versuche am Sperrbildschirm. Steht ueber den Antraegen, weil es die
-            Lage beschreibt und nicht eine Entscheidung verlangt: Ein Druck auf
-            "Eltern fragen" nennt keine Minuten und laesst sich nicht
-            genehmigen. */}
-        {/* Steht die Sperre auf dem Kindgeraet ueberhaupt? Von hier aus laesst
-            sie sich nicht schalten — aber ob sie fehlt, gehoert an die
-            Stelle, an der Eltern ohnehin taeglich nachsehen. */}
-        <ShieldSetupNotice parentId={userId} />
+    <div className="space-y-4">
+      {/* Steht die Sperre auf dem Kindgeraet? Versuche am Sperrbildschirm?
+          Beides beschreibt die Lage und steht deshalb ueber den Anfragen. */}
+      <ShieldSetupNotice parentId={userId} />
+      <ShieldAttemptsNotice parentId={userId} />
 
-        <ShieldAttemptsNotice parentId={userId} />
-
-        {/* Pending Requests - Prominent Display */}
-        {pendingRequests.length > 0 ? (
-          <div className="space-y-3">
-            <h4 className="font-medium text-gray-900 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-600" />
-              Neue Anfragen ({pendingRequests.length})
-            </h4>
-            {pendingRequests.map((request) => (
-              <div key={request.id} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Baby className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        Bildschirmzeit-Anfrage von {getChildName(request.child_id)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Vor {Math.round((Date.now() - new Date(request.created_at).getTime()) / (1000 * 60))} Min.
-                      </p>
-                    </div>
-                  </div>
-                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                    {request.requested_minutes} Min.
-                  </Badge>
-                </div>
-                
-                {request.request_message && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageSquare className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Nachricht:</span>
-                    </div>
-                    <p className="text-sm text-gray-900 italic">
-                      "{request.request_message}"
+      {pendingRequests.length > 0 ? (
+        <ul className="space-y-3">
+          {pendingRequests.map((request) => {
+            const name = getChildName(request.child_id);
+            return (
+              <li key={request.id} className="space-y-3 rounded-[24px] bg-card p-4 shadow-[0_18px_36px_-24px_hsl(var(--tinte)/0.55)] ring-1 ring-inset ring-karo">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-extrabold text-primary" aria-hidden="true">
+                    {name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-base font-extrabold leading-tight text-tinte">
+                      {name} möchte {request.requested_minutes} Min.
                     </p>
+                    <p className="text-xs text-muted-foreground">{vorMinuten(request.created_at)}</p>
                   </div>
-                )}
-                
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Verdiente Zeit</span>
-                  </div>
-                  <p className="text-sm text-blue-700">
-                    {getChildName(request.child_id)} hat durch Lernen <strong>{Math.min(request.earned_minutes, request.requested_minutes)} Minuten</strong> verdient
-                    und möchte diese als Bildschirmzeit nutzen.
-                  </p>
                 </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApproveClick(request)}
-                    disabled={respondingId === request.id}
-                    className="flex-1 bg-green-500 hover:bg-green-600"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Genehmigen
-                  </Button>
-                  
+                {request.request_message && (
+                  <p className="frage-text rounded-xl bg-muted px-3 py-2 font-hand text-[1.05rem] text-tinte">„{request.request_message}“</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Durch Lernen verdient: <b className="tabular text-tinte">{Math.min(request.earned_minutes, request.requested_minutes)} Min.</b>
+                </p>
+                <div className="grid grid-cols-[1fr_1.5fr] gap-2">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Ablehnen
-                      </Button>
+                      <Button variant="outline" size="lg">Ablehnen</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Anfrage ablehnen</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
-                        <p className="text-sm text-gray-600">
-                          Möchtest du deinem Kind erklären, warum du ablehnst?
-                        </p>
-                        
-                        <div>
-                          <Label htmlFor="response">Nachricht (optional)</Label>
+                        <p className="text-sm text-muted-foreground">Magst du {name} sagen, warum? Die Nachricht ist freiwillig.</p>
+                        <div className="space-y-2">
+                          <Label htmlFor="response">Nachricht an {name}</Label>
                           <Textarea
                             id="response"
-                            placeholder="Z.B. Erst Hausaufgaben machen..."
+                            placeholder="Zum Beispiel: Erst die Hausaufgaben"
                             value={responseMessage}
                             onChange={(e) => setResponseMessage(e.target.value)}
                             rows={3}
+                            className="rounded-xl border-[1.5px]"
                           />
                         </div>
-                        
                         <div className="flex gap-2">
+                          <DialogClose asChild>
+                            <Button variant="ghost">Abbrechen</Button>
+                          </DialogClose>
                           <Button
                             onClick={() => handleDeny(request.id, responseMessage || undefined)}
                             disabled={respondingId === request.id}
@@ -319,74 +255,73 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                           >
                             Ablehnen
                           </Button>
-                          <DialogTrigger asChild>
-                            <Button variant="outline">Abbrechen</Button>
-                          </DialogTrigger>
                         </div>
                       </div>
                     </DialogContent>
                   </Dialog>
+                  <Button size="lg" onClick={() => handleApproveClick(request)} disabled={respondingId === request.id}>
+                    Genehmigen
+                  </Button>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-            <Smartphone className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <h4 className="font-medium text-gray-900 mb-2">Keine neuen Anfragen</h4>
-            <p className="text-sm text-gray-600">
-              Deine Kinder haben gerade keine Bildschirmzeit angefragt.
-            </p>
-          </div>
-        )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="heft-karo rounded-[24px] bg-card px-5 py-8 text-center ring-1 ring-inset ring-karo">
+          <p className="text-lg font-extrabold text-tinte">Keine offenen Anfragen</p>
+          <p className="mt-1 text-sm text-muted-foreground">Wenn dein Kind Bildschirmzeit anfragt, steht sie hier.</p>
+        </div>
+      )}
 
-        {/* Recent Requests History */}
-        {recentRequests.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Letzte Anfragen:</h4>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {recentRequests.map((request) => (
-                <div key={request.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-100">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(request.status)}
-                    <span className="text-sm font-medium">{getChildName(request.child_id)}</span>
-                    <span className="text-sm">{request.requested_minutes} Min.</span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(request.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <Badge className={getStatusColor(request.status)}>
-                    {request.status === 'approved' ? 'Genehmigt' : 
-                     request.status === 'denied' ? 'Abgelehnt' : 'Ausstehend'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
+      {recentRequests.length > 0 && (
+        <section aria-labelledby="letzte-anfragen">
+          <h3 id="letzte-anfragen" className="mb-1 px-1 text-sm font-extrabold">Letzte Anfragen</h3>
+          <ul className="divide-y divide-karo rounded-[20px] bg-card px-4 ring-1 ring-inset ring-karo">
+            {recentRequests.map((request) => (
+              <li key={request.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <span className="min-w-0 truncate">
+                  <b className="text-tinte">{getChildName(request.child_id)}</b>, {request.requested_minutes} Min.,{' '}
+                  <span className="text-muted-foreground">{new Date(request.created_at).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</span>
+                </span>
+                <span
+                  className={
+                    request.status === 'approved'
+                      ? 'shrink-0 font-bold text-gruen-text'
+                      : request.status === 'denied'
+                        ? 'shrink-0 font-bold text-rotstift'
+                        : 'shrink-0 font-bold text-muted-foreground'
+                  }
+                >
+                  {request.status === 'approved' ? 'Genehmigt' : request.status === 'denied' ? 'Abgelehnt' : 'Offen'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Approval Dialog with option to open parental control app */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
+              <CheckCircle className="w-5 h-5 text-gruen-text" />
               Bildschirmzeit genehmigen
             </DialogTitle>
           </DialogHeader>
           
           {pendingApprovalRequest && (
             <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-sm text-green-800">
+              <div className="rounded-2xl bg-gruen-hell/10 p-4">
+                <p className="text-sm text-tinte">
                   Du genehmigst <strong>{pendingApprovalRequest.requested_minutes} Minuten</strong> Bildschirmzeit für {getChildName(pendingApprovalRequest.child_id)}.
                 </p>
               </div>
               
               {target.kind === 'manual' ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Wir wissen noch nicht, welches Gerät {pendingChildName} nutzt. Bitte einmalig angeben,
                     damit wir dich zur richtigen Stelle bringen.
                   </p>
@@ -396,15 +331,15 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                   <Button
                     onClick={() => handleApproveAndOpen(false)}
                     disabled={respondingId === pendingApprovalRequest?.id}
-                    className="w-full bg-green-500 hover:bg-green-600"
+                    className="w-full"
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <CheckCircle className="w-4 h-4" />
                     Nur genehmigen (später freigeben)
                   </Button>
                 </div>
               ) : target.canOpen ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Möchtest du {target.appName} öffnen, um die Bildschirmzeit direkt freizugeben?
                   </p>
                   
@@ -412,9 +347,8 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                     <Button
                       onClick={() => handleApproveAndOpen(true)}
                       disabled={respondingId === pendingApprovalRequest?.id}
-                      className="bg-green-500 hover:bg-green-600"
                     >
-                      <ExternalLink className="w-4 h-4 mr-2" />
+                      <ExternalLink className="w-4 h-4" />
                       Genehmigen & {target.appName} öffnen
                     </Button>
                     
@@ -427,20 +361,20 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
                     </Button>
                   </div>
                   
-                  <p className="text-xs text-gray-500">{target.hint}</p>
+                  <p className="text-xs text-muted-foreground">{target.hint}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                  <div className="rounded-2xl bg-muted p-3 text-sm text-tinte">
                     {target.hint}
                   </div>
                   
                   <Button
                     onClick={() => handleApproveAndOpen(false)}
                     disabled={respondingId === pendingApprovalRequest?.id}
-                    className="w-full bg-green-500 hover:bg-green-600"
+                    className="w-full"
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <CheckCircle className="w-4 h-4" />
                     Genehmigen
                   </Button>
                 </div>
@@ -462,6 +396,6 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
         childName={pendingChildName}
         onSelect={(p) => { if (pendingChildId) setChildPlatform(pendingChildId, p); }}
       />
-    </Card>
+    </div>
   );
 }

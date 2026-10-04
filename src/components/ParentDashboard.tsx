@@ -27,7 +27,7 @@ import { track, trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Flame, ChevronDown, LogOut, Download, Apple, Gift, Share2
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Sprout, ChevronDown, ChevronLeft, ChevronRight, LogOut, Download, Apple, Gift, Share2
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -121,6 +121,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [profileSaving, setProfileSaving] = useState(false);
   const [newCodeLoading, setNewCodeLoading] = useState(false);
   const [openChildren, setOpenChildren] = useState<Set<string>>(new Set());
+  const [kindDetail, setKindDetail] = useState<string | null>(null);
+  const [kindBereich, setKindBereich] = useState<'uebersicht' | 'regeln' | 'lernplan' | 'konto'>('uebersicht');
   const [requestsRefreshTrigger, setRequestsRefreshTrigger] = useState(0);
   const [familyLinkInstallOpen, setFamilyLinkInstallOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -559,65 +561,35 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const showFocusedEntry = familyReady && linkedChildren.length === 0
     && !(entryDeferred.userId === userId && entryDeferred.until > Date.now());
 
-  return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Welcome Header */}
-      <Card className="shadow-card">
-        <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-xl font-bold truncate">
-                Willkommen{profileName ? `, ${profileName}` : ''}!
-              </h1>
-              <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-1">
-                <Badge className="bg-success text-success-foreground hover:bg-success text-xs">Elternteil</Badge>
-                {isFoundingFamily && (
-                  <Badge
-                    className="text-xs border-0"
-                    style={{ backgroundColor: '#22d3ee', color: '#0b1220' }}
-                  >
-                    LernZeit-Familie 🚀
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAccountOpen(true)}
-              aria-label="Konto-Einstellungen"
-              className="px-2 sm:px-3"
-            >
-              <Settings className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Konto</span>
-            </Button>
-            {onSignOut && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onSignOut}
-                aria-label="Abmelden"
-                className="px-2 sm:px-3"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+  const reiterTitel: Record<string, string> = { requests: 'Heute', children: 'Kinder', subscription: 'Abo', konto: 'Konto', referral: 'Verschenken' };
+  const heuteText = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  const kindImDetail = activeTab === 'children' ? linkedChildren.find((c) => c.id === kindDetail) : undefined;
+  const reiterWechseln = (wert: string) => {
+    setActiveTab(wert);
+    setKindDetail(null);
+    window.scrollTo({ top: 0 });
+  };
+  const navKlasse =
+    'flex h-auto flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-bold text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none';
 
+  // App-Redesign (Etappe 4): Navigation unten, "Heute" zuerst, Kind-Details in
+  // vier Bereichen. Begruessung, Rollen-Abzeichen und Banner oben entfallen;
+  // Ideen-Forum, Empfehlung und Konto stehen unter "Konto".
+  return (
+    <div className="mx-auto w-full max-w-2xl space-y-6 pb-28">
       {!familyReady ? (
         <div role="status" className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           <span>Familiendaten werden geladen …</span>
         </div>
       ) : showFocusedEntry ? (
-        <section aria-labelledby="parent-entry-title" className="mx-auto w-full max-w-xl min-w-0 space-y-6">
+        <section aria-labelledby="parent-entry-title" className="mx-auto w-full max-w-xl min-w-0 space-y-6 pt-2">
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="sm" onClick={() => { deferParentEntry(); setActiveTab('konto'); }}>
+              <Settings className="h-4 w-4" />
+              Konto
+            </Button>
+          </div>
           <div className="space-y-4">
             <h2 id="parent-entry-title" className="text-2xl font-bold break-words">
               Lege jetzt das Profil deines Kindes an
@@ -636,343 +608,277 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </div>
         </section>
       ) : (
-        <>
-      {/* Section Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="text-2xl font-bold">Eltern-Dashboard</h2>
-          <p className="text-muted-foreground text-sm">Familie und Lernzeit verwalten</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Aktualisieren</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Nächster Schritt beim Onboarding – bleibt, bis der Schritt erledigt ist */}
-      <OnboardingNextStepCard
-        parentId={userId}
-        linkedChildren={linkedChildren}
-        activeCodes={activeCodes}
-        onCreateCode={goToInviteSection}
-        onShowCode={goToInviteSection}
-      />
-
-      {/* Warum stockt es? Nur wenn etwas stockt (siehe AbwanderungUmfrage.tsx) */}
-      <AbwanderungNachfrage
-        parentId={userId}
-        kindIds={linkedChildren.map((c) => c.id)}
-        bereit={!sub.loading && !loading}
-        testphaseVorbei={!isPremium && !isTrialing && !!sub.trialEnd && new Date(sub.trialEnd) < new Date()}
-      />
-
-      {/* Offene Anfrage: kein Fehler, sondern der Normalfall (Kind hat gelernt).
-          Darum ruhig in der Markenfarbe statt rot und ohne Pulsieren. */}
-      {totalPendingRequests > 0 && (
-        <Card className="border-primary/30 bg-primary/5 shadow-sm">
-          <CardContent className="py-5 px-5">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Smartphone className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-base text-foreground">
-                  {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {pendingChildren.map((child) => child.name || 'Kind').join(', ')} {pendingChildren.length === 1 ? 'wartet' : 'warten'} auf deine Antwort.
-                </p>
-                <Button 
-                  size="sm" 
-                  className="mt-3"
-                  onClick={() => {
-                    setActiveTab('requests');
-                    setRequestsRefreshTrigger((n) => n + 1);
-                    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                  }}
-                >
-                  Jetzt antworten
-                </Button>
-              </div>
-              <Badge className="shrink-0 text-sm px-3 py-1">
-                {totalPendingRequests}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Trial Banner */}
-      {trialDaysLeft !== null && trialDaysLeft > 0 && !isPremium && (
-        <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5">
-          <CardContent className="flex items-center justify-between gap-4 py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Clock className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">🎁 Testphase: noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} kostenlos</p>
-                <p className="text-xs text-muted-foreground">Sichere dir jetzt Premium – monatlich kündbar.</p>
-              </div>
-            </div>
-            <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
-              {checkoutLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Crown className="h-4 w-4 mr-2" />}
-              Premium aktivieren
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empfehlungs-Hinweis im Dashboard. Für Premium-Mitglieder verlinkt der Hinweis
-          direkt zum Verschenken-Tab. Für alle anderen öffnet er eine Info-Kachel. */}
-      {!referralBannerDismissed && activeTab !== 'referral' && (
-        <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/5">
-          <CardContent className="flex items-center justify-between gap-3 py-3 px-4">
-            <button
-              type="button"
-              className="flex items-center gap-3 min-w-0 text-left flex-1"
-              onClick={() => {
-                if (isPaidPremium) {
-                  setActiveTab('referral');
-                  setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-                } else {
-                  setReferralInfoOpen(true);
-                }
-              }}
-            >
-              <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-                <Gift className="h-4 w-4 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-sm truncate">Empfehlungsprogramm</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {isPaidPremium
-                    ? 'Lade Freunde ein – pro aktivem Kind 1 Monat Premium geschenkt.'
-                    : 'Exklusiv für Premium-Mitglieder. Mehr erfahren.'}
-                </p>
-              </div>
-            </button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label="Hinweis ausblenden"
-              onClick={() => {
-                setReferralBannerDismissed(true);
-                try { window.localStorage.setItem('referralBannerDismissed', '1'); } catch {}
-              }}
-            >
-              ✕
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Ideen-Forum Banner */}
-      <Card className="border-primary/30 bg-gradient-to-r from-accent/10 via-primary/10 to-accent/5">
-        <CardContent className="flex items-center justify-between gap-3 py-3 px-4">
-          <Link to="/ideen" className="flex items-center gap-3 min-w-0 text-left flex-1">
-            <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-              <span aria-hidden className="text-base">💡</span>
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">Ideen-Forum</p>
-              <p className="text-xs text-muted-foreground truncate">
-                Teile Ideen, stimme ab und gestalte LernZeit mit.
-              </p>
-            </div>
-          </Link>
-          <Button size="sm" variant="outline" asChild>
-            <Link to="/ideen">Öffnen</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        {/* Beschriftung auch auf dem Handy: Nur Symbole (Handy, Personen, Krone,
-            Geschenk) liessen raten, was dahinter liegt (Durchsicht 30.09.2026). */}
-        <TabsList className={`grid h-auto w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
-          <TabsTrigger value="requests" className="relative flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
-            <Smartphone className="h-4 w-4" />
-            <span className="text-[11px] leading-tight sm:text-sm">Anfragen</span>
-            {totalPendingRequests > 0 && (
-              <Badge variant="secondary" className="absolute right-1 top-0.5 h-4 min-w-4 px-1 text-[10px] sm:static sm:ml-1 sm:h-5 sm:min-w-5">
-                {totalPendingRequests}
-              </Badge>
-            )}
+      <Tabs ref={tabsRef} value={activeTab} onValueChange={reiterWechseln} className="space-y-6">
+        {/* Navigation unten am Daumen */}
+        <TabsList className="fixed inset-x-0 bottom-0 z-40 grid h-auto w-full grid-cols-4 rounded-none border-t border-karo bg-card/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+          <TabsTrigger value="requests" className={navKlasse}>
+            <span className="relative">
+              <Smartphone className="h-5 w-5" />
+              {totalPendingRequests > 0 && (
+                <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-rotstift px-1 text-[10px] font-bold text-white">
+                  {totalPendingRequests}
+                </span>
+              )}
+            </span>
+            Heute
           </TabsTrigger>
-          <TabsTrigger value="children" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
-            <Users className="h-4 w-4" />
-            <span className="text-[11px] leading-tight sm:text-sm">Kinder</span>
+          <TabsTrigger value="children" className={navKlasse}>
+            <Users className="h-5 w-5" />
+            Kinder
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
-            <Crown className="h-4 w-4" />
-            <span className="text-[11px] leading-tight sm:text-sm">Abo</span>
+          <TabsTrigger value="subscription" className={navKlasse}>
+            <Crown className="h-5 w-5" />
+            Abo
           </TabsTrigger>
-          {isPaidPremium && (
-            <TabsTrigger value="referral" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
-              <Gift className="h-4 w-4" />
-              <span className="text-[11px] leading-tight sm:text-sm">Verschenken</span>
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="konto" className={`${navKlasse} ${activeTab === 'referral' ? 'text-primary' : ''}`}>
+            <User className="h-5 w-5" />
+            Konto
+          </TabsTrigger>
         </TabsList>
 
-        {/* Tab: Anfragen */}
-        <TabsContent value="requests" className="space-y-4">
-          <ParentScreenTimeRequestsDashboard userId={userId} refreshTrigger={requestsRefreshTrigger} />
-        </TabsContent>
+        {!kindImDetail && (
+          <header className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-[1.75rem] font-extrabold leading-tight">{reiterTitel[activeTab] ?? 'Heute'}</h1>
+              {activeTab === 'requests' && <p className="text-sm text-muted-foreground">{heuteText}</p>}
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={loading} aria-label="Aktualisieren">
+              <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </header>
+        )}
 
-        {/* Tab: Kinder - kind-zentrisch mit Collapsibles */}
-        <TabsContent value="children" className="space-y-4">
-          {linkedChildren.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Users className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Noch keine Kinder verknüpft</p>
-                <p className="text-xs text-muted-foreground mt-1">Erstelle unten einen Einladungscode und teile ihn mit deinem Kind.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {linkedChildren.map((child) => {
-                const summary = summaries.get(child.id);
-                const isOpen = openChildren.has(child.id);
-                const hasLearned = (summary?.questionsToday ?? 0) > 0;
-                const hasPending = (summary?.pendingRequests ?? 0) > 0;
-                const accuracy = summary && summary.questionsToday > 0
-                  ? Math.round((summary.correctToday / summary.questionsToday) * 100) : 0;
+        {/* Reiter: Heute */}
+        <TabsContent value="requests" className="space-y-6">
+          <OnboardingNextStepCard
+            parentId={userId}
+            linkedChildren={linkedChildren}
+            activeCodes={activeCodes}
+            onCreateCode={goToInviteSection}
+            onShowCode={goToInviteSection}
+          />
 
-                return (
-                  <Collapsible key={child.id} open={isOpen} onOpenChange={() => toggleChild(child.id)}>
-                    <Card className={`transition-colors ${
-                      hasPending ? 'border-orange-400/50 bg-orange-50/30 dark:bg-orange-950/10'
-                      : hasLearned ? 'border-green-400/50 bg-green-50/30 dark:bg-green-950/10'
-                      : 'border-muted'
-                    }`}>
-                      <CollapsibleTrigger asChild>
-                        <button className="w-full text-left p-4 hover:bg-muted/30 transition-colors rounded-t-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                                <GraduationCap className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <span className="font-semibold text-sm">{child.name || 'Kind'}</span>
-                                <span className="text-xs text-muted-foreground ml-2">Klasse {child.grade}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {summary?.streak && summary.streak > 0 && (
-                                <span className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
-                                  <Flame className="h-3 w-3" />
-                                  {summary.streak}
-                                </span>
-                              )}
-                              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                            </div>
-                          </div>
-                          {summariesLoading ? (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              Laden...
-                            </div>
-                          ) : summary ? (
-                            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <BookOpen className="h-3 w-3" />
-                                {summary.questionsToday} Fragen
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                {accuracy}% richtig
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {summary.minutesEarned} Min verdient
-                              </span>
-                              {hasPending && (
-                                <span className="text-orange-600 dark:text-orange-400 font-medium">
-                                  {summary.pendingRequests} offene {summary.pendingRequests === 1 ? 'Anfrage' : 'Anfragen'}
-                                </span>
-                              )}
-                              {!hasLearned && (
-                                <span className="italic">Heute noch nicht gelernt</span>
-                              )}
-                            </div>
-                          ) : null}
-                        </button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="px-4 pb-4 space-y-6 border-t pt-4">
-                          <div>
-                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
-                              <Clock className="h-4 w-4 text-primary" />
-                              Bildschirmzeit freigeben
-                            </h3>
-                            <ChildParentalControlButton
-                              childName={child.name || 'Kind'}
-                              platform={childPlatforms[child.id] ?? null}
-                              onPlatformSelected={(p) => setChildPlatform(child.id, p)}
-                            />
-                          </div>
-                          <ChildSettingsEditor 
-                            childId={child.id}
-                            childName={child.name || 'Kind'}
-                            parentId={userId}
-                            currentGrade={child.grade}
-                            onSettingsChanged={() => loadFamilyData(userId)}
-                          />
-                          <div>
-                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                              KI-Lernplan
-                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
-                                <Crown className="h-2.5 w-2.5" />
-                                Premium
-                              </Badge>
-                            </h3>
-                            <LearningPlanGenerator 
-                              userId={userId} 
-                              linkedChildren={[child]}
-                              fixedChildId={child.id}
-                            />
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
-                              <BarChart3 className="h-4 w-4 text-primary" />
-                              Lernanalyse
-                            </h3>
-                            <ChildLearningAnalysis 
-                              childId={child.id} 
-                              childName={child.name || 'Kind'}
-                              childGrade={child.grade}
-                            />
-                          </div>
-                          {child.username && (
-                            <ChildPasswordReset childId={child.id} childName={child.name || 'Kind'} />
-                          )}
-                          <div className="pt-2 border-t">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleRemoveChild(child.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Kind entfernen
-                            </Button>
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Card>
-                  </Collapsible>
-                );
-              })}
+          {/* Warum stockt es? Nur wenn etwas stockt (siehe AbwanderungUmfrage.tsx) */}
+          <AbwanderungNachfrage
+            parentId={userId}
+            kindIds={linkedChildren.map((c) => c.id)}
+            bereit={!sub.loading && !loading}
+            testphaseVorbei={!isPremium && !isTrialing && !!sub.trialEnd && new Date(sub.trialEnd) < new Date()}
+          />
+
+
+          {trialDaysLeft !== null && trialDaysLeft > 0 && !isPremium && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-primary/5 px-4 py-3">
+              <p className="text-sm text-tinte">
+                <b>Testphase:</b> noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} alle Funktionen
+              </p>
+              <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
+                {checkoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Premium
+              </Button>
             </div>
           )}
 
-          {invitationSection}
+          <section aria-labelledby="anfragen-titel" className="space-y-3">
+            <h2 id="anfragen-titel" className="flex items-center gap-2 text-base font-extrabold">
+              Anfragen
+              {totalPendingRequests > 0 && (
+                <span className="tabular rounded-full bg-primary px-2 text-xs font-bold text-white">{totalPendingRequests}</span>
+              )}
+            </h2>
+            <ParentScreenTimeRequestsDashboard userId={userId} refreshTrigger={requestsRefreshTrigger} />
+          </section>
+
+          {linkedChildren.length > 0 && (
+            <section aria-labelledby="kinder-heute" className="space-y-3">
+              <h2 id="kinder-heute" className="text-base font-extrabold">Heute gelernt</h2>
+              <ul className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">
+                {linkedChildren.map((child) => {
+                  const z = summaries.get(child.id);
+                  return (
+                    <li key={child.id}>
+                      <button
+                        type="button"
+                        onClick={() => { reiterWechseln('children'); setKindDetail(child.id); setKindBereich('uebersicht'); }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-extrabold text-primary" aria-hidden="true">
+                          {(child.name || 'K').slice(0, 1).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-tinte">{child.name || 'Kind'}</span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {summariesLoading || !z
+                              ? 'Wird geladen …'
+                              : z.questionsToday > 0
+                                ? `${z.questionsToday} Aufgaben, ${z.correctToday} richtig`
+                                : 'Heute noch nicht gelernt'}
+                          </span>
+                        </span>
+                        {z && z.minutesEarned > 0 && (
+                          <span className="tabular shrink-0 text-sm font-extrabold text-gruen-text">{z.minutesEarned} Min.</span>
+                        )}
+                        {z && z.streak > 0 && (
+                          <span className="tabular inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-gruen-text" aria-label={`${z.streak} Tage in Folge`}>
+                            <Sprout className="h-3.5 w-3.5" />{z.streak}
+                          </span>
+                        )}
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </TabsContent>
+
+        {/* Reiter: Kinder (Liste oder Details eines Kindes) */}
+        <TabsContent value="children" className="space-y-6">
+          {kindImDetail ? (() => {
+            const child = kindImDetail;
+            const z = summaries.get(child.id);
+            const bereiche: { id: typeof kindBereich; text: string }[] = [
+              { id: 'uebersicht', text: 'Übersicht' },
+              { id: 'regeln', text: 'Regeln' },
+              { id: 'lernplan', text: 'Lernplan' },
+              { id: 'konto', text: 'Konto' },
+            ];
+            return (
+              <div className="space-y-5 pt-1">
+                <button type="button" onClick={() => setKindDetail(null)} className="-ml-1 inline-flex h-9 items-center gap-0.5 text-sm font-bold text-primary">
+                  <ChevronLeft className="h-4 w-4" />
+                  Kinder
+                </button>
+                <div className="flex items-center gap-3">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-lg font-extrabold text-primary" aria-hidden="true">
+                    {(child.name || 'K').slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-2xl font-extrabold">{child.name || 'Kind'}</h1>
+                    <p className="text-sm text-muted-foreground">Klasse {child.grade}</p>
+                  </div>
+                </div>
+                <div role="tablist" aria-label="Bereiche" className="grid grid-cols-4 rounded-full bg-muted p-1">
+                  {bereiche.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={kindBereich === b.id}
+                      onClick={() => setKindBereich(b.id)}
+                      className={`rounded-full py-2 text-xs font-bold transition-colors sm:text-sm ${
+                        kindBereich === b.id ? 'bg-card text-tinte shadow-[0_1px_3px_hsl(var(--tinte)/0.15)]' : 'text-muted-foreground'
+                      }`}
+                    >
+                      {b.text}
+                    </button>
+                  ))}
+                </div>
+
+                {kindBereich === 'uebersicht' && (
+                  <div className="space-y-5">
+                    <ul className="divide-y divide-karo rounded-[20px] bg-card px-4 ring-1 ring-inset ring-karo text-sm">
+                      <li className="flex justify-between py-3"><span>Heute verdient</span><b className="tabular text-tinte">{z?.minutesEarned ?? 0} Min.</b></li>
+                      <li className="flex justify-between py-3"><span>Aufgaben heute</span><b className="tabular text-tinte">{z?.questionsToday ?? 0}, davon {z?.correctToday ?? 0} richtig</b></li>
+                      <li className="flex justify-between py-3"><span>Lernpflanze</span><b className="tabular text-tinte">{z?.streak ?? 0} {(z?.streak ?? 0) === 1 ? 'Tag' : 'Tage'} in Folge</b></li>
+                    </ul>
+                    <ChildLearningAnalysis childId={child.id} childName={child.name || 'Kind'} childGrade={child.grade} />
+                  </div>
+                )}
+
+                {kindBereich === 'regeln' && (
+                  <div className="space-y-6">
+                    <section>
+                      <h3 className="mb-2 px-1 text-sm font-extrabold">Bildschirmzeit freigeben</h3>
+                      <ChildParentalControlButton
+                        childName={child.name || 'Kind'}
+                        platform={childPlatforms[child.id] ?? null}
+                        onPlatformSelected={(pl) => setChildPlatform(child.id, pl)}
+                      />
+                    </section>
+                    <ChildSettingsEditor
+                      childId={child.id}
+                      childName={child.name || 'Kind'}
+                      parentId={userId}
+                      currentGrade={child.grade}
+                      onSettingsChanged={() => loadFamilyData(userId)}
+                    />
+                  </div>
+                )}
+
+                {kindBereich === 'lernplan' && (
+                  <section className="space-y-3">
+                    <h3 className="flex items-center gap-2 px-1 text-sm font-extrabold">
+                      KI-Lernplan für eine Klassenarbeit
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-extrabold text-tinte">
+                        <Crown className="h-2.5 w-2.5 text-warning" />
+                        Premium
+                      </span>
+                    </h3>
+                    <LearningPlanGenerator userId={userId} linkedChildren={[child]} fixedChildId={child.id} />
+                  </section>
+                )}
+
+                {kindBereich === 'konto' && (
+                  <div className="space-y-5">
+                    {child.username && <ChildPasswordReset childId={child.id} childName={child.name || 'Kind'} />}
+                    <Button
+                      variant="ghost"
+                      className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleRemoveChild(child.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {child.name || 'Kind'} entfernen
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
+            <>
+              {linkedChildren.length === 0 ? (
+                <div className="heft-karo rounded-[24px] bg-card px-5 py-8 text-center ring-1 ring-inset ring-karo">
+                  <p className="text-lg font-extrabold text-tinte">Noch kein Kind verbunden</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Erstelle unten einen Einladungscode und schick ihn deinem Kind.</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">
+                  {linkedChildren.map((child) => {
+                    const z = summaries.get(child.id);
+                    const offen = z?.pendingRequests ?? 0;
+                    return (
+                      <li key={child.id}>
+                        <button
+                          type="button"
+                          onClick={() => { setKindDetail(child.id); setKindBereich('uebersicht'); window.scrollTo({ top: 0 }); }}
+                          className="flex w-full items-center gap-3 px-4 py-4 text-left"
+                        >
+                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 font-extrabold text-primary" aria-hidden="true">
+                            {(child.name || 'K').slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-bold text-tinte">{child.name || 'Kind'}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              Klasse {child.grade}
+                              {z ? `, heute ${z.minutesEarned} Min. verdient` : ''}
+                            </span>
+                          </span>
+                          {offen > 0 && (
+                            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                              {offen} {offen === 1 ? 'Anfrage' : 'Anfragen'}
+                            </span>
+                          )}
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {invitationSection}
+            </>
+          )}
         </TabsContent>
 
         {/* Tab: Abo */}
@@ -1090,12 +996,12 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
                 <Card className="border-0 overflow-hidden">
                   <CardContent className="p-0">
-                    <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6">
+                    <div className="bg-muted p-6">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center">
                           <Crown className="w-5 h-5 text-warning" />
                         </div>
-                        <h3 className="text-lg font-bold">Premium Features</h3>
+                        <h3 className="text-lg font-extrabold">Das ist in Premium enthalten</h3>
                       </div>
                       <div className="grid sm:grid-cols-2 gap-3">
                         {[
@@ -1132,7 +1038,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       Premium-Funktionen stehen dir während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
                     </p>
                     <p className="text-xs text-muted-foreground/80 font-medium">
-                      ✓ Monatlich kündbar · Keine Mindestlaufzeit
+                      Monatlich kündbar, keine Mindestlaufzeit
                     </p>
                   </div>
                 </div>
@@ -1141,35 +1047,50 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           )}
         </TabsContent>
 
-        {/* Tab: Verschenken – nur für zahlende Premium-Mitglieder */}
+        {/* Reiter: Verschenken – nur fuer zahlende Premium-Mitglieder, erreichbar ueber Konto */}
         {isPaidPremium && (
           <TabsContent value="referral" className="space-y-4">
+            <button type="button" onClick={() => reiterWechseln('konto')} className="-ml-1 inline-flex h-9 items-center gap-0.5 text-sm font-bold text-primary">
+              <ChevronLeft className="h-4 w-4" />
+              Konto
+            </button>
             <ReferralCard userId={userId} />
           </TabsContent>
         )}
 
-      </Tabs>
-        </>
-      )}
-
-      {/* Konto-Dialog (vom Header geöffnet) */}
-      <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
-        {/* Kein Fokus auf das Namensfeld beim Oeffnen: Auf dem iPhone sprang
-            sonst sofort die Tastatur auf und verdeckte den Dialog
-            (Bildschirmaufnahme Betreiber, 03.10.2026). */}
-        <DialogContent
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault();
-            (e.currentTarget as HTMLElement | null)?.focus();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Konto-Einstellungen
-            </DialogTitle>
-          </DialogHeader>
+        {/* Reiter: Konto (frueher Dialog in der Kopfzeile) */}
+        <TabsContent value="konto" className="space-y-6">
+          {isFoundingFamily && (
+            <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">LernZeit-Familie der ersten Stunde</p>
+          )}
+          <ul className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">
+            <li>
+              <button
+                type="button"
+                onClick={() => (isPaidPremium ? reiterWechseln('referral') : setReferralInfoOpen(true))}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left"
+              >
+                <Gift className="h-5 w-5 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-tinte">Premium verschenken</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {isPaidPremium ? 'Freunde einladen, pro aktivem Kind 1 Monat Premium geschenkt' : 'Für Premium-Mitglieder'}
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            </li>
+            <li>
+              <Link to="/ideen" className="flex w-full items-center gap-3 px-4 py-3">
+                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-tinte">Ideen-Forum</span>
+                  <span className="block text-xs text-muted-foreground">Ideen teilen, abstimmen, LernZeit mitgestalten</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            </li>
+          </ul>
           <div className="space-y-6 pt-2">
             <Card>
               <CardHeader>
@@ -1257,8 +1178,18 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               onDeleted={() => window.location.href = '/'}
             />
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {onSignOut && (
+            <Button variant="outline" className="w-full" onClick={onSignOut}>
+              <LogOut className="h-4 w-4" />
+              Abmelden
+            </Button>
+          )}
+        </TabsContent>
+
+      </Tabs>
+      )}
+
 
       {/* Family Link not installed dialog */}
       <Dialog open={familyLinkInstallOpen} onOpenChange={setFamilyLinkInstallOpen}>

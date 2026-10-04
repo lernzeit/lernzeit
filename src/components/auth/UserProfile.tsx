@@ -647,61 +647,28 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // Parent Dashboard
   if (profile?.role === 'parent') {
     return (
-      <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom">
+      <div className="min-h-[100dvh] bg-background pt-safe-top">
         {showOnboarding && (
           <OnboardingTutorial role="parent" onComplete={handleOnboardingComplete} />
         )}
-        <div className="page-container space-y-6">
-          {/* Trial Expired Banner */}
+        <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pt-3">
+          {/* Testphase vorbei: eine ruhige Zeile mit Knopf */}
           {trialJustExpired && (
-            <Card className="shadow-card border-warning bg-warning/10">
-              <CardContent className="p-4 flex items-center gap-3 justify-between">
-                <div className="flex items-center gap-3">
-                  <Crown className="w-6 h-6 text-warning shrink-0" />
-                  <div>
-                    <p className="font-semibold text-sm">Die Testphase ist abgelaufen</p>
-                    <p className="text-xs text-muted-foreground">Premium-Funktionen wurden deaktiviert.</p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="shrink-0"
-                  onClick={() => void handleParentUpgrade()}
-                >
-                  Jetzt upgraden
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-warning/10 px-4 py-3">
+              <p className="flex items-center gap-2 text-sm text-tinte">
+                <Crown className="h-4 w-4 shrink-0 text-warning" />
+                Die Testphase ist vorbei. Premium-Funktionen sind aus.
+              </p>
+              <Button size="sm" className="shrink-0" onClick={() => void handleParentUpgrade()}>
+                Premium
+              </Button>
+            </div>
           )}
-
-          {/* Trial Active Badge */}
-          {isTrialing && trialDaysLeft !== null && (
-            <Card className="shadow-card border-primary/30 bg-primary/5">
-              <CardContent className="p-3 flex items-center gap-3 justify-between">
-                <div className="flex items-center gap-3">
-                  <Crown className="w-5 h-5 text-primary shrink-0" />
-                  <p className="text-sm">
-                    <span className="font-semibold">Premium-Test aktiv</span> — noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="shrink-0"
-                  onClick={() => void handleParentUpgrade()}
-                >
-                  Jetzt Abo abschließen
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-          {/* Parent Dashboard */}
-        <ParentDashboard userId={user.id} onSignOut={handleSignOut} />
-        <RevenueCatPaywall open={parentPaywallOpen} onOpenChange={setParentPaywallOpen} />
+          <ParentDashboard userId={user.id} onSignOut={handleSignOut} />
+          <RevenueCatPaywall open={parentPaywallOpen} onOpenChange={setParentPaywallOpen} />
+        </div>
       </div>
-    </div>
-  );
+    );
   }
 
   // Admin Dashboard

@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { toast as sonnerToast } from 'sonner';
+import { Stepper } from '@/components/parent/Stepper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +27,8 @@ import {
   Loader2,
   Calendar,
   Crown,
-  Info
+  Info,
+  Star
 } from 'lucide-react';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
@@ -79,10 +82,10 @@ interface SubjectPriority {
 }
 
 const PremiumBadge = () => (
-  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary gap-1 font-normal">
-    <Crown className="h-2.5 w-2.5" />
+  <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-extrabold text-tinte">
+    <Crown className="h-2.5 w-2.5 text-warning" />
     Premium
-  </Badge>
+  </span>
 );
 
 const SUBJECTS = [
@@ -232,108 +235,158 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     }
   };
 
-  const saveSettings = async () => {
-    setSaving(true);
-    try {
-      const { error: gradeError } = await supabase
-        .from('profiles')
-        .update({ grade })
-        .eq('id', childId);
+  // Sofort speichern (App-Redesign, Wunsch 04.10.2026): keine Speichern-Taste
+  // mehr. Jede Aenderung wird nach kurzer Pause gespeichert, danach erscheint
+  // "Gespeichert" mit "Rueckgaengig".
+  const einstellungenRef = useRef(settings);
+  einstellungenRef.current = settings;
+  const ausstehend = useRef<{ vorher: ChildSettings | null; timer: number | null }>({ vorher: null, timer: null });
 
-      if (gradeError) throw gradeError;
-
-      const { data: existingSettings } = await supabase
+  const schreibeEinstellungen = async (werte: ChildSettings) => {
+    const { data: vorhanden } = await supabase
+      .from('child_settings')
+      .select('id')
+      .eq('child_id', childId)
+      .maybeSingle();
+    if (vorhanden) {
+      const { error } = await supabase
         .from('child_settings')
-        .select('id')
-        .eq('child_id', childId)
-        .maybeSingle();
-
-      if (existingSettings) {
-        const { error: settingsError } = await supabase
-          .from('child_settings')
-          .update({
-            ...settings,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('child_id', childId);
-
-        if (settingsError) throw settingsError;
-      } else {
-        const { error: settingsError } = await supabase
-          .from('child_settings')
-          .insert({
-            parent_id: parentId,
-            child_id: childId,
-            ...settings,
-          });
-
-        if (settingsError) throw settingsError;
-      }
-
-      for (const subject of SUBJECTS) {
-        const { data: existingVisibility } = await supabase
-          .from('child_subject_visibility')
-          .select('id')
-          .eq('child_id', childId)
-          .eq('subject', subject.key)
-          .maybeSingle();
-
-        if (existingVisibility) {
-          const { error: visibilityError } = await supabase
-            .from('child_subject_visibility')
-            .update({
-              is_visible: visibility[subject.key] ?? true,
-              is_priority: priorities[subject.key] ?? false,
-              updated_at: new Date().toISOString(),
-            } as any)
-            .eq('child_id', childId)
-            .eq('subject', subject.key);
-
-          if (visibilityError) throw visibilityError;
-        } else {
-          const { error: visibilityError } = await supabase
-            .from('child_subject_visibility')
-            .insert({
-              parent_id: parentId,
-              child_id: childId,
-              subject: subject.key,
-              is_visible: visibility[subject.key] ?? true,
-              is_priority: priorities[subject.key] ?? false,
-            } as any);
-
-          if (visibilityError) throw visibilityError;
-        }
-      }
-
-      toast({
-        title: "Gespeichert",
-        description: `Einstellungen für ${childName} wurden aktualisiert.`,
-      });
-
-      onSettingsChanged?.();
-    } catch (error) {
-      console.error('Error saving child settings:', error);
-      toast({
-        title: "Fehler",
-        description: "Einstellungen konnten nicht gespeichert werden.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
+        .update({ ...werte, updated_at: new Date().toISOString() })
+        .eq('child_id', childId);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('child_settings')
+        .insert({ parent_id: parentId, child_id: childId, ...werte });
+      if (error) throw error;
     }
   };
 
+  const gespeichert = (rueckgaengig: () => Promise<void>) => {
+    sonnerToast('Gespeichert', {
+      duration: 4000,
+      action: {
+        label: 'Rückgängig',
+        onClick: () => {
+          void rueckgaengig()
+            .then(() => sonnerToast('Rückgängig gemacht', { duration: 2500 }))
+            .catch(() => sonnerToast.error('Konnte nicht rückgängig gemacht werden.'));
+        },
+      },
+    });
+  };
+
+  const fehler = () => sonnerToast.error('Konnte nicht gespeichert werden. Bitte versuch es noch einmal.');
+
   const updateSetting = (key: keyof ChildSettings, value: number) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    const jetzt = einstellungenRef.current;
+    if (jetzt[key] === value) return;
+    if (!ausstehend.current.vorher) ausstehend.current.vorher = jetzt;
+    const neu = { ...jetzt, [key]: value };
+    einstellungenRef.current = neu;
+    setSettings(neu);
+    if (ausstehend.current.timer) window.clearTimeout(ausstehend.current.timer);
+    ausstehend.current.timer = window.setTimeout(async () => {
+      const vorher = ausstehend.current.vorher;
+      ausstehend.current = { vorher: null, timer: null };
+      const werte = einstellungenRef.current;
+      setSaving(true);
+      try {
+        // Kein onSettingsChanged: Das laedt die ganze Familie neu und liess die
+        // Seite bei jedem Plus/Minus flackern. Grenzen und Sekunden braucht das
+        // Eltern-Dashboard nicht.
+        await schreibeEinstellungen(werte);
+        if (vorher) {
+          gespeichert(async () => {
+            await schreibeEinstellungen(vorher);
+            setSettings(vorher);
+            einstellungenRef.current = vorher;
+          });
+        }
+      } catch (error) {
+        console.error('Error saving child settings:', error);
+        if (vorher) { setSettings(vorher); einstellungenRef.current = vorher; }
+        fehler();
+      } finally {
+        setSaving(false);
+      }
+    }, 700);
   };
 
-  const toggleSubjectVisibility = (subject: string) => {
-    setHasExplicitVisibility(true);
-    setVisibility(prev => ({ ...prev, [subject]: !prev[subject] }));
+  useEffect(() => () => { if (ausstehend.current.timer) window.clearTimeout(ausstehend.current.timer); }, []);
+
+  const aendereKlasse = async (neu: number) => {
+    const vorher = grade;
+    if (neu === vorher) return;
+    setGrade(neu);
+    const schreiben = async (g: number) => {
+      const { error } = await supabase.from('profiles').update({ grade: g }).eq('id', childId);
+      if (error) throw error;
+    };
+    try {
+      await schreiben(neu);
+      onSettingsChanged?.();
+      gespeichert(async () => { await schreiben(vorher); setGrade(vorher); onSettingsChanged?.(); });
+    } catch (error) {
+      console.error('Error saving grade:', error);
+      setGrade(vorher);
+      fehler();
+    }
   };
 
-  const toggleSubjectPriority = (subject: string) => {
-    setPriorities(prev => ({ ...prev, [subject]: !prev[subject] }));
+  // Faecher: Gibt es noch keine eigene Auswahl, werden beim ersten Aendern alle
+  // Faecher geschrieben (wie frueher beim Speichern). Sonst gilt fuer nicht
+  // eingetragene Faecher "sichtbar", auch wenn die Klassenstufe sie nicht hat.
+  const schreibeFach = async (fach: string, sichtbar: boolean, schwerpunkt: boolean) => {
+    const { data: vorhanden } = await supabase
+      .from('child_subject_visibility')
+      .select('id')
+      .eq('child_id', childId)
+      .eq('subject', fach)
+      .maybeSingle();
+    if (vorhanden) {
+      const { error } = await supabase
+        .from('child_subject_visibility')
+        .update({ is_visible: sichtbar, is_priority: schwerpunkt, updated_at: new Date().toISOString() } as any)
+        .eq('child_id', childId)
+        .eq('subject', fach);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('child_subject_visibility')
+        .insert({ parent_id: parentId, child_id: childId, subject: fach, is_visible: sichtbar, is_priority: schwerpunkt } as any);
+      if (error) throw error;
+    }
+  };
+
+  const aendereFach = async (fach: string, aenderung: { sichtbar?: boolean; schwerpunkt?: boolean }) => {
+    const vorherSicht = { ...visibility };
+    const vorherPrio = { ...priorities };
+    const neueSicht = { ...visibility, [fach]: aenderung.sichtbar ?? (visibility[fach] ?? true) };
+    const neuePrio = { ...priorities, [fach]: aenderung.schwerpunkt ?? (priorities[fach] ?? false) };
+    setVisibility(neueSicht);
+    setPriorities(neuePrio);
+    const alleSchreiben = async (sicht: SubjectVisibility, prio: SubjectPriority) => {
+      for (const s of SUBJECTS) await schreibeFach(s.key, sicht[s.key] ?? true, prio[s.key] ?? false);
+    };
+    try {
+      if (!hasExplicitVisibility) {
+        await alleSchreiben(neueSicht, neuePrio);
+        setHasExplicitVisibility(true);
+      } else {
+        await schreibeFach(fach, neueSicht[fach], neuePrio[fach]);
+      }
+      gespeichert(async () => {
+        await alleSchreiben(vorherSicht, vorherPrio);
+        setVisibility(vorherSicht);
+        setPriorities(vorherPrio);
+      });
+    } catch (error) {
+      console.error('Error saving subject:', error);
+      setVisibility(vorherSicht);
+      setPriorities(vorherPrio);
+      fehler();
+    }
   };
 
   if (loading) {
@@ -349,8 +402,8 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
     : SUBJECTS.filter(s => isSubjectAvailableForGrade(s.key, grade));
 
   return (
-    <div className="space-y-4">
-      {/* Nach Trial-Ende: gespeicherte Werte im Klartext gegenüberstellen */}
+    <div className="space-y-6">
+      {/* Nach Trial-Ende: gespeicherte Werte im Klartext gegenueberstellen */}
       {!hasPremiumAccess && (() => {
         const changed = SUBJECTS
           .filter(s => settings[`${s.key}_seconds_per_task` as keyof ChildSettings] !== 30)
@@ -366,280 +419,122 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           ? changed[0]
           : `${changed.slice(0, -1).join(', ')} und ${changed[changed.length - 1]}`;
         return (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Crown className="h-4 w-4 text-primary" />
-                Deine Premium-Einstellungen sind pausiert
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Du hattest {list} pro Aufgabe eingestellt. Jetzt gilt wieder für alle Fächer der
-                Standard: {describeStandard()}.
-                Deine Einstellungen bleiben gespeichert und gelten sofort wieder, wenn du Premium aktivierst.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-1 rounded-2xl bg-primary/5 p-4">
+            <p className="flex items-center gap-2 text-sm font-bold text-tinte">
+              <Crown className="h-4 w-4 text-primary" />
+              Deine Premium-Einstellungen sind pausiert
+            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Du hattest {list} pro Aufgabe eingestellt. Jetzt gilt wieder für alle Fächer der
+              Standard: {describeStandard()}.
+              Deine Einstellungen bleiben gespeichert und gelten sofort wieder, wenn du Premium aktivierst.
+            </p>
+          </div>
         );
       })()}
 
-      {/* Grade Management */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <GraduationCap className="h-4 w-4" />
-            Klassenstufe
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3">
-            <Label className="text-sm">Klasse</Label>
-            <Select 
-              value={grade.toString()} 
-              onValueChange={(value) => setGrade(parseInt(value))}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Klasse wählen" />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
-                  <SelectItem key={g} value={g.toString()}>
-                    Klasse {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <Gruppe titel="Klasse">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <Label htmlFor={`klasse-${childId}`} className="text-sm font-semibold text-tinte">Klassenstufe</Label>
+          <Select value={grade.toString()} onValueChange={(value) => void aendereKlasse(parseInt(value))}>
+            <SelectTrigger id={`klasse-${childId}`} className="w-32 rounded-full">
+              <SelectValue placeholder="Klasse wählen" />
+            </SelectTrigger>
+            <SelectContent className="bg-card">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+                <SelectItem key={g} value={g.toString()}>
+                  Klasse {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Gruppe>
 
-      {/* Screen Time Limits */}
-      <PremiumFeature 
+      <PremiumFeature
         featureName="Anpassbare Bildschirmzeit-Limits"
         onUpgradeClick={() => toast({ title: "Upgrade zu Premium", description: "Diese Funktion ist nur für Premium-Nutzer verfügbar." })}
       >
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Bildschirmzeit-Limits
-              </CardTitle>
-              <PremiumBadge />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 mb-4">
-              <Label className="text-xs">Freiminuten am Tag (ohne Lernen)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={480}
-                value={settings.screen_time_base_minutes}
-                onChange={(e) => updateSetting('screen_time_base_minutes', Math.max(0, parseInt(e.target.value) || 0))}
-                disabled={!hasPremiumAccess}
-              />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Zeit, die {childName} täglich ohne Lernen zusteht — wie ein
-                Tagesbudget in Apples Bildschirmzeit. 0 bedeutet: Alles muss
-                verdient werden. Wirkt nur, wenn die Handysperre auf dem Gerät
-                eingerichtet ist.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs">Wochentags (Min)</Label>
-                <Input
-                  type="number"
-                  min={5}
-                  max={180}
-                  value={settings.weekday_max_minutes}
-                  onChange={(e) => updateSetting('weekday_max_minutes', parseInt(e.target.value) || 30)}
-                  disabled={!hasPremiumAccess}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Wochenende (Min)</Label>
-                <Input
-                  type="number"
-                  min={5}
-                  max={180}
-                  value={settings.weekend_max_minutes}
-                  onChange={(e) => updateSetting('weekend_max_minutes', parseInt(e.target.value) || 60)}
-                  disabled={!hasPremiumAccess}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Gruppe titel="Bildschirmzeit am Tag" premium>
+          <Zeile titel="Werktags" hinweis="höchstens">
+            <Stepper label="Werktags" wert={settings.weekday_max_minutes} min={5} max={180} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('weekday_max_minutes', v)} />
+          </Zeile>
+          <Zeile titel="Am Wochenende" hinweis="höchstens">
+            <Stepper label="Am Wochenende" wert={settings.weekend_max_minutes} min={5} max={180} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('weekend_max_minutes', v)} />
+          </Zeile>
+          <Zeile titel="Freiminuten" hinweis="ohne Lernen, nur mit Handysperre">
+            <Stepper label="Freiminuten" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
+          </Zeile>
+        </Gruppe>
       </PremiumFeature>
 
-      {/* Merged Subject Settings - each subject is a collapsible */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Fächer
-            </CardTitle>
-            <PremiumBadge />
-          </div>
-          <CardDescription className="text-xs">
-            Fächer für Klasse {grade} verwalten
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/5 border border-primary/10 mb-3">
-            <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              Bei Klassenwechsel werden Fächer automatisch angepasst.
-            </p>
-          </div>
-          {availableSubjects.map((subject) => {
-            const Icon = subject.icon;
-            const isVisible = visibility[subject.key] ?? true;
-            const isPriority = priorities[subject.key] ?? false;
-            const settingKey = `${subject.key}_seconds_per_task` as keyof ChildSettings;
-            const bonus = settings[settingKey];
+      <Gruppe titel="Fächer und Zeit pro richtiger Aufgabe" premium>
+        {availableSubjects.map((subject) => {
+          const sichtbar = visibility[subject.key] ?? true;
+          const schwerpunkt = priorities[subject.key] ?? false;
+          const settingKey = `${subject.key}_seconds_per_task` as keyof ChildSettings;
+          return (
+            <div key={subject.key} className={`space-y-2 px-4 py-3 ${sichtbar ? '' : 'bg-muted/50'}`}>
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={sichtbar}
+                  onCheckedChange={(v) => void aendereFach(subject.key, { sichtbar: v })}
+                  disabled={!hasPremiumAccess}
+                  aria-label={`${subject.name} anzeigen`}
+                />
+                <span className={`min-w-0 flex-1 truncate text-sm font-bold ${sichtbar ? 'text-tinte' : 'text-muted-foreground'}`}>{subject.name}</span>
+                <button
+                  type="button"
+                  onClick={() => void aendereFach(subject.key, { schwerpunkt: !schwerpunkt })}
+                  disabled={!hasPremiumAccess || !sichtbar}
+                  aria-pressed={schwerpunkt}
+                  className={`inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-bold transition-colors disabled:opacity-40 ${
+                    schwerpunkt ? 'bg-warning/15 text-tinte' : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Star className={`h-3.5 w-3.5 ${schwerpunkt ? 'fill-warning text-warning' : ''}`} />
+                  Schwerpunkt
+                </button>
+              </div>
+              {sichtbar && (
+                <div className="flex items-center justify-between gap-3 pl-[3.25rem]">
+                  <span className="text-xs text-muted-foreground">pro Aufgabe</span>
+                  <Stepper label={`${subject.name}, Zeit pro Aufgabe`} wert={settings[settingKey]} min={5} max={300} schritt={5} einheit="Sek." disabled={!hasPremiumAccess} onChange={(v) => updateSetting(settingKey, v)} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Gruppe>
 
-            return (
-              <SubjectRow
-                key={subject.key}
-                icon={Icon}
-                name={subject.name}
-                isVisible={isVisible}
-                isPriority={isPriority}
-                bonus={bonus}
-                hasPremiumAccess={hasPremiumAccess}
-                onToggleVisibility={() => toggleSubjectVisibility(subject.key)}
-                onTogglePriority={() => toggleSubjectPriority(subject.key)}
-                onBonusChange={(v) => updateSetting(settingKey, v)}
-              />
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      {/* Save Button */}
-      <Button 
-        onClick={saveSettings} 
-        disabled={saving}
-        className="w-full"
-      >
-        {saving ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Speichern...
-          </>
-        ) : (
-          <>
-            <Save className="h-4 w-4 mr-2" />
-            Einstellungen speichern
-          </>
-        )}
-      </Button>
+      <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+        {saving ? <><Loader2 className="h-3 w-3 animate-spin" />Wird gespeichert …</> : 'Änderungen werden sofort gespeichert.'}
+      </p>
     </div>
   );
 }
 
-// Individual subject row as collapsible
-function SubjectRow({
-  icon: Icon,
-  name,
-  isVisible,
-  isPriority,
-  bonus,
-  hasPremiumAccess,
-  onToggleVisibility,
-  onTogglePriority,
-  onBonusChange,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  name: string;
-  isVisible: boolean;
-  isPriority: boolean;
-  bonus: number;
-  hasPremiumAccess: boolean;
-  onToggleVisibility: () => void;
-  onTogglePriority: () => void;
-  onBonusChange: (v: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
+/** Gruppe von Einstellungen: Titel und weisses Blatt mit Trennlinien. */
+function Gruppe({ titel, premium, children }: { titel: string; premium?: boolean; children: React.ReactNode }) {
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <button
-          className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-colors ${
-            !isVisible
-              ? 'bg-muted/30 opacity-60'
-              : isPriority
-              ? 'bg-primary/5 border border-primary/15'
-              : 'bg-muted/50 hover:bg-muted/70'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-sm font-medium">{name}</span>
-            {isPriority && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-primary/30 text-primary">
-                Fokus
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{bonus}s</span>
-            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-          </div>
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="ml-4 mr-2 mb-2 mt-1 p-3 rounded-lg border bg-card space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Sichtbar</Label>
-            <Switch
-              checked={isVisible}
-              onCheckedChange={onToggleVisibility}
-              disabled={!hasPremiumAccess}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Label className="text-xs">Schwerpunkt</Label>
-              {!hasPremiumAccess && <Crown className="h-3 w-3 text-primary" />}
-            </div>
-            <Switch
-              checked={isPriority}
-              onCheckedChange={onTogglePriority}
-              disabled={!hasPremiumAccess}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Label className="text-xs">Bonus je Aufgabe</Label>
-              {!hasPremiumAccess && <Crown className="h-3 w-3 text-primary" />}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Input
-                type="number"
-                min={5}
-                max={300}
-                value={bonus === 0 ? '' : bonus}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === '') { onBonusChange(0); return; }
-                  const num = parseInt(raw);
-                  if (!isNaN(num)) onBonusChange(num);
-                }}
-                onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 5) onBonusChange(5); }}
-                className="w-16 h-7 text-center text-xs"
-                disabled={!hasPremiumAccess}
-              />
-              <span className="text-xs text-muted-foreground">s</span>
-            </div>
-          </div>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+    <section>
+      <h3 className="mb-2 flex items-center gap-2 px-1 text-sm font-extrabold">
+        {titel}
+        {premium && <PremiumBadge />}
+      </h3>
+      <div className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">{children}</div>
+    </section>
+  );
+}
+
+function Zeile({ titel, hinweis, children }: { titel: string; hinweis?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-tinte">{titel}</p>
+        {hinweis && <p className="text-xs text-muted-foreground">{hinweis}</p>}
+      </div>
+      {children}
+    </div>
   );
 }
