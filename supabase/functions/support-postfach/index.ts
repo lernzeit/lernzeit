@@ -17,6 +17,7 @@
 // Absender oder die eigene Domain. Hoechstens 10 gesendete Antworten am Tag.
 // Secrets: IONOS_POSTFACH_PASSWORT (Benutzer ist info@lernzeit.app).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { Buffer } from "node:buffer";
 import { simpleParser } from "npm:mailparser@3.7.1";
 import MailComposer from "npm:nodemailer@6.9.15/lib/mail-composer/index.js";
 import { Imap, smtpSenden } from "../_shared/mailverbindung.ts";
@@ -111,7 +112,8 @@ async function mailLesen(c: Imap, uid: number): Promise<Mail | null> {
 }
 
 async function zerlegen(uid: number, quelle: Uint8Array): Promise<Mail> {
-  const p = await simpleParser(quelle);
+  // mailparser braucht einen Buffer; ein Uint8Array haelt es fuer einen Stream.
+  const p = await simpleParser(Buffer.from(quelle));
   const von = p.from?.value?.[0];
   const refs = Array.isArray(p.references) ? p.references : p.references ? [p.references] : [];
   const adresse = (p.replyTo?.value?.[0]?.address ?? von?.address ?? "").toLowerCase();
