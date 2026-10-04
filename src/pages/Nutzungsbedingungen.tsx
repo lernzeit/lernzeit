@@ -120,6 +120,10 @@ const Nutzungsbedingungen = () => (
     <section>
       <h2>6. Laufzeit, Verlängerung und Kündigung des Abos</h2>
       <p>
+        6.1 bis 6.3 gelten für Abos, die auf der Website abgeschlossen werden. Für In-App-Abos aus dem App Store oder
+        von Google Play gilt 6.4.
+      </p>
+      <p>
         6.1 <strong>Monatsabo:</strong> Die Laufzeit beträgt einen Monat. Sie verlängert sich jeweils um einen weiteren
         Monat, wenn das Abo nicht bis zum Ende des laufenden Monats gekündigt wird.
       </p>
@@ -141,15 +145,17 @@ const Nutzungsbedingungen = () => (
         </li>
       </ul>
       <p>
-        Ein über den App Store oder Google Play abgeschlossenes Abo wird von dem jeweiligen Store verlängert und kann
-        deshalb nur dort beendet werden: in den Abo-Einstellungen Ihrer Apple-ID bzw. in Google Play unter „Zahlungen
-        und Abos“.
+        6.4 <strong>In-App-Abos:</strong> Abrechnung, Laufzeit, Verlängerung und Erstattung übernimmt der jeweilige
+        Store nach seinen Bedingungen; das Abo verlängert sich dort um die gewählte Laufzeit, wenn es nicht spätestens
+        24 Stunden vor deren Ende gekündigt wird. Beenden lässt es sich deshalb nur im Store: in den Abo-Einstellungen
+        Ihrer Apple-ID bzw. in Google Play unter „Zahlungen und Abos“. In der App führt „Abo verwalten oder kündigen“
+        im Eltern-Bereich direkt dorthin.
       </p>
       <p>
-        6.4 Das Recht beider Seiten zur Kündigung aus wichtigem Grund bleibt unberührt.
+        6.5 Das Recht beider Seiten zur Kündigung aus wichtigem Grund bleibt unberührt.
       </p>
       <p>
-        6.5 Den kostenlosen Nutzungsvertrag können Sie jederzeit beenden, indem Sie Ihr Konto löschen (
+        6.6 Den kostenlosen Nutzungsvertrag können Sie jederzeit beenden, indem Sie Ihr Konto löschen (
         <Link to="/konto-loeschen">Konto löschen</Link>). Ein laufendes Abo ist vorher zu kündigen. Wir können den
         kostenlosen Nutzungsvertrag mit einer Frist von vier Wochen kündigen.
       </p>

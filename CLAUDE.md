@@ -102,3 +102,13 @@ Supabase-Secrets gelöscht werden.
   Tabelle `vertragserklaerungen` + Eingangsbestätigung per IONOS-SMTP; ausgeführt wird von
   Hand in Stripe (`docs/support/leitfaden.md`). Offene Punkte für Betreiber und Kanzlei:
   `docs/rechtstexte-pruefung.md`. Texte tragen einen festen Stand – bei Änderungen anpassen.
+
+## Lernplan aus Fotos (Stand 04.10.2026)
+
+- Premium: Eltern laden bis zu 10 Fotos (Heft/Buch/Arbeitsblatt) im Lernplan-Formular hoch
+  (`parent/FotoAuswahl.tsx`, verkleinert auf 1600 px, ohne Bildangaben). `generate-learning-plan`
+  liest den Stoff mit `_shared/lernstoff-fotos.ts` aus (use_case `lernstoff_fotos`, Gemini 3.8 Flash,
+  ~0,5 Cent je Foto) und speichert nur den Text in `learning_plans.lernstoff`; die Fotos nie.
+- `ai-question-generator` holt den Stoff über `learningPlanId` (nur Kind/Elternteil des Plans);
+  solche Fragen gehen nicht in `ai_question_cache`.
+- Prüfen mit den künstlichen Seiten in `docs/testdaten/` (Prüfzugang nur mit Service-Rolle).

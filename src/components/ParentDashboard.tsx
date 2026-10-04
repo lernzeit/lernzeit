@@ -1019,7 +1019,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                         <>
                           <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
                             {portalLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                            {!isNativeApp && premiumSource !== 'revenuecat' ? 'Zahlungsdaten und Rechnungen' : 'Abo verwalten'}
+                            {!isNativeApp && premiumSource !== 'revenuecat' ? 'Zahlungsdaten und Rechnungen' : 'Abo verwalten oder kündigen'}
                           </Button>
                           {/* Web-Abo: Kuendigen ueber unsere Funktion statt im Stripe-
                               Portal (Jahresabo ab dem 2. Jahr: ein Monat Frist). */}

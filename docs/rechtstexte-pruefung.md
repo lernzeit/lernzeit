@@ -113,3 +113,14 @@ Der Entwurf zur Werbemessung (`docs/datenschutz-entwurf.md`, § 8a) ist
 | 18 | Favicon | vorhanden (ico, png, Apple-Touch, PWA) |
 | 19 | Alt-Texte | alle `<img>` haben `alt` |
 | 20 | Mobile | alle geprüften Seiten ohne waagerechtes Scrollen bei 390 px |
+
+## Lernplan aus Fotos (04.10.2026)
+
+Eltern laden Fotos von Heft, Buch oder Arbeitsblatt hoch; Gemini liest den
+Stoff aus. Die Fotos werden auf dem Gerät verkleinert (ohne Bildangaben) und
+nicht gespeichert, nur der ausgelesene Text (`learning_plans.lernstoff`).
+Daraus erzeugte Fragen gehen nicht in den gemeinsamen Fragen-Cache.
+Datenschutzerklärung 2.2 und 6 ergänzt. Für die Kanzlei: Reicht der Hinweis
+im Formular, Seiten mit Namen/Noten möglichst nicht zu fotografieren, oder
+braucht es eine ausdrückliche Bestätigung? Urheberrecht an Buchseiten:
+Auswertung nur für den privaten Lernplan, keine Speicherung der Seite.
