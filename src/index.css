@@ -261,7 +261,7 @@ html {
 }
 .lp :is(h1, h2, h3) {
   color: var(--lp-tinte);
-  letter-spacing: 0;
+  letter-spacing: -0.028em;
   line-height: 1.08;
 }
 .lp .lp-band :is(h1, h2, h3) {
@@ -389,33 +389,4 @@ html {
   .lp-strich {
     animation: none;
   }
-}
-
-/* Motion der Startseite: semantische Farben, feste Videoflaeche, JS optional. */
-.lp {
-  --lp-motion-glow: 0 22px 60px -24px hsl(var(--primary) / 0.45), 18px 12px 60px -30px hsl(var(--secondary) / 0.3);
-  --lp-motion-logo: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-  --lp-motion-step: hsl(0 0% 100% / 0.06);
-  --lp-motion-line: hsl(0 0% 100% / 0.18);
-  --lp-motion-number: hsl(0 0% 100%);
-}
-.lp-logo { background: var(--lp-motion-logo); }
-.lp .lp-hero-cta { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: var(--shadow-button); }
-.lp .lp-hero-cta:hover { background: hsl(var(--primary) / 0.9); }
-.lp .lp-demo-cta { color: var(--lp-tinte); }
-.lp .lp-demo-cta:hover { background: var(--lp-heft); }
-.lp-loop { aspect-ratio: 4 / 5; object-fit: contain; }
-.lp-loop-hero { border-radius: 8px; box-shadow: var(--lp-motion-glow); }
-.lp-step { background: var(--lp-motion-step); box-shadow: inset 0 0 0 1px var(--lp-motion-line); }
-.lp-step-number { color: var(--lp-motion-number); --tw-ring-color: var(--lp-motion-line); }
-.lp-reveal { transition: opacity 650ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1); transition-delay: var(--lp-reveal-delay, 0ms); }
-.lp-reveal-pending { opacity: 0; transform: translateY(18px); }
-.lp [data-parallax] { transform: translate3d(0, var(--lp-parallax, 0px), 0); }
-@keyframes lp-loop-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-.lp-loop-float { animation: lp-loop-float 6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .lp-reveal, .lp-reveal-pending { opacity: 1; transform: none; transition: none; }
-  .lp [data-parallax] { transform: none; }
-  .lp-loop-float { animation: none; }
-  .lp *, .lp *::before, .lp *::after { scroll-behavior: auto !important; }
 }
