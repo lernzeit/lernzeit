@@ -32,8 +32,8 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
       <Card className="shadow-card">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-warning/15 rounded-full flex items-center justify-center">
+              <Trophy className="w-6 h-6 text-warning" />
             </div>
             <div className="flex-1">
               <div className="font-medium">Erfolge</div>
@@ -96,8 +96,8 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
       <Card className="shadow-card">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-warning/15 rounded-full flex items-center justify-center">
+              <Trophy className="w-6 h-6 text-warning" />
             </div>
             <div className="flex-1">
               <div className="font-medium flex items-center gap-2">

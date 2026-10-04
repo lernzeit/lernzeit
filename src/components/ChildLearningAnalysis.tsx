@@ -17,7 +17,7 @@ import {
   Lightbulb,
   Crown
 } from 'lucide-react';
-import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface ChildLearningAnalysisProps {
   childId: string;
@@ -474,56 +474,49 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
               <CardContent>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={weeklyData}>
-                      <XAxis 
-                        dataKey="week" 
-                        tick={{ fontSize: 12 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis 
-                        yAxisId="left"
-                        domain={[0, 100]} 
-                        tick={{ fontSize: 12 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        tickFormatter={(value) => `${value}%`}
+                    {/* Eine Achse (Erfolgsquote). Die Anzahl der Aufgaben steht im
+                        Tooltip, nicht auf einer zweiten Achse (App-Redesign). */}
+                    <LineChart data={weeklyData} margin={{ top: 12, right: 12, bottom: 0, left: -12 }}>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--karo))" />
+                      <XAxis
+                        dataKey="week"
+                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        tick={{ fontSize: 12 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        allowDecimals={false}
+                        domain={[0, 100]}
+                        ticks={[0, 50, 100]}
+                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => `${value} %`}
                       />
-                      <Tooltip 
-                        formatter={(value: number, name: string) => {
-                          if (name === 'successRate') return [<span style={{ color: 'hsl(var(--primary))' }}>{`${value}%`}</span>, 'Erfolgsquote'];
-                          return [<span style={{ color: '#22d3ee' }}>{value}</span>, 'Fragen'];
-                        }}
-                        labelFormatter={(label) => label}
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          color: 'hsl(var(--foreground))'
+                      <Tooltip
+                        cursor={{ stroke: 'hsl(var(--karo))', strokeWidth: 2 }}
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload?.length) return null;
+                          const zeile = payload[0].payload as { successRate: number; questions: number };
+                          return (
+                            <div className="rounded-xl bg-card px-3 py-2 text-xs shadow-lg ring-1 ring-karo">
+                              <p className="font-bold text-tinte">{label}</p>
+                              <p className="text-muted-foreground">
+                                <span className="tabular font-bold text-tinte">{zeile.successRate} %</span> richtig, {zeile.questions} Aufgaben
+                              </p>
+                            </div>
+                          );
                         }}
                       />
-                      <Bar
-                        yAxisId="right"
-                        dataKey="questions"
-                        fill="#22d3ee"
-                        fillOpacity={0.35}
-                        radius={[4, 4, 0, 0]}
+                      <Line
+                        type="monotone"
+                        dataKey="successRate"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--card))', strokeWidth: 2 }}
+                        activeDot={{ r: 6 }}
                         isAnimationActive={false}
                       />
-                      <Line 
-                        yAxisId="left"
-                        type="monotone" 
-                        dataKey="successRate" 
-                        stroke="hsl(var(--primary))" 
-                        dot={{ fill: 'hsl(var(--primary))' }}
-                        isAnimationActive={false}
-                      />
-                    </ComposedChart>
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>

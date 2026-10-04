@@ -49,7 +49,7 @@ export function AchievementPopup({ achievements, onClose }: AchievementPopupProp
           </div>
 
           {totalReward > 0 && (
-            <div className="flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-green-100 to-blue-100 rounded-lg mb-4">
+            <div className="flex items-center justify-center gap-2 p-3 bg-gruen-hell/10 rounded-2xl mb-4">
               <Gift className="w-5 h-5 text-green-600" />
               <span className="font-medium text-green-800">
                 Gesamt: +{totalReward} Minuten Belohnung!

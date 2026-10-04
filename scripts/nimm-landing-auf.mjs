@@ -66,7 +66,7 @@ try {
     }
     await page.waitForTimeout(600);
     await halt('klasse');
-    await page.getByRole('button', { name: "Los geht's!" }).nth(2).click();
+    await page.getByRole('button', { name: 'Klasse 3', exact: true }).click();
     await page.getByText('Mathe', { exact: true }).first().waitFor();
     await page.waitForTimeout(600);
     await halt('fach');

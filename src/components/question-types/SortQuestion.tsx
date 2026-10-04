@@ -124,7 +124,7 @@ export function SortQuestion({
               <div className="flex items-center gap-4 p-4 md:p-6">
                 {/* Position Number */}
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-primary/10 flex items-center justify-center">
                     <span className="text-xl md:text-2xl font-bold text-primary">
                       {index + 1}
                     </span>

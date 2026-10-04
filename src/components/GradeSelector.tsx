@@ -1,120 +1,87 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { BookOpen, Award, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 
 interface GradeSelectorProps {
   onSelectGrade: (grade: number) => void;
 }
 
 const grades = [
-  { grade: 1, label: 'Klasse 1', description: 'Zahlen 1-10, Plus & Minus', icon: '🌟' },
-  { grade: 2, label: 'Klasse 2', description: 'Zahlen 1-100, Einmaleins', icon: '🎈' },
-  { grade: 3, label: 'Klasse 3', description: 'Einmaleins, Division', icon: '🚀' },
-  { grade: 4, label: 'Klasse 4', description: 'Große Zahlen, Brüche', icon: '⭐' },
-  { grade: 5, label: 'Klasse 5', description: 'Dezimalzahlen, Prozente', icon: '🎯' },
-  { grade: 6, label: 'Klasse 6', description: 'Negative Zahlen, Algebra', icon: '🏆' },
-  { grade: 7, label: 'Klasse 7', description: 'Gleichungen, Winkel', icon: '💎' },
-  { grade: 8, label: 'Klasse 8', description: 'Terme, Funktionen', icon: '🔥' },
-  { grade: 9, label: 'Klasse 9', description: 'Quadratische Funktionen', icon: '⚡' },
-  { grade: 10, label: 'Klasse 10', description: 'Trigonometrie, Exponential', icon: '🌟' },
+  { grade: 1, description: 'Zahlen bis 10, Plus und Minus' },
+  { grade: 2, description: 'Zahlen bis 100, Einmaleins' },
+  { grade: 3, description: 'Einmaleins, Teilen' },
+  { grade: 4, description: 'Große Zahlen, Brüche' },
+  { grade: 5, description: 'Dezimalzahlen, Prozente' },
+  { grade: 6, description: 'Negative Zahlen, Algebra' },
+  { grade: 7, description: 'Gleichungen, Winkel' },
+  { grade: 8, description: 'Terme, Funktionen' },
+  { grade: 9, description: 'Quadratische Funktionen' },
+  { grade: 10, description: 'Trigonometrie, Exponential' },
 ];
 
 const youngGrades = grades.filter((g) => g.grade <= 4);
 const teenGrades = grades.filter((g) => g.grade >= 5);
 
+/**
+ * Klassenwahl der Demo (App-Redesign): grosse Kaestchen mit der Klassenzahl,
+ * ein Weg zurueck zur Startseite. Bis 04.10.2026 Emoji-Kacheln mit viermal
+ * "Los geht's!".
+ */
 export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
   return (
-    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom">
-      <div className="page-container">
-        {/* Header */}
-        <div className="text-center mb-8">
-          {/* Hier stand bis zum 25.09.2026 „MathTime 📱⏰" — ein alter
-              Arbeitsname, den jeder Demo-Besucher als Erstes sah, waehrend
-              Anzeige und Startseite „LernZeit" sagen. Die Emojis sind mit
-              entfernt: In einer Ueberschrift mit Verlaufstext
-              (bg-clip-text, text-transparent) werden sie zu einfarbigen
-              Kloetzen. */}
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
-            LernZeit
-          </h1>
-          <p className="text-lg text-muted-foreground mb-2">
-            Löse Lernaufgaben und verdiene Handyzeit!
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-primary" />
-              <span>Lerne spielerisch</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-secondary" />
-              <span>Verdiene Belohnungen</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-accent" />
-              <span>Altersgerecht</span>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-[100dvh] bg-background pt-safe-top pb-safe-bottom">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-12 pt-3">
+        <Link
+          to="/start"
+          className="-ml-2 inline-flex h-11 items-center gap-1 rounded-full pl-1 pr-4 text-[0.9375rem] font-bold text-tinte transition-colors hover:bg-muted"
+        >
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
+          Zur Startseite
+        </Link>
 
-        {/* === Grundschule (1–4): big, colorful, emoji-first === */}
-        <div className="mb-10">
-          <h2 className="text-xl font-bold mb-1 text-center">🏫 Grundschule</h2>
-          <p className="text-sm text-muted-foreground text-center mb-4">Klasse 1 – 4</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h1 className="mt-4 text-[2rem] font-extrabold leading-tight sm:text-[2.5rem]">In welche Klasse gehst du?</h1>
+        <p className="mt-2 max-w-md text-muted-foreground">Probier fünf echte Aufgaben aus, ganz ohne Anmeldung.</p>
+
+        <section aria-labelledby="grundschule" className="mt-8">
+          <h2 id="grundschule" className="mb-3 text-base font-extrabold">Grundschule, Klasse 1 – 4</h2>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {youngGrades.map((g) => (
-              <Card
-                key={g.grade}
-                className="rounded-2xl border-2 shadow-lg hover:scale-105 cursor-pointer transition-all duration-300 group"
-                onClick={() => onSelectGrade(g.grade)}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="text-5xl mb-3 group-hover:animate-bounce-gentle">{g.icon}</div>
-                  <h3 className="text-xl font-bold mb-1 text-foreground">{g.label}</h3>
-                  <Button variant="game" size="lg" className="w-full mt-2">
-                    Los geht's!
-                  </Button>
-                </CardContent>
-              </Card>
+              <li key={g.grade}>
+                <button
+                  type="button"
+                  onClick={() => onSelectGrade(g.grade)}
+                  aria-label={`Klasse ${g.grade}`}
+                  className="heft-karo flex aspect-square w-full flex-col items-center justify-center rounded-[24px] bg-card ring-1 ring-inset ring-karo transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <span className="text-sm font-bold text-muted-foreground">Klasse</span>
+                  <span className="tabular text-[3.5rem] font-extrabold leading-none text-tinte">{g.grade}</span>
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
 
-        {/* === Weiterführende Schule (5–10): compact, modern === */}
-        <div>
-          <h2 className="text-xl font-bold mb-1 text-center">🎓 Weiterführende Schule</h2>
-          <p className="text-sm text-muted-foreground text-center mb-4">Klasse 5 – 10</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <section aria-labelledby="weiterfuehrend" className="mt-8">
+          <h2 id="weiterfuehrend" className="mb-3 text-base font-extrabold">Weiterführende Schule, Klasse 5 – 10</h2>
+          <ul className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">
             {teenGrades.map((g) => (
-              <Card
-                key={g.grade}
-                className="rounded-lg shadow-card hover:scale-[1.02] cursor-pointer transition-all duration-200 group"
-                onClick={() => onSelectGrade(g.grade)}
-              >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <span className="text-2xl">{g.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-foreground">{g.label}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{g.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <li key={g.grade}>
+                <button
+                  type="button"
+                  onClick={() => onSelectGrade(g.grade)}
+                  aria-label={`Klasse ${g.grade}`}
+                  className="flex w-full items-center gap-4 px-4 py-3 text-left"
+                >
+                  <span className="tabular grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-muted text-xl font-extrabold text-tinte">{g.grade}</span>
+                  <span className="min-w-0">
+                    <span className="block font-bold text-tinte">Klasse {g.grade}</span>
+                    <span className="block truncate text-sm text-muted-foreground">{g.description}</span>
+                  </span>
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
-
-        {/* Bottom info */}
-        <div className="mt-8 text-center">
-          <Card className="max-w-lg mx-auto shadow-card">
-            <CardContent className="p-6">
-              <div className="text-2xl mb-2">🎮</div>
-              <h3 className="font-semibold mb-2">Wie funktioniert's?</h3>
-              <p className="text-sm text-muted-foreground">
-                Löse Aufgaben korrekt und erhalte zusätzliche Handyzeit!
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+          </ul>
+        </section>
       </div>
     </div>
   );

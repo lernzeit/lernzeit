@@ -138,7 +138,7 @@ try {
       if (versuch === 5) throw e;
     }
   }
-  await page.getByRole('button', { name: "Los geht's!" }).nth(2).click();
+  await page.getByRole('button', { name: 'Klasse 3', exact: true }).click();
   await page.getByText('Mathe', { exact: true }).first().click();
   await page.waitForFunction(
     (fragen) => fragen.some((f) => document.body.innerText.includes(f)),

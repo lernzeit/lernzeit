@@ -18,7 +18,7 @@ import {
   AlertCircle,
   Loader2,
   Bell
-} from 'lucide-react';
+, ChevronRight } from 'lucide-react';
 import { ChildLinking } from '@/components/ChildLinking';
 import { ScreenTimeWidget } from '@/components/ScreenTimeWidget';
 import { ScreenTimeTestPanel } from '@/components/screenTime/ScreenTimeTestPanel';
@@ -236,14 +236,14 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
   if (activeSection) {
     return (
         <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom px-safe">
-          <div className="page-container">
-          <Button 
-            variant="ghost" 
+          <div className="mx-auto w-full max-w-xl px-4 pt-4 pb-10">
+          <Button
+            variant="ghost"
             onClick={() => setActiveSection(null)}
-            className="mb-4 hover:bg-muted/50"
+            className="mb-4 -ml-2"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Zurück
+            <ArrowLeft className="w-4 h-4" />
+            Einstellungen
           </Button>
           
           {activeSection === 'family' && (
@@ -252,8 +252,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                 <Card className="shadow-card">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Users className="w-5 h-5 text-primary" />
                       </div>
                       Eltern-Verknüpfung
                     </CardTitle>
@@ -274,8 +274,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                   <Card className="shadow-card">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                          <Users className="w-5 h-5 text-white" />
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <Users className="w-5 h-5 text-primary" />
                         </div>
                         Aktuelle Verknüpfungen ({parentInfoList.length})
                       </CardTitle>
@@ -409,8 +409,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
               <Card className="shadow-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-primary" />
                     </div>
                     Mein Profil
                   </CardTitle>
@@ -438,9 +438,9 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                             Prüfe...
                           </span>
                         ) : hasParentLink ? (
-                          `👨‍👩‍👧‍👦 Mit ${parentInfoList.map(p => p.name).join(', ')} verknüpft` 
+                          `Mit ${parentInfoList.map(p => p.name).join(', ')} verbunden` 
                         ) : (
-                          '🔓 Unabhängig'
+                          'Noch nicht mit Eltern verbunden'
                         )}
                       </span>
                     </div>
@@ -469,84 +469,48 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
   }
 
   return (
-      <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom px-safe">
-        <div className="page-container space-y-6">
-        {/* Header */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={onBack}>
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <div>
-                  <CardTitle className="text-xl">⚙️ Einstellungen</CardTitle>
-                  <p className="text-sm text-muted-foreground">Verwalte dein Konto</p>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+    <div className="min-h-[100dvh] bg-background pt-safe-top pb-safe-bottom px-safe">
+      <div className="mx-auto w-full max-w-xl space-y-6 px-4 pb-10 pt-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Zurück">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl font-extrabold">Einstellungen</h1>
+        </div>
 
-        {/* Menu Items */}
-        <div className="space-y-3">
+        <ul className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             return (
-              <Card 
-                key={item.id} 
-                className="shadow-card hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                onClick={() => setActiveSection(item.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 bg-gradient-to-r ${item.gradient} rounded-full flex items-center justify-center shadow-lg`}>
-                      <IconComponent className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                      {item.id === 'family' && hasParentLink && !loadingParentInfo && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Check className="w-3 h-3 text-green-600" />
-                          <span className="text-xs text-green-600">Verknüpft</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-muted-foreground">
-                      {item.id === 'family' && loadingParentInfo && (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      )}
-                      {item.id !== 'family' || !loadingParentInfo ? '→' : null}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <li key={item.id}>
+                <button type="button" onClick={() => setActiveSection(item.id)} className="flex w-full items-center gap-4 px-4 py-4 text-left">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                    <IconComponent className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold text-tinte">{item.title}</span>
+                    <span className="block text-sm text-muted-foreground">{item.description}</span>
+                    {item.id === 'family' && hasParentLink && !loadingParentInfo && (
+                      <span className="mt-0.5 flex items-center gap-1 text-xs font-bold text-gruen-text">
+                        <Check className="h-3 w-3" /> Verbunden
+                      </span>
+                    )}
+                  </span>
+                  {item.id === 'family' && loadingParentInfo ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
-        {/* Logout Button */}
-        <Card className="shadow-card">
-          <CardContent className="p-4">
-            <Button 
-              variant="destructive" 
-              onClick={handleSignOut}
-              className="w-full h-12 text-lg"
-            >
-              <LogOut className="w-5 h-5 mr-2" />
-              Abmelden
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Fun Footer */}
-        <div className="text-center py-4">
-          <div className="text-2xl mb-2">🚀</div>
-          <p className="text-sm text-muted-foreground">
-            Bleib motiviert und sammle weiter Lernzeit!
-          </p>
-        </div>
+        <Button variant="outline" onClick={handleSignOut} className="w-full" size="lg">
+          <LogOut className="h-5 w-5" />
+          Abmelden
+        </Button>
       </div>
     </div>
   );

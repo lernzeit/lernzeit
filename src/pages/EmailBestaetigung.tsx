@@ -40,7 +40,7 @@ export default function EmailBestaetigung() {
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardContent className="p-0">
           {/* Header */}
-          <div className="bg-gradient-to-br from-primary/20 to-secondary/20 text-center p-8 rounded-t-xl">
+          <div className="heft-karo bg-card text-center p-8 rounded-t-xl">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-4">
               <Mail className="w-10 h-10" />
             </div>

@@ -13,7 +13,7 @@ export function AchievementQuickView({ userId, onClick }: AchievementQuickViewPr
 
   if (loading) {
     return (
-      <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 cursor-pointer hover:shadow-lg transition-all" onClick={onClick}>
+      <Card className="shadow-card cursor-pointer transition-colors hover:bg-muted" onClick={onClick}>
         <CardContent className="p-4 text-center">
           <Trophy className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
           <div className="text-sm font-medium text-yellow-700">Erfolge</div>
@@ -28,7 +28,7 @@ export function AchievementQuickView({ userId, onClick }: AchievementQuickViewPr
   const totalCompleted = completedAchievements.length;
 
   return (
-    <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200 cursor-pointer hover:shadow-lg transition-all hover:scale-105" onClick={onClick}>
+    <Card className="shadow-card cursor-pointer transition-colors hover:bg-muted" onClick={onClick}>
       <CardContent className="p-4">
         <div className="flex items-center gap-3 mb-3">
           <Trophy className="w-6 h-6 text-yellow-600" />

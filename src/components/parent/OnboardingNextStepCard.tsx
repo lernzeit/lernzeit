@@ -129,7 +129,7 @@ export function OnboardingNextStepCard({
   };
 
   return (
-    <Card className="border-primary/40 bg-gradient-to-r from-primary/10 to-accent/5">
+    <Card className="rounded-[24px] border-primary/30 bg-primary/5">
       <CardContent className="py-5 px-5">
         <div className="flex items-start gap-4">
           <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center shrink-0">

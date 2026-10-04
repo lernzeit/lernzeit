@@ -136,7 +136,7 @@ export function OnboardingTutorial({ role, grade = 5, onComplete }: OnboardingTu
 
         <CardContent className="p-0">
           {/* Top colored section */}
-          <div className={`bg-gradient-to-br from-primary/20 to-secondary/20 text-center ${isYoung ? 'p-10' : 'p-8'}`}>
+          <div className={`heft-karo bg-card text-center ${isYoung ? 'p-10' : 'p-8'}`}>
             <div className={`${emojiSize} mb-3 animate-scale-in`}>{step.emoji}</div>
             <div className={`inline-flex items-center justify-center rounded-2xl bg-primary/10 text-primary mb-2 ${isYoung ? 'w-16 h-16' : 'w-14 h-14'}`}>
               {step.icon}

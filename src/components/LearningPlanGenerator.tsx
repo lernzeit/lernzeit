@@ -208,7 +208,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
   if (!hasPremiumAccess) {
     return (
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <Card className="rounded-[24px]">
         <CardContent className="py-12 text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <Crown className="h-8 w-8 text-primary" />
