@@ -163,6 +163,36 @@ All colors MUST be HSL.
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* Strich zeichnet sich (Haken, Rotstift); pathLength=1 am Pfad */
+  .heft-strich {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: heft-schreiben 0.45s cubic-bezier(0.65, 0, 0.35, 1) 0.05s forwards;
+  }
+  /* Die Loesung erscheint nach dem Durchstreichen */
+  .heft-korrektur {
+    opacity: 0;
+    animation: heft-auftauchen 0.35s ease-out 0.45s forwards;
+    rotate: -4deg;
+  }
+  /* "+30 Sek." fliegt in die verdiente Zeit */
+  .heft-gutschrift {
+    animation: heft-gutschrift 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes heft-schreiben { to { stroke-dashoffset: 0; } }
+@keyframes heft-auftauchen { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes heft-gutschrift {
+  0% { opacity: 0; transform: translateY(70px) scale(0.9); }
+  25% { opacity: 1; transform: translateY(40px) scale(1.1); }
+  80% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heft-strich { animation: none; stroke-dashoffset: 0; }
+  .heft-korrektur { animation: none; opacity: 1; }
+  .heft-gutschrift { animation: none; opacity: 0; }
 }
 
 /* Responsive page container – fluid width that scales with viewport */

@@ -25,6 +25,7 @@ import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
+import { AntwortKaestchen, KaestchenFortschritt, VerdienteZeit, Ziffernfeld, istZahlAntwort } from '@/components/game/heft/Heft';
 import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 import { useReviewQueue } from '@/hooks/useReviewQueue';
@@ -156,6 +157,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
   const streakBeforeSession = useRef<number | null>(null);
   const isStreakRecovery = mode === 'streak_recovery';
+
+  // Ergebnis je Aufgabe fuer den Kaestchen-Fortschritt (nur Anzeige)
+  const [antwortVerlauf, setAntwortVerlauf] = useState<Record<number, boolean>>({});
+  useEffect(() => {
+    if (hasAnswered) setAntwortVerlauf((v) => (v[currentIndex] === isCorrect ? v : { ...v, [currentIndex]: isCorrect }));
+  }, [hasAnswered, isCorrect, currentIndex]);
 
   // Track streak before session starts
   const { streak: currentStreak, inactiveDays: currentInactiveDays, loading: streakLoading } = useStreak(user?.id);
@@ -539,17 +546,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       // Trigger gamification effects
       if (isFast) {
         triggerSpeedBonus();
-        setGameAnimation({ type: 'speed', message: 'Blitzschnell! ⚡' });
+        setGameAnimation({ type: 'speed', message: 'Blitzschnell!' });
       } else if (newStreak === 3) {
         triggerCombo();
-        setGameAnimation({ type: 'combo', message: '3er-Combo! 🔥' });
+        setGameAnimation({ type: 'combo', message: 'Drei richtig in Folge!' });
       } else if (newStreak === 5) {
         triggerCombo();
-        setGameAnimation({ type: 'combo', message: 'Unaufhaltbar! 🦄' });
-      } else {
-        triggerSparkle();
-        setGameAnimation({ type: 'correct', message: 'Richtig! ✨' });
+        setGameAnimation({ type: 'combo', message: 'Fünf richtig in Folge!' });
       }
+      // Normale richtige Antwort: kein Einblenden und kein Konfetti mehr. Der
+      // gruene Haken und "+30 Sek." in der Zeit oben sind die Rueckmeldung
+      // (App-Redesign, ein Bewegungsmoment statt mehrerer).
 
       // Adaptive difficulty handles the adjustment automatically
     } else {
@@ -885,7 +892,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       triggerRainbow();
     }
     return (
-      <div className="min-h-screen bg-gradient-bg flex flex-col items-center justify-center p-4 pt-safe-top pb-safe-bottom">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background pt-safe-top pb-safe-bottom">
           <GameCompletionScreen
           score={score}
           totalQuestions={totalQuestions}
@@ -924,8 +931,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
         {/* Daily Challenge Banner */}
         {dailyChallengeCompleted && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold text-sm shadow-2xl animate-scale-in-bounce pointer-events-none">
-            🎯 Tages-Challenge geschafft! Bonus-Minuten verdient!
+          <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 animate-scale-in-bounce rounded-2xl bg-tinte px-5 py-3 text-sm font-bold text-white shadow-2xl pointer-events-none">
+            Tages-Challenge geschafft: Bonus-Minuten verdient!
           </div>
         )}
       </div>
@@ -935,16 +942,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Initial loading screen with progress
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-12 text-center">
             <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
             <p className="mt-4 text-lg text-muted-foreground">
-              {grade <= 4 ? 'Gleich geht\'s los! 🚀' : 'Deine Fragen werden vorbereitet...'}
+              {grade <= 4 ? 'Gleich geht\'s los …' : 'Deine Aufgaben werden vorbereitet …'}
             </p>
             {grade > 4 && (
               <p className="mt-2 text-sm text-muted-foreground">
-                Das dauert nur einen Moment ✨
+                Das dauert nur einen Moment.
               </p>
             )}
           </CardContent>
@@ -956,7 +963,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Error state
   if (preloadError && !question) {
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
@@ -964,11 +971,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                {grade <= 4 ? 'Zurück' : 'Zurück'}
+                Zurück
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
+                Nochmal versuchen
               </Button>
             </div>
           </CardContent>
@@ -980,7 +987,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Waiting for next question or no question available (fallback with retry)
   if (!question && !isInitialLoading) {
     return (
-      <div className="min-h-screen bg-gradient-bg flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             {preloadError ? (
@@ -1002,7 +1009,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               </Button>
               <Button onClick={reload}>
                 <RotateCcw className="w-4 h-4 mr-2" />
-                {grade <= 4 ? '🔄 Nochmal!' : 'Nochmal versuchen'}
+                Nochmal versuchen
               </Button>
             </div>
           </CardContent>
@@ -1011,8 +1018,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     );
   }
 
+  // Verdiente Zeit dieser Runde (wie beim Speichern: Punkte x Sekunden je Aufgabe)
+  const sekundenProAufgabe = getSecondsPerTask();
+  const verdienteSekunden = isStreakRecovery ? 0 : score * sekundenProAufgabe;
+  const zahlAntwort =
+    (question?.questionType === 'FREETEXT' || shouldUseTextFallbackForMultipleChoice) &&
+    istZahlAntwort(getCorrectAnswerText());
+  const loesungText = question ? getCorrectAnswerText() : '';
+
   return (
-    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom">
+    <div className="flex min-h-[100dvh] flex-col bg-background pt-safe-top">
       {/* In-game animation overlay */}
       {gameAnimation && (
         <InGameAnimation
@@ -1021,83 +1036,57 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           onComplete={() => setGameAnimation(null)}
         />
       )}
-      <div className="page-container space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            {grade <= 4 ? '' : 'Zurück'}
-          </Button>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className={grade <= 4 ? 'text-base px-3 py-1' : ''}>
-              {getSubjectEmoji(subject)} {grade <= 4 ? '' : getSubjectName(subject)}
-            </Badge>
-            {grade > 4 && <Badge variant="outline">Klasse {grade}</Badge>}
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
+        {/* Kopf: beenden, Kaestchen-Fortschritt, verdiente Zeit */}
+        <div className="flex items-center gap-3 px-4 pb-3 pt-3">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Runde beenden"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-card text-tinte ring-1 ring-inset ring-karo transition-colors hover:bg-muted"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="flex min-w-0 flex-1 justify-center">
+            <KaestchenFortschritt anzahl={totalQuestions} aktuell={currentIndex} verlauf={antwortVerlauf} />
           </div>
-        </div>
-
-        {/* Progress with Active Timer */}
-        <div>
-          {/* Timer Display - hidden for young */}
-          {grade > 4 && (
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-3">
-              <Clock className={cn("w-4 h-4", isRunning ? "text-primary" : "text-muted-foreground/50")} />
-              <span className={cn(
-                "font-mono text-lg transition-colors",
-                isRunning ? "text-foreground" : "text-muted-foreground/70"
-              )}>
-                {formattedTime}
-              </span>
-              {!isRunning && hasAnswered && (
-                <span className="text-xs text-muted-foreground">(pausiert)</span>
-              )}
-            </div>
+          {!isStreakRecovery ? (
+            <VerdienteZeit
+              sekunden={verdienteSekunden}
+              gutschrift={hasAnswered && isCorrect ? sekundenProAufgabe : null}
+              gutschriftSchluessel={currentIndex}
+            />
+          ) : (
+            <span className="w-10" />
           )}
-          
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span className="flex items-center gap-2">
-              {grade <= 4 
-                ? `${currentIndex + 1} von ${totalQuestions}`
-                : <>Frage {currentIndex + 1} von {totalQuestions}</>
-              }
-              {loadingProgress < totalQuestions && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  {loadingProgress}/{totalQuestions}
-                </span>
-              )}
-            </span>
-            <span className="flex items-center gap-1">
-              {grade <= 4 ? (
-                <span className="text-lg">⭐ {score}</span>
-              ) : (
-                <>
-                  <Trophy className="w-4 h-4 text-primary" />
-                  {score} richtig
-                </>
-              )}
-            </span>
-          </div>
-          <Progress value={(currentIndex / totalQuestions) * 100} className={grade <= 4 ? "h-4" : "h-2"} />
         </div>
 
-        {/* Question Card */}
+        {/* Das Blatt mit der Aufgabe */}
         {question && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
-                {question.questionType !== 'FILL_BLANK' && (
-                  <CardTitle className={cn("frage-text", grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed")}>{question.questionText}</CardTitle>
+          <div className="heft-karo relative flex flex-1 flex-col rounded-t-[28px] bg-card px-5 pt-6 shadow-[0_-1px_0_hsl(var(--karo))] sm:px-8">
+            <div className="flex items-center justify-between gap-3 text-sm font-semibold text-muted-foreground">
+              <span>{getSubjectName(subject)}{grade > 4 ? `, Klasse ${grade}` : ''}</span>
+              <span className="flex items-center gap-2">
+                {grade > 4 && (
+                  <span className={cn('tabular inline-flex items-center gap-1', !isRunning && 'opacity-60')}>
+                    <Clock className="h-3.5 w-3.5" />{formattedTime}
+                  </span>
                 )}
-                {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
-              </div>
-              {question.hint && !hasAnswered && (
-                <HintToggle hint={question.hint} />
-              )}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Question Type Renderers */}
+                {loadingProgress < totalQuestions && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="Weitere Aufgaben werden geladen" />
+                )}
+              </span>
+            </div>
+
+            {/* Bei FILL_BLANK steht der Text mit Luecken im Renderer */}
+            {question.questionType !== 'FILL_BLANK' && (
+              <h1 className={cn('frage-text mt-3 font-extrabold leading-tight text-tinte', grade <= 4 ? 'text-[1.875rem]' : 'text-2xl')}>
+                {question.questionText}
+              </h1>
+            )}
+            {question.hint && !hasAnswered && <HintToggle hint={question.hint} />}
+
+            <div className="mt-6 space-y-6 pb-6">
               {question.questionType === 'MULTIPLE_CHOICE' && !shouldUseTextFallbackForMultipleChoice && (
                 <MultipleChoiceRenderer
                   options={multipleChoiceOptions}
@@ -1109,13 +1098,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               )}
 
               {(question.questionType === 'FREETEXT' || shouldUseTextFallbackForMultipleChoice) && (
-                <FreetextRenderer
-                  value={userTextAnswer}
-                  onChange={setUserTextAnswer}
-                  hasAnswered={hasAnswered}
-                  isCorrect={isCorrect}
-                  correctAnswer={getCorrectAnswerText()}
-                />
+                zahlAntwort ? (
+                  <AntwortKaestchen
+                    wert={userTextAnswer}
+                    zustand={!hasAnswered ? 'offen' : isCorrect ? 'richtig' : 'falsch'}
+                    loesung={getCorrectAnswerText()}
+                    mitCursor={!hasAnswered}
+                  />
+                ) : (
+                  <FreetextRenderer
+                    value={userTextAnswer}
+                    onChange={setUserTextAnswer}
+                    hasAnswered={hasAnswered}
+                    isCorrect={isCorrect}
+                    correctAnswer={getCorrectAnswerText()}
+                  />
+                )
               )}
 
               {question.questionType === 'SORT' && (
@@ -1209,47 +1207,23 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 />
               )}
 
-              {/* Answer Feedback */}
+              {/* Rueckmeldung: Haken oder Rotstift, ruhig und ohne Alarmfarbe */}
               {hasAnswered && (
-                <div className={cn(
-                  "p-4 rounded-lg border-2",
-                  isCorrect 
-                    ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800" 
-                    : "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800"
-                )}>
-                  <div className="flex items-center gap-2 mb-2">
-                    {isCorrect ? (
-                      <>
-                        {grade <= 4 ? (
-                          <span className="text-2xl">✅</span>
-                        ) : (
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        )}
-                        <span className="font-semibold text-green-700 dark:text-green-400">
-                          {grade <= 4 ? 'Super!' : 'Richtig!'}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        {grade <= 4 ? (
-                          <span className="text-2xl">❌</span>
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-600" />
-                        )}
-                        <span className="font-semibold text-red-700 dark:text-red-400">
-                          {grade <= 4 ? 'Nicht ganz' : 'Nicht ganz richtig'}
-                        </span>
-                      </>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-2xl font-extrabold text-tinte">
+                      {isCorrect ? 'Richtig!' : grade <= 4 ? 'Fast.' : 'Nicht ganz.'}
+                    </span>
+                    {isCorrect && !isStreakRecovery && (
+                      <span className="font-hand text-lg text-gruen-text">+{sekundenProAufgabe} Sek.</span>
+                    )}
+                    {!isCorrect && !zahlAntwort && (
+                      <span className="frage-text font-hand text-lg text-rotstift">Richtig ist: {loesungText}</span>
                     )}
                   </div>
                   {isCorrect && spellingHint && (
-                    <p className="frage-text text-sm text-green-600 dark:text-green-400 mt-1">
-                      ✏️ Richtige Schreibweise: <strong>{spellingHint}</strong>
-                    </p>
-                  )}
-                  {!isCorrect && (
-                    <p className="frage-text text-sm text-muted-foreground">
-                      Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
+                    <p className="frage-text text-sm text-gruen-text">
+                      Richtige Schreibweise: <strong>{spellingHint}</strong>
                     </p>
                   )}
                   {/* Report Button - für Klasse 5+, auch bei richtiger Antwort */}
@@ -1266,13 +1240,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   )}
                   {/* KI-Tutor - only for teen */}
                   {grade > 4 && !isCorrect && question && (
-                    <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                    <div className="mt-3 pt-3 border-t border-karo">
                       {isPremium ? (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowTutorDialog(true)}
-                          className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                          className="w-full text-primary hover:bg-primary/10"
                         >
                           <MessageCircleQuestion className="w-4 h-4 mr-2" />
                           KI-Tutor fragen
@@ -1306,18 +1280,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
               {/* Explanation */}
               {showExplanation && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="rounded-2xl bg-muted p-4 ring-1 ring-inset ring-karo">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Lightbulb className="w-5 h-5 text-blue-600" />
-                      <span className="font-semibold text-blue-700 dark:text-blue-400">Erklärung</span>
+                      <Lightbulb className="w-5 h-5 text-primary" />
+                      <span className="font-bold text-tinte">Erklärung</span>
                     </div>
                     {explanation && !isLoadingExplanation && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => isSpeaking ? stopSpeaking() : speakText(explanation)}
-                        className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                        className="h-8 px-2 text-primary hover:bg-primary/10"
                       >
                         {isSpeaking ? (
                           <><VolumeX className="w-4 h-4 mr-1" /> Stopp</>
@@ -1338,61 +1312,71 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 </div>
               )}
 
-              {/* Action Buttons — bleiben unten am Bildschirm stehen. Nach einer
-                  Antwort lag "Naechste Frage" auf dem iPhone 13 mini sonst unter
-                  dem Rand (Befund 30.09.2026), das Kind musste jedes Mal scrollen. */}
-              <div className={cn("sticky bottom-0 z-10 -mx-6 flex gap-3 border-t", hasAnswered ? "flex-row" : "flex-col", "bg-card/95 px-6 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-card/80")}>
+            </div>
+
+            {/* Unten am Daumen: Ziffernfeld und Knoepfe. Bleiben stehen, damit
+                "Weiter" auf kleinen iPhones nicht unter dem Rand liegt (30.09.2026). */}
+            <div className="sticky bottom-0 z-10 -mx-5 mt-auto space-y-3 border-t border-karo bg-card/95 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:-mx-8 sm:px-8">
+              {zahlAntwort && !hasAnswered && (
+                <Ziffernfeld
+                  wert={userTextAnswer}
+                  onChange={setUserTextAnswer}
+                  onEnter={() => { if (canSubmitAnswer() && !isValidatingAnswer) checkAnswer(); }}
+                  komma={/[.,]/.test(loesungText)}
+                  minus={loesungText.trim().startsWith('-')}
+                />
+              )}
+              <div className="flex gap-3">
                 {!hasAnswered ? (
                   <>
-                    <Button 
-                      onClick={checkAnswer} 
+                    <Button
+                      variant="ghost"
+                      onClick={handleShowAnswer}
+                      disabled={isLoadingExplanation}
+                      className="shrink-0 text-muted-foreground"
+                    >
+                      <Lightbulb className="h-4 w-4" />
+                      Lösung zeigen
+                    </Button>
+                    <Button
+                      onClick={checkAnswer}
+                      size="lg"
                       className="flex-1"
                       disabled={!canSubmitAnswer() || isValidatingAnswer}
                     >
                       {isValidatingAnswer ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{grade <= 4 ? 'Wird geprüft...' : 'Antwort wird geprüft...'}</>
+                        <><Loader2 className="h-4 w-4 animate-spin" />Wird geprüft …</>
                       ) : (
-                        grade <= 4 ? 'Prüfen ✓' : 'Antwort prüfen'
+                        'Prüfen'
                       )}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      onClick={handleShowAnswer}
-                      disabled={isLoadingExplanation}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      {grade <= 4 ? '💡 Hilfe' : 'Antwort anzeigen'}
                     </Button>
                   </>
                 ) : (
                   <>
                     {!isCorrect && !showExplanation && (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
+                        size="lg"
                         onClick={handleShowExplanation}
                         disabled={isLoadingExplanation}
                         className="shrink-0"
                       >
-                        <Lightbulb className="w-4 h-4 mr-2" />
+                        <Lightbulb className="h-4 w-4" />
                         Erklärung
                       </Button>
                     )}
-                    <Button onClick={handleNextQuestion} className="flex-1 min-w-0">
+                    <Button onClick={handleNextQuestion} size="lg" className="min-w-0 flex-1">
                       {currentIndex + 1 >= totalQuestions ? (
-                        <>
-                          <Trophy className="w-4 h-4 mr-2" />
-                          {grade <= 4 ? '🏆 Fertig!' : 'Ergebnis anzeigen'}
-                        </>
+                        <><Trophy className="h-4 w-4" />Fertig</>
                       ) : (
-                        grade <= 4 ? 'Weiter ➡️' : <>Weiter <ArrowRight className="w-4 h-4 ml-2" /></>
+                        'Weiter'
                       )}
                     </Button>
                   </>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
 
@@ -1475,21 +1459,22 @@ const MultipleChoiceRenderer: React.FC<{
           key={index}
           // Nach der Antwort nie die ausgefuellte Variante: Deren weisse Schrift
           // stand bis 30.09.2026 auf blassem Rot und war kaum lesbar.
-          variant={!hasAnswered && selectedOption === option ? 'default' : 'outline'}
+          variant="outline"
           className={cn(
-            "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
+            "w-full justify-start rounded-2xl text-left p-4 h-auto min-h-14 whitespace-normal break-words text-base font-semibold",
+            !hasAnswered && selectedOption === option && "border-2 border-primary bg-primary/5 text-tinte hover:bg-primary/10",
             // Ergebnis nicht ausgrauen: Das Kind soll die Aufloesung lesen koennen.
             hasAnswered && "disabled:opacity-100",
             hasAnswered && !richtig && !falschGewaehlt && "text-muted-foreground",
-            richtig && "border-2 border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100",
-            falschGewaehlt && "border-2 border-red-400 bg-red-50 text-red-900 dark:bg-red-950 dark:text-red-100"
+            richtig && "border-2 border-gruen-hell bg-gruen-hell/10 text-tinte",
+            falschGewaehlt && "border-2 border-rotstift/70 bg-card text-tinte line-through decoration-rotstift decoration-2"
           )}
           onClick={() => !hasAnswered && onSelect(option)}
           disabled={hasAnswered}
         >
           <span className="frage-text min-w-0 flex-1">{option}</span>
-          {richtig && <Check className="ml-2 h-5 w-5 shrink-0 text-green-600" />}
-          {falschGewaehlt && <X className="ml-2 h-5 w-5 shrink-0 text-red-500" />}
+          {richtig && <Check className="ml-2 h-5 w-5 shrink-0 text-gruen-text" strokeWidth={3} />}
+          {falschGewaehlt && <X className="ml-2 h-5 w-5 shrink-0 text-rotstift" />}
         </Button>
       );
     })}
@@ -1510,10 +1495,10 @@ const FreetextRenderer: React.FC<{
     placeholder="Deine Antwort..."
     disabled={hasAnswered}
     className={cn(
-      "text-lg h-14",
+      "h-16 rounded-2xl font-hand text-2xl text-tinte",
       hasAnswered && "disabled:opacity-100",
-      hasAnswered && isCorrect && "border-green-500 bg-green-50 text-green-900",
-      hasAnswered && !isCorrect && "border-red-400 bg-red-50 text-red-900"
+      hasAnswered && isCorrect && "border-2 border-gruen-hell",
+      hasAnswered && !isCorrect && "line-through decoration-rotstift decoration-2"
     )}
     autoComplete="off"
   />
@@ -1557,8 +1542,8 @@ const SortRenderer: React.FC<{
               "active:scale-[0.98] touch-manipulation",
               isSelected && "ring-2 ring-primary ring-offset-2 border-primary bg-primary/10 scale-[1.02]",
               !isSelected && !hasAnswered && "border-border hover:border-primary/50 hover:bg-muted/50",
-              hasAnswered && isCorrectPosition && "bg-green-50 border-green-500 text-green-900 dark:bg-green-950 dark:text-green-100",
-              hasAnswered && !isCorrectPosition && "bg-red-50 border-red-400 text-red-900 dark:bg-red-950 dark:text-red-100"
+              hasAnswered && isCorrectPosition && "bg-gruen-hell/10 border-gruen-hell text-tinte",
+              hasAnswered && !isCorrectPosition && "bg-card border-rotstift/70 text-tinte"
             )}
           >
             <span className={cn(
@@ -1568,8 +1553,8 @@ const SortRenderer: React.FC<{
               {index + 1}
             </span>
             <span className="frage-text min-w-0 flex-1 font-medium">{item}</span>
-            {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-green-600 flex-shrink-0" />}
-            {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-red-500 flex-shrink-0" />}
+            {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-gruen-text flex-shrink-0" />}
+            {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-rotstift flex-shrink-0" />}
           </button>
         );
       })}
@@ -1873,8 +1858,8 @@ const FillBlankRenderer: React.FC<{
                 className={cn(
                   "text-lg h-14",
                   hasAnswered && "disabled:opacity-100",
-                  hasAnswered && answers[0]?.toLowerCase().trim() === correctAnswers[0]?.toLowerCase().trim() && "border-green-500",
-                  hasAnswered && answers[0]?.toLowerCase().trim() !== correctAnswers[0]?.toLowerCase().trim() && "border-red-500"
+                  hasAnswered && answers[0]?.toLowerCase().trim() === correctAnswers[0]?.toLowerCase().trim() && "border-2 border-gruen-hell",
+                  hasAnswered && answers[0]?.toLowerCase().trim() !== correctAnswers[0]?.toLowerCase().trim() && "border-rotstift/70 line-through decoration-rotstift"
                 )}
                 placeholder="Deine Antwort..."
                 autoComplete="off"
