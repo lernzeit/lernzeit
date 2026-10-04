@@ -62,3 +62,17 @@ Supabase-Secrets gelöscht werden.
 - Support-Postfach info@lernzeit.app: Funktion `support-postfach` (IMAP/SMTP bei IONOS,
   Secret `IONOS_POSTFACH_PASSWORT`), Regeln in `docs/support/leitfaden.md`, Protokoll
   `support_postfach_protokoll`. Aus der Claude-Umgebung selbst geht kein IMAP (nur HTTPS).
+
+## Messung der Website (Stand 04.10.2026)
+
+- Events gehen nur in `analytics_events` (keine Cookies, kein Drittanbieter). Gemessen wird
+  nur auf `lernzeit.app`/`www` und in den Apps, nie mit `navigator.webdriver` (Vorrendern,
+  Playwright, Lovable-Vorschau). Wer lokal mit Playwright testet, muss `navigator.webdriver`
+  per `addInitScript` auf `false` setzen und den Host prüfen.
+- Daten vor dem 04.10.2026 enthalten Builds, Vorschau-Aufrufe und Meta-Prüf-Crawler; die
+  Besucherzahl ist dort um ein Vielfaches zu hoch (Lovable zählte 223 statt ~1.000 in 4 Wochen).
+- Abschnitte der Startseite tragen `data-abschnitt` (hero, so_funktionierts, preise, faq,
+  fusszeile); Store-Links werden zentral im `AnalyticsTracker` gezählt.
+- Bericht: `admin_registrierungs_trichter` / Karte im Marketing-Panel.
+- Ratgeber-Artikel (`src/content/ratgeber/`) erscheinen erst mit `veroeffentlicht: true`
+  und `geprueftAm` an jeder Quelle; Prüfliste `docs/ratgeber/quellenpruefung.md`.
