@@ -24,7 +24,7 @@ export const eigenesSmartphone: RatgeberArtikel = {
       absaetze: [
         'Insgesamt hatten 46 Prozent der 6- bis 13-Jährigen ein eigenes Smartphone [1]. Hinter dem Durchschnitt stecken große Unterschiede. Bei den 6- und 7-Jährigen waren es 11 Prozent, bei den 8- und 9-Jährigen 33 Prozent. Von den 10- und 11-Jährigen hatten schon 63 Prozent ein eigenes Gerät, von den 12- und 13-Jährigen 79 Prozent [1].',
         'Der größte Sprung liegt zwischen 9 und 10 Jahren. Das ist ungefähr das Alter, in dem die meisten Kinder auf die weiterführende Schule wechseln.',
-        'Ohne eigenes Handy heißt übrigens nicht ohne Handy: 13 Prozent der Kinder, die keins haben, dürfen sich bei Bedarf eines ausleihen [1].',
+        'Auch Kinder ohne eigenes Gerät kommen an ein Handy: 13 Prozent von ihnen dürfen sich bei Bedarf eines ausleihen [1].',
       ],
     },
     {

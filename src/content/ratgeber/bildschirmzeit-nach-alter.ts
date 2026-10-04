@@ -9,7 +9,7 @@ export const bildschirmzeitNachAlter: RatgeberArtikel = {
   slug: 'bildschirmzeit-kinder-empfehlungen-nach-alter',
   titel: 'Wie viel Bildschirmzeit ist für Kinder in Ordnung?',
   beschreibung:
-    'Was Kinderärzte und die WHO für jedes Alter empfehlen, von der Kita bis zur Pubertät, und warum die Minuten allein nicht alles sind.',
+    'Wie viele Minuten am Bildschirm Kinderärzte und die WHO je nach Alter für vertretbar halten, und worauf es neben der Dauer ankommt.',
   veroeffentlicht: false,
   datum: '2026-10-04',
   lesezeitMinuten: 4,
@@ -28,7 +28,7 @@ export const bildschirmzeitNachAlter: RatgeberArtikel = {
         'Zwischen 6 und 9 Jahren sind es höchstens 30 bis 45 Minuten an einzelnen Tagen [1].',
         'Zwischen 9 und 12 Jahren empfiehlt die Leitlinie höchstens 45 bis 60 Minuten. Ins Internet sollen Kinder in diesem Alter nur unter Aufsicht [1].',
         'Zwischen 12 und 16 Jahren sind es höchstens ein bis zwei Stunden am Tag, und nach 21 Uhr nicht mehr [1].',
-        'Bei den Jüngeren lohnt ein zweiter Blick auf die Worte „an einzelnen Tagen“. Gemeint ist kein Tageskontingent, das ausgeschöpft werden soll. Das Bundesinstitut für Öffentliche Gesundheit rät, Bildschirmmedien möglichst nicht jeden Tag zu nutzen und an den übrigen Tagen unter den genannten Zeiten zu bleiben [3].',
+        'Bei den Jüngeren lohnt ein zweiter Blick auf die Worte „an einzelnen Tagen“. Ein Kontingent, das jeden Tag ausgeschöpft werden soll, ist damit nicht gemeint. Das Bundesinstitut für Öffentliche Gesundheit rät, Bildschirmmedien möglichst nicht jeden Tag zu nutzen und an den übrigen Tagen unter den genannten Zeiten zu bleiben [3].',
       ],
     },
     {
@@ -41,7 +41,7 @@ export const bildschirmzeitNachAlter: RatgeberArtikel = {
     {
       ueberschrift: 'Warum die Minuten allein nicht alles sind',
       absaetze: [
-        'Die Angaben sind Obergrenzen, keine Ziele. Ob eine halbe Stunde gut verbracht ist, hängt davon ab, was auf dem Bildschirm passiert und was dafür ausfällt. Die WHO begründet ihre Empfehlung genau so: Kleine Kinder brauchen viel Bewegung und genug Schlaf, und beides leidet, wenn sie lange sitzen [2].',
+        'Die Minuten sind als Obergrenze gedacht. Ob eine halbe Stunde gut verbracht ist, hängt davon ab, was auf dem Bildschirm passiert und was dafür ausfällt. Die WHO begründet ihre Empfehlung genau so: Kleine Kinder brauchen viel Bewegung und genug Schlaf, und beides leidet, wenn sie lange sitzen [2].',
         'Im Alltag helfen feste Zeiten mehr als spontane Verhandlungen. Wenn vorher klar ist, wann der Bildschirm an ist, muss nicht jeden Nachmittag neu darüber gestritten werden.',
       ],
     },
