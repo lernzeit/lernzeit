@@ -55,6 +55,14 @@ export function beispieldaten() {
       ...fruehere,
     ],
     learning_sessions: [],
+    // Hefte und Sticker (App-Redesign): Mia hat ihr Mathe-Heft lila gemacht
+    kind_hefte: [
+      { child_id: KIND, fach: 'math', farbe: 'lila', sticker: ['einhorn', 'stern'], updated_at: '2026-10-03T15:00:00Z' },
+      { child_id: KIND, fach: 'german', farbe: 'rot', sticker: ['eule'], updated_at: '2026-10-03T15:00:00Z' },
+    ],
+    kind_sticker: ['einhorn', 'stern', 'eule', 'delfin', 'rakete'].map((sticker, i) => ({
+      id: `st${i}`, child_id: KIND, sticker, quelle: 'alles_richtig', sitzung_id: null, created_at: `2026-09-2${i}T15:00:00Z`,
+    })),
     screen_time_requests: [],
     user_achievements: [],
     subscriptions: [{

@@ -237,7 +237,14 @@ const Index = () => {
           user={user}
           onSignOut={handleSignOut}
           onStartGame={handleStartGame}
-          onStartStreakRecovery={handleStartStreakRecovery} />
+          onStartStreakRecovery={handleStartStreakRecovery}
+          onStartSubject={(grade, subject) => {
+            setSelectedGrade(grade);
+            setSelectedCategory(subject);
+            setLearningPlanTopic(null);
+            setLearningPlanId(null);
+            setGameMode('normal');
+          }} />
 
       </Suspense>);
 

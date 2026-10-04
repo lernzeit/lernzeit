@@ -96,9 +96,9 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
     : null;
 
   return (
-    <Card className="shadow-card">
+    <Card className="rounded-2xl">
       <CardContent className="p-4 space-y-3">
-        <div className="flex items-center gap-2 font-semibold">
+        <div className="flex items-center gap-2 font-bold text-tinte">
           <Smartphone className="h-4 w-4 text-primary" />
           Deine Freiminuten
         </div>
@@ -120,7 +120,7 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
               tickt die Uhr.
             </p>
             <Button className="w-full" disabled={busy} onClick={() => void starten()}>
-              {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               {minuten} Freiminuten starten
             </Button>
           </>

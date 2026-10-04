@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, UserPlus, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Sticker } from '@/components/child/Hefte';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -16,6 +17,8 @@ interface GameCompletionScreenProps {
   /** Demo auf der Landingpage: statt "Weiter" folgt der Registrierungs-Hinweis. */
   demoMode?: boolean;
   onDemoSignUp?: () => void;
+  /** Kennung eines eben gewonnenen Stickers (alles richtig) */
+  neuerSticker?: string | null;
 }
 
 export function GameCompletionScreen({
@@ -29,7 +32,8 @@ export function GameCompletionScreen({
   isStreakRecovery = false,
   onContinue,
   demoMode = false,
-  onDemoSignUp
+  onDemoSignUp,
+  neuerSticker = null,
 }: GameCompletionScreenProps) {
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
@@ -134,6 +138,16 @@ export function GameCompletionScreen({
           </div>
         )}
       </div>
+
+      {neuerSticker && (
+        <div className="flex items-center gap-4 rounded-[28px] bg-card p-5 ring-1 ring-inset ring-karo">
+          <Sticker id={neuerSticker} className="heft-sticker-neu text-6xl" />
+          <div>
+            <p className="text-lg font-extrabold text-tinte">Neuer Sticker!</p>
+            <p className="font-hand text-gruen-text">Für alles richtig. Kleb ihn auf ein Heft.</p>
+          </div>
+        </div>
+      )}
 
       {/* Ab Klasse 5: wie sich die Zeit zusammensetzt */}
       {!isYoung && !isStreakRecovery && (

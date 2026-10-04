@@ -175,6 +175,10 @@ All colors MUST be HSL.
     animation: heft-auftauchen 0.35s ease-out 0.45s forwards;
     rotate: -4deg;
   }
+  /* Neuer Sticker wird aufgeklebt */
+  .heft-sticker-neu {
+    animation: heft-aufkleben 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+  }
   /* "+30 Sek." fliegt in die verdiente Zeit */
   .heft-gutschrift {
     animation: heft-gutschrift 1.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -182,6 +186,7 @@ All colors MUST be HSL.
 }
 
 @keyframes heft-schreiben { to { stroke-dashoffset: 0; } }
+@keyframes heft-aufkleben { from { opacity: 0; transform: scale(1.8) rotate(-20deg); } to { opacity: 1; transform: scale(1) rotate(-6deg); } }
 @keyframes heft-auftauchen { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes heft-gutschrift {
   0% { opacity: 0; transform: translateY(70px) scale(0.9); }
@@ -193,6 +198,7 @@ All colors MUST be HSL.
   .heft-strich { animation: none; stroke-dashoffset: 0; }
   .heft-korrektur { animation: none; opacity: 1; }
   .heft-gutschrift { animation: none; opacity: 0; }
+  .heft-sticker-neu { animation: none; }
 }
 
 /* Responsive page container – fluid width that scales with viewport */

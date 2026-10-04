@@ -1024,6 +1024,57 @@ export type Database = {
           },
         ]
       }
+      kind_hefte: {
+        Row: {
+          child_id: string
+          fach: string
+          farbe: string
+          sticker: Json
+          updated_at: string
+        }
+        Insert: {
+          child_id: string
+          fach: string
+          farbe?: string
+          sticker?: Json
+          updated_at?: string
+        }
+        Update: {
+          child_id?: string
+          fach?: string
+          farbe?: string
+          sticker?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kind_sticker: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          quelle: string
+          sitzung_id: string | null
+          sticker: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          quelle?: string
+          sitzung_id?: string | null
+          sticker: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          quelle?: string
+          sitzung_id?: string | null
+          sticker?: string
+        }
+        Relationships: []
+      }
       learning_plans: {
         Row: {
           child_id: string
@@ -2508,6 +2559,7 @@ export type Database = {
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
       revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
+      sticker_vergeben: { Args: never; Returns: string }
       service_mail_auswahl: {
         Args: { p_einrichtung_ab?: string }
         Returns: {

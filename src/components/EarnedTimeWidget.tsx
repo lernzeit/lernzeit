@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Smartphone, Clock, AlertCircle, ChevronDown, ChevronUp, Trophy, Calendar } from 'lucide-react';
+import { Smartphone, Clock, ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 import { useScreenTimeRequests } from '@/hooks/useScreenTimeRequests';
 import { useEarnedMinutesTracker } from '@/hooks/useEarnedMinutesTracker';
 import { useScreenTimeLimit, TodayAchievementDetail } from '@/hooks/useScreenTimeLimit';
@@ -132,7 +131,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
         const grantedMinutes = results.find(r => r.success)?.request?.requested_minutes ?? minutesToRequest;
         await Promise.all([refreshAvailableMinutes(), refreshRequests()]);
         toast({
-          title: "Anfrage gesendet! 🎉",
+          title: "Anfrage gesendet",
           description: `Du hast ${grantedMinutes} Minuten Bildschirmzeit beantragt. ${relationships.length > 1 ? 'Beide Elternteile' : 'Deine Eltern'} wurden benachrichtigt.`,
         });
         setMessage('');
@@ -163,243 +162,109 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
   const sessionMinutes = todayMinutesUsed - todayAchievementMinutes;
 
   if (requestsLoading || usageLoading) {
-    return (
-      <Card className="shadow-card">
-        <CardContent className="p-6">
-          <div className="animate-pulse flex items-center gap-3">
-            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <div className="h-12 animate-pulse rounded-full bg-muted" aria-label="Wird geladen" />;
   }
 
+  // Seit dem App-Redesign zeigt die Zeit-Uhr die verdienten Minuten; hier
+  // bleiben Anfrage, laufende Anfragen und der Bonus (Heft-Stil).
   return (
-    <Card className="shadow-card border-primary/20 bg-primary/5">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-lg">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-600" />
-            Heute verdient
-          </div>
-          <span className="text-2xl font-bold text-blue-800">{todayMinutesUsed} Min.</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Ruhiger Hinweis auf eine offene Anfrage */}
-        {latestPendingRequest && (
-          <div className="rounded-lg bg-muted/60 border border-border px-3 py-2">
-            <p className="text-sm text-foreground">
-              Deine Anfrage über {latestPendingRequest.requested_minutes} Minuten wartet auf deine Eltern.
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Du kannst in der Zwischenzeit weiterlernen.
-            </p>
-          </div>
-        )}
-
-        {/* Compact breakdown */}
-        <div className="flex justify-between text-sm">
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground">📚 Lernzeit:</span>
-            <span className="font-medium">{sessionMinutes} Min.</span>
-          </div>
-          {todayAchievementMinutes > 0 && (
-            <div className="flex items-center gap-1">
-              <span className="text-purple-600">🏆 Bonus:</span>
-              <span className="font-medium text-purple-700">+{todayAchievementMinutes} Min.</span>
-            </div>
-          )}
-        </div>
-
-        {/* Expandable achievement details */}
-        {todayAchievementDetails && todayAchievementDetails.length > 0 && (
-          <div>
-            <button 
-              onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 transition-colors"
-            >
-              {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {showDetails ? 'Details verbergen' : `${todayAchievementDetails.length} Achievement${todayAchievementDetails.length > 1 ? 's' : ''} anzeigen`}
-            </button>
-            
-            {showDetails && (
-              <div className="mt-2 p-3 bg-purple-50 rounded-lg space-y-1 text-xs">
-                <div className="text-purple-700 font-medium mb-2 flex items-center gap-1">
-                  <Trophy className="w-3 h-3" />
-                  Heute freigeschaltete Achievements:
+    <div className="space-y-3">
+      {hasParentLink ? (
+        availableMinutes >= 5 ? (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" variant="outline" className="w-full border-gruen-hell/40 bg-gruen-hell/10 text-gruen-text hover:bg-gruen-hell/15 hover:text-gruen-text">
+                <Smartphone className="h-4 w-4" />
+                {availableMinutes} Min. anfragen
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bildschirmzeit anfragen</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5">
+                <div className="heft-karo rounded-2xl bg-card p-5 text-center ring-1 ring-inset ring-karo">
+                  <div className="tabular text-5xl font-extrabold leading-none text-gruen-text">{availableMinutes}</div>
+                  <p className="mt-1 text-sm font-bold text-tinte">Minuten</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Alle Minuten, die du heute verdient und noch nicht angefragt hast.</p>
                 </div>
-                {todayAchievementDetails.map((achievement, index) => (
-                  <div key={index} className="flex justify-between text-purple-600 py-0.5">
-                    <span className="truncate max-w-[200px]">
-                      {achievement.icon} {achievement.name}
-                    </span>
-                    <span className="font-medium text-purple-700">+{achievement.reward_minutes} Min.</span>
-                  </div>
-                ))}
+                <div className="space-y-2">
+                  <Label htmlFor="message">Nachricht an deine Eltern (freiwillig)</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Zum Beispiel: Mathe ist fertig"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    rows={3}
+                    className="rounded-xl border-[1.5px]"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
+                    Abbrechen
+                  </Button>
+                  <Button onClick={handleCreateRequest} disabled={isSubmitting || availableMinutes < 5} className="flex-1" size="lg">
+                    {isSubmitting ? 'Wird gesendet …' : `${availableMinutes} Min. anfragen`}
+                  </Button>
+                </div>
               </div>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">
+            {availableMinutes > 0
+              ? `Ab 5 Minuten kannst du anfragen. Noch ${5 - availableMinutes} ${5 - availableMinutes === 1 ? 'Minute' : 'Minuten'} lernen.`
+              : 'Lös Aufgaben, dann kannst du Bildschirmzeit anfragen.'}
+          </p>
+        )
+      ) : (
+        <p className="text-center text-sm text-muted-foreground">Verbinde dich zuerst mit deinen Eltern, dann kannst du Zeit anfragen.</p>
+      )}
+
+      {/* Laufende Anfragen, ruhig */}
+      {latestPendingRequest && (
+        <div className="flex items-start gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-inset ring-karo">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="text-sm">
+            <p className="font-bold text-tinte">
+              {todayPendingRequests.length > 1
+                ? `${todayPendingRequests.length} Anfragen warten auf deine Eltern.`
+                : `Deine Anfrage über ${latestPendingRequest.requested_minutes} Min. wartet auf deine Eltern.`}
+            </p>
+            <p className="text-muted-foreground">Du kannst in der Zwischenzeit weiterlernen.</p>
+            {olderPendingRequests.length > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Ältere: {olderPendingRequests.map((r) => `${formatDate(r.created_at)} (${r.requested_minutes} Min.)`).join(', ')}
+              </p>
             )}
           </div>
-        )}
-
-        {/* Remaining time info */}
-        <div className="flex justify-between items-center text-sm border-t pt-3">
-          <span className="text-muted-foreground">Noch verfügbar (Tageslimit):</span>
-          <span className="font-medium">{remainingMinutes} Min.</span>
         </div>
+      )}
 
-        {/* Screen Time Request Section */}
-        <div className="border-t pt-4 space-y-3">
-          {/* Show older pending requests (from previous days) */}
-          {olderPendingRequests.length > 0 && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-xs text-gray-600 font-medium">Offene Anfragen (ältere Tage)</span>
-              </div>
-              {olderPendingRequests.map((req) => (
-                <div key={req.id} className="bg-white rounded border border-gray-100 p-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">{formatDate(req.created_at)}</span>
-                    <span className="font-medium text-gray-700">{req.requested_minutes} Min.</span>
-                  </div>
-                </div>
+      {/* Bonus aus Erfolgen */}
+      {todayAchievementMinutes > 0 && (
+        <div className="text-center text-sm">
+          <button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            className="inline-flex items-center gap-1 font-semibold text-gruen-text"
+          >
+            <Trophy className="h-3.5 w-3.5" />
+            Davon {todayAchievementMinutes} Min. Bonus für Erfolge
+            {todayAchievementDetails && todayAchievementDetails.length > 0 && (showDetails ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />)}
+          </button>
+          {showDetails && todayAchievementDetails && todayAchievementDetails.length > 0 && (
+            <ul className="mx-auto mt-2 max-w-xs space-y-1 text-left text-xs text-muted-foreground">
+              {todayAchievementDetails.map((a, i) => (
+                <li key={i} className="flex justify-between gap-2">
+                  <span className="truncate">{a.icon} {a.name}</span>
+                  <span className="tabular font-bold text-gruen-text">+{a.reward_minutes} Min.</span>
+                </li>
               ))}
-            </div>
-          )}
-
-          {/* Show today's pending requests */}
-          {todayPendingRequests.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-4 h-4 text-yellow-600" />
-                <span className="font-medium text-yellow-800 text-sm">
-                  {todayPendingRequests.length === 1 ? 'Anfrage läuft' : `${todayPendingRequests.length} Anfragen laufen`}
-                </span>
-              </div>
-              {todayPendingRequests.map((req) => (
-                <div key={req.id} className="text-xs text-yellow-700 py-1 border-t border-yellow-100 first:border-t-0 first:pt-0">
-                  <div className="flex justify-between">
-                    <span>{req.requested_minutes} Minuten angefragt</span>
-                    <span className="text-yellow-600">
-                      {new Date(req.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {req.request_message && (
-                    <p className="text-yellow-600 mt-1 italic">"{req.request_message}"</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Request button - now always shows if there are available minutes */}
-          {hasParentLink ? (
-            availableMinutes >= 5 ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Smartphone className="w-4 h-4 text-green-600" />
-                    <span className="font-medium text-green-800 text-sm">
-                      {availableMinutes} Minuten anforderbar! 🎉
-                    </span>
-                  </div>
-                </div>
-                
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Smartphone className="w-4 h-4 mr-2" />
-                      Bildschirmzeit anfragen
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Bildschirmzeit anfragen</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          <strong>Du kannst jetzt {availableMinutes} Minuten beantragen! 🎉</strong>
-                        </p>
-                        <p className="text-xs text-blue-600 mt-1">
-                          Das sind alle Minuten, die du heute verdient und noch nicht beantragt hast.
-                        </p>
-                      </div>
-                      
-                      {/* Requested minutes (simple) */}
-                      <div className="space-y-2">
-                        <Label>Minuten</Label>
-                        <div className="bg-muted rounded-lg p-4 text-center">
-                          <div className="text-3xl font-bold text-foreground">
-                            {availableMinutes}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            (alle heute noch nicht beantragten Minuten)
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="message">Nachricht an deine Eltern (optional)</Label>
-                        <Textarea
-                          id="message"
-                          placeholder="Z.B. Ich möchte mit Freunden spielen..."
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          rows={3}
-                        />
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleCreateRequest}
-                          disabled={isSubmitting || availableMinutes < 5}
-                          className="flex-1"
-                        >
-                          {isSubmitting ? 'Wird gesendet...' : `${availableMinutes} Min. anfragen`}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsDialogOpen(false)}
-                          disabled={isSubmitting}
-                        >
-                          Abbrechen
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            ) : availableMinutes > 0 ? (
-              <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 text-center">
-                <p className="text-xs text-blue-700">
-                  📚 Du hast noch {availableMinutes} Minuten - verdiene noch {5 - availableMinutes} mehr, um Bildschirmzeit zu beantragen!
-                </p>
-              </div>
-            ) : (
-              <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 text-center">
-                <p className="text-xs text-blue-700">
-                  📚 Löse mehr Aufgaben, um Bildschirmzeit anfragen zu können!
-                </p>
-              </div>
-            )
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-              <p className="text-xs text-gray-600">
-                Verknüpfe zuerst deine Eltern, um Bildschirmzeit anfragen zu können.
-              </p>
-            </div>
+            </ul>
           )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

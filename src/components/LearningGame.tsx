@@ -160,6 +160,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   // Ergebnis je Aufgabe fuer den Kaestchen-Fortschritt (nur Anzeige)
   const [antwortVerlauf, setAntwortVerlauf] = useState<Record<number, boolean>>({});
+  const [neuerSticker, setNeuerSticker] = useState<string | null>(null);
   useEffect(() => {
     if (hasAnswered) setAntwortVerlauf((v) => (v[currentIndex] === isCorrect ? v : { ...v, [currentIndex]: isCorrect }));
   }, [hasAnswered, isCorrect, currentIndex]);
@@ -754,6 +755,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
 
+          // Sticker fuer eine Runde mit allen Aufgaben richtig (die Datenbank
+          // prueft selbst und vergibt hoechstens drei am Tag)
+          if (!isStreakRecovery && score === totalQuestions && totalQuestions >= 5) {
+            try {
+              const { data: sticker } = await supabase.rpc('sticker_vergeben');
+              if (typeof sticker === 'string' && sticker) setNeuerSticker(sticker);
+            } catch {
+              /* ohne Sticker weiter */
+            }
+          }
+
           // Erste abgeschlossene Lernsession dieses Nutzers?
           try {
             const { count } = await supabase
@@ -900,6 +912,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           timePerTask={secondsPerTask}
           achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
+          neuerSticker={neuerSticker}
           grade={grade}
             isStreakRecovery={isStreakRecovery}
           onContinue={handleCompletionContinue}

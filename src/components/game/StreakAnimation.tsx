@@ -1,122 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import { Flame } from 'lucide-react';
-import { triggerCombo } from '@/utils/confetti';
+import { useEffect, useState } from 'react';
+import { PflanzenBild, STUFEN, stufeFuer } from '@/components/child/LernPflanze';
 
 interface StreakAnimationProps {
   newStreak: number;
   onClose: () => void;
 }
 
+/**
+ * Die Lernpflanze waechst (App-Redesign, statt Feuer-Animation): erscheint am
+ * Rundenende, wenn heute der erste Lerntag in Folge dazukam. Bei einer neuen
+ * Stufe zeigt sie den Namen der Stufe.
+ */
 export function StreakAnimation({ newStreak, onClose }: StreakAnimationProps) {
-  const [phase, setPhase] = useState<'enter' | 'count' | 'message' | 'exit'>('enter');
-  const [displayCount, setDisplayCount] = useState(0);
+  const [phase, setPhase] = useState<'enter' | 'zeigen' | 'exit'>('enter');
 
   useEffect(() => {
-    triggerCombo();
-
-    // Phase 1: Enter (scale in)
-    const enterTimer = setTimeout(() => setPhase('count'), 400);
-
-    // Phase 2: Count up to streak number
-    const countTimer = setTimeout(() => {
-      let current = 0;
-      const step = Math.max(1, Math.floor(newStreak / 8));
-      const interval = setInterval(() => {
-        current = Math.min(current + step, newStreak);
-        setDisplayCount(current);
-        if (current >= newStreak) {
-          clearInterval(interval);
-          setPhase('message');
-        }
-      }, 80);
-    }, 500);
-
-    // Phase 3: Show motivational message, then exit
-    const exitTimer = setTimeout(() => setPhase('exit'), 3500);
-    const closeTimer = setTimeout(onClose, 4200);
-
-    return () => {
-      clearTimeout(enterTimer);
-      clearTimeout(countTimer);
-      clearTimeout(exitTimer);
-      clearTimeout(closeTimer);
-    };
+    const a = setTimeout(() => setPhase('zeigen'), 60);
+    const b = setTimeout(() => setPhase('exit'), 3200);
+    const c = setTimeout(onClose, 3700);
+    return () => { clearTimeout(a); clearTimeout(b); clearTimeout(c); };
   }, [newStreak, onClose]);
 
-  const getMessage = () => {
-    if (newStreak >= 30) return '🏆 Legendär! Einen Monat am Stück!';
-    if (newStreak >= 14) return '💎 Zwei Wochen Streak – unglaublich!';
-    if (newStreak >= 7) return '⭐ Eine ganze Woche – mega!';
-    if (newStreak >= 5) return '🔥 5 Tage! Du bist unstoppbar!';
-    if (newStreak >= 3) return '💪 3 Tage am Stück – weiter so!';
-    return '🎯 Streak gestartet – bleib dran!';
-  };
+  const stufe = stufeFuer(newStreak);
+  const neueStufe = STUFEN.some((s) => s.ab === newStreak && s.ab > 0);
 
   return (
-    <div className="fixed inset-0 z-[110] pointer-events-none flex items-center justify-center">
-      {/* Backdrop */}
+    <div className="pointer-events-none fixed inset-0 z-[110] flex items-center justify-center p-6" role="status" aria-live="polite">
+      <div className={`absolute inset-0 bg-tinte/40 transition-opacity duration-500 ${phase === 'zeigen' ? 'opacity-100' : 'opacity-0'}`} />
       <div
-        className={`absolute inset-0 bg-black/40 transition-opacity duration-500 ${
-          phase === 'exit' ? 'opacity-0' : 'opacity-100'
-        }`}
-      />
-
-      {/* Main content */}
-      <div
-        className={`relative flex flex-col items-center gap-3 transition-all duration-500 ${
-          phase === 'enter'
-            ? 'scale-50 opacity-0'
-            : phase === 'exit'
-            ? 'scale-150 opacity-0'
-            : 'scale-100 opacity-100'
+        className={`heft-karo relative flex w-full max-w-xs flex-col items-center rounded-[28px] bg-card px-6 pb-6 pt-4 text-center shadow-2xl transition-all duration-500 ${
+          phase === 'zeigen' ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
         }`}
       >
-        {/* Fire ring */}
-        <div className="relative">
-          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-orange-500 via-red-500 to-yellow-500 flex items-center justify-center animate-pulse shadow-2xl">
-            <div className="w-24 h-24 rounded-full bg-background/90 flex items-center justify-center">
-              <div className="flex flex-col items-center">
-                <Flame className="w-8 h-8 text-orange-500 animate-bounce" />
-                <span className="text-3xl font-black text-orange-600 dark:text-orange-400 tabular-nums">
-                  {displayCount}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Floating fire emojis */}
-          {[...Array(6)].map((_, i) => (
-            <span
-              key={i}
-              className="absolute text-2xl animate-float-up"
-              style={{
-                left: `${20 + Math.random() * 60}%`,
-                top: `${10 + Math.random() * 40}%`,
-                animationDelay: `${i * 0.2}s`,
-                animationDuration: '1.5s',
-              }}
-            >
-              🔥
-            </span>
-          ))}
-        </div>
-
-        {/* Streak label */}
-        <div className="text-lg font-bold text-white drop-shadow-lg">
-          Tage-Streak!
-        </div>
-
-        {/* Motivational message */}
-        {(phase === 'message' || phase === 'exit') && (
-          <div
-            className="px-6 py-3 rounded-2xl bg-black/70 text-white font-semibold text-center text-sm md:text-base animate-scale-in-bounce shadow-2xl max-w-xs"
-          >
-            {getMessage()}
-            <div className="text-xs text-white/70 mt-1">
-              Jeden Tag lernen zahlt sich aus!
-            </div>
-          </div>
-        )}
+        <PflanzenBild stufe={stufe.id} className="h-32 w-32" />
+        <p className="tabular text-3xl font-extrabold text-tinte">
+          {newStreak} {newStreak === 1 ? 'Tag' : 'Tage'}
+        </p>
+        <p className="mt-1 font-hand text-lg text-gruen-text">
+          {neueStufe ? `Deine Pflanze ist jetzt: ${stufe.name}!` : 'Deine Lernpflanze wächst.'}
+        </p>
       </div>
     </div>
   );

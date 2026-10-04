@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, Star, TreePine, Sparkles, Calendar } from 'lucide-react';
+import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, TreePine, Sparkles, Calendar } from 'lucide-react';
 import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAgeGroup } from '@/hooks/useAgeGroup';
-import { isSubjectAvailableForGrade } from '@/lib/category';
+import { useHefte } from '@/hooks/useHefte';
+import { HeftRegal } from '@/components/child/Hefte';
 import { supabase } from '@/lib/supabase';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -57,20 +56,11 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const { user } = useAuth();
   const { settings, loading } = useChildSettings(user?.id || '');
   const age = useAgeGroup(grade);
-  const [visibleSubjects, setVisibleSubjects] = useState<Set<string>>(new Set());
-  const [prioritySubjects, setPrioritySubjects] = useState<Set<string>>(new Set());
+  const hefte = useHefte(user?.id, grade);
   const [activePlan, setActivePlan] = useState<LearningPlan | null>(null);
 
-  // Grade-based default: only show subjects appropriate for this grade
-  const getGradeDefaults = () => new Set(categories.filter(c => isSubjectAvailableForGrade(c.id, grade)).map(c => c.id));
-
   useEffect(() => {
-    if (user?.id) {
-      loadSubjectVisibility();
-      loadActiveLearningPlan();
-    } else {
-      setVisibleSubjects(getGradeDefaults());
-    }
+    if (user?.id) loadActiveLearningPlan();
   }, [user?.id, grade]);
 
   const loadActiveLearningPlan = async () => {
@@ -91,47 +81,6 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     }
   };
 
-  const loadSubjectVisibility = async () => {
-    if (!user?.id) return;
-    try {
-      const { data: relationships } = await supabase
-        .from('parent_child_relationships')
-        .select('parent_id')
-        .eq('child_id', user.id)
-        .limit(1);
-
-      const relationship = relationships?.[0] || null;
-
-      if (relationship?.parent_id) {
-        const { data: visibilitySettings } = await supabase
-          .from('child_subject_visibility')
-          .select('subject, is_visible, is_priority')
-          .eq('parent_id', relationship.parent_id)
-          .eq('child_id', user.id);
-
-        if (visibilitySettings && visibilitySettings.length > 0) {
-          // Parent has explicit settings – use those
-          const allSubjects = new Set<string>(categories.map(c => c.id));
-          const priorities = new Set<string>();
-          visibilitySettings.forEach(s => {
-            if (!s.is_visible) allSubjects.delete(s.subject);
-            if (s.is_priority) priorities.add(s.subject);
-          });
-          setVisibleSubjects(allSubjects);
-          setPrioritySubjects(priorities);
-        } else {
-          // No parent overrides – use grade-based defaults
-          setVisibleSubjects(getGradeDefaults());
-        }
-      } else {
-        // No parent linked – use grade-based defaults
-        setVisibleSubjects(getGradeDefaults());
-      }
-    } catch {
-      setVisibleSubjects(getGradeDefaults());
-    }
-  };
-
   const getSecondsForCategory = (categoryId: string) => {
     if (!settings) return 30;
     switch (categoryId) {
@@ -149,44 +98,19 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
     }
   };
 
-  // Apply parent visibility (or grade defaults)
-  const sortedCategories = categories
-    .filter(c => visibleSubjects.has(c.id))
-    .sort((a, b) => {
-      const aPri = prioritySubjects.has(a.id) ? 0 : 1;
-      const bPri = prioritySubjects.has(b.id) ? 0 : 1;
-      return aPri - bPri;
-    });
-
   const isYoung = age.group === 'young';
 
   return (
-    <div className="min-h-screen bg-gradient-bg py-4 pt-safe-top pb-safe-bottom">
-      <div className="page-container space-y-4">
-        {/* Header */}
+    <div className="min-h-[100dvh] bg-background pt-safe-top pb-safe-bottom">
+      <div className="mx-auto w-full max-w-xl space-y-6 px-4 pb-10 pt-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Zurück">
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className={`${isYoung ? 'text-2xl' : 'text-xl'} font-bold`}>
-            {isYoung ? '📖 Was möchtest du lernen?' : `Klasse ${grade} – Fach wählen`}
-          </h1>
+          <h1 className={`${isYoung ? 'text-2xl' : 'text-xl'} font-extrabold`}>Was möchtest du lernen?</h1>
         </div>
 
-        {/* Motivation - only for teen */}
-        {!isYoung && (
-          <Card className="shadow-card bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-200">
-            <CardContent className="p-4 text-center">
-              <div className="text-3xl mb-2">🏆</div>
-              <h3 className="font-bold text-green-800 text-base mb-1">Verdiene Handyzeit!</h3>
-              <p className="text-sm text-green-700">
-                Löse Aufgaben und verdiene wertvolle Bildschirmzeit
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Learning Plan Card */}
+        {/* Lernplan der Eltern fuer eine Klassenarbeit */}
         {activePlan && (() => {
           // Kalendertage, nicht volle 24 Stunden: Ein Plan von 21 Uhr ist am
           // naechsten Nachmittag bei Tag 2 (frueher noch bei Tag 1).
@@ -194,110 +118,48 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           const daysSinceCreated = differenceInCalendarDays(new Date(), new Date(activePlan.created_at));
           const currentDay = Math.min(daysSinceCreated + 1, Math.max(planDays.length, 1));
           const subjectName = categories.find(c => c.id === activePlan.subject)?.shortName || activePlan.subject;
-          
-          // Get today's focus from plan_data for a more targeted topicHint
           const todaysPlan = planDays[currentDay - 1];
-          const topicHint = todaysPlan 
-            ? `${activePlan.topic} – Schwerpunkt: ${todaysPlan.focus}` 
+          const topicHint = todaysPlan
+            ? `${activePlan.topic} – Schwerpunkt: ${todaysPlan.focus}`
             : activePlan.topic;
-          
+
           return (
-            <Card
-              className="rounded-2xl border-2 border-primary/50 shadow-lg hover:scale-[1.02] cursor-pointer transition-all duration-300 bg-gradient-to-r from-primary/5 to-accent/5"
+            <button
+              type="button"
+              className="heft-karo block w-full rounded-[24px] bg-card p-5 text-left ring-2 ring-inset ring-primary/60 transition-transform active:scale-[0.99]"
               onClick={() => onCategorySelect(activePlan.subject as SubjectId, topicHint, activePlan.id)}
             >
-              <CardContent className={`${isYoung ? 'p-5' : 'p-4'}`}>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white shrink-0">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className={`${isYoung ? 'text-lg' : 'text-base'} font-bold`}>📋 Dein Lernplan</h3>
-                      <Badge variant="secondary" className="text-xs">{subjectName}</Badge>
-                    </div>
-                    <p className={`${isYoung ? 'text-sm' : 'text-xs'} text-muted-foreground font-medium mt-0.5 truncate`}>
-                      {todaysPlan ? `Heute: ${todaysPlan.focus}` : activePlan.topic}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span className="font-medium text-primary">Tag {currentDay} von 5</span>
-                      {activePlan.test_date && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Test am {format(new Date(activePlan.test_date), 'd. MMM', { locale: de })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <div className="flex items-center gap-2 text-sm font-bold text-primary">
+                <Sparkles className="h-4 w-4" />
+                Dein Lernplan, {subjectName}
+              </div>
+              <p className="mt-1 text-lg font-extrabold leading-snug text-tinte">
+                {todaysPlan ? `Heute: ${todaysPlan.focus}` : activePlan.topic}
+              </p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
+                <span>Tag {currentDay} von {Math.max(planDays.length, 1)}</span>
+                {activePlan.test_date && (
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Test am {format(new Date(activePlan.test_date), 'd. MMM', { locale: de })}
+                  </span>
+                )}
+              </p>
+            </button>
           );
         })()}
 
-        {/* Categories */}
-        <div className={`grid ${age.gridCols} ${isYoung ? 'gap-4' : 'gap-3'}`}>
-          {sortedCategories.map((category) => {
-            const seconds = getSecondsForCategory(category.id);
-            const isPriority = prioritySubjects.has(category.id);
+        <HeftRegal
+          titel={activePlan ? 'Oder ein Heft' : 'Deine Hefte'}
+          hefte={hefte.hefte}
+          onWaehlen={(fach) => onCategorySelect(fach)}
+        />
 
-            if (isYoung) {
-              // === YOUNG: big emoji tiles ===
-              return (
-                <Card
-                  key={category.id}
-                  className={`rounded-2xl border-2 shadow-lg hover:scale-105 cursor-pointer transition-all duration-300 ${isPriority ? 'ring-2 ring-primary border-primary' : ''}`}
-                  onClick={() => onCategorySelect(category.id)}
-                >
-                  <CardContent className="p-4 sm:p-5 text-center">
-                    <div className={`w-14 h-14 sm:w-16 sm:h-16 mx-auto ${category.color} rounded-full flex items-center justify-center text-2xl sm:text-3xl mb-2 sm:mb-3`}>
-                      {category.emoji}
-                    </div>
-                    <h3 className="text-base sm:text-lg font-bold">{category.shortName}</h3>
-                    {isPriority && (
-                      <Badge variant="default" className="mt-2 text-xs gap-1">
-                        <Star className="w-3 h-3" /> Wichtig
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            }
-
-            // === TEEN: compact list cards ===
-            const IconComponent = category.icon;
-            return (
-              <Card
-                key={category.id}
-                className={`shadow-card hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02] ${isPriority ? 'ring-2 ring-primary border-primary' : ''}`}
-                onClick={() => onCategorySelect(category.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 ${category.color} rounded-full flex items-center justify-center text-white text-lg`}>
-                      {category.emoji}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-semibold">{category.name}</h3>
-                        {isPriority && (
-                          <Badge variant="default" className="text-xs gap-1">
-                            <Star className="w-3 h-3" /> Schwerpunkt
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3.5 h-3.5 text-green-600" />
-                        <span className="text-xs text-green-600 font-medium">+{seconds} Sek pro Aufgabe</span>
-                      </div>
-                    </div>
-                    <IconComponent className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        {!isYoung && (
+          <p className="text-center text-sm text-muted-foreground">
+            Für jede richtige Aufgabe gibt es Bildschirmzeit, {getSecondsForCategory('math')} Sekunden in Mathe.
+          </p>
+        )}
       </div>
     </div>
   );
