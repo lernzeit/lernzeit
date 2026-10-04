@@ -10,57 +10,68 @@ All colors MUST be HSL.
 */
 
 @layer base {
+  /*
+   * App-Gestaltung "Heft" (seit 04.10.2026, Vorschlag App-Redesign): dieselbe
+   * Bildwelt wie die Startseite. Tinte fuer Text, Blau fuer Handlungen, Gruen
+   * fuer richtig und verdiente Zeit, Rotstift fuer Korrekturen (nie Alarm),
+   * Heft fuer Flaechen, Karo fuer Linien.
+   */
   :root {
-    --background: 240 100% 99%;
-    --foreground: 240 10% 15%;
+    --background: 224 70% 97%;        /* Heft #f3f6fd */
+    --foreground: 228 45% 22%;        /* Tinte, etwas dunkler fuer Fliesstext */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 15%;
+    --card-foreground: 228 45% 22%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 15%;
+    --popover-foreground: 228 45% 22%;
 
-    --primary: 217 91% 60%;
+    --primary: 221 83% 53%;           /* Blau #2563eb */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 100% 70%;
+    --primary-glow: 221 90% 66%;
 
-    --secondary: 146 84% 47%;
+    --secondary: 150 80% 31%;         /* Gruen, dunkel genug fuer weisse Schrift */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 20% 97%;
-    --muted-foreground: 240 5% 45%;
+    --muted: 224 70% 96%;
+    --muted-foreground: 224 15% 45%;
 
-    --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 224 70% 95%;            /* Hover-Flaeche, ruhig */
+    --accent-foreground: 228 61% 26%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 5 64% 50%;         /* Rotstift #d4483b */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 20% 92%;
-    --input: 240 20% 96%;
-    --ring: 217 91% 60%;
+    --border: 220 62% 92%;            /* Karo #dfe7f7 */
+    --input: 222 52% 85%;
+    --ring: 221 83% 53%;
 
-    --success: 146 84% 47%;
+    --success: 150 80% 31%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 100% 70%));
-    --gradient-success: linear-gradient(135deg, hsl(146 84% 47%), hsl(146 84% 57%));
-    --gradient-accent: linear-gradient(135deg, hsl(38 92% 50%), hsl(38 92% 60%));
-    --gradient-bg: linear-gradient(180deg, hsl(240 100% 99%), hsl(240 60% 98%));
+    /* Markenfarben als feste Werte (Heft-Bildwelt) */
+    --tinte: 228 61% 26%;             /* #1a2b6d */
+    --gruen-hell: 149 83% 43%;        /* #13c96a, nur Flaechen und Striche */
+    --gruen-text: 152 83% 26%;        /* #0b7a46, lesbar auf Weiss */
+    --rotstift: 5 64% 53%;            /* #d4483b */
+    --karo: 220 62% 92%;
 
-    /* Shadows */
-    --shadow-card: 0 4px 6px -1px hsl(240 20% 92% / 0.3), 0 2px 4px -1px hsl(240 20% 92% / 0.2);
-    --shadow-button: 0 2px 4px -1px hsl(217 91% 60% / 0.3);
-    --shadow-success: 0 2px 4px -1px hsl(146 84% 47% / 0.3);
+    /* Verlaeufe sind abgeschafft; die Namen bleiben, damit alte Klassen ruhig werden */
+    --gradient-primary: linear-gradient(hsl(221 83% 53%), hsl(221 83% 53%));
+    --gradient-success: linear-gradient(hsl(150 80% 31%), hsl(150 80% 31%));
+    --gradient-accent: linear-gradient(hsl(38 92% 50%), hsl(38 92% 50%));
+    --gradient-bg: linear-gradient(hsl(224 70% 97%), hsl(224 70% 97%));
 
-    /* Animations */
+    --shadow-card: 0 1px 2px hsl(228 61% 26% / 0.05), 0 10px 28px -20px hsl(228 61% 26% / 0.35);
+    --shadow-button: 0 8px 18px -10px hsl(221 83% 53% / 0.7);
+    --shadow-success: 0 8px 18px -10px hsl(150 80% 31% / 0.6);
+
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --radius: 0.5rem;
+    --radius: 0.875rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -125,6 +136,32 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :is(h1, h2, h3) {
+    color: hsl(var(--tinte));
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Heft-Bausteine der App */
+@layer components {
+  /* Handschrift fuer Rueckmeldungen und Notizen, wie im Heft */
+  .font-hand {
+    font-family: 'Playpen Notiz', 'Segoe Print', 'Bradley Hand', cursive;
+    font-weight: 560;
+  }
+  /* Karo wie im Rechenheft */
+  .heft-karo {
+    background-image:
+      linear-gradient(to right, hsl(var(--karo)) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--karo)) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 

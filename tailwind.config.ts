@@ -18,7 +18,16 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+				hand: ['"Playpen Notiz"', '"Segoe Print"', '"Bradley Hand"', 'cursive'],
+			},
 			colors: {
+				tinte: 'hsl(var(--tinte))',
+				'gruen-hell': 'hsl(var(--gruen-hell))',
+				'gruen-text': 'hsl(var(--gruen-text))',
+				rotstift: 'hsl(var(--rotstift))',
+				karo: 'hsl(var(--karo))',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
