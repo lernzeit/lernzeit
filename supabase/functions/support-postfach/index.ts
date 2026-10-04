@@ -6,8 +6,10 @@
 //
 // Aufruf nur mit dem Service-Role-Schluessel. Body { aktion, ... }:
 //   ping                          TLS-Verbindung zu IMAP und SMTP, ohne Anmeldung
-//   neu       { tage?: 14 }       Mails der letzten Tage, die noch nicht im
-//                                 Protokoll stehen (Lesestatus bleibt unveraendert)
+//   neu       { tage?: 14 }       Kundenmails der letzten Tage, die noch nicht im
+//                                 Protokoll stehen (Lesestatus bleibt unveraendert).
+//                                 Anbieter-, Massen- und Systemmails werden nicht
+//                                 gelesen, nur gezaehlt (uebersprungen).
 //   entwurf   { uid, text, form } Antwort als Entwurf in "Entwuerfe"
 //   antworten { uid, text, form } Antwort senden (nur an den Absender, einmal je Mail)
 //   erledigt  { uids, notiz }     ohne Antwort abhaken (Spam, Automatisches, Dank ohne Frage)
@@ -43,11 +45,36 @@ function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 
-/** Absender, denen nie geantwortet wird. */
-function automatisch(adresse: string): boolean {
+/**
+ * Anbieter, deren Mails nie Kundenanfragen sind (Rechnungen, Hinweise,
+ * Werbung). Wunsch des Betreibers: nur Kundenmails lesen und bearbeiten.
+ */
+const ANBIETER = [
+  "lernzeit.app", "facebookmail.com", "facebook.com", "meta.com", "instagram.com",
+  "google.com", "youtube.com", "apple.com", "stripe.com", "revenuecat.com",
+  "onesignal.com", "openai.com", "openrouter.ai", "anthropic.com", "codemagic.io",
+  "lovable.dev", "supabase.com", "supabase.io", "github.com", "ionos.de", "ionos.com",
+  "pinterest.com", "adcreative.ai", "linkedin.com", "paypal.com", "paypal.de",
+];
+
+/** Kopfzeilen, die nur Massen- und Systemmails tragen. */
+const MASSEN_KOPF = ["list-unsubscribe", "list-id", "feedback-id", "x-campaign", "x-mailgun-tag"];
+
+/**
+ * Keine Kundenmail: automatischer Absender, bekannter Anbieter oder
+ * Massenversand (Abmelde-Link, Verteiler, Precedence bulk). `kopf` liefert
+ * eine Kopfzeile (Name klein) oder undefined.
+ */
+function keineKundenmail(adresse: string, kopf: (name: string) => string | undefined): boolean {
   const a = adresse.toLowerCase();
-  return a.endsWith("@lernzeit.app") || a.endsWith(".lernzeit.app") ||
-    /(^|[._-])(no[-_]?reply|do[-_]?not[-_]?reply|mailer-daemon|postmaster|bounces?|notifications?)([._@-]|$)/.test(a);
+  const domain = a.split("@")[1] ?? "";
+  if (!a || !domain) return true;
+  if (/(^|[._-])(no[-_]?reply|do[-_]?not[-_]?reply|mailer-daemon|postmaster|bounces?|notifications?|newsletter|marketing|news|info-?mail)([._@-]|$)/.test(a)) return true;
+  if (ANBIETER.some((d) => domain === d || domain.endsWith(`.${d}`))) return true;
+  const auto = kopf("auto-submitted");
+  if (auto && auto.toLowerCase() !== "no") return true;
+  if (/^(bulk|list|junk)$/i.test((kopf("precedence") ?? "").trim())) return true;
+  return MASSEN_KOPF.some((k) => Boolean(kopf(k)));
 }
 
 // ---------------------------------------------------------------- Signatur
@@ -111,6 +138,17 @@ async function mailLesen(c: Imap, uid: number): Promise<Mail | null> {
   return quelle ? await zerlegen(uid, quelle) : null;
 }
 
+/** Kopfzeile aus mailparser als Text (Werte koennen Objekte sein). */
+function kopfAus(h: Map<string, unknown>) {
+  return (name: string): string | undefined => {
+    const v = h.get(name);
+    if (v === undefined || v === null) return undefined;
+    if (typeof v === "string") return v;
+    const o = v as { text?: string; value?: unknown };
+    return o.text ?? (typeof o.value === "string" ? o.value : JSON.stringify(v));
+  };
+}
+
 async function zerlegen(uid: number, quelle: Uint8Array): Promise<Mail> {
   // mailparser braucht einen Buffer; ein Uint8Array haelt es fuer einen Stream.
   const p = await simpleParser(Buffer.from(quelle));
@@ -127,7 +165,8 @@ async function zerlegen(uid: number, quelle: Uint8Array): Promise<Mail> {
     text: (p.text ?? "").slice(0, 8000),
     anhaenge: (p.attachments ?? []).map((a: { filename?: string; contentType: string }) => a.filename ?? a.contentType),
     referenzen: refs,
-    automatisch: automatisch(adresse) || Boolean(p.headers.get("auto-submitted") && p.headers.get("auto-submitted") !== "no"),
+    automatisch: keineKundenmail((von?.address ?? "").toLowerCase(), kopfAus(p.headers)) ||
+      keineKundenmail(adresse, kopfAus(p.headers)),
   };
 }
 
@@ -209,7 +248,10 @@ Deno.serve(async (req) => {
       const seit = new Date(Date.now() - tage * 86_400_000);
       const ergebnis = await imap(async (c) => {
         const uids = (await c.suchenSeit(seit)).slice(-200);
-        const koepfe = await c.koepfe(uids, ["MESSAGE-ID", "FROM", "REPLY-TO", "SUBJECT", "DATE", "AUTO-SUBMITTED"]);
+        const koepfe = await c.koepfe(uids, [
+          "MESSAGE-ID", "FROM", "REPLY-TO", "SUBJECT", "DATE", "AUTO-SUBMITTED", "PRECEDENCE",
+          "LIST-UNSUBSCRIBE", "LIST-ID", "FEEDBACK-ID", "X-CAMPAIGN", "X-MAILGUN-TAG",
+        ]);
         const liste = uids.map((uid) => {
           const k = koepfe.get(uid)?.kopf ?? {};
           const von = adresseLesen(k["reply-to"] || k["from"]);
@@ -220,7 +262,9 @@ Deno.serve(async (req) => {
             von_name: adresseLesen(k["from"]).name,
             betreff: k["subject"] ?? "",
             datum: k["date"] ?? "",
-            automatisch: automatisch(von.adresse) || Boolean(k["auto-submitted"] && k["auto-submitted"] !== "no"),
+            // Absender laut From, nicht Reply-To: Anbieter setzen oft eine Reply-To-Adresse.
+            automatisch: keineKundenmail(adresseLesen(k["from"]).adresse, (n) => k[n]) ||
+              keineKundenmail(von.adresse, (n) => k[n]),
             // Vom Betreiber schon selbst beantwortet (Kennzeichen im Postfach)
             beantwortet: (koepfe.get(uid)?.flags ?? []).includes("\\Answered"),
           };
@@ -230,8 +274,8 @@ Deno.serve(async (req) => {
           .select("message_id").in("message_id", ids.length ? ids : ["-"]);
         const bekannt = new Set((erledigt ?? []).map((e) => e.message_id));
         const offen = liste.filter((m) => !bekannt.has(m.message_id) && !m.beantwortet);
-        // Automatische Mails nur mit Kopfzeilen melden, Kundenmails ganz lesen.
-        const automatische = offen.filter((m) => m.automatisch);
+        // Anbieter- und Massenmails werden nicht gelesen und nicht gemeldet.
+        const uebersprungen = offen.filter((m) => m.automatisch).length;
         const kunden = offen.filter((m) => !m.automatisch);
         const gelesen: Mail[] = [];
         for (const m of kunden.slice(0, PRO_AUFRUF)) {
@@ -239,7 +283,7 @@ Deno.serve(async (req) => {
           if (voll) gelesen.push(voll);
         }
         const schonBeantwortet = liste.filter((m) => m.beantwortet && !bekannt.has(m.message_id)).length;
-        return { mails: gelesen, automatische, weitere: Math.max(0, kunden.length - PRO_AUFRUF), schon_beantwortet: schonBeantwortet };
+        return { mails: gelesen, weitere: Math.max(0, kunden.length - PRO_AUFRUF), schon_beantwortet: schonBeantwortet, uebersprungen };
       });
       return json({ anzahl: ergebnis.mails.length, ...ergebnis });
     }
@@ -282,7 +326,7 @@ Deno.serve(async (req) => {
       const ergebnis = await imap(async (c) => {
         const orig = await mailLesen(c, body.uid!);
         if (!orig) return { fehler: "Mail nicht gefunden", status: 404 };
-        if (orig.automatisch || !orig.von) return { fehler: "Automatischer Absender – keine Antwort", status: 400 };
+        if (orig.automatisch || !orig.von) return { fehler: "Keine Kundenmail (Anbieter, Massen- oder Systemmail) – keine Antwort", status: 400 };
         const { data: schon } = await supabase.from("support_postfach_protokoll")
           .select("aktion").eq("message_id", orig.message_id).in("aktion", ["antwort", "entwurf"]);
         if (schon?.length) return { fehler: `Zu dieser Mail gibt es schon: ${schon.map((s) => s.aktion).join(", ")}`, status: 409 };

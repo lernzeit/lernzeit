@@ -16,17 +16,19 @@ einfache Anleitungsfragen selbst beantworten, alles andere als Entwurf.
    -- danach: select status_code, content from net._http_response where id = <id>;
    ```
    Die Antwort liegt erst nach ein paar Sekunden in `net._http_response`.
-   Die Antwort enthält `mails` (bis zu 5 Mails mit vollem Text), `automatische`
-   (nur Kopfzeilen: noreply, Benachrichtigungen, eigene Mails), `weitere`
-   (noch nicht gelesene Mails) und `schon_beantwortet` (vom Betreiber selbst
-   beantwortet, werden übersprungen).
+   Die Antwort enthält nur **Kundenmails**: `mails` (bis zu 5 mit vollem Text),
+   `weitere` (noch nicht gelesene Kundenmails) und `schon_beantwortet` (vom
+   Betreiber selbst beantwortet, übersprungen). Anbieter-, Massen- und
+   Systemmails (Rechnungen, Werbung, Newsletter, noreply, Meta, Google, Apple,
+   Stripe usw.) liest die Funktion gar nicht; `uebersprungen` nennt nur ihre
+   Zahl. Sie kommen im Bericht nicht vor (Wunsch des Betreibers).
 2. Jede Mail genau einer Gruppe zuordnen (unten) und **genau eine** Aktion
    ausführen: `antworten`, `entwurf` oder `erledigt`. Beispiele:
    `{"aktion":"entwurf","uid":123,"form":"sie","text":"…"}`,
    `{"aktion":"erledigt","uids":[249,250,251],"notiz":"automatisch"}`.
    Die Funktion hängt Gruß, Signatur mit Pflichtangaben und das Zitat der
    Originalmail selbst an. Der `text` beginnt mit der Anrede und endet vor
-   „Viele Grüße“. `automatische` gesammelt mit einem `erledigt` abhaken.
+   „Viele Grüße“.
    Ist `weitere` > 0, danach erneut `neu` abrufen, bis nichts mehr offen ist.
 3. Am Ende eine kurze Zusammenfassung: was beantwortet wurde, welche Entwürfe
    im IONOS-Ordner „Entwürfe“ warten (mit Grund), was dringend ist.
@@ -78,13 +80,10 @@ notieren (nicht in der Mail).
 
 ### C — ohne Antwort abhaken (`erledigt`)
 
-Spam, Werbung, Newsletter, automatische Mails (Apple, Google, Stripe, IONOS,
-OneSignal, Zustellfehler), Abwesenheitsnotizen, reine Dankesmails ohne Frage.
-Wichtiges davon im Bericht nennen, mit Datum und Betreff: Zahlungsprobleme
-(Google Payments, Stripe, Meta), Fristen und Erinnerungen von Google Play oder
-Apple (Prüfung, Ablehnung, Kontoverifizierung), Sicherheitswarnungen und
-Anmeldeversuche (Google, Meta, Instagram), DMARC-Berichte mit Fehlern.
-Codes aus Bestätigungsmails nie in den Bericht übernehmen.
+Was trotz Filter durchrutscht: Kaltakquise und Spam von unbekannten
+Absendern, Abwesenheitsnotizen, reine Dankesmails ohne Frage. Im Bericht nur
+als Zahl nennen. Rutscht eine Anbieterart öfter durch, im Bericht vorschlagen,
+ihre Domain in `ANBIETER` (support-postfach/index.ts) aufzunehmen.
 
 ## Ton
 
