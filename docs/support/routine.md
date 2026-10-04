@@ -8,7 +8,9 @@ Die Routine braucht in claude.ai → Routines:
 - **Repository:** `lernzeit/lernzeit` (für `docs/support/leitfaden.md`)
 
 Beides lässt sich nicht aus einer Claude-Sitzung heraus anhängen; ohne läuft die
-Routine ins Leere und meldet das.
+Routine ins Leere und meldet das. Nachrüsten: Routinen → Routine öffnen → ⋯ →
+„Bearbeiten“ → im Feld „Anweisungen“ Repository und Connector hinzufügen.
+Eingerichtet am 04.10.2026 (Repo `lernzeit/lernzeit`, Connector Supabase).
 
 ## Auftragstext
 
