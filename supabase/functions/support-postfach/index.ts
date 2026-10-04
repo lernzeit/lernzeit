@@ -17,10 +17,9 @@
 // Absender oder die eigene Domain. Hoechstens 10 gesendete Antworten am Tag.
 // Secrets: IONOS_POSTFACH_PASSWORT (Benutzer ist info@lernzeit.app).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { ImapFlow } from "npm:imapflow@1.0.164";
 import { simpleParser } from "npm:mailparser@3.7.1";
-import nodemailer from "npm:nodemailer@6.9.15";
 import MailComposer from "npm:nodemailer@6.9.15/lib/mail-composer/index.js";
+import { Imap, smtpSenden } from "../_shared/mailverbindung.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -72,26 +71,25 @@ Sitz der Gesellschaft: Erfurt · Amtsgericht Jena, HRB 524759<br>
 
 // ---------------------------------------------------------------- IMAP
 
-async function imap<T>(arbeit: (c: ImapFlow) => Promise<T>): Promise<T> {
-  const c = new ImapFlow({
-    host: IMAP_HOST, port: 993, secure: true,
-    auth: { user: BENUTZER, pass: PASSWORT },
-    logger: false,
-  });
-  await c.connect();
+/** Angemeldete Verbindung, INBOX ausgewaehlt. */
+async function imap<T>(arbeit: (c: Imap) => Promise<T>): Promise<T> {
+  const c = await Imap.oeffnen(await Deno.connectTls({ hostname: IMAP_HOST, port: 993 }));
   try {
+    await c.anmelden(BENUTZER, PASSWORT);
+    await c.auswaehlen("INBOX");
     return await arbeit(c);
   } finally {
-    await c.logout().catch(() => {});
+    await c.abmelden();
   }
 }
 
-async function ordner(c: ImapFlow, art: "\\Drafts" | "\\Sent", namen: string[]): Promise<string> {
-  const liste: { path: string; specialUse?: string }[] = await c.list();
-  const treffer = liste.find((o) => o.specialUse === art) ??
-    liste.find((o) => namen.some((n) => o.path.toLowerCase() === n.toLowerCase()));
-  if (!treffer) throw new Error(`Ordner fuer ${art} nicht gefunden`);
-  return treffer.path;
+/** Ordner per Sonderkennzeichen (\\Drafts, \\Sent) oder ueblichem Namen. */
+async function ordner(c: Imap, art: "\\Drafts" | "\\Sent", namen: string[]): Promise<string> {
+  const liste = await c.ordnerListe();
+  const treffer = liste.find((o) => o.attribute.some((a) => a.toLowerCase() === art.toLowerCase())) ??
+    liste.find((o) => namen.some((n) => o.name.toLowerCase() === n.toLowerCase()));
+  if (!treffer) throw new Error(`Ordner fuer ${art} nicht gefunden: ${liste.map((o) => o.name).join(", ")}`);
+  return treffer.name;
 }
 
 interface Mail {
@@ -107,10 +105,9 @@ interface Mail {
   automatisch: boolean;
 }
 
-async function mailLesen(c: ImapFlow, uid: number): Promise<Mail | null> {
-  const m = await c.fetchOne(String(uid), { uid: true, source: true }, { uid: true });
-  if (!m || !m.source) return null;
-  return await zerlegen(uid, m.source);
+async function mailLesen(c: Imap, uid: number): Promise<Mail | null> {
+  const quelle = await c.quelle(uid);
+  return quelle ? await zerlegen(uid, quelle) : null;
 }
 
 async function zerlegen(uid: number, quelle: Uint8Array): Promise<Mail> {
@@ -206,18 +203,13 @@ Deno.serve(async (req) => {
       const tage = Math.min(Math.max(body.tage ?? 14, 1), 60);
       const seit = new Date(Date.now() - tage * 86_400_000);
       const mails = await imap(async (c) => {
-        const lock = await c.getMailboxLock("INBOX");
-        try {
-          const uids = (await c.search({ since: seit }, { uid: true })) || [];
-          const ergebnis: Mail[] = [];
-          for (const uid of uids.slice(-50)) {
-            const m = await mailLesen(c, uid);
-            if (m) ergebnis.push(m);
-          }
-          return ergebnis;
-        } finally {
-          lock.release();
+        const uids = await c.suchenSeit(seit);
+        const ergebnis: Mail[] = [];
+        for (const uid of uids.slice(-50)) {
+          const m = await mailLesen(c, uid);
+          if (m) ergebnis.push(m);
         }
+        return ergebnis;
       });
       const ids = mails.map((m) => m.message_id);
       const { data: erledigt } = await supabase.from("support_postfach_protokoll")
@@ -229,10 +221,7 @@ Deno.serve(async (req) => {
 
     if (body.aktion === "erledigt") {
       if (!body.uid) return json({ error: "uid fehlt" }, 400);
-      const orig = await imap(async (c) => {
-        const lock = await c.getMailboxLock("INBOX");
-        try { return await mailLesen(c, body.uid!); } finally { lock.release(); }
-      });
+      const orig = await imap((c) => mailLesen(c, body.uid!));
       if (!orig) return json({ error: "Mail nicht gefunden" }, 404);
       await protokoll({ message_id: orig.message_id, uid: orig.uid, aktion: "erledigt", an: orig.von, betreff: orig.betreff, text: body.notiz ?? null });
       return json({ ok: true });
@@ -250,9 +239,7 @@ Deno.serve(async (req) => {
       }
 
       const ergebnis = await imap(async (c) => {
-        let orig: Mail | null;
-        const lock = await c.getMailboxLock("INBOX");
-        try { orig = await mailLesen(c, body.uid!); } finally { lock.release(); }
+        const orig = await mailLesen(c, body.uid!);
         if (!orig) return { fehler: "Mail nicht gefunden", status: 404 };
         if (orig.automatisch || !orig.von) return { fehler: "Automatischer Absender – keine Antwort", status: 400 };
         const { data: schon } = await supabase.from("support_postfach_protokoll")
@@ -264,24 +251,23 @@ Deno.serve(async (req) => {
 
         if (body.aktion === "entwurf") {
           const pfad = await ordner(c, "\\Drafts", ["Entwürfe", "Entw&APw-rfe", "Drafts"]);
-          await c.append(pfad, roh, ["\\Draft"]);
+          await c.anhaengen(pfad, roh, ["\\Draft", "\\Seen"]);
           await protokoll({ message_id: orig.message_id, uid: orig.uid, aktion: "entwurf", an: orig.von, betreff: nachricht.subject, text: body.text });
           return { ok: true, aktion: "entwurf", ordner: pfad, an: orig.von };
         }
 
-        const transport = nodemailer.createTransport({
-          host: SMTP_HOST, port: 465, secure: true, auth: { user: BENUTZER, pass: PASSWORT },
-        });
-        const info = await transport.sendMail({ raw: roh, envelope: { from: BENUTZER, to: orig.von } });
-        await protokoll({ message_id: orig.message_id, uid: orig.uid, aktion: "antwort", an: orig.von, betreff: nachricht.subject, text: body.text, gesendet_id: info.messageId ?? null });
+        const smtp = await smtpSenden(
+          await Deno.connectTls({ hostname: SMTP_HOST, port: 465 }),
+          { benutzer: BENUTZER, passwort: PASSWORT }, BENUTZER, orig.von, roh,
+        );
+        await protokoll({ message_id: orig.message_id, uid: orig.uid, aktion: "antwort", an: orig.von, betreff: nachricht.subject, text: body.text, gesendet_id: smtp.slice(0, 200) });
 
         // Kopie in "Gesendet", Original als beantwortet markieren.
         try {
           const gesendet = await ordner(c, "\\Sent", ["Gesendete Objekte", "Gesendet", "Sent"]);
-          await c.append(gesendet, roh, ["\\Seen"]);
+          await c.anhaengen(gesendet, roh, ["\\Seen"]);
         } catch (e) { console.warn("Kopie in Gesendet fehlgeschlagen", e); }
-        const lock2 = await c.getMailboxLock("INBOX");
-        try { await c.messageFlagsAdd(String(orig.uid), ["\\Answered", "\\Seen"], { uid: true }); } finally { lock2.release(); }
+        await c.flagsSetzen(orig.uid, ["\\Answered", "\\Seen"]);
         return { ok: true, aktion: "antwort", an: orig.von };
       });
       if ("fehler" in ergebnis) return json({ error: ergebnis.fehler }, ergebnis.status);
