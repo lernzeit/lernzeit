@@ -88,6 +88,9 @@ ihre Domain in `ANBIETER` (support-postfach/index.ts) aufzunehmen.
 ## Ton
 
 - Anrede wie der Kunde: duzt er, `form: "du"`, sonst `form: "sie"`.
+- „Herr“ oder „Frau“ nur, wenn der Kunde sich selbst so nennt (Signatur,
+  frühere Mail). Nie aus dem Vornamen raten — sonst „Guten Tag Vorname
+  Nachname,“ bzw. bei `du` „Hallo Vorname,“.
 - Kurz, freundlich, konkret. Erst die Lösung, dann Details. Keine Floskeln.
 - Bei Fehlern unsererseits ehrlich entschuldigen, ohne Schuldzuweisung.
 - Gruß und Signatur kommen von der Funktion („Ihr/Dein Kunden-Support von
