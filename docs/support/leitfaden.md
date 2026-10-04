@@ -16,11 +16,18 @@ einfache Anleitungsfragen selbst beantworten, alles andere als Entwurf.
    -- danach: select status_code, content from net._http_response where id = <id>;
    ```
    Die Antwort liegt erst nach ein paar Sekunden in `net._http_response`.
+   Die Antwort enthält `mails` (bis zu 5 Mails mit vollem Text), `automatische`
+   (nur Kopfzeilen: noreply, Benachrichtigungen, eigene Mails), `weitere`
+   (noch nicht gelesene Mails) und `schon_beantwortet` (vom Betreiber selbst
+   beantwortet, werden übersprungen).
 2. Jede Mail genau einer Gruppe zuordnen (unten) und **genau eine** Aktion
-   ausführen: `antworten`, `entwurf` oder `erledigt` (Body z. B.
-   `{"aktion":"entwurf","uid":123,"form":"sie","text":"…"}`). Die Funktion hängt
-   Gruß, Signatur mit Pflichtangaben und das Zitat der Originalmail selbst an.
-   Der `text` beginnt mit der Anrede und endet vor „Viele Grüße“.
+   ausführen: `antworten`, `entwurf` oder `erledigt`. Beispiele:
+   `{"aktion":"entwurf","uid":123,"form":"sie","text":"…"}`,
+   `{"aktion":"erledigt","uids":[249,250,251],"notiz":"automatisch"}`.
+   Die Funktion hängt Gruß, Signatur mit Pflichtangaben und das Zitat der
+   Originalmail selbst an. Der `text` beginnt mit der Anrede und endet vor
+   „Viele Grüße“. `automatische` gesammelt mit einem `erledigt` abhaken.
+   Ist `weitere` > 0, danach erneut `neu` abrufen, bis nichts mehr offen ist.
 3. Am Ende eine kurze Zusammenfassung: was beantwortet wurde, welche Entwürfe
    im IONOS-Ordner „Entwürfe“ warten (mit Grund), was dringend ist.
 
@@ -73,8 +80,11 @@ notieren (nicht in der Mail).
 
 Spam, Werbung, Newsletter, automatische Mails (Apple, Google, Stripe, IONOS,
 OneSignal, Zustellfehler), Abwesenheitsnotizen, reine Dankesmails ohne Frage.
-Wichtiges davon (z. B. Zahlungsprobleme, Ablehnungen von Apple/Google) im
-Bericht nennen.
+Wichtiges davon im Bericht nennen, mit Datum und Betreff: Zahlungsprobleme
+(Google Payments, Stripe, Meta), Fristen und Erinnerungen von Google Play oder
+Apple (Prüfung, Ablehnung, Kontoverifizierung), Sicherheitswarnungen und
+Anmeldeversuche (Google, Meta, Instagram), DMARC-Berichte mit Fehlern.
+Codes aus Bestätigungsmails nie in den Bericht übernehmen.
 
 ## Ton
 

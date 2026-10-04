@@ -10,7 +10,7 @@
 //                                 Protokoll stehen (Lesestatus bleibt unveraendert)
 //   entwurf   { uid, text, form } Antwort als Entwurf in "Entwuerfe"
 //   antworten { uid, text, form } Antwort senden (nur an den Absender, einmal je Mail)
-//   erledigt  { uid, notiz }      ohne Antwort abhaken (Spam, Rueckmeldung ohne Frage)
+//   erledigt  { uids, notiz }     ohne Antwort abhaken (Spam, Automatisches, Dank ohne Frage)
 //
 // Sicherungen: Empfaenger ist immer der Absender der Originalmail, wie ihn der
 // Server liefert, nie ein Wert aus dem Aufruf. Keine Antwort an automatische
@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
   if (!SUPABASE_SERVICE_ROLE_KEY || bearer !== SUPABASE_SERVICE_ROLE_KEY) {
     return json({ error: "Nicht berechtigt" }, 401);
   }
-  let body: { aktion?: string; tage?: number; uid?: number; text?: string; form?: Form; notiz?: string } = {};
+  let body: { aktion?: string; tage?: number; uid?: number; uids?: number[]; text?: string; form?: Form; notiz?: string } = {};
   try { body = await req.json(); } catch { /* leer */ }
 
   try {
@@ -245,11 +245,27 @@ Deno.serve(async (req) => {
     }
 
     if (body.aktion === "erledigt") {
-      if (!body.uid) return json({ error: "uid fehlt" }, 400);
-      const orig = await imap((c) => mailLesen(c, body.uid!));
-      if (!orig) return json({ error: "Mail nicht gefunden" }, 404);
-      await protokoll({ message_id: orig.message_id, uid: orig.uid, aktion: "erledigt", an: orig.von, betreff: orig.betreff, text: body.notiz ?? null });
-      return json({ ok: true });
+      // Ohne Antwort abhaken; auch mehrere auf einmal (uids). Liest nur Kopfzeilen.
+      const uids = (body.uids ?? (body.uid ? [body.uid] : [])).filter((u) => Number.isInteger(u)).slice(0, 200);
+      if (!uids.length) return json({ error: "uid oder uids fehlt" }, 400);
+      const koepfe = await imap((c) => c.koepfe(uids, ["MESSAGE-ID", "FROM", "REPLY-TO", "SUBJECT"]));
+      const zeilen = uids.flatMap((uid) => {
+        const k = koepfe.get(uid)?.kopf;
+        if (!k) return [];
+        return [{
+          message_id: (k["message-id"] ?? "").trim() || `uid-${uid}`,
+          uid,
+          aktion: "erledigt",
+          an: adresseLesen(k["reply-to"] || k["from"]).adresse,
+          betreff: k["subject"] ?? "",
+          text: body.notiz ?? null,
+        }];
+      });
+      if (zeilen.length) {
+        const { error } = await supabase.from("support_postfach_protokoll").insert(zeilen);
+        if (error) throw new Error(`Protokoll: ${error.message}`);
+      }
+      return json({ ok: true, erledigt: zeilen.length, nicht_gefunden: uids.length - zeilen.length });
     }
 
     if (body.aktion === "entwurf" || body.aktion === "antworten") {
