@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,9 @@ import { istNativeApp, oauthImAppBrowser } from '@/services/nativeOAuth';
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { fehlerTyp, useRegistrierungsMessung } from '@/hooks/useRegistrierungsMessung';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound, ChevronLeft, Check } from 'lucide-react';
+import Handy from '@/components/landing/Handy';
+import Randnotiz from '@/components/landing/Randnotiz';
 import { useTurnstile } from '@/hooks/useTurnstile';
 import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
 
@@ -63,6 +65,12 @@ const getAppleErrorDescription = (error: any) => {
 interface AuthFormProps {
   onAuthSuccess: () => void;
 }
+
+// Gestaltung im Bild der Startseite (Klassen aus src/index.css, Block .lp)
+const TAB =
+  'h-10 rounded-full text-[0.9375rem] font-bold text-[var(--lp-leise)] data-[state=active]:bg-white data-[state=active]:text-[var(--lp-tinte)] data-[state=active]:shadow-[0_1px_3px_rgba(26,43,109,0.15)]';
+const ABSENDEN =
+  'w-full h-12 rounded-full bg-[var(--lp-blau)] text-base font-bold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.7)] hover:bg-[#1d4ed8]';
 
 export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
@@ -669,29 +677,77 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   // Hintergrund, dazu Funkel-Symbole und „Dein persönlicher Lern-Assistent" —
   // der typische KI-Baukasten-Look. Der erste Bildschirm der App soll ruhig
   // sein und sagen, worum es geht.
+  // Seit 04.10.2026 im Gestaltungsbild der Startseite (Schulheft: Karo, Tinte,
+  // Plus Jakarta Sans) und mit einem sichtbaren Weg zurueck zur Startseite.
+  // Ab 1024 px links ein Band mit Claim, Fakten und echtem App-Bildschirm.
   return (
-    <div className="min-h-screen bg-background flex flex-col p-4 pt-safe-top pb-safe-bottom relative">
-
-      <div className="relative z-10 w-full max-w-md lg:max-w-lg mx-auto my-auto">
-        {/* Header with logo animation */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl mb-4">
-            <BookOpen className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-1">
-            LernZeit
+    <div className="lp min-h-screen lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <aside className="lp-band lp-karo relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-10 xl:px-16">
+        <Link to="/start" className="flex items-center gap-2.5" aria-label="LernZeit – zur Startseite">
+          <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-gradient-to-br from-primary to-secondary">
+            <BookOpen className="h-5 w-5 text-white" strokeWidth={2.25} />
+          </span>
+          <span className="text-[1.25rem] font-extrabold tracking-[-0.02em] text-white">LernZeit</span>
+        </Link>
+        <div className="py-10">
+          <h1 className="text-[2.5rem] font-extrabold xl:text-[3rem]">
+            Lernen belohnen<span className="-ml-[0.05em]">.</span>
+            <br />
+            Handyzeit verdienen<span className="-ml-[0.05em]">.</span>
           </h1>
-          <p className="text-muted-foreground">
-            Löse Aufgaben und verdiene Handyzeit
-          </p>
+          <ul className="mt-8 space-y-2.5 text-[1rem]">
+            {['Klasse 1 bis 10, nach Lehrplan', '4 Wochen alle Funktionen kostenlos', 'Keine Zahlungsdaten nötig', 'Server in der EU'].map((t) => (
+              <li key={t} className="flex items-center gap-3">
+                <Check className="h-4 w-4 shrink-0 text-[var(--lp-gruen-hell)]" strokeWidth={3} />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="relative -mb-24 ml-auto mr-4 w-max xl:mr-10">
+          <Handy bild="/landing/demo-aufgaben.webp" alt="" className="text-[1.9px] xl:text-[2.15px]" />
+          <Randnotiz drehung={-5} className="absolute -left-48 top-10 w-[11rem] text-[1.25rem] !text-white" pfeil="rechts-unten">
+            +30 Sek. für jede richtige Aufgabe
+          </Randnotiz>
+        </div>
+      </aside>
+
+      {/* Kein `overflow-hidden` und kein `items-center` am Container: sonst
+          scrollt die Seite nicht, wenn die Tastatur aufgeht. `my-auto` am
+          Inhalt zentriert bei genug Platz. */}
+      <div className="flex min-h-screen flex-col px-4 pb-safe-bottom pt-safe-top sm:px-8">
+        <div className="flex h-16 shrink-0 items-center justify-between">
+          <Link
+            to="/start"
+            className="-ml-2 inline-flex h-11 items-center gap-1 rounded-full pl-1 pr-4 text-[0.9375rem] font-bold text-[var(--lp-tinte)] transition-colors hover:bg-[var(--lp-heft)]"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
+            Zur Startseite
+          </Link>
+          <Link to="/start" className="flex items-center gap-2 lg:hidden" aria-label="LernZeit – zur Startseite">
+            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-primary to-secondary">
+              <BookOpen className="h-[18px] w-[18px] text-white" strokeWidth={2.25} />
+            </span>
+            <span className="text-[1.0625rem] font-extrabold tracking-[-0.02em] text-[var(--lp-tinte)]">LernZeit</span>
+          </Link>
         </div>
 
-        <Card className="shadow-card">
-          <CardContent className="p-6">
+      <div className="relative z-10 mx-auto my-auto w-full max-w-md py-6">
+        <div className="mb-7 lg:hidden">
+          <h1 className="text-[2rem] font-extrabold">
+            Lernen belohnen<span className="-ml-[0.05em]">.</span>
+            <br />
+            Handyzeit verdienen<span className="-ml-[0.05em]">.</span>
+          </h1>
+          <p className="mt-3 text-[1rem] text-[var(--lp-leise)]">4 Wochen alle Funktionen kostenlos, keine Zahlungsdaten nötig.</p>
+        </div>
+
+        <Card className="rounded-[28px] border-[var(--lp-karo)] shadow-[0_30px_70px_-40px_rgba(26,43,109,0.35)]">
+          <CardContent className="p-5 sm:p-8">
             <Tabs defaultValue="signup" className="w-full" onValueChange={messung.tabGewechselt}>
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
-                <TabsTrigger value="signup" className="data-[state=active]:bg-background">Registrieren</TabsTrigger>
-                <TabsTrigger value="signin" className="data-[state=active]:bg-background">Anmelden</TabsTrigger>
+              <TabsList className="mb-7 grid h-12 w-full grid-cols-2 rounded-full bg-[var(--lp-heft)] p-1">
+                <TabsTrigger value="signup" className={TAB}>Registrieren</TabsTrigger>
+                <TabsTrigger value="signin" className={TAB}>Anmelden</TabsTrigger>
               </TabsList>
 
               {/* Shared Turnstile CAPTCHA widget */}
@@ -717,8 +773,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               
               <TabsContent value="signin" className="space-y-5 animate-fade-in">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
-                  <p className="text-sm text-muted-foreground">Melde dich an und setze dein Lernabenteuer fort</p>
+                  <h3 className="text-xl font-extrabold">Willkommen zurück!</h3>
+                  <p className="text-sm text-muted-foreground">Schön, dass du wieder da bist.</p>
                 </div>
 
                 {/* Social sign-in (fast path) — shown above the manual form */}
@@ -726,7 +782,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
+                    className="w-full h-12 rounded-full border-[1.5px] border-[var(--lp-karo-dunkel)] text-base font-bold text-[var(--lp-tinte)] hover:bg-[var(--lp-heft)]"
                     onClick={handleGoogleSignIn}
                     disabled={loading}
                   >
@@ -735,7 +791,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </Button>
                   <Button
                     type="button"
-                    className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200"
+                    className="w-full h-12 rounded-full bg-black text-base font-bold text-white hover:bg-black/85"
                     onClick={handleAppleSignIn}
                     disabled={loading}
                   >
@@ -747,10 +803,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 {/* Divider */}
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border"></div>
+                    <div className="w-full border-t border-[var(--lp-karo)]"></div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-card px-3 text-[var(--lp-leise)]">oder mit E-Mail</span>
                   </div>
                 </div>
 
@@ -766,7 +822,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         onChange={(e) => setLoginIdentifier(e.target.value)}
                         required
                         placeholder="E-Mail oder Benutzername"
-                        className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                        className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                       />
                     </div>
                   </div>
@@ -781,14 +837,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         placeholder="••••••••"
-                        className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                        className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                       />
                     </div>
                   </div>
 
                   <Button 
                     type="submit" 
-                    className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
+                    className={ABSENDEN} 
                     disabled={loading}
                   >
                     {loading ? (
@@ -851,7 +907,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 {role === null ? (
                   <div className="space-y-4 animate-fade-in">
                     <div className="text-center mb-2">
-                      <h3 className="text-lg font-semibold">Wer legt hier ein Konto an?</h3>
+                      <h3 className="text-xl font-extrabold">Wer legt hier ein Konto an?</h3>
                       <p className="text-sm text-muted-foreground">
                         Bitte wähle aus – danach zeigen wir dir die passenden Felder.
                       </p>
@@ -864,15 +920,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         onClick={() => { setRole('parent'); setChildNoEmail(false); messung.schritt('rolle_gewaehlt', { rolle: 'parent' }); }}
                         className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
                           role === 'parent'
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
+                            ? 'border-[var(--lp-blau)] bg-[var(--lp-heft)]'
+                            : 'border-[var(--lp-karo)] hover:border-[var(--lp-karo-dunkel)] hover:bg-[var(--lp-heft)]'
                         }`}
                       >
                         <div className="w-12 h-12 shrink-0 bg-blue-600 rounded-full flex items-center justify-center">
                           <Shield className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
-                          <div className="font-semibold text-base">Ich bin Elternteil</div>
+                          <div className="font-bold text-base text-[var(--lp-tinte)]">Ich bin Elternteil</div>
                           <div className="text-sm text-muted-foreground">
                             Du verbindest dein Kind und gibst Bildschirmzeit frei.
                           </div>
@@ -885,15 +941,15 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         onClick={() => { setRole('child'); messung.schritt('rolle_gewaehlt', { rolle: 'child' }); }}
                         className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
                           role === 'child'
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
+                            ? 'border-[var(--lp-blau)] bg-[var(--lp-heft)]'
+                            : 'border-[var(--lp-karo)] hover:border-[var(--lp-karo-dunkel)] hover:bg-[var(--lp-heft)]'
                         }`}
                       >
                         <div className="w-12 h-12 shrink-0 bg-emerald-600 rounded-full flex items-center justify-center">
                           <Heart className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
-                          <div className="font-semibold text-base">Ich bin ein Kind</div>
+                          <div className="font-bold text-base text-[var(--lp-tinte)]">Ich bin ein Kind</div>
                           <div className="text-sm text-muted-foreground">
                             Du löst Aufgaben und verdienst Bildschirmzeit. Deine Eltern brauchen ein eigenes Konto.
                           </div>
@@ -904,7 +960,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                 ) : (
                 <>
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold">Konto erstellen</h3>
+                  <h3 className="text-xl font-extrabold">Konto erstellen</h3>
                   <p className="text-sm text-muted-foreground">
                     {role === 'parent'
                       ? 'Eltern-Konto – 4 Wochen alle Funktionen kostenlos'
@@ -931,7 +987,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
+                    className="w-full h-12 rounded-full border-[1.5px] border-[var(--lp-karo-dunkel)] text-base font-bold text-[var(--lp-tinte)] hover:bg-[var(--lp-heft)]"
                     onClick={() => { messung.schritt('oauth', { anbieter: 'google' }); void handleGoogleSignIn(); }}
                     disabled={loading}
                   >
@@ -940,7 +996,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </Button>
                   <Button
                     type="button"
-                    className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200"
+                    className="w-full h-12 rounded-full bg-black text-base font-bold text-white hover:bg-black/85"
                     onClick={() => { messung.schritt('oauth', { anbieter: 'apple' }); void handleAppleSignIn(); }}
                     disabled={loading}
                   >
@@ -954,10 +1010,10 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border"></div>
+                    <div className="w-full border-t border-[var(--lp-karo)]"></div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">oder mit E-Mail</span>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-card px-3 text-[var(--lp-leise)]">oder mit E-Mail</span>
                   </div>
                 </div>
 
@@ -977,7 +1033,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         onChange={(e) => setName(e.target.value)}
                         required={!childNoEmail || !username}
                         placeholder="Dein Name"
-                        className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                        className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                       />
                     </div>
                   </div>
@@ -990,7 +1046,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         <select 
                           value={grade}
                           onChange={(e) => setGrade(Number(e.target.value))}
-                          className="w-full pl-10 h-12 border-2 rounded-lg bg-background focus:border-primary transition-colors appearance-none cursor-pointer"
+                          className="w-full pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus:border-[var(--lp-blau)] focus:outline-none focus:ring-2 focus:ring-[var(--lp-blau)]/20 appearance-none cursor-pointer"
                         >
                           {Array.from({ length: 10 }, (_, i) => i + 1).map(g => (
                             <option key={g} value={g}>Klasse {g}</option>
@@ -1028,7 +1084,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))}
                             required
                             placeholder="z.B. max2015"
-                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                            className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">3–20 Zeichen, Buchstaben, Zahlen und _</p>
@@ -1047,7 +1103,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             placeholder="6-stelliger Code"
                             maxLength={6}
-                            className="pl-10 h-12 border-2 focus:border-primary transition-colors text-center text-lg tracking-widest font-mono"
+                            className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0 text-center text-lg tracking-widest font-mono"
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -1068,7 +1124,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             required
                             placeholder="••••••••"
                             minLength={6}
-                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                            className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
@@ -1087,7 +1143,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             placeholder="deine-email@beispiel.de"
-                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                            className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                           />
                         </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -1108,7 +1164,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             required
                             placeholder="••••••••"
                             minLength={6}
-                            className="pl-10 h-12 border-2 focus:border-primary transition-colors"
+                            className="pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0"
                           />
                         </div>
                         <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
@@ -1129,7 +1185,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                               placeholder="z. B. ABC123"
                               aria-invalid={testerCode.trim().length > 0 && !validateReferralCode(testerCode).valid}
                               aria-describedby="tester-code-hint"
-                              className={`pl-10 h-12 border-2 focus:border-primary transition-colors uppercase tracking-wider ${
+                              className={`pl-10 h-12 rounded-xl border-[1.5px] border-[var(--lp-karo-dunkel)] bg-white text-base focus-visible:border-[var(--lp-blau)] focus-visible:ring-2 focus-visible:ring-[var(--lp-blau)]/20 focus-visible:ring-offset-0 uppercase tracking-wider ${
                                 testerCode.trim().length > 0 && !validateReferralCode(testerCode).valid
                                   ? 'border-destructive focus:border-destructive'
                                   : ''
@@ -1169,7 +1225,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   
                   <Button 
                     type="submit" 
-                    className="w-full h-12 text-base font-medium bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105" 
+                    className={ABSENDEN} 
                     disabled={loading}
                   >
                     {loading ? (
@@ -1192,9 +1248,11 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-6 text-xs text-muted-foreground animate-fade-in">
-          <p>🔒 Deine Daten sind sicher und werden verschlüsselt übertragen</p>
-        </div>
+        <p className="mt-6 flex items-center justify-center gap-2 text-center text-sm text-[var(--lp-leise)]">
+          <Lock className="h-3.5 w-3.5 shrink-0" />
+          Server in der EU, Übertragung verschlüsselt
+        </p>
+      </div>
       </div>
     </div>
   );

@@ -247,6 +247,7 @@ html {
   --lp-text: #3d4763;       /* Fliesstext */
   --lp-leise: #66708a;      /* Nebentext */
   --lp-karo: #dfe7f7;       /* Rasterlinien, Haarlinien */
+  --lp-karo-dunkel: #b8c4e3; /* Trenner, die man sehen soll */
   --lp-heft: #f3f6fd;       /* getoente Flaechen */
   --lp-blau: #2563eb;       /* Handlungen */
   --lp-gruen: #0b7a46;      /* Randnotizen "richtig", lesbar auf Weiss */

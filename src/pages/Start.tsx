@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import HeroSection from '@/components/landing/HeroSection';
 import HowItWorks from '@/components/landing/HowItWorks';
 import ZweiAnsichten from '@/components/landing/ZweiAnsichten';
@@ -15,9 +15,17 @@ import { useAbschnittMessung } from '@/hooks/useAbschnittMessung';
 const Start = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { hash } = useLocation();
   // Welche Abschnitte gesehen wurden (data-abschnitt), seit 04.10.2026
   const seite = useRef<HTMLElement>(null);
   useAbschnittMessung(seite);
+
+  // Sprungmarke aus einer Unterseite (/start#preise): nach dem Zeichnen hinscrollen
+  useEffect(() => {
+    if (!hash) return;
+    const ziel = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (ziel) requestAnimationFrame(() => ziel.scrollIntoView({ block: 'start' }));
+  }, [hash]);
 
   // Einladungslink der Eltern (/start?code=123456) → direkt zur Kind-Registrierung
   useEffect(() => {
