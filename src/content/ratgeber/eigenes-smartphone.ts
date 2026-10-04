@@ -1,8 +1,8 @@
 import type { RatgeberArtikel } from './types';
 
 /*
- * Entwurf vom 04.10.2026. Erscheint erst, wenn veroeffentlicht = true und jede
- * Quelle geprueftAm hat. Pruefliste: docs/ratgeber/quellenpruefung.md
+ * Quellen am 04.10.2026 am Original geprüft, Befunde in
+ * docs/ratgeber/quellenpruefung.md.
  */
 
 export const eigenesSmartphone: RatgeberArtikel = {
@@ -10,7 +10,7 @@ export const eigenesSmartphone: RatgeberArtikel = {
   titel: 'Ab wann ein eigenes Smartphone? Was die KIM-Studie zeigt',
   beschreibung:
     'Wie viele Kinder in welchem Alter ein eigenes Handy haben, laut KIM-Studie 2024, und was Kinderärzte zur Bildschirmzeit in diesem Alter raten.',
-  veroeffentlicht: false,
+  veroeffentlicht: true,
   datum: '2026-10-04',
   lesezeitMinuten: 3,
   abschnitte: [
@@ -22,21 +22,21 @@ export const eigenesSmartphone: RatgeberArtikel = {
     {
       ueberschrift: 'Die Zahlen nach Alter',
       absaetze: [
-        'Insgesamt hatten 46 Prozent der 6- bis 13-Jährigen ein eigenes Smartphone [1]. Hinter dem Durchschnitt stecken große Unterschiede. Bei den 6- und 7-Jährigen waren es 11 Prozent, bei den 8- und 9-Jährigen 33 Prozent. Von den 10- und 11-Jährigen hatten schon 63 Prozent ein eigenes Gerät, von den 12- und 13-Jährigen 79 Prozent [1].',
-        'Der größte Sprung liegt zwischen 9 und 10 Jahren. Das ist ungefähr das Alter, in dem die meisten Kinder auf die weiterführende Schule wechseln.',
+        '46 Prozent der 6- bis 13-Jährigen hatten ein eigenes Smartphone [1]. Hinter dem Durchschnitt stecken große Unterschiede. Bei den 6- und 7-Jährigen waren es 11 Prozent, bei den 8- und 9-Jährigen 33 Prozent. Von den 10- und 11-Jährigen hatten schon 63 Prozent ein eigenes Gerät, von den 12- und 13-Jährigen 79 Prozent [1].',
+        'Der größte Sprung liegt zwischen den 8- und 9-Jährigen und den 10- und 11-Jährigen. In diesem Alter wechseln die meisten Kinder auf die weiterführende Schule [1].',
         'Auch Kinder ohne eigenes Gerät kommen an ein Handy: 13 Prozent von ihnen dürfen sich bei Bedarf eines ausleihen [1].',
       ],
     },
     {
       ueberschrift: 'Mehr Kinder sind online als vor zwei Jahren',
       absaetze: [
-        '2024 nutzten 70 Prozent der 6- bis 13-Jährigen das Internet, 2022 waren es noch 62 Prozent. Mehr als die Hälfte der Kinder, die online sind, ist es jeden Tag [1].',
+        '2024 nutzten 72 Prozent der 6- bis 13-Jährigen das Internet, 2022 waren es 70 Prozent. Mehr als die Hälfte der Kinder, die online sind, ist es jeden Tag [1].',
       ],
     },
     {
       ueberschrift: 'Das Handy in der Schule',
       absaetze: [
-        'Mehr als drei Viertel der Kinder mit eigenem Smartphone dürfen es mit in die Schule nehmen. Benutzen dürfen sie es dort meistens nur in den Pausen [1].',
+        'Mehr als drei Viertel der Schulkinder mit eigenem Handy dürfen es mit in die Schule nehmen. Benutzen dürfen sie es dort meistens nur in den Pausen [1].',
       ],
     },
     {
@@ -54,7 +54,7 @@ export const eigenesSmartphone: RatgeberArtikel = {
       herausgeber: 'Medienpädagogischer Forschungsverbund Südwest (mpfs)',
       jahr: '2025',
       url: 'https://mpfs.de/studie/kim-studie-2024/',
-      geprueftAm: null,
+      geprueftAm: '2026-10-04',
     },
     {
       nr: 2,
@@ -62,7 +62,7 @@ export const eigenesSmartphone: RatgeberArtikel = {
       herausgeber: 'Deutsche Gesellschaft für Kinder- und Jugendmedizin u. a.',
       jahr: '2023',
       url: 'https://register.awmf.org/de/leitlinien/detail/027-075',
-      geprueftAm: null,
+      geprueftAm: '2026-10-04',
     },
   ],
 };

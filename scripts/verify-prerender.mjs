@@ -22,6 +22,7 @@ const ROUTES = [
   { path: '/datenschutz',        needle: 'Datenschutz' },
   { path: '/nutzungsbedingungen', needle: 'Nutzungsbedingungen' },
   { path: '/konto-loeschen',     needle: 'Konto' },
+  { path: '/faq',                needle: 'Häufige Fragen' },
 ];
 
 // Ratgeber-Routen schreibt vite.config.ts beim Build aus sichtbareArtikel().

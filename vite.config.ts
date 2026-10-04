@@ -13,7 +13,7 @@ import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 // weiterhin klassische SPA.
 // Ratgeber: /ratgeber plus alle sichtbaren Artikel, automatisch aus den Daten.
 const RATGEBER_ARTIKEL_ROUTES = sichtbareArtikel().map((a) => `/ratgeber/${a.slug}`);
-const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support', '/konto-loeschen', '/ratgeber', ...RATGEBER_ARTIKEL_ROUTES];
+const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support', '/konto-loeschen', '/faq', '/ratgeber', ...RATGEBER_ARTIKEL_ROUTES];
 
 // Schreibt nach dem Build die Ratgeber-Routen für scripts/verify-prerender.mjs
 // und ergänzt dist/sitemap.xml um /ratgeber und alle sichtbaren Artikel

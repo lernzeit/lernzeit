@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, FileText, Building2, LifeBuoy, Trash2, BookOpen } from 'lucide-react';
+import { Shield, FileText, Building2, LifeBuoy, Trash2, BookOpen, HelpCircle } from 'lucide-react';
 import { sichtbareArtikel } from '@/content/ratgeber';
 
 interface LegalFooterProps {
@@ -38,6 +38,11 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
         >
           <Building2 className="w-3.5 h-3.5" />
           Impressum
+        </Link>
+        <span className={`hidden sm:inline ${variant === 'dark' ? 'text-gray-600' : 'text-muted'}`}>•</span>
+        <Link to="/faq" className={`flex items-center gap-1.5 transition-colors ${textClass}`}>
+          <HelpCircle className="w-3.5 h-3.5" />
+          FAQ
         </Link>
         <span className={`hidden sm:inline ${variant === 'dark' ? 'text-gray-600' : 'text-muted'}`}>•</span>
         <Link
