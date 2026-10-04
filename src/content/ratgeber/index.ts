@@ -1,9 +1,16 @@
 import type { RatgeberArtikel } from './types';
 import { bildschirmzeitNachAlter } from './bildschirmzeit-nach-alter';
 import { eigenesSmartphone } from './eigenes-smartphone';
+import { mediennutzungsvertrag } from './mediennutzungsvertrag';
+import { bildschirmzeitEinstellen } from './bildschirmzeit-einstellen';
 
 // Alle Artikel, auch Entwuerfe. Sichtbar ist nur, was sichtbareArtikel() liefert.
-export const artikel: RatgeberArtikel[] = [bildschirmzeitNachAlter, eigenesSmartphone];
+export const artikel: RatgeberArtikel[] = [
+  bildschirmzeitNachAlter,
+  eigenesSmartphone,
+  mediennutzungsvertrag,
+  bildschirmzeitEinstellen,
+];
 
 // Nur veröffentlichte Artikel, deren Quellen alle geprüft sind, werden
 // angezeigt, verlinkt, vorgerendert und in die Sitemap geschrieben.
