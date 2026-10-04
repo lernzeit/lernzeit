@@ -36,7 +36,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useScreenTimeLimit } from '@/hooks/useScreenTimeLimit';
 import { useStreak } from '@/hooks/useStreak';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { useOneSignal } from '@/hooks/useOneSignal';
+import { useOneSignal, unregisterPushDevice } from '@/hooks/useOneSignal';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
@@ -417,6 +417,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
 
   const handleSignOut = async () => {
+    await unregisterPushDevice(user?.id);
     await supabase.auth.signOut();
     onSignOut();
   };
@@ -587,6 +588,16 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
             </CardHeader>
           </Card>
 
+          {/* Streak prominent oben auf dem Startbildschirm des Kindes */}
+          <StreakFireCard
+            streak={streak}
+            status={streakStatus}
+            inactiveDays={inactiveDays}
+            loading={streakLoading}
+            reactivationTrigger={streakReactivationTrigger}
+            onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
+          />
+
           {/* Daily Challenge */}
           <DailyChallenge userId={user.id} />
 
@@ -675,8 +686,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           )}
 
           {(profile?.grade || 5) <= 4 ? (
-            /* Young mode: 3 simple cards with labels (Minuten, Spiele, Streak) */
-            <div className="grid grid-cols-3 gap-3">
+            /* Young mode: 2 simple cards with labels (Minuten, Spiele) — der Streak sitzt oben */
+            <div className="grid grid-cols-2 gap-3">
               <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
                 <CardContent className="p-4 text-center">
                   <div className="text-3xl mb-2">⏰</div>
@@ -691,18 +702,10 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   <div className="text-xs text-green-600 mt-1">Spiele</div>
                 </CardContent>
               </Card>
-              <StreakFireCard
-                streak={streak}
-                status={streakStatus}
-                inactiveDays={inactiveDays}
-                loading={streakLoading}
-                reactivationTrigger={streakReactivationTrigger}
-                onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
-              />
             </div>
           ) : (
-            /* Teen mode: full 4 cards */
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            /* Teen mode: full 3 cards — der Streak sitzt oben */
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <Card className="shadow-card bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -721,21 +724,16 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                   <div className="text-xs text-green-600">Spiele gespielt 🎯</div>
                 </CardContent>
               </Card>
-              <AchievementQuickView 
-                userId={user.id} 
-                onClick={() => {
-                  setSettingsInitialSection('achievements');
-                  setShowSettingsMenu(true);
-                }} 
-              />
-              <StreakFireCard
-                streak={streak}
-                status={streakStatus}
-                inactiveDays={inactiveDays}
-                loading={streakLoading}
-                reactivationTrigger={streakReactivationTrigger}
-                onStartRecovery={() => onStartStreakRecovery?.(profile?.grade || 1)}
-              />
+              {/* Erfolge über beide Spalten, damit keine Karte allein in der Reihe steht */}
+              <div className="col-span-2 lg:col-span-1">
+                <AchievementQuickView
+                  userId={user.id}
+                  onClick={() => {
+                    setSettingsInitialSection('achievements');
+                    setShowSettingsMenu(true);
+                  }}
+                />
+              </div>
             </div>
           )}
 

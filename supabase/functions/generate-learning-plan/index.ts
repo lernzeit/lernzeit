@@ -14,9 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) throw new Error("No AI API key configured");
+    // KI ueber callAI: Gemini direkt, sonst OpenRouter (kein Lovable mehr).
+    if (!Deno.env.get("GEMINI_API_KEY") && !Deno.env.get("OPENROUTER_API_KEY")) throw new Error("No AI API key configured");
 
     // Auth check
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -140,7 +139,7 @@ ${extraInfo}
 Erstelle den Plan als JSON-Array mit 5 Tagen.`;
 
     const { response: aiResponse } = await callAI({
-      model: "google/gemini-3.5-flash",
+      model: "google/gemini-3.8-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

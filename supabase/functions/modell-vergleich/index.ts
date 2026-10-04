@@ -22,6 +22,12 @@
  *       Bewertet alle gueltigen Fragen mit der Qualitaetspruefung der
  *       Produktion (erst Rechen-Check, dann das Pruefmodell).
  *
+ *   {"aktion":"direkt","use_case":"question_generator_batch"}
+ *       Ein Aufruf ueber callAI, also genau den Weg der Produktion (erst
+ *       Google direkt, dann OpenRouter) mit der Konfiguration des use_case.
+ *       Ohne use_case gilt "modell" (Standard: gemini-3.8-flash). Zeigt, welcher
+ *       Anbieter und welches Modell tatsaechlich geantwortet haben.
+ *
  * Alle Modelle laufen ueber OpenRouter, auch Gemini: So stammen die Kosten
  * aus derselben Quelle (usage.cost) und die Bedingungen sind gleich.
  * Die Fragen landen in `modell_vergleich`, nicht im Fragen-Cache.
@@ -171,8 +177,10 @@ async function erzeugeEine(
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
-    const dauer = Date.now() - start;
+    // Erst nach dem vollstaendigen Text messen: OpenRouter schickt die Header
+    // sofort und haelt die Verbindung offen, bis das Modell fertig ist.
     const text = await res.text();
+    const dauer = Date.now() - start;
     if (!res.ok) return { fehler: `HTTP ${res.status}: ${text.substring(0, 400)}`, dauer_ms: dauer };
     const data = JSON.parse(text);
     const u = data?.usage ?? {};
@@ -275,6 +283,7 @@ async function pruefen(client: ReturnType<typeof createClient>, lauf: string) {
         category: z.category,
         correct_answer: f.correct_answer,
         options: f.options,
+        task: f.task,
       };
       let urteil = deterministicVerdict(q);
       if (!urteil) {
@@ -335,8 +344,19 @@ Deno.serve(async (req) => {
         if (!lauf) return json({ error: 'lauf angeben' }, 400);
         return json(await pruefen(client, lauf));
       }
+      case 'direkt': {
+        const { response, provider, model } = await callAI({
+          model: String(body.modell ?? 'google/gemini-3.8-flash'),
+          messages: [{ role: 'user', content: String(body.prompt ?? 'Antworte mit genau einem Wort: OK') }],
+          timeoutMs: 60_000,
+        }, undefined, body.use_case ? String(body.use_case) : 'modell_vergleich');
+        const text = await response.text();
+        let antwort: unknown = text.substring(0, 500);
+        try { antwort = JSON.parse(text)?.choices?.[0]?.message?.content ?? antwort; } catch { /* Rohtext */ }
+        return json({ provider, model, status: response.status, antwort });
+      }
       default:
-        return json({ error: 'aktion: modelle | erzeugen | pruefen' }, 400);
+        return json({ error: 'aktion: modelle | erzeugen | pruefen | direkt' }, 400);
     }
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : String(err) }, 500);

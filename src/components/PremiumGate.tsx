@@ -67,8 +67,8 @@ export function PremiumGate({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Upgraden Sie Ihren Account, um auf erweiterte Funktionen zuzugreifen und Ihrem Kind mehr
-          Lernoptionen zu bieten.
+          Mit Premium schaltest du alle Funktionen frei und bietest deinem Kind mehr
+          Lernoptionen.
         </p>
         {showUpgradeButton && (
           <Button

@@ -171,8 +171,9 @@ const Datenschutz = () => {
               <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
                 <li><strong>Supabase</strong> (EU-Region) – Hosting, Datenbank, Authentifizierung</li>
                 <li><strong>Stripe Payments Europe, Ltd.</strong> – Zahlungsabwicklung für Premium-Abos (nur Eltern-Accounts)</li>
-                <li><strong>Google (Lovable AI Gateway / Gemini)</strong> sowie <strong>OpenRouter</strong> – Generierung von Lernfragen und KI-Erklärungen; Eingaben werden ohne personenbezogene Identifikatoren übertragen</li>
-                <li><strong>Resend</strong> – Versand transaktionaler E-Mails (z. B. Bestätigungen)</li>
+                <li><strong>Google (Gemini)</strong> sowie <strong>OpenRouter</strong> – Generierung von Lernfragen und KI-Erklärungen; Eingaben werden ohne personenbezogene Identifikatoren übertragen</li>
+                <li><strong>OneSignal, Inc.</strong> (USA) – Push-Benachrichtigungen in der App sowie Service-E-Mails an Eltern (z. B. Hilfe beim Einrichten, Hinweis auf das Ende der Testphase); keine Werbung, jederzeit abbestellbar</li>
+                <li><strong>IONOS SE</strong> – E-Mail-Postfach und Versand der Anmelde- und Bestätigungs-E-Mails</li>
                 <li><strong>Apple App Store / Google Play</strong> – App-Bereitstellung und ggf. In-App-Käufe</li>
               </ul>
               <p className="text-muted-foreground mt-2">

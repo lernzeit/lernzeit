@@ -12,6 +12,7 @@ import {
   THEORY_SUBJECTS,
   type QuestionCategory,
 } from "../_shared/question-prompt.ts";
+import { cleanHint, hatCodeReste, parseChoiceOptions } from '../_shared/choice-options.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -169,7 +170,7 @@ serve(async (req) => {
     // the function/API key is reachable. Return immediately without invoking AI
     // so the request doesn't run the full pipeline (which would hit the 150s idle limit).
     if (body.test === true) {
-      const hasKey = !!(Deno.env.get('LOVABLE_API_KEY') || Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY'));
+      const hasKey = !!(Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY'));
       return new Response(JSON.stringify({ success: hasKey, test: true, ok: hasKey }), {
         status: hasKey ? 200 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -271,10 +272,9 @@ serve(async (req) => {
     
     console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
-      console.error('Neither LOVABLE_API_KEY nor GEMINI_API_KEY is configured');
+    // KI ueber callAI: Gemini direkt, sonst OpenRouter (kein Lovable mehr).
+    if (!Deno.env.get('GEMINI_API_KEY') && !Deno.env.get('OPENROUTER_API_KEY')) {
+      console.error('Neither GEMINI_API_KEY nor OPENROUTER_API_KEY is configured');
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Konfigurationsfehler. Bitte kontaktiere den Support.' 
@@ -375,7 +375,7 @@ serve(async (req) => {
               questionType: picked.question_type,
               correctAnswer: tryParseStructuredValue(picked.correct_answer),
               options: tryParseStructuredValue(picked.options),
-              hint: picked.hint,
+              hint: cleanHint(picked.hint),
               task: picked.task,
               createdAt: new Date().toISOString(),
               source: 'cache'
@@ -657,7 +657,7 @@ serve(async (req) => {
               questionType: picked.question_type,
               correctAnswer: tryParseStructuredValue(picked.correct_answer),
               options: tryParseStructuredValue(picked.options),
-              hint: picked.hint,
+              hint: cleanHint(picked.hint),
               task: picked.task,
               createdAt: new Date().toISOString(),
               source: 'cache-fallback'
@@ -696,7 +696,7 @@ serve(async (req) => {
       questionType: rawType,
       correctAnswer: rawCorrectAnswer,
       options: rawOptions,
-      hint: question.hint || null,
+      hint: cleanHint(question.hint),
       task: typeof question.task === 'string' ? question.task : null,
       createdAt: new Date().toISOString()
     };
@@ -780,24 +780,13 @@ function sanitizeStringArray(value: unknown): string[] {
   );
 }
 
+/**
+ * Optionen einer Auswahlfrage. Liest auch Programmtext wie
+ * `options = ["2", "3"]` oder `['my', 'mine']` richtig — bis 29.09.2026 wurde
+ * er an Kommas zerschnitten, und Kinder sahen `['my'` als Antwort.
+ */
 function extractChoiceOptions(value: unknown): string[] {
-  const parsed = tryParseStructuredValue(value);
-
-  if (Array.isArray(parsed)) {
-    return sanitizeStringArray(parsed);
-  }
-
-  if (typeof parsed !== 'string') return [];
-
-  return Array.from(
-    new Set(
-      parsed
-        .replace(/\r/g, '\n')
-        .split(/[\n,;|]+/)
-        .map((entry) => entry.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '').trim())
-        .filter(Boolean)
-    )
-  );
+  return parseChoiceOptions(tryParseStructuredValue(value));
 }
 
 function extractFillBlankAnswers(value: unknown): string[] {
@@ -845,6 +834,7 @@ function isRenderableQuestionPayload(
     case 'MULTIPLE_CHOICE': {
       const choiceOptions = extractChoiceOptions(options);
       if (choiceOptions.length < 2) return false;
+      if (hatCodeReste(choiceOptions)) return false;
 
       if (typeof correctAnswer === 'number') {
         return correctAnswer >= 0 && correctAnswer < choiceOptions.length;

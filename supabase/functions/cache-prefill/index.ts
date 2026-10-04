@@ -57,7 +57,7 @@ async function callGemini(
   // gestellt. Der Wert hier ist nur der Fallback, falls keine Konfiguration
   // geladen werden kann. Der Funktionsname ist historisch.
   const { response, provider, model } = await callAI({
-    model: 'google/gemini-3.5-flash',
+    model: 'google/gemini-3.8-flash',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },

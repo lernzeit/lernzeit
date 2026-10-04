@@ -171,3 +171,53 @@ All colors MUST be HSL.
 }
 
 /* Safe-Area-Utilities sind zentral in src/styles/safe-area.css definiert. */
+
+/*
+ * Zoom-Fehler auf dem iPhone (Rueckmeldung Klara, 30.09.2026).
+ *
+ * 1. Doppeltippen: Beim Sortieren tippt man ein Element und gleich danach
+ *    den Zielplatz an. iOS wertete das als Doppeltippen und zoomte hinein.
+ *    `manipulation` schaltet nur das Doppeltipp-Zoomen ab, Zwei-Finger-Zoom
+ *    bleibt im Browser moeglich.
+ * 2. Eingabefelder unter 16 px: iOS vergroessert beim Antippen und zoomt
+ *    danach nicht zurueck. Betraf die Rueckmelde-Felder bei den Fragen
+ *    (Textarea mit 14 px) und auf dem iPad alle Eingaben (`md:text-sm`).
+ *    Nur auf iOS (`-webkit-touch-callout` kennt nur WebKit auf iOS), damit
+ *    die Groessen am Rechner bleiben, wie sie sind. `:is()` hebt die
+ *    Spezifitaet ueber die Tailwind-Klassen, ohne `!important`.
+ */
+html {
+  touch-action: manipulation;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input:is(.text-xs, .text-sm, .md\:text-sm),
+  textarea:is(.text-xs, .text-sm, .md\:text-sm),
+  select {
+    font-size: 16px;
+  }
+}
+
+/*
+ * Herauszoomen bei langen Antworten (Rueckmeldung Klara, 30.09.2026).
+ *
+ * Ein Wort ohne Trennstelle, das breiter ist als der Bildschirm, machte die
+ * Seite breiter (nachgestellt: 502 px bei 375 px). iOS zoomt dann die ganze
+ * Seite heraus, damit sie hineinpasst. Zwei Stufen:
+ *
+ * 1. Fragetexte und Antworten duerfen jedes Wort umbrechen — mit deutscher
+ *    Silbentrennung, wo moeglich (lang="de" in index.html). `anywhere` zaehlt
+ *    auch fuer die Mindestbreite, sonst halten Flex-Elemente das Wort fest.
+ * 2. Sicherheitsnetz: Die App wird nie breiter als der Bildschirm. `clip`
+ *    statt `hidden`, damit kein Scroll-Container entsteht und die fest
+ *    stehende Knopfleiste im Spiel (position: sticky) weiter funktioniert.
+ */
+.frage-text {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+#root {
+  overflow-x: clip;
+}

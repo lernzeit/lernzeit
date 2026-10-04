@@ -6,7 +6,8 @@
   "private": true,
   "files": [
     "ios/Sources",
-    "LernzeitScreenTime.podspec"
+    "LernzeitScreenTime.podspec",
+    "Package.swift"
   ],
   "capacitor": {
     "ios": {

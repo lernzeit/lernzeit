@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { berechneStreak } from '@/lib/streak';
 
 export type StreakStatus = 'active' | 'dim' | 'frozen';
 
@@ -12,9 +13,6 @@ interface StreakState {
   loading: boolean;
   reload: () => Promise<void>;
 }
-
-const dayKey = (date: Date) => date.toISOString().split('T')[0];
-const daysBetween = (from: string, to: string) => Math.max(0, Math.floor((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000));
 
 export function useStreak(userId?: string): StreakState {
   const [streak, setStreak] = useState(0);
@@ -38,18 +36,19 @@ export function useStreak(userId?: string): StreakState {
         supabase.from('user_streak_states').select('streak_value, last_activity_date, status').eq('user_id', userId).maybeSingle(),
       ]);
 
-      const allDates = new Set<string>();
+      const zeitpunkte: string[] = [];
       learningSessionsRes.data?.forEach((session) => {
-        if (session.session_date) allDates.add(dayKey(new Date(session.session_date)));
+        if (session.session_date) zeitpunkte.push(session.session_date);
       });
       gameSessionsRes.data?.forEach((session) => {
-        if (session.session_date) allDates.add(dayKey(new Date(session.session_date)));
+        if (session.session_date) zeitpunkte.push(session.session_date);
       });
 
-      const sortedDates = Array.from(allDates).sort((a, b) => b.localeCompare(a));
-      const today = dayKey(new Date());
+      // Kalendertage in Ortszeit — frueher Ortszeit und UTC gemischt, siehe
+      // src/lib/streak.ts.
+      const { streak: currentStreak, inaktiveTage: inactive, letzterTag: mostRecentDate } = berechneStreak(zeitpunkte);
 
-      if (sortedDates.length === 0) {
+      if (!mostRecentDate) {
         setStreak(0);
         setStatus('active');
         setInactiveDays(0);
@@ -57,19 +56,7 @@ export function useStreak(userId?: string): StreakState {
         return;
       }
 
-      const mostRecentDate = sortedDates[0];
-      const inactive = daysBetween(mostRecentDate, today);
       const nextStatus: StreakStatus = inactive === 0 ? 'active' : inactive === 1 ? 'dim' : 'frozen';
-
-      let currentStreak = 0;
-      if (inactive <= 2) {
-        let checkDate = new Date(`${mostRecentDate}T00:00:00`);
-        for (let i = 0; i < sortedDates.length; i++) {
-          const expectedDate = dayKey(new Date(checkDate.getTime() - i * 86400000));
-          if (sortedDates[i] === expectedDate) currentStreak++;
-          else break;
-        }
-      }
 
       const visibleStreak = inactive >= 3 ? 0 : Math.max(currentStreak, Number(storedStateRes.data?.streak_value) || 0);
       const visibleStatus: StreakStatus = inactive >= 3 ? 'frozen' : nextStatus;

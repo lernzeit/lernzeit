@@ -118,9 +118,12 @@ serve(async (req) => {
       .filter(([, items]) => items.length >= MIN_CLUSTER_SIZE)
       .slice(0, MAX_NEW_RULES_PER_RUN);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY nicht konfiguriert' }), {
+    // Die KI laeuft ueber callAI (Gemini direkt, sonst OpenRouter). Bis zum
+    // 03.10.2026 verlangte die Funktion hier noch den Lovable-Schluessel,
+    // obwohl sie ihn nicht mehr nutzte.
+    const KI_SCHLUESSEL = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY');
+    if (!KI_SCHLUESSEL) {
+      return new Response(JSON.stringify({ error: 'Kein KI-Schluessel konfiguriert (GEMINI_API_KEY oder OPENROUTER_API_KEY)' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -155,7 +158,7 @@ serve(async (req) => {
 
       const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
 
-      const ruleText = await generateRule(LOVABLE_API_KEY, {
+      const ruleText = await generateRule(KI_SCHLUESSEL, {
         type: 'content_quality',
         category,
         feedbackType,
@@ -169,7 +172,7 @@ serve(async (req) => {
       const similarMatch = findSimilarRule(activeRules, ruleText);
       if (similarMatch) {
         console.log(`🔀 Merging with existing rule ${similarMatch.id} for ${clusterKey}`);
-        const merged = await mergeRules(LOVABLE_API_KEY, similarMatch.rule_text, ruleText);
+        const merged = await mergeRules(KI_SCHLUESSEL, similarMatch.rule_text, ruleText);
         if (merged) {
           const newFeedbackIds = [...new Set([...similarMatch.source_feedback_ids, ...items.map(i => i.id)])];
           await supabase
@@ -223,7 +226,7 @@ serve(async (req) => {
     if (variantIssues.length > 0) {
       console.log(`🔄 Found ${variantIssues.length} variant-related feedbacks`);
 
-      const variantRule = await generateRule(LOVABLE_API_KEY, {
+      const variantRule = await generateRule(KI_SCHLUESSEL, {
         type: 'variant_optimization',
         category: 'all',
         feedbackType: 'variant_mismatch',
@@ -237,7 +240,7 @@ serve(async (req) => {
       });
 
       if (variantRule) {
-        const mergeResult = await mergeOrInsertRule(supabase, LOVABLE_API_KEY, activeRules, variantRule, {
+        const mergeResult = await mergeOrInsertRule(supabase, KI_SCHLUESSEL, activeRules, variantRule, {
           subject: null,
           grade_min: null,
           grade_max: null,
@@ -272,7 +275,7 @@ serve(async (req) => {
         `- Frage: "${(i.question_content || '').substring(0, 200)}" | Typ: ${i.question_type}`
       ).join('\n');
 
-      const variantRule = await generateRule(LOVABLE_API_KEY, {
+      const variantRule = await generateRule(KI_SCHLUESSEL, {
         type: 'variant_selection',
         category,
         feedbackType: 'wrong_variant',
@@ -282,7 +285,7 @@ serve(async (req) => {
 
       if (variantRule) {
         const ruleSubject = normalizeCategory(category);
-        const mergeResult = await mergeOrInsertRule(supabase, LOVABLE_API_KEY, activeRules, variantRule, {
+        const mergeResult = await mergeOrInsertRule(supabase, KI_SCHLUESSEL, activeRules, variantRule, {
           subject: ruleSubject,
           grade_min: null,
           grade_max: null,
@@ -312,7 +315,7 @@ serve(async (req) => {
 
       const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
 
-      const positiveRule = await generateRule(LOVABLE_API_KEY, {
+      const positiveRule = await generateRule(KI_SCHLUESSEL, {
         type: 'positive_reinforcement',
         category,
         feedbackType: 'good_question',
@@ -322,7 +325,7 @@ serve(async (req) => {
 
       if (positiveRule) {
         const ruleSubject = normalizeCategory(category);
-        const mergeResult = await mergeOrInsertRule(supabase, LOVABLE_API_KEY, activeRules, positiveRule, {
+        const mergeResult = await mergeOrInsertRule(supabase, KI_SCHLUESSEL, activeRules, positiveRule, {
           subject: ruleSubject,
           grade_min: grades.length > 0 ? Math.min(...grades) : null,
           grade_max: grades.length > 0 ? Math.max(...grades) : null,
@@ -465,7 +468,7 @@ Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
 
   try {
     const { response } = await callAI({
-      model: 'google/gemini-3.5-flash',
+      model: 'google/gemini-3.8-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     }, undefined, 'analyze_feedback');
@@ -531,7 +534,7 @@ Antworte NUR mit der kombinierten Regel, ohne Anführungszeichen, ohne Erklärun
 
   try {
     const { response } = await callAI({
-      model: 'google/gemini-3.5-flash',
+      model: 'google/gemini-3.8-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
     }, undefined, 'analyze_feedback');

@@ -56,7 +56,7 @@ bzw. Tests per `haiku`-Agent laufen lassen), bevor er es als erledigt meldet.
 | Web | Push auf `main` → Lovable übernimmt → Veröffentlichen per Lovable (`deploy_project`) |
 | iOS | Codemagic, Workflow `ios-release`, **von Hand gestartet** → TestFlight |
 | Android | **Android Studio beim Betreiber**, aus dem Ordner `android/` dieses Repos |
-| Edge Functions | Lovable spielt sie **selbst** neu ein, sobald es einen Commit übernimmt, der `supabase/functions/` ändert — dann alle Funktionen aus `main` (beobachtet am 27.09.2026, 10:01 und 18:41 UTC). Sofort per Supabase-MCP (`deploy_edge_function`, mit allen importierten Dateien aus `_shared/`) nur, wenn es nicht warten kann |
+| Edge Functions | GitHub-Workflow `deploy-supabase.yml` spielt bei jedem Push auf `main`, der `supabase/functions/` ändert, alle Funktionen ein (seit 03.10.2026 mit gültigem `SUPABASE_ACCESS_TOKEN`; erster Lauf erfolgreich). Danach den Lauf prüfen (`actions_list` → Ergebnis `success`). Änderungen nur an `supabase/config.toml` lösen ihn nicht aus – dann von Hand starten (`workflow_dispatch`). Lovable spielt daneben manchmal selbst ein |
 
 Folgen daraus:
 
@@ -76,3 +76,28 @@ Folgen daraus:
 - Eine Edge Function, die nur per MCP eingespielt wurde und nicht in `main`
   steht, überschreibt Lovable beim nächsten Commit auf `supabase/functions/`.
   Was live laufen soll, gehört deshalb immer auch nach `main`.
+- Jede Edge Function braucht einen Eintrag `[functions.<name>]` mit `verify_jwt` in
+  `supabase/config.toml`. Fehlt er, spielt die CLI sie mit `verify_jwt = true` ein (bis
+  03.10.2026 fehlten 9, u. a. `send-push`). Gelöschte Funktionen entfernt der Workflow nicht
+  aus Supabase (z. B. `auth-email-hook` läuft dort noch, ungenutzt).
+
+## Lovable ablösen (Stand 03.10.2026)
+
+Geprüft im Code, in Supabase und per Rückfrage an Lovable: Datenbank (eigene
+Supabase-Organisation „LernZeit“), Auth, Login-Mails (IONOS-SMTP), KI (Gemini/
+OpenRouter, 0 Aufrufe ans Lovable-Gateway in 30 Tagen), Cron und Push hängen nicht an
+Lovable. An Lovable hängen nur noch:
+- Hosting von lernzeit.app und www (A-Records auf 185.158.133.1, TXT `_lovable`),
+  einschließlich `public/.well-known/` (App-Links für iOS und Android) und SPA-Fallback.
+- Bei IONOS ein verknüpfter „Third Party Service“: A-Einträge `@` und `www` der Website
+  plus alte OneSignal-DKIM-Einträge unter `mail`. Ändern deaktiviert die ganze Gruppe samt
+  Website – beim Hosting-Umzug erst den Service lösen, dann neu eintragen.
+  E-Mail-Versand (OneSignal) deshalb über `post.lernzeit.app`, nicht `mail`.
+  Die alten OneSignal-Einträge unter `mail` (SPF, os1/os2, `_osauth`, `email.mail`) beim
+  Umzug mit aufräumen. Erledigt am 03.10.2026: NS-Delegation von `mail` an Lovable,
+  Resend- und SES-Einträge gelöscht; DMARC berichtet an `info@lernzeit.app`.
+- OneSignal-Standardabsender ist noch `mail@lernzeit.app` (nicht eingerichtet): jede
+  Versand-Funktion gibt `email_from_address: hallo@post.lernzeit.app` selbst an.
+Die Fassungen von `analyze-feedback`, `ai-question-generator` und `generate-learning-plan`
+ohne Lovable-Schlüssel sind seit 03.10.2026 eingespielt; `LOVABLE_API_KEY` kann aus den
+Supabase-Secrets gelöscht werden.

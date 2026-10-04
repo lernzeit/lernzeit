@@ -16,7 +16,7 @@ import { useAchievementTracker } from '@/hooks/useAchievementTracker';
 import { useAdaptiveDifficultySystem } from '@/hooks/useAdaptiveDifficultySystem';
 import { GameCompletionScreen } from '@/components/GameCompletionScreen';
 import { AchievementPopup } from '@/components/AchievementPopup';
-import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, Sparkles, Crown, Volume2, VolumeX } from 'lucide-react';
+import { Loader2, Lightbulb, ArrowRight, ArrowLeft, CheckCircle2, XCircle, RotateCcw, Trophy, Clock, Flag, ChevronDown, Check, X, MessageCircleQuestion, Crown, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useQuestionReport } from '@/hooks/useQuestionReport';
@@ -29,6 +29,7 @@ import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 import { useReviewQueue } from '@/hooks/useReviewQueue';
 import { useStreak } from '@/hooks/useStreak';
+import { berechneStreak, lokalerTag } from '@/lib/streak';
 
 interface LearningGameProps {
   grade: number;
@@ -37,6 +38,8 @@ interface LearningGameProps {
   onBack: () => void;
   totalQuestions?: number;
   topicHint?: string;
+  /** Lernplan, aus dem die Runde gestartet wurde — zaehlt nur dann als Plan-Fortschritt. */
+  learningPlanId?: string;
   mode?: 'normal' | 'streak_recovery';
   demoMode?: boolean;
 }
@@ -59,6 +62,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   onBack,
   totalQuestions = 5,
   topicHint,
+  learningPlanId,
   mode = 'normal',
   demoMode = false
 }) => {
@@ -154,12 +158,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const isStreakRecovery = mode === 'streak_recovery';
 
   // Track streak before session starts
-  const { streak: currentStreak, inactiveDays: currentInactiveDays } = useStreak(user?.id);
+  const { streak: currentStreak, inactiveDays: currentInactiveDays, loading: streakLoading } = useStreak(user?.id);
+  // Erst nach dem Laden merken. Vorher liefert useStreak seinen Startwert 0 —
+  // bis 30.09.2026 wurde genau der gemerkt, und nach jeder Runde stand der
+  // Streak auf 1 (0 + 1).
   useEffect(() => {
-    if (streakBeforeSession.current === null && currentStreak !== undefined) {
+    if (streakBeforeSession.current === null && !streakLoading) {
       streakBeforeSession.current = currentStreak;
     }
-  }, [currentStreak]);
+  }, [currentStreak, streakLoading]);
 
   // Save emoji feedback to question_feedback table
   const saveEmojiFeedback = (feedbackType: 'thumbs_up' | 'thumbs_down' | 'too_hard' | 'too_easy') => {
@@ -468,7 +475,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         setIsValidatingAnswer(true);
         const { data, error } = await supabase.functions.invoke('validate-answer', {
           body: {
-            question: question.questionText,
+            question: getAufgabeText(),
             correctAnswer: statedAnswerText,
             userAnswer: userAnswerText.trim(),
             grade,
@@ -563,7 +570,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     const userAnswerText = getUserAnswerText();
     
     const result = await fetchExplanation(
-      question.questionText,
+      getAufgabeText(),
       correctAnswerText,
       grade,
       subject,
@@ -592,7 +599,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     const correctAnswerText = getCorrectAnswerText();
     
     await fetchExplanation(
-      question.questionText,
+      getAufgabeText(),
       correctAnswerText,
       grade,
       subject,
@@ -640,6 +647,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       templateId: question.id,
     });
     markReviewReported(question.questionText);
+  };
+
+  // Bei Lueckentexten steht der Satz mit der Luecke in `task`; der Fragetext
+  // ist nur die Anweisung ("Ergaenze das fehlende Wort"). Nachpruefung,
+  // Erklaerung und Tutor bekamen bis 27.09.2026 nur die Anweisung und konnten
+  // die eigentliche Aufgabe nicht sehen.
+  const getAufgabeText = (): string => {
+    if (!question) return '';
+    const task = typeof question.task === 'string' ? question.task.trim() : '';
+    return question.questionType === 'FILL_BLANK' && task
+      ? `${question.questionText}\n${task}`
+      : question.questionText;
   };
 
   const getCorrectAnswerText = (): string => {
@@ -720,7 +739,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           timeSpentSeconds,
           earnedSeconds,
           questionSource: isStreakRecovery ? 'streak-recovery' : 'template-bank',
-          suppressEarnedMinutes: isStreakRecovery
+          suppressEarnedMinutes: isStreakRecovery,
+          learningPlanId: learningPlanId ?? null
         });
         
         if (result.success) {
@@ -757,7 +777,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             user_id: user.id,
             streak_value: neuerStreak,
             status: 'active',
-            last_activity_date: new Date().toISOString().split('T')[0],
+            last_activity_date: lokalerTag(new Date()),
             last_reactivated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' });
           
@@ -806,24 +826,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               supabase.from('learning_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false }),
               supabase.from('game_sessions').select('session_date').eq('user_id', user.id).order('session_date', { ascending: false })
             ]);
-            const allDates = new Set<string>();
-            lsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
-            gsRes.data?.forEach(s => { if (s.session_date) allDates.add(new Date(s.session_date).toISOString().split('T')[0]); });
-            const sorted = Array.from(allDates).sort((a, b) => b.localeCompare(a));
-            let freshStreak = 0;
-            if (sorted.length > 0) {
-              const today = new Date().toISOString().split('T')[0];
-              const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-              if (sorted[0] === today || sorted[0] === yesterday) {
-                let checkDate = new Date();
-                if (sorted[0] === yesterday) checkDate = new Date(Date.now() - 86400000);
-                for (let i = 0; i < sorted.length; i++) {
-                  const expected = new Date(checkDate.getTime() - i * 86400000).toISOString().split('T')[0];
-                  if (sorted[i] === expected) freshStreak++;
-                  else break;
-                }
-              }
-            }
+            const zeitpunkte: string[] = [];
+            lsRes.data?.forEach(s => { if (s.session_date) zeitpunkte.push(s.session_date); });
+            gsRes.data?.forEach(s => { if (s.session_date) zeitpunkte.push(s.session_date); });
+            const frisch = berechneStreak(zeitpunkte);
+            const freshStreak = frisch.inaktiveTage <= 1 ? frisch.streak : 0;
             const previousStreak = streakBeforeSession.current ?? 0;
             if (freshStreak > previousStreak) {
               setNewStreakValue(freshStreak);
@@ -1081,7 +1088,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               <div className="flex items-center justify-between">
                 {/* Hide question text for FILL_BLANK as it's rendered inline with gaps */}
                 {question.questionType !== 'FILL_BLANK' && (
-                  <CardTitle className={grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed"}>{question.questionText}</CardTitle>
+                  <CardTitle className={cn("frage-text", grade <= 4 ? "text-2xl leading-relaxed" : "text-xl leading-relaxed")}>{question.questionText}</CardTitle>
                 )}
                 {question.questionType === 'FILL_BLANK' && <div className="flex-1" />}
               </div>
@@ -1236,12 +1243,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                     )}
                   </div>
                   {isCorrect && spellingHint && (
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    <p className="frage-text text-sm text-green-600 dark:text-green-400 mt-1">
                       ✏️ Richtige Schreibweise: <strong>{spellingHint}</strong>
                     </p>
                   )}
                   {!isCorrect && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="frage-text text-sm text-muted-foreground">
                       Richtige Antwort: <strong>{getCorrectAnswerText()}</strong>
                     </p>
                   )}
@@ -1251,10 +1258,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowReportDialog(true)}
-                      className="mt-2 w-full text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30"
+                      className="mt-2 w-full text-muted-foreground hover:text-foreground"
                     >
                       <Flag className="w-4 h-4 mr-2" />
-                      {isCorrect ? 'Frage melden' : 'Frage melden (Antwort falsch?)'}
+                      {isCorrect ? 'Fehler in der Frage melden' : 'Stimmt die Lösung nicht? Melden'}
                     </Button>
                   )}
                   {/* KI-Tutor - only for teen */}
@@ -1267,12 +1274,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                           onClick={() => setShowTutorDialog(true)}
                           className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
                         >
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <MessageCircleQuestion className="w-4 h-4 mr-2" />
                           KI-Tutor fragen
                         </Button>
                       ) : (
                         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-1">
-                          <Sparkles className="w-4 h-4 text-warning" />
+                          <MessageCircleQuestion className="w-4 h-4 text-warning" />
                           <span>KI-Tutor erklärt dir den Lösungsweg</span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                             <Crown className="h-3 w-3" />
@@ -1326,13 +1333,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       <span>Erklärung wird erstellt...</span>
                     </div>
                   ) : (
-                    <p className="text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
+                    <p className="frage-text text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
                   )}
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-3">
+              {/* Action Buttons — bleiben unten am Bildschirm stehen. Nach einer
+                  Antwort lag "Naechste Frage" auf dem iPhone 13 mini sonst unter
+                  dem Rand (Befund 30.09.2026), das Kind musste jedes Mal scrollen. */}
+              <div className={cn("sticky bottom-0 z-10 -mx-6 flex gap-3 border-t", hasAnswered ? "flex-row" : "flex-col", "bg-card/95 px-6 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-card/80")}>
                 {!hasAnswered ? (
                   <>
                     <Button 
@@ -1363,19 +1372,20 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                         variant="outline" 
                         onClick={handleShowExplanation}
                         disabled={isLoadingExplanation}
+                        className="shrink-0"
                       >
                         <Lightbulb className="w-4 h-4 mr-2" />
                         Erklärung
                       </Button>
                     )}
-                    <Button onClick={handleNextQuestion} className="flex-1">
+                    <Button onClick={handleNextQuestion} className="flex-1 min-w-0">
                       {currentIndex + 1 >= totalQuestions ? (
                         <>
                           <Trophy className="w-4 h-4 mr-2" />
                           {grade <= 4 ? '🏆 Fertig!' : 'Ergebnis anzeigen'}
                         </>
                       ) : (
-                        grade <= 4 ? 'Weiter ➡️' : <>Nächste Frage <ArrowRight className="w-4 h-4 ml-2" /></>
+                        grade <= 4 ? 'Weiter ➡️' : <>Weiter <ArrowRight className="w-4 h-4 ml-2" /></>
                       )}
                     </Button>
                   </>
@@ -1410,7 +1420,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         <KITutorDialog
           open={showTutorDialog}
           onOpenChange={setShowTutorDialog}
-          questionText={question.questionText}
+          questionText={getAufgabeText()}
           correctAnswer={getCorrectAnswerText()}
           userAnswer={getUserAnswerText()}
           grade={grade}
@@ -1457,21 +1467,32 @@ const MultipleChoiceRenderer: React.FC<{
   onSelect: (option: string) => void;
 }> = ({ options, selectedOption, correctAnswer, hasAnswered, onSelect }) => (
   <div className="space-y-3">
-    {options.map((option, index) => (
-      <Button
-        key={index}
-        variant={selectedOption === option ? 'default' : 'outline'}
-        className={cn(
-          "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
-          hasAnswered && option === correctAnswer && "border-primary bg-primary/10",
-          hasAnswered && selectedOption === option && option !== correctAnswer && "border-destructive bg-destructive/10"
-        )}
-        onClick={() => !hasAnswered && onSelect(option)}
-        disabled={hasAnswered}
-      >
-        {option}
-      </Button>
-    ))}
+    {options.map((option, index) => {
+      const richtig = hasAnswered && option === correctAnswer;
+      const falschGewaehlt = hasAnswered && selectedOption === option && option !== correctAnswer;
+      return (
+        <Button
+          key={index}
+          // Nach der Antwort nie die ausgefuellte Variante: Deren weisse Schrift
+          // stand bis 30.09.2026 auf blassem Rot und war kaum lesbar.
+          variant={!hasAnswered && selectedOption === option ? 'default' : 'outline'}
+          className={cn(
+            "w-full justify-start text-left p-4 h-auto whitespace-normal break-words",
+            // Ergebnis nicht ausgrauen: Das Kind soll die Aufloesung lesen koennen.
+            hasAnswered && "disabled:opacity-100",
+            hasAnswered && !richtig && !falschGewaehlt && "text-muted-foreground",
+            richtig && "border-2 border-green-500 bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100",
+            falschGewaehlt && "border-2 border-red-400 bg-red-50 text-red-900 dark:bg-red-950 dark:text-red-100"
+          )}
+          onClick={() => !hasAnswered && onSelect(option)}
+          disabled={hasAnswered}
+        >
+          <span className="frage-text min-w-0 flex-1">{option}</span>
+          {richtig && <Check className="ml-2 h-5 w-5 shrink-0 text-green-600" />}
+          {falschGewaehlt && <X className="ml-2 h-5 w-5 shrink-0 text-red-500" />}
+        </Button>
+      );
+    })}
   </div>
 );
 
@@ -1490,8 +1511,9 @@ const FreetextRenderer: React.FC<{
     disabled={hasAnswered}
     className={cn(
       "text-lg h-14",
-      hasAnswered && isCorrect && "border-primary bg-primary/10",
-      hasAnswered && !isCorrect && "border-destructive bg-destructive/10"
+      hasAnswered && "disabled:opacity-100",
+      hasAnswered && isCorrect && "border-green-500 bg-green-50 text-green-900",
+      hasAnswered && !isCorrect && "border-red-400 bg-red-50 text-red-900"
     )}
     autoComplete="off"
   />
@@ -1535,8 +1557,8 @@ const SortRenderer: React.FC<{
               "active:scale-[0.98] touch-manipulation",
               isSelected && "ring-2 ring-primary ring-offset-2 border-primary bg-primary/10 scale-[1.02]",
               !isSelected && !hasAnswered && "border-border hover:border-primary/50 hover:bg-muted/50",
-              hasAnswered && isCorrectPosition && "bg-primary/10 border-primary",
-              hasAnswered && !isCorrectPosition && "bg-destructive/10 border-destructive"
+              hasAnswered && isCorrectPosition && "bg-green-50 border-green-500 text-green-900 dark:bg-green-950 dark:text-green-100",
+              hasAnswered && !isCorrectPosition && "bg-red-50 border-red-400 text-red-900 dark:bg-red-950 dark:text-red-100"
             )}
           >
             <span className={cn(
@@ -1545,9 +1567,9 @@ const SortRenderer: React.FC<{
             )}>
               {index + 1}
             </span>
-            <span className="flex-1 font-medium">{item}</span>
-            {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
-            {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-destructive flex-shrink-0" />}
+            <span className="frage-text min-w-0 flex-1 font-medium">{item}</span>
+            {hasAnswered && isCorrectPosition && <Check className="w-5 h-5 text-green-600 flex-shrink-0" />}
+            {hasAnswered && !isCorrectPosition && <X className="w-5 h-5 text-red-500 flex-shrink-0" />}
           </button>
         );
       })}
@@ -1575,7 +1597,7 @@ const HintToggle: React.FC<{ hint: string }> = ({ hint }) => {
         <ChevronDown className={cn("w-4 h-4 transition-transform", showHint && "rotate-180")} />
       </button>
       {showHint && (
-        <p className="text-sm text-muted-foreground mt-2 pl-5 border-l-2 border-primary/30">
+        <p className="frage-text text-sm text-muted-foreground mt-2 pl-5 border-l-2 border-primary/30">
           {hint}
         </p>
       )}
@@ -1618,7 +1640,7 @@ const MatchRenderer: React.FC<{
                   size="sm"
                   className={cn(
                     "h-auto min-h-11 justify-start py-3 px-3 text-sm whitespace-normal text-left",
-                    isMatched && "border-primary/40 bg-primary/10",
+                    isMatched && selectedLeft !== item && "border-primary/40 bg-primary/10",
                     selectedLeft === item && "ring-2 ring-primary ring-offset-2"
                   )}
                   onClick={() => {
@@ -1628,7 +1650,7 @@ const MatchRenderer: React.FC<{
                   disabled={hasAnswered}
                 >
                   <div className="flex w-full items-center justify-between gap-2">
-                    <span>{item}</span>
+                    <span className="frage-text min-w-0">{item}</span>
                     {matches[item] && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
                   </div>
                 </Button>
@@ -1662,7 +1684,7 @@ const MatchRenderer: React.FC<{
                   disabled={hasAnswered || !selectedLeft}
                 >
                   <div className="flex w-full items-center justify-between gap-2">
-                    <span>{item}</span>
+                    <span className="frage-text min-w-0">{item}</span>
                     {isUsed && <Check className="h-4 w-4 flex-shrink-0 text-primary" />}
                   </div>
                 </Button>
@@ -1692,9 +1714,9 @@ const MatchRenderer: React.FC<{
                     !hasAnswered && "bg-muted/50"
                   )}
                 >
-                  <span className="font-medium flex-shrink-0">{left}</span>
+                  <span className="frage-text min-w-0 max-w-[45%] font-medium">{left}</span>
                   <span className="text-muted-foreground">→</span>
-                  <span className="flex-1">{right}</span>
+                  <span className="frage-text min-w-0 flex-1">{right}</span>
                   {!hasAnswered && (
                     <button
                       onClick={() => onMatch(left, '')}
@@ -1788,6 +1810,7 @@ const FillBlankRenderer: React.FC<{
           disabled={hasAnswered}
           className={cn(
             "inline-block w-32 mx-1 h-8 text-center",
+            hasAnswered && "disabled:opacity-100",
             isCorrect && "border-primary bg-primary/10",
             isWrong && "border-destructive bg-destructive/10"
           )}
@@ -1803,7 +1826,7 @@ const FillBlankRenderer: React.FC<{
         onClick={() => handleGapClick(index)}
         disabled={hasAnswered}
         className={cn(
-          "inline-flex items-center justify-center min-w-20 px-3 py-1 mx-1 rounded-md border-2 border-dashed transition-all",
+          "frage-text inline-flex max-w-full items-center justify-center min-w-20 px-3 py-1 mx-1 rounded-md border-2 border-dashed transition-all",
           "text-base font-medium",
           !value && !isActive && "border-muted-foreground/40 bg-muted/30 text-muted-foreground",
           !value && isActive && "border-primary bg-primary/10 text-primary animate-pulse",
@@ -1849,6 +1872,7 @@ const FillBlankRenderer: React.FC<{
                 disabled={hasAnswered}
                 className={cn(
                   "text-lg h-14",
+                  hasAnswered && "disabled:opacity-100",
                   hasAnswered && answers[0]?.toLowerCase().trim() === correctAnswers[0]?.toLowerCase().trim() && "border-green-500",
                   hasAnswered && answers[0]?.toLowerCase().trim() !== correctAnswers[0]?.toLowerCase().trim() && "border-red-500"
                 )}
@@ -1880,7 +1904,7 @@ const FillBlankRenderer: React.FC<{
                   onClick={() => isAvailable && handleChipSelect(option)}
                   disabled={isUsed || activeGapIndex === null}
                   className={cn(
-                    "px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                    "frage-text max-w-full px-3 py-1.5 rounded-full text-sm font-medium transition-all",
                     isAvailable && "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-sm hover:shadow-md active:scale-95",
                     isUsed && "bg-muted text-muted-foreground/50 line-through cursor-not-allowed",
                     !isUsed && activeGapIndex === null && "bg-secondary text-secondary-foreground opacity-60"
@@ -1898,7 +1922,7 @@ const FillBlankRenderer: React.FC<{
       {hasAnswered && correctAnswers.some((correct, i) => 
         answers[i]?.toLowerCase().trim() !== correct?.toLowerCase().trim()
       ) && (
-        <div className="text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-lg">
+        <div className="frage-text text-sm text-muted-foreground mt-2 p-3 bg-muted/50 rounded-lg">
           <strong>Richtige Lösung:</strong> {correctAnswers.join(', ')}
         </div>
       )}
@@ -1934,6 +1958,7 @@ const DragDropRenderer: React.FC<{
               key={item}
               variant={selectedItem === item ? 'default' : 'outline'}
               size="sm"
+              className="frage-text h-auto max-w-full whitespace-normal py-1.5 text-left"
               onClick={() => !hasAnswered && setSelectedItem(item)}
               disabled={hasAnswered}
             >

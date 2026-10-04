@@ -154,9 +154,9 @@ export function AIModelConfigPanel() {
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="pt-4 text-xs space-y-1.5">
           <div className="font-semibold text-sm">So funktioniert die Konfiguration:</div>
-          <div>• <b>Primär-Modell</b> = das KI-Modell, das verwendet wird (z.B. <code className="text-[11px]">google/gemini-3.5-flash</code>).</div>
+          <div>• <b>Primär-Modell</b> = das KI-Modell, das verwendet wird (z.B. <code className="text-[11px]">google/gemini-3.8-flash</code>).</div>
           <div>• <b>Provider-Reihenfolge</b> = Über welche API das Modell aufgerufen wird. Plattform 1 wird zuerst probiert; bei Fehler (z.B. 402/Credits) fällt das System auf Plattform 2 zurück.</div>
-          <div>• Beispiel: Modell <code className="text-[11px]">google/gemini-3.5-flash</code> + Reihenfolge <i>Gemini Direct → OpenRouter</i> → Anfrage geht zuerst an Gemini; schlägt sie fehl, an OpenRouter.</div>
+          <div>• Beispiel: Modell <code className="text-[11px]">google/gemini-3.8-flash</code> + Reihenfolge <i>Gemini Direct → OpenRouter</i> → Anfrage geht zuerst an Gemini; schlägt sie fehl, an OpenRouter.</div>
           <div>• <b>Thinking-Level</b> steuert die Denk-Tiefe (minimal = schnellste Antwort), <b>Max Output Tokens</b> begrenzt die Antwortlänge.</div>
           <div>• <b>Provider-Routing</b> (JSON) wird an OpenRouter durchgereicht, z. B. <code className="text-[11px]">{'{"only":["groq"],"allow_fallbacks":false}'}</code>.</div>
           <div className="text-muted-foreground pt-1">→ Zum Vergleich verschiedener Modelle für denselben Use-Case: Tab <b>Playground</b>.</div>

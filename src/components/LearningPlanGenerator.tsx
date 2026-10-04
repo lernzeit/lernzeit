@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { differenceInCalendarDays } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
@@ -174,7 +175,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
       toast({
         title: '🎉 Lernplan erstellt!',
-        description: `Der 5-Tage-Lernplan für ${selectedChild?.name || 'Ihr Kind'} ist fertig.`,
+        description: `Der 5-Tage-Lernplan für ${selectedChild?.name || 'dein Kind'} ist fertig.`,
       });
 
       // Reset form
@@ -382,19 +383,6 @@ interface DayProgress {
   sessions: number;
 }
 
-function normalizeCategoryKey(cat: string): string {
-  const mapping: Record<string, string> = {
-    'mathematik': 'math', 'mathe': 'math',
-    'deutsch': 'german', 'englisch': 'english',
-    'sachkunde': 'science', 'sachunterricht': 'science',
-    'erdkunde': 'geography', 'geographie': 'geography',
-    'geschichte': 'history', 'physik': 'physics',
-    'biologie': 'biology', 'chemie': 'chemistry',
-    'latein': 'latin',
-  };
-  return mapping[cat.toLowerCase()] || cat.toLowerCase();
-}
-
 function usePlanProgress(plan: LearningPlan) {
   const [dayProgress, setDayProgress] = useState<Map<number, DayProgress>>(new Map());
   const [loaded, setLoaded] = useState(false);
@@ -403,46 +391,38 @@ function usePlanProgress(plan: LearningPlan) {
   useEffect(() => {
     if (days.length === 0) return;
 
-    const planStart = new Date(plan.created_at);
-    planStart.setHours(0, 0, 0, 0);
-
-    // End = test_date or created + days count
-    const planEnd = plan.test_date
-      ? new Date(plan.test_date)
-      : new Date(planStart.getTime() + days.length * 24 * 60 * 60 * 1000);
-    planEnd.setHours(23, 59, 59, 999);
-
     const fetchProgress = async () => {
       try {
+        // Nur Runden, die ueber die Lernplan-Karte gestartet wurden. Frueher
+        // zaehlte jede Runde im Fach ab Mitternacht des Erstellungstags —
+        // am 30.09.2026 stand so bei einem Plan, den das Kind nie geoeffnet
+        // hatte, schon "2/5 • 40 %" (eine freie Mathe-Runde vom Nachmittag).
         const { data } = await supabase
           .from('game_sessions')
-          .select('session_date, correct_answers, total_questions, category')
+          .select('session_date, correct_answers, total_questions')
           .eq('user_id', plan.child_id)
-          .gte('session_date', planStart.toISOString())
-          .lte('session_date', planEnd.toISOString())
+          .eq('learning_plan_id', plan.id)
           .order('session_date', { ascending: true });
 
         if (!data) { setLoaded(true); return; }
 
-        // Filter to matching subject
-        const matching = data.filter(s =>
-          normalizeCategoryKey(s.category || '') === normalizeCategoryKey(plan.subject)
-        );
-
-        // Map sessions to plan days (day 0 = planStart, day 1 = planStart+1, etc.)
+        // Tag des Plans nach Kalendertagen: Tag 1 = Erstellungstag, wie auf
+        // der Lernplan-Karte des Kindes (CategorySelector).
+        const planStart = new Date(plan.created_at);
         const progress = new Map<number, DayProgress>();
-        for (const session of matching) {
-          const sessionDate = new Date(session.session_date!);
-          const dayIndex = Math.floor(
-            (sessionDate.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)
-          );
-          if (dayIndex < 0 || dayIndex >= days.length) continue;
+        for (const session of data) {
+          if (!session.session_date) continue;
+          const dayIndex = differenceInCalendarDays(new Date(session.session_date), planStart);
+          if (dayIndex < 0) continue;
+          // Nach dem letzten Plantag weiter geuebt: dem letzten Tag zurechnen,
+          // so wie die Karte ab dann den letzten Schwerpunkt zeigt.
+          const tag = Math.min(dayIndex, days.length - 1);
 
-          const existing = progress.get(dayIndex) || { totalQuestions: 0, correctAnswers: 0, sessions: 0 };
+          const existing = progress.get(tag) || { totalQuestions: 0, correctAnswers: 0, sessions: 0 };
           existing.totalQuestions += session.total_questions;
           existing.correctAnswers += session.correct_answers;
           existing.sessions += 1;
-          progress.set(dayIndex, existing);
+          progress.set(tag, existing);
         }
 
         setDayProgress(progress);
@@ -454,7 +434,7 @@ function usePlanProgress(plan: LearningPlan) {
     };
 
     fetchProgress();
-  }, [plan.child_id, plan.subject, plan.created_at, plan.test_date, days.length]);
+  }, [plan.id, plan.child_id, plan.created_at, days.length]);
 
   const totalStats = React.useMemo(() => {
     let practiced = 0, questions = 0, correct = 0;

@@ -10,6 +10,7 @@ import { useScreenTimeRequests } from '@/hooks/useScreenTimeRequests';
 import { useEarnedMinutesTracker } from '@/hooks/useEarnedMinutesTracker';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { vielleichtUmBewertungBitten } from '@/lib/reviewPrompt';
 
 interface ScreenTimeRequestWidgetProps {
   userId: string;
@@ -146,9 +147,13 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   };
 
   const handleResponse = async (requestId: string, status: 'approved' | 'denied', response?: string) => {
+    const childId = requests.find(r => r.id === requestId)?.child_id;
     const result = await respondToRequest(requestId, status, response);
     
     if (result.success) {
+      if (role === 'parent' && status === 'approved' && childId) {
+        void vielleichtUmBewertungBitten(childId, false);
+      }
       toast({
         title: status === 'approved' ? 'Anfrage genehmigt!' : 'Anfrage abgelehnt!',
         description: status === 'approved' 

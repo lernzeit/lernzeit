@@ -48,6 +48,7 @@ import { MessageSquareHeart } from 'lucide-react';
 import { useOfferings } from '@/hooks/useOfferings';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { OnboardingNextStepCard } from '@/components/parent/OnboardingNextStepCard';
+import { AbwanderungNachfrage } from '@/components/parent/AbwanderungUmfrage';
 import { shareInviteLink, buildInviteLink } from '@/lib/inviteLink';
 
 // Farbiger Drachen (Kite) im Stil des Google Family Link Logos.
@@ -93,6 +94,8 @@ interface LinkedChild {
 export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>('requests');
   const [accountOpen, setAccountOpen] = useState(false);
+  const [familyLoadedFor, setFamilyLoadedFor] = useState<string | null>(null);
+  const [entryDeferred, setEntryDeferred] = useState({ userId: '', until: 0 });
   const tabsRef = React.useRef<HTMLDivElement>(null);
   const inviteRef = React.useRef<HTMLDivElement>(null);
   const [profileName, setProfileName] = useState('');
@@ -216,11 +219,40 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const isNativeApp = Capacitor.isNativePlatform();
 
   useEffect(() => {
+    let cancelled = false;
+    setFamilyLoadedFor(null);
+    // Die Pause gilt nur für dieses Elternkonto; gesperrter Speicher ist unkritisch.
+    let until = 0;
+    try {
+      const saved = Number(window.localStorage.getItem(`parentEntryDeferred:${userId}`));
+      if (Number.isFinite(saved) && saved > Date.now()) until = saved;
+    } catch {}
+    setEntryDeferred({ userId, until });
     if (userId) {
-      loadFamilyData(userId);
+      loadFamilyData(userId).then(() => {
+        if (!cancelled) setFamilyLoadedFor(userId);
+      });
       loadProfileName();
     }
-  }, [userId]);
+    return () => { cancelled = true; };
+  }, [userId, loadFamilyData]);
+
+  useEffect(() => {
+    if (entryDeferred.userId !== userId || entryDeferred.until <= Date.now()) return;
+    // Auch bei geöffnetem Dashboard läuft die Pause nach 24 Stunden ab.
+    const timer = window.setTimeout(() => {
+      setEntryDeferred({ userId, until: 0 });
+    }, entryDeferred.until - Date.now());
+    return () => window.clearTimeout(timer);
+  }, [entryDeferred, userId]);
+
+  const deferParentEntry = () => {
+    const until = Date.now() + 24 * 60 * 60 * 1000;
+    setEntryDeferred({ userId, until });
+    try {
+      window.localStorage.setItem(`parentEntryDeferred:${userId}`, String(until));
+    } catch {}
+  };
 
   const toggleChild = (childId: string) => {
     setOpenChildren(prev => {
@@ -348,7 +380,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
   const handleGenerateCode = async () => {
     if (!emailVerified) {
-      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse.", variant: "destructive" });
+      toast({ title: "E-Mail nicht bestätigt", description: "Bitte bestätige zuerst deine E-Mail-Adresse.", variant: "destructive" });
       return;
     }
     if (!consentChecked) {
@@ -396,7 +428,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       setProfileSaving(true);
       const { error } = await supabase.from('profiles').update({ name: profileName.trim() }).eq('id', userId);
       if (error) throw error;
-      toast({ title: "Profil aktualisiert", description: "Ihr Name wurde erfolgreich gespeichert." });
+      toast({ title: "Profil aktualisiert", description: "Dein Name wurde gespeichert." });
     } catch {
       toast({ title: "Fehler", description: "Name konnte nicht gespeichert werden.", variant: "destructive" });
     } finally {
@@ -448,6 +480,84 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       setActiveTab('requests');
     }
   }, [totalPendingRequests]);
+
+  // Derselbe Einladungsablauf wird im Einstieg und im Kinder-Reiter verwendet.
+  const invitationSection = (
+          <Card ref={inviteRef}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Key className="h-4 w-4 text-primary" />
+                {linkedChildren.length === 0 ? 'Kind einladen' : 'Weiteres Kind einladen'}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Erstelle einen Einladungslink, den dein Kind auf dem eigenen Handy öffnet. Der Link ist 7 Tage gültig – der Code funktioniert auch manuell.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {emailVerified === false && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Bitte bestätige zuerst deine E-Mail-Adresse.
+                </p>
+              )}
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="consent-children-tab"
+                  checked={consentChecked}
+                  onCheckedChange={(v) => setConsentChecked(!!v)}
+                  disabled={emailVerified === false}
+                />
+                <label htmlFor="consent-children-tab" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                  Ich stimme den{' '}
+                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
+                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
+                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
+                </label>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleGenerateCode}
+                disabled={newCodeLoading || !consentChecked || emailVerified === false}
+              >
+                {newCodeLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                Code erstellen
+              </Button>
+              {activeCodes.length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-medium text-muted-foreground">Aktive Einladungen:</p>
+                  {activeCodes.map((code) => (
+                    <div key={code.id} className="bg-muted/50 rounded-md px-3 py-2 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({formatTimeRemaining(code.expires_at)})
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code kopieren" onClick={() => copyToClipboard(code.code)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code zurückziehen" onClick={() => handleRevokeCode(code.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground break-all">{buildInviteLink(code.code)}</p>
+                      <Button size="sm" variant="outline" className="w-full" onClick={() => handleShareInvite(code.code)}>
+                        <Share2 className="h-3.5 w-3.5 mr-2" />
+                        Link teilen
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+  );
+  const familyReady = familyLoadedFor === userId && !loading;
+  const showFocusedEntry = familyReady && linkedChildren.length === 0
+    && !(entryDeferred.userId === userId && entryDeferred.until > Date.now());
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -501,6 +611,32 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         </CardContent>
       </Card>
 
+      {!familyReady ? (
+        <div role="status" className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          <span>Familiendaten werden geladen …</span>
+        </div>
+      ) : showFocusedEntry ? (
+        <section aria-labelledby="parent-entry-title" className="mx-auto w-full max-w-xl min-w-0 space-y-6">
+          <div className="space-y-4">
+            <h2 id="parent-entry-title" className="text-2xl font-bold break-words">
+              Lege jetzt das Profil deines Kindes an
+            </h2>
+            <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+              <li>Dein Kind meldet sich auf seinem eigenen Gerät an.</li>
+              <li>Es löst Aufgaben und sammelt Bildschirmzeit.</li>
+              <li>Es fragt Bildschirmzeit an, du gibst sie frei.</li>
+            </ul>
+          </div>
+          {invitationSection}
+          <div className="text-center">
+            <Button variant="link" className="text-muted-foreground" onClick={deferParentEntry}>
+              Später
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <>
       {/* Section Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -522,6 +658,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         activeCodes={activeCodes}
         onCreateCode={goToInviteSection}
         onShowCode={goToInviteSection}
+      />
+
+      {/* Warum stockt es? Nur wenn etwas stockt (siehe AbwanderungUmfrage.tsx) */}
+      <AbwanderungNachfrage
+        parentId={userId}
+        kindIds={linkedChildren.map((c) => c.id)}
+        bereit={!sub.loading && !loading}
+        testphaseVorbei={!isPremium && !isTrialing && !!sub.trialEnd && new Date(sub.trialEnd) < new Date()}
       />
 
       {totalPendingRequests > 0 && (
@@ -570,7 +714,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               </div>
               <div>
                 <p className="font-semibold text-sm">🎁 Testphase: noch {trialDaysLeft} {trialDaysLeft === 1 ? 'Tag' : 'Tage'} kostenlos</p>
-                <p className="text-xs text-muted-foreground">Sichern Sie sich jetzt Premium – monatlich kündbar.</p>
+                <p className="text-xs text-muted-foreground">Sichere dir jetzt Premium – monatlich kündbar.</p>
               </div>
             </div>
             <Button size="sm" onClick={() => handleUpgrade('monthly')} disabled={checkoutLoading} className="shrink-0">
@@ -646,28 +790,30 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       </Card>
 
       <Tabs ref={tabsRef} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
-          <TabsTrigger value="requests" className="flex items-center gap-1.5">
+        {/* Beschriftung auch auf dem Handy: Nur Symbole (Handy, Personen, Krone,
+            Geschenk) liessen raten, was dahinter liegt (Durchsicht 30.09.2026). */}
+        <TabsList className={`grid h-auto w-full ${isPaidPremium ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsTrigger value="requests" className="relative flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
             <Smartphone className="h-4 w-4" />
-            <span className="hidden sm:inline">Anfragen</span>
+            <span className="text-[11px] leading-tight sm:text-sm">Anfragen</span>
             {totalPendingRequests > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1 text-[10px]">
+              <Badge variant="secondary" className="absolute right-1 top-0.5 h-4 min-w-4 px-1 text-[10px] sm:static sm:ml-1 sm:h-5 sm:min-w-5">
                 {totalPendingRequests}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="children" className="flex items-center gap-1.5">
+          <TabsTrigger value="children" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Kinder</span>
+            <span className="text-[11px] leading-tight sm:text-sm">Kinder</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-1.5">
+          <TabsTrigger value="subscription" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
             <Crown className="h-4 w-4" />
-            <span className="hidden sm:inline">Abo</span>
+            <span className="text-[11px] leading-tight sm:text-sm">Abo</span>
           </TabsTrigger>
           {isPaidPremium && (
-            <TabsTrigger value="referral" className="flex items-center gap-1.5">
+            <TabsTrigger value="referral" className="flex flex-col items-center gap-0.5 py-1.5 sm:flex-row sm:gap-1.5">
               <Gift className="h-4 w-4" />
-              <span className="hidden sm:inline">Verschenken</span>
+              <span className="text-[11px] leading-tight sm:text-sm">Verschenken</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -826,78 +972,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </div>
           )}
 
-          {/* Kind einladen – unter den verknüpften Kindern */}
-          <Card ref={inviteRef}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Key className="h-4 w-4 text-primary" />
-                Weiteres Kind einladen
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Erstelle einen Einladungslink, den dein Kind auf dem eigenen Handy öffnet. Der Link ist 7 Tage gültig – der Code funktioniert auch manuell.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {emailVerified === false && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  Bitte bestätige zuerst deine E-Mail-Adresse.
-                </p>
-              )}
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="consent-children-tab"
-                  checked={consentChecked}
-                  onCheckedChange={(v) => setConsentChecked(!!v)}
-                  disabled={emailVerified === false}
-                />
-                <label htmlFor="consent-children-tab" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
-                  Ich stimme den{' '}
-                  <Link to="/nutzungsbedingungen" className="text-primary underline hover:text-primary/80">Nutzungsbedingungen</Link>
-                  {' '}zu und erteile als Erziehungsberechtigte/r die Einwilligung zur Datenverarbeitung für mein Kind gemäß Art. 8 DSGVO (
-                  <Link to="/datenschutz" className="text-primary underline hover:text-primary/80">Datenschutzerklärung</Link>).
-                </label>
-              </div>
-              <Button
-                size="sm"
-                onClick={handleGenerateCode}
-                disabled={newCodeLoading || !consentChecked || emailVerified === false}
-              >
-                {newCodeLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                Code erstellen
-              </Button>
-              {activeCodes.length > 0 && (
-                <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground">Aktive Einladungen:</p>
-                  {activeCodes.map((code) => (
-                    <div key={code.id} className="bg-muted/50 rounded-md px-3 py-2 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <code className="font-mono font-bold text-sm text-primary">{code.code}</code>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({formatTimeRemaining(code.expires_at)})
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code kopieren" onClick={() => copyToClipboard(code.code)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Code zurückziehen" onClick={() => handleRevokeCode(code.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground break-all">{buildInviteLink(code.code)}</p>
-                      <Button size="sm" variant="outline" className="w-full" onClick={() => handleShareInvite(code.code)}>
-                        <Share2 className="h-3.5 w-3.5 mr-2" />
-                        Link teilen
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {invitationSection}
         </TabsContent>
 
         {/* Tab: Abo */}
@@ -1074,10 +1149,21 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         )}
 
       </Tabs>
+        </>
+      )}
 
       {/* Konto-Dialog (vom Header geöffnet) */}
       <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Kein Fokus auf das Namensfeld beim Oeffnen: Auf dem iPhone sprang
+            sonst sofort die Tastatur auf und verdeckte den Dialog
+            (Bildschirmaufnahme Betreiber, 03.10.2026). */}
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement | null)?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
@@ -1094,15 +1180,16 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="profile-name">Ihr Name</Label>
+                  <Label htmlFor="profile-name">Dein Name</Label>
                   <div className="flex gap-2">
                     <Input
                       id="profile-name"
                       type="text"
+                      autoComplete="name"
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="Ihr Name"
-                      className="flex-1"
+                      placeholder="Dein Name"
+                      className="flex-1 min-w-0 text-base"
                     />
                     <Button onClick={saveProfileName} disabled={profileSaving || !profileName.trim()} size="sm">
                       {profileSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Speichern"}
@@ -1121,7 +1208,12 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   Feedback
                 </CardTitle>
                 <CardDescription>
-                  Schreib uns, was gut läuft oder besser werden kann.
+                  Schreib uns, was gut läuft oder besser werden kann. Fehler gefunden oder eine Idee?
+                  Über das Formular oder per E-Mail an{' '}
+                  <a href="mailto:info@lernzeit.app?subject=LernZeit%20Feedback" className="underline">
+                    info@lernzeit.app
+                  </a>
+                  .
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
@@ -1147,11 +1239,11 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-password">Neues Passwort</Label>
-                  <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
+                  <Input className="text-base" id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-                  <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
+                  <Input className="text-base" id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Passwort wiederholen" />
                 </div>
                 <Button onClick={changePassword} disabled={passwordChanging || !newPassword || !confirmPassword} className="w-full">
                   {passwordChanging ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ändern...</>) : "Passwort ändern"}
@@ -1161,6 +1253,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
             <AccountDeleteSection
               isPremium={isPremium}
+              umfrageUserId={userId}
               onDeleted={() => window.location.href = '/'}
             />
           </div>
@@ -1212,7 +1305,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         isFoundingFamily={isFoundingFamily}
       />
 
-      <RatingPromptDialog open={ratingShouldShow} onResponse={ratingDismiss} />
+      <RatingPromptDialog open={familyReady && !showFocusedEntry && ratingShouldShow} onResponse={ratingDismiss} />
 
       {/* Info-Kachel: erklärt das Empfehlungsprogramm für Nicht-Premium-Eltern */}
       <Dialog open={referralInfoOpen} onOpenChange={setReferralInfoOpen}>
@@ -1233,7 +1326,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
               <p className="text-xs text-foreground/90 leading-relaxed">
                 <Crown className="inline h-3.5 w-3.5 text-primary mr-1 -mt-0.5" />
                 Das Programm steht <strong>ausschließlich Premium-Mitgliedern</strong> zur Verfügung –
-                nicht während der kostenlosen Testphase. Schließen Sie Ihre Premium-Mitgliedschaft ab,
+                nicht während der kostenlosen Testphase. Schließ deine Premium-Mitgliedschaft ab,
                 um den Verschenken-Reiter freizuschalten.
               </p>
             </div>
@@ -1257,7 +1350,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       </Dialog>
 
       {/* Einmaliges Intro-Pop-up nach Abschluss der Premium-Mitgliedschaft */}
-      <Dialog open={referralIntroOpen} onOpenChange={(o) => { if (!o) dismissReferralIntro(); }}>
+      <Dialog open={familyReady && !showFocusedEntry && referralIntroOpen} onOpenChange={(o) => { if (!o) dismissReferralIntro(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1290,7 +1383,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 Neu freigeschaltet: Empfehlungsprogramm
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Verschenken Sie 2 Monate Premium an Freunde und sichern Sie sich bis zu
+                Verschenke 2 Monate Premium an Freunde und sichere dir bis zu
                 6 Bonus-Monate gratis.
               </p>
             </div>

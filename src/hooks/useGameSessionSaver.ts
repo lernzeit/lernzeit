@@ -11,6 +11,8 @@ interface SaveSessionParams {
   earnedSeconds: number;
   questionSource?: string;
   suppressEarnedMinutes?: boolean;
+  /** Gesetzt, wenn die Runde ueber die Lernplan-Karte gestartet wurde. */
+  learningPlanId?: string | null;
 }
 
 interface SaveSessionResult {
@@ -38,7 +40,8 @@ export function useGameSessionSaver() {
     timeSpentSeconds,
     earnedSeconds,
     questionSource = 'template-bank',
-    suppressEarnedMinutes = false
+    suppressEarnedMinutes = false,
+    learningPlanId = null
   }: SaveSessionParams): Promise<SaveSessionResult> => {
     if (!user) {
       console.warn('⚠️ Cannot save session: User not authenticated');
@@ -59,6 +62,7 @@ export function useGameSessionSaver() {
         duration_seconds: Math.round(timeSpentSeconds),
         score: Math.round((correctAnswers / totalQuestions) * 100),
         question_source: questionSource,
+        learning_plan_id: learningPlanId,
         session_date: new Date().toISOString(),
       };
 

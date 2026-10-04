@@ -23,6 +23,9 @@ type AnalyticsEventInsert = Database['public']['Tables']['analytics_events']['In
 export type AnalyticsEventName =
   | 'page_view'
   | 'landing_cta_click'
+  // Klick auf "Im App Store/Play Store oeffnen" (Leiste oben auf der Website).
+  // Fuer Anzeigen, die zur App fuehren sollen, der eigentliche Erfolg.
+  | 'app_store_click'
   | 'demo_started'
   | 'demo_question_answered'
   | 'demo_completed_cta_click'

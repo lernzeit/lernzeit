@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { trackFireAndForget } from '@/lib/analytics';
 import { shareInviteLink, buildInviteLink } from '@/lib/inviteLink';
-import { Share2, KeyRound, UserPlus, Sparkles, Loader2 } from 'lucide-react';
+import { Share2, KeyRound, UserPlus, GraduationCap, Loader2 } from 'lucide-react';
 import {
   DEFAULT_WEEKDAY_MAX_MINUTES,
   DEFAULT_WEEKEND_MAX_MINUTES,
@@ -135,7 +135,7 @@ export function OnboardingNextStepCard({
           <div className="w-11 h-11 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
             {step === 1 ? <UserPlus className="h-5 w-5 text-primary" />
               : step === 2 ? <Share2 className="h-5 w-5 text-primary" />
-              : <Sparkles className="h-5 w-5 text-primary" />}
+              : <GraduationCap className="h-5 w-5 text-primary" />}
           </div>
           <div className="min-w-0 flex-1">
             {step === 1 && (
@@ -179,7 +179,7 @@ export function OnboardingNextStepCard({
               <>
                 <p className="font-bold text-base">Schritt 3 von 3: {childName} löst die erste Aufgabe</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Sobald {childName} Aufgaben löst, verdient er oder sie Bildschirmzeit und stellt hier einen Antrag.
+                  Mit jeder gelösten Aufgabe sammelt {childName} Bildschirmzeit und kann sie hier bei dir anfragen.
                   {' '}Eingestellt sind {describeSecondsPerTask(limits ?? {})},{' '}
                   {describeDailyLimits(limits ?? {
                     weekday_max_minutes: DEFAULT_WEEKDAY_MAX_MINUTES,

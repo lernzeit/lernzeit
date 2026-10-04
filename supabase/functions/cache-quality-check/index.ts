@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
   const faelligVor = new Date(Date.now() - RECHECK_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data: queue, error: queueErr } = await supabase
     .from('ai_question_cache')
-    .select('id, grade, subject, question_text, question_type, category, correct_answer, options')
+    .select('id, grade, subject, question_text, question_type, category, correct_answer, options, task')
     .or(`quality_checked_at.is.null,quality_checked_at.lt.${faelligVor}`)
     .order('quality_checked_at', { ascending: true, nullsFirst: true })
     .order('times_served', { ascending: false })

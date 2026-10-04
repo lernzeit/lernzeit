@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link2, Clock } from 'lucide-react';
+import { NotifyParentsButton } from '@/components/child/NotifyParentsButton';
 
 interface ChildLinkPromptCardProps {
   totalMinutes: number;
@@ -26,10 +27,13 @@ export function ChildLinkPromptCard({ totalMinutes, onConnect }: ChildLinkPrompt
               Du hast bisher {totalMinutes} Minuten erarbeitet. Damit du sie auch nutzen kannst,
               muss ein Elternteil dich freigeben. Deine Minuten bleiben so lange erhalten.
             </p>
-            <Button size="sm" className="mt-3" onClick={onConnect}>
-              <Link2 className="h-4 w-4 mr-2" />
-              Mit Eltern verbinden
-            </Button>
+            <div className="mt-3 space-y-2">
+              <Button size="sm" className="w-full sm:w-auto" onClick={onConnect}>
+                <Link2 className="h-4 w-4 mr-2" />
+                Mit Eltern verbinden
+              </Button>
+              <NotifyParentsButton className="w-full sm:w-auto" variant="outline" />
+            </div>
           </div>
         </div>
       </CardContent>

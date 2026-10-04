@@ -20,6 +20,13 @@ export interface CachedQuestion {
   category: string;
   correct_answer: unknown;
   options: unknown;
+  /**
+   * Bei FILL_BLANK der Satz mit der Luecke. Fehlte bis 27.09.2026 in der
+   * Pruefung: Das Modell sah nur „Ergaenze das fehlende Wort" und verwarf
+   * die Frage als unvollstaendig — 64 richtige Lueckentexte wurden so
+   * aussortiert.
+   */
+  task?: unknown;
 }
 
 export interface Verdict {
@@ -95,6 +102,9 @@ export function buildUserPrompt(q: CachedQuestion): string {
   const optionsLine = Array.isArray(q.options) && q.options.length > 0
     ? `\nOPTIONEN: ${JSON.stringify(q.options)}`
     : '';
+  const taskLine = typeof q.task === 'string' && q.task.trim().length > 0
+    ? `\nLÜCKENTEXT: ${q.task.trim()}`
+    : '';
 
   const task = q.category === 'theory'
     ? `PRÜFAUFTRAG (Theoriefrage):
@@ -112,7 +122,7 @@ export function buildUserPrompt(q: CachedQuestion): string {
   return `FACH: ${q.subject}
 KLASSE: ${q.grade}
 FRAGETYP: ${q.question_type}
-FRAGE: ${q.question_text}${optionsLine}
+FRAGE: ${q.question_text}${taskLine}${optionsLine}
 ANGEGEBENE ANTWORT: ${stated}
 
 ${task}`;

@@ -13,6 +13,19 @@ try {
   }
 } catch { /* ignore */ }
 
+// In der App (iOS/Android) laesst sich nichts zoomen — eine App soll sich wie
+// eine App verhalten, und Kinder zoomten mit zwei Fingern aus Versehen hinein
+// (Rueckmeldung 30.09.2026). Im Browser bleibt Zoomen erlaubt (Barriere-
+// freiheit). window.Capacitor setzt die native Huelle vor dem ersten Skript.
+try {
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  if (cap?.isNativePlatform?.()) {
+    document
+      .querySelector('meta[name="viewport"]')
+      ?.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+  }
+} catch { /* ignore */ }
+
 declare global {
   interface Window {
     __LERNZEIT_APP_MOUNTED__?: boolean;

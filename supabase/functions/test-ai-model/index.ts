@@ -78,7 +78,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const model: string = body.model || 'google/gemini-3.5-flash';
+    const model: string = body.model || 'google/gemini-3.8-flash';
     const prompt: string = body.prompt || 'Antworte mit genau einem Wort: "OK".';
     const onlyProvider: ProviderId | undefined = body.provider;
     const providerOrder: ProviderId[] = Array.isArray(body.provider_order) && body.provider_order.length > 0

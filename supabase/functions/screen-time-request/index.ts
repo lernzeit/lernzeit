@@ -685,8 +685,11 @@ async function sendParentNotification(
         email_subject: emailSubject,
         email_body: emailHtml,
         email_from_name: 'LernZeit',
-        email_from_address: 'mail@lernzeit.app',
-        email_reply_to_address: 'mail@lernzeit.app',
+        // Absender-Domain post.lernzeit.app ist bei OneSignal einzurichten
+        // (docs/email-einrichtung.md). mail@lernzeit.app war dort nie
+        // eingerichtet; diese Mails konnten nicht zugestellt werden.
+        email_from_address: 'hallo@post.lernzeit.app',
+        email_reply_to_address: 'info@lernzeit.app',
       }),
     });
 

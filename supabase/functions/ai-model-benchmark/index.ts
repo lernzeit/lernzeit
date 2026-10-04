@@ -91,7 +91,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in dieser Form:
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.8-flash',
         messages: [{ role: 'user', content: judgePrompt }],
         temperature: 0,
         response_format: { type: 'json_object' },

@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAgeGroup } from '@/hooks/useAgeGroup';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import { supabase } from '@/lib/supabase';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInCalendarDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 type SubjectId = 'math' | 'german' | 'english' | 'science' | 'geography' | 'history' | 'physics' | 'biology' | 'chemistry' | 'latin';
@@ -36,7 +36,7 @@ interface LearningPlan {
 
 interface CategorySelectorProps {
   grade: number;
-  onCategorySelect: (category: SubjectId, topicHint?: string) => void;
+  onCategorySelect: (category: SubjectId, topicHint?: string, planId?: string) => void;
   onBack: () => void;
 }
 
@@ -188,12 +188,14 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
 
         {/* Learning Plan Card */}
         {activePlan && (() => {
-          const daysSinceCreated = differenceInDays(new Date(), new Date(activePlan.created_at));
-          const currentDay = Math.min(daysSinceCreated + 1, 5);
+          // Kalendertage, nicht volle 24 Stunden: Ein Plan von 21 Uhr ist am
+          // naechsten Nachmittag bei Tag 2 (frueher noch bei Tag 1).
+          const planDays = Array.isArray(activePlan.plan_data) ? activePlan.plan_data : [];
+          const daysSinceCreated = differenceInCalendarDays(new Date(), new Date(activePlan.created_at));
+          const currentDay = Math.min(daysSinceCreated + 1, Math.max(planDays.length, 1));
           const subjectName = categories.find(c => c.id === activePlan.subject)?.shortName || activePlan.subject;
           
           // Get today's focus from plan_data for a more targeted topicHint
-          const planDays = Array.isArray(activePlan.plan_data) ? activePlan.plan_data : [];
           const todaysPlan = planDays[currentDay - 1];
           const topicHint = todaysPlan 
             ? `${activePlan.topic} – Schwerpunkt: ${todaysPlan.focus}` 
@@ -202,7 +204,7 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           return (
             <Card
               className="rounded-2xl border-2 border-primary/50 shadow-lg hover:scale-[1.02] cursor-pointer transition-all duration-300 bg-gradient-to-r from-primary/5 to-accent/5"
-              onClick={() => onCategorySelect(activePlan.subject as SubjectId, topicHint)}
+              onClick={() => onCategorySelect(activePlan.subject as SubjectId, topicHint, activePlan.id)}
             >
               <CardContent className={`${isYoung ? 'p-5' : 'p-4'}`}>
                 <div className="flex items-center gap-4">

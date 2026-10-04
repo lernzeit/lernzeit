@@ -29,6 +29,24 @@ export async function requestPushPermissionNow(): Promise<void> {
 }
 
 /**
+ * Vor dem Abmelden aufrufen: Das Gerät bekommt danach keine Pushes mehr für
+ * dieses Konto. Ohne das landeten z. B. Eltern-Meldungen weiter auf einem
+ * Telefon, auf dem inzwischen das Kind angemeldet ist.
+ */
+export async function unregisterPushDevice(userId?: string): Promise<void> {
+  try {
+    if (!Capacitor.isNativePlatform() || !oneSignalRef || !userId) return;
+    const playerId = oneSignalRef.User?.pushSubscription?.id;
+    if (playerId) {
+      await supabase.from("push_tokens").delete().eq("user_id", userId).eq("player_id", playerId);
+    }
+    oneSignalRef.logout?.();
+  } catch (e) {
+    console.warn("unregisterPushDevice failed", e);
+  }
+}
+
+/**
  * Initializes OneSignal on native platforms (Android/iOS) and registers
  * the device's player ID against the authenticated user. On web this hook
  * is a no-op — push notifications there are handled by usePushNotifications.

@@ -80,7 +80,7 @@ class ParentalControlsService {
     const minutesText = minutes ? `${minutes} Minuten` : 'zusätzliche Zeit';
     return {
       android: `Family Link App öffnen → [Kind auswählen] → Tageslimit → ${minutesText} hinzufügen`,
-      ios: `Einstellungen → Bildschirmzeit → [Kind auswählen] → App-Limits → ${minutesText} gewähren`,
+      ios: `Einstellungen → Familie → [Kind auswählen] → Bildschirmzeit → ${minutesText} gewähren`,
     };
   }
 
@@ -105,12 +105,13 @@ class ParentalControlsService {
     }
 
     if (childPlatform === 'ios') {
+      // Absprung über einen nicht dokumentierten Link — siehe parentalControls/ios.ts.
       if (native && parent === 'ios') {
         return {
           kind: 'screen_time',
           appName: 'Bildschirmzeit',
           buttonLabel: 'Bildschirmzeit öffnen',
-          hint: `In Bildschirmzeit: ${childName} → App-Limits → Zeit gewähren`,
+          hint: `In den Einstellungen: Familie → ${childName} → Bildschirmzeit → Zeit gewähren`,
           canOpen: true,
         };
       }

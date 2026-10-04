@@ -60,7 +60,7 @@ function billingPlatform(): BillingPlatform {
  */
 const BILLING_TERMS: Record<BillingPlatform, { charge: string; renewal: string; manage: string }> = {
   ios: {
-    charge: 'Die Zahlung wird bei Kaufbestätigung Ihrem Apple-ID-Konto belastet.',
+    charge: 'Die Zahlung wird bei Kaufbestätigung deinem Apple-ID-Konto belastet.',
     renewal:
       'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird.',
     manage:
@@ -227,7 +227,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       setLoadError(
         err?.message
           ? `Angebote konnten nicht geladen werden: ${err.message}`
-          : 'Angebote konnten nicht geladen werden. Bitte prüfen Sie Ihre Internetverbindung.'
+          : 'Angebote konnten nicht geladen werden. Bitte prüfe deine Internetverbindung.'
       );
       toast({
         title: 'Angebote nicht verfügbar',
@@ -263,7 +263,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       const outcome = await rcPurchasePackage(pkg, { customerEmail: user?.email ?? undefined });
       if (outcome.userCancelled) {
         trackEvent('paywall_purchase_cancelled', { package: pkg.identifier, platform });
-        toast({ title: 'Kauf abgebrochen', description: 'Sie können jederzeit erneut starten.' });
+        toast({ title: 'Kauf abgebrochen', description: 'Du kannst jederzeit erneut starten.' });
         return;
       }
       // On web (RC Web Billing / Stripe) the entitlement webhook may lag a
@@ -387,7 +387,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
               <DialogTitle>LernZeit Premium</DialogTitle>
             </div>
             <DialogDescription>
-              Schalten Sie alle Funktionen für Ihre Familie frei.
+              Schalte alle Funktionen für deine Familie frei.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -432,7 +432,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
             <DialogTitle>LernZeit Premium</DialogTitle>
           </div>
           <DialogDescription>
-            Schalten Sie alle Funktionen für Ihre Familie frei.
+            Schalte alle Funktionen für deine Familie frei.
           </DialogDescription>
         </DialogHeader>
 

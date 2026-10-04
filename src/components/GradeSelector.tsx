@@ -41,7 +41,7 @@ export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
           <p className="text-lg text-muted-foreground mb-2">
             Löse Lernaufgaben und verdiene Handyzeit!
           </p>
-          <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
               <span>Lerne spielerisch</span>
@@ -95,7 +95,7 @@ export function GradeSelector({ onSelectGrade }: GradeSelectorProps) {
                   <span className="text-2xl">{g.icon}</span>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base font-semibold text-foreground">{g.label}</h3>
-                    <p className="text-xs text-muted-foreground truncate">{g.description}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{g.description}</p>
                   </div>
                 </CardContent>
               </Card>

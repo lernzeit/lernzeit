@@ -45,6 +45,7 @@ const Index = () => {
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
+  const [learningPlanId, setLearningPlanId] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery'>('normal');
   // Sessions always use 5 questions
   const [earnedTime, setEarnedTime] = useState<number>(0);
@@ -81,9 +82,10 @@ const Index = () => {
     setShowSuccess(false);
   };
 
-  const handleCategorySelect = (category: Category, topicHint?: string) => {
+  const handleCategorySelect = (category: Category, topicHint?: string, planId?: string) => {
     setSelectedCategory(category);
     setLearningPlanTopic(topicHint || null);
+    setLearningPlanId(planId || null);
   };
 
   const handleStartGame = (grade: number) => {
@@ -254,6 +256,7 @@ const Index = () => {
             onBack={() => setSelectedCategory(null)}
             totalQuestions={5}
             topicHint={learningPlanTopic || undefined}
+            learningPlanId={learningPlanId || undefined}
             mode={gameMode}
             demoMode={!user && demoMode} />
         </Suspense>

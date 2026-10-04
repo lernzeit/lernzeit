@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      abwanderung_umfrage: {
+        Row: {
+          anlass: string
+          created_at: string
+          freitext: string | null
+          gruende: string[]
+          id: string
+          plattform: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anlass: string
+          created_at?: string
+          freitext?: string | null
+          gruende?: string[]
+          id?: string
+          plattform?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anlass?: string
+          created_at?: string
+          freitext?: string | null
+          gruende?: string[]
+          id?: string
+          plattform?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       achievements_template: {
         Row: {
           category: Database["public"]["Enums"]["achievement_category"]
@@ -143,6 +173,21 @@ export type Database = {
           note?: string | null
           tags_enabled?: boolean
           updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_testkonten: {
+        Row: {
+          markiert_am: string
+          user_id: string
+        }
+        Insert: {
+          markiert_am?: string
+          user_id: string
+        }
+        Update: {
+          markiert_am?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -870,6 +915,7 @@ export type Database = {
           duration_seconds: number | null
           grade: number
           id: string
+          learning_plan_id: string | null
           question_source: string | null
           score: number | null
           session_date: string | null
@@ -885,6 +931,7 @@ export type Database = {
           duration_seconds?: number | null
           grade: number
           id?: string
+          learning_plan_id?: string | null
           question_source?: string | null
           score?: number | null
           session_date?: string | null
@@ -900,6 +947,7 @@ export type Database = {
           duration_seconds?: number | null
           grade?: number
           id?: string
+          learning_plan_id?: string | null
           question_source?: string | null
           score?: number | null
           session_date?: string | null
@@ -909,6 +957,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "game_sessions_learning_plan_id_fkey"
+            columns: ["learning_plan_id"]
+            isOneToOne: false
+            referencedRelation: "learning_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "game_sessions_user_id_fkey"
             columns: ["user_id"]
@@ -1050,6 +1105,87 @@ export type Database = {
           time_spent?: number
           total_questions?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      modell_vergleich: {
+        Row: {
+          anbieter: string | null
+          category: string
+          completion_tokens: number | null
+          created_at: string
+          dauer_ms: number | null
+          difficulty: string
+          fehler: string | null
+          frage: Json | null
+          grade: number
+          gueltig: boolean | null
+          id: string
+          kosten_usd: number | null
+          lauf: string
+          modell: string
+          prompt_tokens: number | null
+          pruef_grund: string | null
+          pruef_modell: string | null
+          pruef_ok: boolean | null
+          question_type: string
+          reasoning_tokens: number | null
+          roh: string | null
+          slot: number
+          subject: string
+          user_prompt: string | null
+        }
+        Insert: {
+          anbieter?: string | null
+          category: string
+          completion_tokens?: number | null
+          created_at?: string
+          dauer_ms?: number | null
+          difficulty: string
+          fehler?: string | null
+          frage?: Json | null
+          grade: number
+          gueltig?: boolean | null
+          id?: string
+          kosten_usd?: number | null
+          lauf: string
+          modell: string
+          prompt_tokens?: number | null
+          pruef_grund?: string | null
+          pruef_modell?: string | null
+          pruef_ok?: boolean | null
+          question_type: string
+          reasoning_tokens?: number | null
+          roh?: string | null
+          slot: number
+          subject: string
+          user_prompt?: string | null
+        }
+        Update: {
+          anbieter?: string | null
+          category?: string
+          completion_tokens?: number | null
+          created_at?: string
+          dauer_ms?: number | null
+          difficulty?: string
+          fehler?: string | null
+          frage?: Json | null
+          grade?: number
+          gueltig?: boolean | null
+          id?: string
+          kosten_usd?: number | null
+          lauf?: string
+          modell?: string
+          prompt_tokens?: number | null
+          pruef_grund?: string | null
+          pruef_modell?: string | null
+          pruef_ok?: boolean | null
+          question_type?: string
+          reasoning_tokens?: number | null
+          roh?: string | null
+          slot?: number
+          subject?: string
+          user_prompt?: string | null
         }
         Relationships: []
       }
@@ -1452,6 +1588,51 @@ export type Database = {
         }
         Relationships: []
       }
+      revenuecat_events: {
+        Row: {
+          ablauf_am: string | null
+          empfangen_am: string
+          ergebnis: string | null
+          gekauft_am: string | null
+          id: string
+          kuendigungsgrund: string | null
+          periode: string | null
+          produkt: string | null
+          store: string | null
+          typ: string
+          umgebung: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ablauf_am?: string | null
+          empfangen_am?: string
+          ergebnis?: string | null
+          gekauft_am?: string | null
+          id: string
+          kuendigungsgrund?: string | null
+          periode?: string | null
+          produkt?: string | null
+          store?: string | null
+          typ: string
+          umgebung?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ablauf_am?: string | null
+          empfangen_am?: string
+          ergebnis?: string | null
+          gekauft_am?: string | null
+          id?: string
+          kuendigungsgrund?: string | null
+          periode?: string | null
+          produkt?: string | null
+          store?: string | null
+          typ?: string
+          umgebung?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       review_queue: {
         Row: {
           correct_answer: Json
@@ -1640,7 +1821,10 @@ export type Database = {
           current_period_start: string | null
           id: string
           plan: string
+          quelle: string | null
           status: string
+          store: string | null
+          store_produkt: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           trial_end: string | null
@@ -1655,7 +1839,10 @@ export type Database = {
           current_period_start?: string | null
           id?: string
           plan?: string
+          quelle?: string | null
           status?: string
+          store?: string | null
+          store_produkt?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           trial_end?: string | null
@@ -1670,7 +1857,10 @@ export type Database = {
           current_period_start?: string | null
           id?: string
           plan?: string
+          quelle?: string | null
           status?: string
+          store?: string | null
+          store_produkt?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           trial_end?: string | null
@@ -1940,6 +2130,117 @@ export type Database = {
       }
     }
     Functions: {
+      admin_marketing_kanaele: {
+        Args: { p_tage: number }
+        Returns: {
+          anzeige: string
+          besucher: number
+          demo_starts: number
+          kampagne: string
+          kanal: string
+          medium: string
+          registrierung_begonnen: number
+          registrierung_klicks: number
+          seitenaufrufe: number
+        }[]
+      }
+      admin_marketing_kanalbericht: {
+        Args: { p_tage: number }
+        Returns: {
+          anzeige: string
+          besucher: number
+          demo_starts: number
+          kampagne: string
+          kanal: string
+          medium: string
+          registrierung_begonnen: number
+          registrierung_klicks: number
+          seitenaufrufe: number
+          store_klicks: number
+        }[]
+      }
+      admin_marketing_verlauf: {
+        Args: { p_anzahl: number; p_raster: string }
+        Returns: {
+          erstoeffnungen_android: number
+          erstoeffnungen_ios: number
+          periode: string
+          registrierung_klicks: number
+          registrierungen_eltern: number
+          registrierungen_kinder: number
+          store_klicks_android: number
+          store_klicks_ios: number
+          website_aufrufe: number
+          website_besucher: number
+        }[]
+      }
+      admin_marketing_zeitreihe: {
+        Args: { p_anzahl: number; p_raster: string }
+        Returns: {
+          erstoeffnungen_android: number
+          erstoeffnungen_ios: number
+          periode: string
+          registrierung_klicks: number
+          registrierungen_eltern: number
+          registrierungen_kinder: number
+          website_aufrufe: number
+          website_besucher: number
+        }[]
+      }
+      admin_nutzung_familien: {
+        Args: never
+        Returns: {
+          abo_quelle: string
+          abo_status: string
+          anfragen_28: number
+          art: string
+          eltern_tage_14: number
+          eltern_zuletzt: string
+          email: string
+          erste_runde: string
+          freigaben_28: number
+          id: string
+          kauf_begonnen: boolean
+          kinder: number
+          kinder_mit_runden: number
+          lernminuten_28: number
+          lerntage_14: number
+          lerntage_28: number
+          lerntage_7: number
+          letzte_runde: string
+          name: string
+          paywall_gesehen: boolean
+          plattform: string
+          registriert_am: string
+          runden_28: number
+          testkonto: boolean
+          testkonto_grund: string
+          testphase_ende: string
+        }[]
+      }
+      admin_nutzung_kohorten: {
+        Args: { p_ohne_test: boolean; p_wochen: number }
+        Returns: {
+          aktiv: number[]
+          kinder: number
+          kohorte: string
+        }[]
+      }
+      admin_nutzung_verlauf: {
+        Args: { p_ohne_test: boolean; p_tage: number }
+        Returns: {
+          eltern_aktiv: number
+          eltern_aktiv_7t: number
+          kinder_aktiv: number
+          kinder_aktiv_7t: number
+          runden: number
+          tag: string
+        }[]
+      }
+      admin_testkonto_setzen: {
+        Args: { p_test: boolean; p_user: string }
+        Returns: undefined
+      }
       apply_premium_grant: {
         Args: {
           p_months: number
@@ -1957,6 +2258,22 @@ export type Database = {
         Args: { p_job_name: string; p_year: number }
         Returns: boolean
       }
+      claim_approved_time: {
+        Args: { p_request_id: string }
+        Returns: {
+          expires_at: string
+          minutes: number
+          unlock_id: string
+        }[]
+      }
+      claim_base_time: {
+        Args: never
+        Returns: {
+          expires_at: string
+          minutes: number
+          unlock_id: string
+        }[]
+      }
       claim_facts: { Args: never; Returns: Json }
       claim_invitation_code: {
         Args: { claiming_child_id: string; code_to_claim: string }
@@ -1965,6 +2282,21 @@ export type Database = {
       cleanup_expired_codes: { Args: never; Returns: undefined }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       forget_ad_attribution: { Args: never; Returns: number }
+      funnel_report: {
+        Args: { p_tage?: number }
+        Returns: {
+          abos: number
+          besucher_zielseite: number
+          bezahlschranke: number
+          bezahlvorgang: number
+          einladungscodes: number
+          elternkonten: number
+          erste_lernsitzung: number
+          formular_geoeffnet: number
+          kinder_verknuepft: number
+          tag: string
+        }[]
+      }
       generate_invitation_code: { Args: never; Returns: string }
       generate_referral_code: { Args: { p_user_id: string }; Returns: string }
       get_ai_latency_summary: {
@@ -2038,23 +2370,80 @@ export type Database = {
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
       link_referral: { Args: { p_code: string }; Returns: Json }
+      lz_nutzung_familien: {
+        Args: never
+        Returns: {
+          abo_quelle: string
+          abo_status: string
+          anfragen_28: number
+          art: string
+          eltern_tage_14: number
+          eltern_zuletzt: string
+          email: string
+          erste_runde: string
+          freigaben_28: number
+          id: string
+          kauf_begonnen: boolean
+          kinder: number
+          kinder_mit_runden: number
+          lernminuten_28: number
+          lerntage_14: number
+          lerntage_28: number
+          lerntage_7: number
+          letzte_runde: string
+          name: string
+          paywall_gesehen: boolean
+          plattform: string
+          registriert_am: string
+          runden_28: number
+          testkonto: boolean
+          testkonto_grund: string
+          testphase_ende: string
+        }[]
+      }
+      lz_nutzung_kohorten: {
+        Args: { p_ohne_test: boolean; p_wochen: number }
+        Returns: {
+          aktiv: number[]
+          kinder: number
+          kohorte: string
+        }[]
+      }
+      lz_nutzung_verlauf: {
+        Args: { p_ohne_test: boolean; p_tage: number }
+        Returns: {
+          eltern_aktiv: number
+          eltern_aktiv_7t: number
+          kinder_aktiv: number
+          kinder_aktiv_7t: number
+          runden: number
+          tag: string
+        }[]
+      }
+      lz_testkonten: {
+        Args: never
+        Returns: {
+          grund: string
+          user_id: string
+        }[]
+      }
+      produkt_cockpit: { Args: { p_namen?: boolean }; Returns: Json }
+      produkt_cockpit_ab: {
+        Args: { p_ab: string; p_namen: boolean }
+        Returns: Json
+      }
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
+      revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
       set_child_platform: {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined
       }
-      claim_approved_time: {
-        Args: { p_request_id: string }
-        Returns: { unlock_id: string; minutes: number; expires_at: string }[]
-      }
-      claim_base_time: {
-        Args: never
-        Returns: { unlock_id: string; minutes: number; expires_at: string }[]
-      }
-      revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
       set_own_platform: { Args: { p_platform: string }; Returns: undefined }
-      set_screen_time_managed: { Args: { ist_verwaltet: boolean }; Returns: undefined }
+      set_screen_time_managed: {
+        Args: { ist_verwaltet: boolean }
+        Returns: undefined
+      }
       spalten_vorgabe: {
         Args: { p_spalte: string; p_tabelle: string }
         Returns: string
