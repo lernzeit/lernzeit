@@ -77,9 +77,9 @@ const BILLING_TERMS: Record<BillingPlatform, { charge: string; renewal: string; 
     charge:
       'Die Zahlung wird bei Kaufbestätigung über das von dir gewählte Zahlungsmittel abgerechnet.',
     renewal:
-      'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht vor Ende des aktuellen Abrechnungszeitraums gekündigt wird.',
+      'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht vor Ende des aktuellen Abrechnungszeitraums gekündigt wird. Ein verlängertes Jahresabo ist jederzeit mit einem Monat Frist kündbar; den Rest erstatten wir anteilig.',
     manage:
-      'Verwaltung und Kündigung des Abos sind jederzeit im Eltern-Dashboard über „Abo verwalten“ möglich.',
+      'Kündigen kannst du jederzeit im Eltern-Bereich über „Abo kündigen“ oder unter „Verträge hier kündigen“ auf der Support-Seite.',
   },
 };
 

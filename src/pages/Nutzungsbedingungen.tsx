@@ -135,7 +135,7 @@ const Nutzungsbedingungen = () => (
         <li>
           über die Seite <Link to="/kuendigen">„Verträge hier kündigen“</Link>, auch ohne Anmeldung,
         </li>
-        <li>im Eltern-Bereich unter „Abo“ → „Abo verwalten“ oder</li>
+        <li>angemeldet im Eltern-Bereich unter „Abo“ → „Abo kündigen“ oder</li>
         <li>
           per E-Mail an <a href="mailto:info@lernzeit.app">info@lernzeit.app</a>.
         </li>

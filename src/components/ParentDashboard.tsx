@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AboKuendigen } from '@/components/parent/AboKuendigen';
 import { useFamilyLinking } from '@/hooks/useFamilyLinking';
 import { useChildDaySummary } from '@/hooks/useChildDaySummary';
 import { supabase } from '@/lib/supabase';
@@ -1015,10 +1016,15 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                           </p>
                         </>
                       ) : (
-                        <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
-                          {portalLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                          Abo verwalten
-                        </Button>
+                        <>
+                          <Button variant="outline" className="w-full" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
+                            {portalLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                            {!isNativeApp && premiumSource !== 'revenuecat' ? 'Zahlungsdaten und Rechnungen' : 'Abo verwalten'}
+                          </Button>
+                          {/* Web-Abo: Kuendigen ueber unsere Funktion statt im Stripe-
+                              Portal (Jahresabo ab dem 2. Jahr: ein Monat Frist). */}
+                          {!isNativeApp && premiumSource !== 'revenuecat' && !cancelAt && <AboKuendigen />}
+                        </>
                       )}
                       {!isNativeApp && (
                         <p className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground">

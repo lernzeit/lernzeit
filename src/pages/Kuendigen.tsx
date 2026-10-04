@@ -22,7 +22,7 @@ const Kuendigen = () => (
         bestehen; wenn du es auch löschen möchtest, geht das unter <Link to="/konto-loeschen">Konto löschen</Link>.
       </p>
       <p>
-        Bist du angemeldet, geht es auch direkt im Eltern-Bereich unter „Abo“ → „Abo verwalten“. Ein Abo aus dem App
+        Bist du angemeldet, geht es auch direkt im Eltern-Bereich unter „Abo“ → „Abo kündigen“. Ein Abo aus dem App
         Store oder von Google Play beendest du in den Abo-Einstellungen des jeweiligen Stores.
       </p>
       <div className="mt-10">

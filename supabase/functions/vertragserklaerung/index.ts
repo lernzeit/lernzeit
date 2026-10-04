@@ -13,14 +13,10 @@
 // `firma` ist ein unsichtbares Feld gegen Formular-Roboter und muss leer sein.
 // Secrets: IONOS_POSTFACH_PASSWORT (Absender info@lernzeit.app).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import MailComposer from "npm:nodemailer@6.9.15/lib/mail-composer/index.js";
-import { smtpSenden } from "../_shared/mailverbindung.ts";
+import { esc, POSTFACH, postfachSenden } from "../_shared/postfach-senden.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const POSTFACH = "info@lernzeit.app";
-const PASSWORT = Deno.env.get("IONOS_POSTFACH_PASSWORT") ?? "";
-const SMTP_HOST = "smtp.ionos.de";
 const HOECHSTENS_JE_ADRESSE = 3; // in 24 Stunden
 const HOECHSTENS_INSGESAMT = 100; // in 24 Stunden
 
@@ -34,10 +30,6 @@ const corsHeaders = {
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
-
-function esc(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 
 const VERTRAEGE: Record<string, string> = {
@@ -141,23 +133,7 @@ Amtsgericht Jena, HRB 524759 · <a href="mailto:info@lernzeit.app" style="color:
   return { betreff: `Eingangsbestätigung: ${was} deines LernZeit-Abos`, text, html, wann };
 }
 
-async function senden(an: string, betreff: string, text: string, html: string, antwortAn?: string) {
-  const roh: Uint8Array = await new MailComposer({
-    from: { name: "LernZeit", address: POSTFACH },
-    to: an,
-    replyTo: antwortAn,
-    subject: betreff,
-    text,
-    html,
-  }).compile().build();
-  return await smtpSenden(
-    await Deno.connectTls({ hostname: SMTP_HOST, port: 465 }),
-    { benutzer: POSTFACH, passwort: PASSWORT },
-    POSTFACH,
-    an,
-    roh,
-  );
-}
+const senden = postfachSenden;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

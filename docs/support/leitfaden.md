@@ -91,7 +91,11 @@ filtert `neu` sie als Systemmail heraus). Bei jedem Lauf zusätzlich:
 select * from vertragserklaerungen where bearbeitet_am is null order by eingegangen_am;
 ```
 
-Offene Einträge im Bericht **ganz oben** nennen. Die Ausführung macht der
+Offene Einträge im Bericht **ganz oben** nennen. Kündigungen, die Eltern
+angemeldet über „Abo kündigen“ abgeben (Funktion `abo-kuendigen`), führt die
+Funktion selbst in Stripe aus (Enddatum, anteilige Erstattung) und trägt sie
+als bearbeitet ein; offen bleiben sie nur, wenn die Erstattung scheiterte –
+dann steht der Betrag in `notiz` und muss von Hand erstattet werden. Die Ausführung macht der
 Betreiber in Stripe: Kündigung zum Laufzeitende (Monatsabo; Jahresabo im
 ersten Jahr) bzw. mit einem Monat Frist (Jahresabo ab dem zweiten Jahr,
 anteilige Erstattung), Widerruf = Abo sofort beenden und alle Zahlungen

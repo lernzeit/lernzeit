@@ -92,3 +92,6 @@ project_id = "fsmgynpdfxkaiiuguqyr"
 # Kuendigen und Widerrufen ohne Anmeldung (§§ 312k, 356a BGB), 04.10.2026.
   [functions.vertragserklaerung]
     verify_jwt = false
+# Abo im Eltern-Bereich kuendigen (prueft die Anmeldung selbst), 04.10.2026.
+  [functions.abo-kuendigen]
+    verify_jwt = false

@@ -42,8 +42,15 @@ pro Tag, Honigtopf-Feld). Ausführung in Stripe von Hand, siehe
    weiteres Jahr. Gegenüber Verbrauchern ist eine stillschweigende
    Verlängerung nur auf unbestimmte Zeit mit monatlicher Kündigungsmöglichkeit
    zulässig (§ 309 Nr. 9 BGB). Die AGB sagen deshalb: ab dem zweiten Jahr
-   jederzeit mit einem Monat Frist kündbar, anteilige Erstattung. Das muss bei
-   Kündigungen von Hand so umgesetzt werden (oder Stripe-Einstellung ändern).
+   jederzeit mit einem Monat Frist kündbar, anteilige Erstattung.
+   **Entscheidung des Betreibers (04.10.2026): weiter jährlich verlängern,
+   ab dem zweiten Jahr monatlich kündbar.** Umgesetzt: „Abo kündigen“ im
+   Abo-Bereich (Funktion `abo-kuendigen`, Rechnung `_shared/abo-kuendigung.ts`
+   mit Tests) setzt das Enddatum und erstattet den Rest automatisch; das
+   Stripe-Portal bietet keine Kündigung mehr an (eigene Portal-Konfiguration).
+   Kündigungen über `/kuendigen` (ohne Anmeldung) und per E-Mail weiter von
+   Hand nach denselben Regeln. Für die Kanzlei: Ist Vorauszahlung für ein Jahr
+   bei monatlicher Kündbarkeit mit anteiliger Erstattung so in Ordnung?
 5. **Erstattung bei Widerruf:** Die Belehrung enthält den gesetzlichen
    Wertersatz-Absatz für Dienstleistungen. Er greift nur, wenn der Kunde
    ausdrücklich verlangt hat, dass Premium vor Ablauf der Frist beginnt – das

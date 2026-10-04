@@ -49,7 +49,7 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
   {
     q: 'Wie kündige ich Premium?',
-    a: 'Im Eltern-Dashboard unter „Abonnement" → „Abo verwalten". In der iOS-App öffnet sich die Apple-Abo-Verwaltung, im Web das Kundenportal.',
+    a: 'Im Eltern-Bereich unter „Abo" → „Abo kündigen" oder ohne Anmeldung über „Verträge hier kündigen" auf dieser Seite. Ein Abo aus dem App Store oder von Google Play beendest du in den Abo-Einstellungen des Stores.',
   },
   {
     q: 'Wie lösche ich mein Konto und alle Daten?',
@@ -344,7 +344,7 @@ const Support = () => {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground">Wie kündige ich Premium?</h3>
-                  <p>Im Eltern-Bereich unter „Abo" → „Abo verwalten" oder ohne Anmeldung
+                  <p>Im Eltern-Bereich unter „Abo" → „Abo kündigen" oder ohne Anmeldung
                   über „Verträge hier kündigen" oben auf dieser Seite. Ein Abo aus dem App Store
                   oder von Google Play beendest du in den Abo-Einstellungen des Stores.</p>
                 </div>
