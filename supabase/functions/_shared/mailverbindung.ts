@@ -161,14 +161,15 @@ export class Imap {
   }
 
   /** Ausgewaehlte Kopfzeilen mehrerer Mails in einem Befehl (wenig Rechenzeit). */
-  async koepfe(uids: number[], felder: string[]): Promise<Map<number, Record<string, string>>> {
-    const ergebnis = new Map<number, Record<string, string>>();
+  async koepfe(uids: number[], felder: string[]): Promise<Map<number, { kopf: Record<string, string>; flags: string[] }>> {
+    const ergebnis = new Map<number, { kopf: Record<string, string>; flags: string[] }>();
     if (!uids.length) return ergebnis;
-    const res = await this.befehl(`UID FETCH ${uids.join(",")} (UID BODY.PEEK[HEADER.FIELDS (${felder.join(" ")})])`);
+    const res = await this.befehl(`UID FETCH ${uids.join(",")} (UID FLAGS BODY.PEEK[HEADER.FIELDS (${felder.join(" ")})])`);
     for (const a of res) {
       const uid = a.text.match(/UID (\d+)/)?.[1];
       if (!/^\* \d+ FETCH /.test(a.text) || !uid || !a.literale.length) continue;
-      ergebnis.set(Number(uid), kopfzeilenLesen(a.literale[0]));
+      const flags = (a.text.match(/FLAGS \(([^)]*)\)/)?.[1] ?? "").split(/\s+/).filter(Boolean);
+      ergebnis.set(Number(uid), { kopf: kopfzeilenLesen(a.literale[0]), flags });
     }
     return ergebnis;
   }

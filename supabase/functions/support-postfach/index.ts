@@ -47,7 +47,7 @@ function esc(s: string): string {
 function automatisch(adresse: string): boolean {
   const a = adresse.toLowerCase();
   return a.endsWith("@lernzeit.app") || a.endsWith(".lernzeit.app") ||
-    /(^|[._-])(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounce|notifications?)([._@-]|$)/.test(a);
+    /(^|[._-])(no[-_]?reply|do[-_]?not[-_]?reply|mailer-daemon|postmaster|bounces?|notifications?)([._@-]|$)/.test(a);
 }
 
 // ---------------------------------------------------------------- Signatur
@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
         const uids = (await c.suchenSeit(seit)).slice(-200);
         const koepfe = await c.koepfe(uids, ["MESSAGE-ID", "FROM", "REPLY-TO", "SUBJECT", "DATE", "AUTO-SUBMITTED"]);
         const liste = uids.map((uid) => {
-          const k = koepfe.get(uid) ?? {};
+          const k = koepfe.get(uid)?.kopf ?? {};
           const von = adresseLesen(k["reply-to"] || k["from"]);
           return {
             uid,
@@ -221,13 +221,15 @@ Deno.serve(async (req) => {
             betreff: k["subject"] ?? "",
             datum: k["date"] ?? "",
             automatisch: automatisch(von.adresse) || Boolean(k["auto-submitted"] && k["auto-submitted"] !== "no"),
+            // Vom Betreiber schon selbst beantwortet (Kennzeichen im Postfach)
+            beantwortet: (koepfe.get(uid)?.flags ?? []).includes("\\Answered"),
           };
         });
         const ids = liste.map((m) => m.message_id);
         const { data: erledigt } = await supabase.from("support_postfach_protokoll")
           .select("message_id").in("message_id", ids.length ? ids : ["-"]);
         const bekannt = new Set((erledigt ?? []).map((e) => e.message_id));
-        const offen = liste.filter((m) => !bekannt.has(m.message_id));
+        const offen = liste.filter((m) => !bekannt.has(m.message_id) && !m.beantwortet);
         // Automatische Mails nur mit Kopfzeilen melden, Kundenmails ganz lesen.
         const automatische = offen.filter((m) => m.automatisch);
         const kunden = offen.filter((m) => !m.automatisch);
@@ -236,7 +238,8 @@ Deno.serve(async (req) => {
           const voll = await mailLesen(c, m.uid);
           if (voll) gelesen.push(voll);
         }
-        return { mails: gelesen, automatische, weitere: Math.max(0, kunden.length - PRO_AUFRUF) };
+        const schonBeantwortet = liste.filter((m) => m.beantwortet && !bekannt.has(m.message_id)).length;
+        return { mails: gelesen, automatische, weitere: Math.max(0, kunden.length - PRO_AUFRUF), schon_beantwortet: schonBeantwortet };
       });
       return json({ anzahl: ergebnis.mails.length, ...ergebnis });
     }
