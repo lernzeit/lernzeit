@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { ausschnittKorrekturEinrichten } from './hooks/useTastatur'
 
 // Fuer die Selbstheilung in index.html: Das Hauptskript ist angelaufen.
 (window as unknown as { __LERNZEIT_BOOT__?: boolean }).__LERNZEIT_BOOT__ = true;
@@ -16,6 +17,10 @@ window.addEventListener('vite:preloadError', (event) => {
     window.location.reload();
   } catch { /* ignore */ }
 });
+
+// iOS: Nach dem Tippen blieb der Ausschnitt manchmal verschoben, die Seite
+// liess sich nicht mehr bis oben scrollen (Rueckmeldung 04.10.2026).
+ausschnittKorrekturEinrichten();
 
 // Capture ?ref=CODE early and persist in localStorage (30 days)
 try {

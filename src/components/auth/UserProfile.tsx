@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSeitenanfang } from '@/hooks/useTastatur';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +62,7 @@ interface UserProfileProps {
 
 export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery, onStartSubject }: UserProfileProps) {
   const [profile, setProfile] = useState<any>(null);
+  useSeitenanfang();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSeitenanfang } from '@/hooks/useTastatur';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Languages, GraduationCap, ArrowLeft, Globe, Clock, Atom, Leaf, FlaskConical, Columns3, TreePine, Sparkles, Calendar } from 'lucide-react';
 import { useChildSettings } from '@/hooks/useChildSettings';
@@ -54,6 +55,7 @@ const categories: { id: SubjectId; name: string; shortName: string; icon: any; c
 
 export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySelectorProps) {
   const { user } = useAuth();
+  useSeitenanfang();
   const { settings, loading } = useChildSettings(user?.id || '');
   const age = useAgeGroup(grade);
   const hefte = useHefte(user?.id, grade);

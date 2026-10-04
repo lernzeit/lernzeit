@@ -30,6 +30,7 @@ import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
 import { useReviewQueue } from '@/hooks/useReviewQueue';
 import { useStreak } from '@/hooks/useStreak';
+import { useSeitenanfang, useTastaturOffen } from '@/hooks/useTastatur';
 import { berechneStreak, lokalerTag } from '@/lib/streak';
 
 interface LearningGameProps {
@@ -123,6 +124,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Active timer - only counts time spent answering questions
   const { elapsedTime, isRunning, start: startTimer, pause: pauseTimer, reset: resetTimer, formattedTime } = useActiveTimer();
   
+  const tastaturOffen = useTastaturOffen();
+  useSeitenanfang();
+  const erklaerungRef = useRef<HTMLDivElement>(null);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [hasAnswered, setHasAnswered] = useState(false);
@@ -273,6 +278,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
   }, [question]);
 
+  // Erklaerung ins Bild holen, sobald sie aufgeht: Sie steht unter dem
+  // Ergebnis und war auf kleinen Handys sonst nur angeschnitten zu sehen.
+  useEffect(() => {
+    if (!showExplanation) return;
+    const t = setTimeout(() => erklaerungRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    return () => clearTimeout(t);
+  }, [showExplanation]);
+
   const resetAnswerState = () => {
     setUserTextAnswer('');
     setSelectedOption(null);
@@ -360,6 +373,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   const checkAnswer = async () => {
     if (!question) return;
+    // Tastatur sauber schliessen, bevor das Feld gesperrt wird; sonst bleibt
+    // der Ausschnitt auf iOS verschoben (Rueckmeldung 04.10.2026).
+    (document.activeElement as HTMLElement | null)?.blur?.();
 
     // Die Zeit endet mit dem Absenden. Bis 09/2026 hielt der Timer erst nach
     // der Nachpruefung unten an — die Wartezeit auf den Server lief sichtbar
@@ -1125,6 +1141,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                     hasAnswered={hasAnswered}
                     isCorrect={isCorrect}
                     correctAnswer={getCorrectAnswerText()}
+                    onEnter={() => { if (canSubmitAnswer() && !isValidatingAnswer) checkAnswer(); }}
                   />
                 )
               )}
@@ -1217,6 +1234,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   hasAnswered={hasAnswered}
                   isCorrect={isCorrect}
                   correctAnswer={question.correctAnswer?.value || String(question.correctAnswer || '')}
+                  onEnter={() => { if (canSubmitAnswer() && !isValidatingAnswer) checkAnswer(); }}
                 />
               )}
 
@@ -1239,6 +1257,46 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                       Richtige Schreibweise: <strong>{spellingHint}</strong>
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Erklaerung direkt unter dem Ergebnis: wichtiger als Melden,
+                  KI-Tutor und Bewertung (Rueckmeldung 04.10.2026). */}
+              {showExplanation && (
+                <div ref={erklaerungRef} className="scroll-mt-4 rounded-2xl bg-muted p-4 ring-1 ring-inset ring-karo">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="w-5 h-5 text-primary" />
+                      <span className="font-bold text-tinte">Erklärung</span>
+                    </div>
+                    {explanation && !isLoadingExplanation && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => isSpeaking ? stopSpeaking() : speakText(explanation)}
+                        className="h-8 px-2 text-primary hover:bg-primary/10"
+                      >
+                        {isSpeaking ? (
+                          <><VolumeX className="w-4 h-4 mr-1" /> Stopp</>
+                        ) : (
+                          <><Volume2 className="w-4 h-4 mr-1" /> Vorlesen</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  {isLoadingExplanation ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Erklärung wird erstellt...</span>
+                    </div>
+                  ) : (
+                    <p className="frage-text text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
+                  )}
+                </div>
+              )}
+
+              {hasAnswered && (
+                <div className="space-y-3">
                   {/* Report Button - für Klasse 5+, auch bei richtiger Antwort */}
                   {grade > 4 && question && (
                     <Button
@@ -1291,45 +1349,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 </div>
               )}
 
-              {/* Explanation */}
-              {showExplanation && (
-                <div className="rounded-2xl bg-muted p-4 ring-1 ring-inset ring-karo">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="w-5 h-5 text-primary" />
-                      <span className="font-bold text-tinte">Erklärung</span>
-                    </div>
-                    {explanation && !isLoadingExplanation && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => isSpeaking ? stopSpeaking() : speakText(explanation)}
-                        className="h-8 px-2 text-primary hover:bg-primary/10"
-                      >
-                        {isSpeaking ? (
-                          <><VolumeX className="w-4 h-4 mr-1" /> Stopp</>
-                        ) : (
-                          <><Volume2 className="w-4 h-4 mr-1" /> Vorlesen</>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  {isLoadingExplanation ? (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Erklärung wird erstellt...</span>
-                    </div>
-                  ) : (
-                    <p className="frage-text text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
-                  )}
-                </div>
-              )}
-
             </div>
 
             {/* Unten am Daumen: Ziffernfeld und Knoepfe. Bleiben stehen, damit
                 "Weiter" auf kleinen iPhones nicht unter dem Rand liegt (30.09.2026). */}
-            <div className="sticky bottom-0 z-10 -mx-5 mt-auto space-y-3 border-t border-karo bg-card/95 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:-mx-8 sm:px-8">
+            <div className={cn(
+              "bottom-0 z-10 -mx-5 mt-auto space-y-3 border-t border-karo bg-card/95 px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:-mx-8 sm:px-8",
+              // Waehrend getippt wird, steht die Leiste unter dem Feld statt ueber der Tastatur.
+              tastaturOffen ? "relative" : "sticky",
+            )}>
               {zahlAntwort && !hasAnswered && (
                 <Ziffernfeld
                   wert={userTextAnswer}
@@ -1500,20 +1528,33 @@ const FreetextRenderer: React.FC<{
   hasAnswered: boolean;
   isCorrect: boolean;
   correctAnswer: string;
-}> = ({ value, onChange, hasAnswered, isCorrect, correctAnswer }) => (
+  onEnter?: () => void;
+}> = ({ value, onChange, hasAnswered, isCorrect, onEnter }) => (
   <Input
     type="text"
-    value={value}
+    value={hasAnswered && !value ? '–' : value}
     onChange={(e) => onChange(e.target.value)}
-    placeholder="Deine Antwort..."
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' && onEnter) {
+        e.preventDefault();
+        onEnter();
+      }
+    }}
+    enterKeyHint="done"
+    // Nach dem Pruefen kein Platzhalter mehr: Er sah durchgestrichen aus wie
+    // eine falsche Antwort (Rueckmeldung 04.10.2026).
+    placeholder={hasAnswered ? '' : 'Deine Antwort …'}
     disabled={hasAnswered}
     className={cn(
       "h-16 rounded-2xl font-hand text-2xl text-tinte",
       hasAnswered && "disabled:opacity-100",
       hasAnswered && isCorrect && "border-2 border-gruen-hell",
-      hasAnswered && !isCorrect && "line-through decoration-rotstift decoration-2"
+      hasAnswered && !isCorrect && value && "line-through decoration-rotstift decoration-2"
     )}
     autoComplete="off"
+    autoCapitalize="off"
+    autoCorrect="off"
+    spellCheck={false}
   />
 );
 

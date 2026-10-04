@@ -295,6 +295,22 @@ html {
   overflow-x: clip;
 }
 
+/*
+ * Datumsfelder auf iOS (Rueckmeldung 04.10.2026): Safari gibt ihnen eine
+ * eigene Mindestbreite und ignoriert `width: 100%`. Das Testdatum im
+ * Lernplan ragte dadurch rechts aus der Karte.
+ */
+input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"]) {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+input::-webkit-date-and-time-value {
+  min-height: 1.5em;
+  text-align: left;
+}
+
 /* ───────────────────────── Startseite (/start) ─────────────────────────
  * Gilt nur innerhalb von .lp (Start.tsx). Bildwelt: das Schulheft — Karo,
  * Fuellertinte, Randnotizen. Schriften selbst gehostet (public/fonts, OFL).
