@@ -251,6 +251,7 @@ html {
   --lp-blau: #2563eb;       /* Handlungen */
   --lp-gruen: #0b7a46;      /* Randnotizen "richtig", lesbar auf Weiss */
   --lp-gruen-hell: #13c96a; /* Markenfarbe, nur Flaechen und Striche */
+  --lp-nav: calc(4rem + env(safe-area-inset-top, 0px)); /* Hoehe der oberen Leiste */
   font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 1.0625rem;
   line-height: 1.65;
@@ -373,12 +374,12 @@ html {
 /* Handy auf der Scroll-Buehne (ZweiAnsichten): Groesse folgt der Bildschirmhoehe.
  * Rahmen = 100em breit und ca. 220em hoch. */
 .lp-buehne-handy {
-  font-size: min(2.05px, calc((100vh - 4rem) * 0.5 / 220));
-  font-size: min(2.05px, calc((100svh - 4rem) * 0.5 / 220));
+  font-size: min(2.05px, calc((100vh - var(--lp-nav)) * 0.5 / 220));
+  font-size: min(2.05px, calc((100svh - var(--lp-nav)) * 0.5 / 220));
 }
 @media (min-width: 1024px) {
   .lp-buehne-handy {
-    font-size: min(2.75px, calc((100vh - 6rem) * 0.78 / 220));
+    font-size: min(2.75px, calc((100vh - var(--lp-nav) - 2rem) * 0.78 / 220));
   }
 }
 

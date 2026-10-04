@@ -26,7 +26,7 @@ const LandingNav = () => {
 
   return (
     <header
-      className={`sticky top-0 z-40 pt-safe-top transition-[background-color,box-shadow,backdrop-filter] duration-300 ${
+      className={`sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 ${
         gescrollt ? 'bg-white/90 backdrop-blur-xl shadow-[0_1px_0_var(--lp-karo)]' : 'bg-transparent'
       }`}
     >

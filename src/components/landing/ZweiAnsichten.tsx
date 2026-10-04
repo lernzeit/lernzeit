@@ -128,7 +128,7 @@ const ZweiAnsichten = () => {
 
         <div className="relative mt-10 lg:mt-14 lg:grid lg:grid-cols-12 lg:gap-10">
           {/* Buehne: bleibt stehen, Bildschirm wechselt */}
-          <div className="sticky top-16 z-0 h-[calc(100svh_-_4rem)] pb-3 pt-2 lg:order-2 lg:col-span-8 lg:top-20 lg:h-[calc(100vh_-_6rem)] lg:self-start lg:py-0">
+          <div className="sticky top-[var(--lp-nav)] z-0 h-[calc(100svh_-_var(--lp-nav))] pb-3 pt-2 lg:order-2 lg:col-span-8 lg:top-[calc(var(--lp-nav)_+_1rem)] lg:h-[calc(100vh_-_var(--lp-nav)_-_2rem)] lg:self-start lg:py-0">
             <div className="relative flex h-full flex-col items-center overflow-hidden rounded-[28px] lg:justify-center">
               {/* zwei Flaechen, die ineinander uebergehen: gruen (Kind), blau (Eltern) */}
               <div aria-hidden="true" className={`lp-karo absolute inset-0 bg-[#ecf9f2] [--lp-karo-farbe:#d3efdf] transition-opacity duration-700 motion-reduce:transition-none ${ansicht === 'kind' ? 'opacity-100' : 'opacity-0'}`} />
@@ -175,9 +175,9 @@ const ZweiAnsichten = () => {
           </div>
 
           {/* Kapitel: Handy = Karten, die ueber die Buehne laufen; breit = Text links */}
-          <ol className="relative z-10 -mt-[calc(100svh_-_4rem)] lg:order-1 lg:col-span-4 lg:mt-0">
+          <ol className="relative z-10 -mt-[calc(100svh_-_var(--lp-nav))] lg:order-1 lg:col-span-4 lg:mt-0">
             {KAPITEL.map((k, i) => (
-              <li key={k.titel} className="pointer-events-none flex h-[calc(100svh_-_4rem)] items-end pb-5 lg:h-auto lg:min-h-[78vh] lg:items-center lg:pb-0">
+              <li key={k.titel} className="pointer-events-none flex h-[calc(100svh_-_var(--lp-nav))] items-end pb-5 lg:h-auto lg:min-h-[78vh] lg:items-center lg:pb-0">
                 <div
                   ref={(el) => { karten.current[i] = el; }}
                   className={`pointer-events-auto w-full rounded-[22px] bg-white/95 p-6 shadow-[0_18px_40px_-18px_rgba(26,43,109,0.35)] ring-1 ring-[var(--lp-karo)] backdrop-blur transition-opacity duration-500 lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 lg:backdrop-blur-none ${
