@@ -11,6 +11,7 @@ import FaqSection from '@/components/landing/FaqSection';
 import LandingNav from '@/components/landing/LandingNav';
 import { trackFireAndForget } from '@/lib/analytics';
 import { useAbschnittMessung } from '@/hooks/useAbschnittMessung';
+import { useLandingMotion } from '@/components/landing/useLandingMotion';
 
 const Start = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Start = () => {
   // Welche Abschnitte gesehen wurden (data-abschnitt), seit 04.10.2026
   const seite = useRef<HTMLElement>(null);
   useAbschnittMessung(seite);
+  useLandingMotion(seite);
 
   // Einladungslink der Eltern (/start?code=123456) → direkt zur Kind-Registrierung
   useEffect(() => {
