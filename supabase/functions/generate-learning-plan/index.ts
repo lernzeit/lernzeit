@@ -32,6 +32,17 @@ serve(async (req) => {
     // pg_net aus der Datenbank): wertet Fotos aus, speichert nichts.
     if (token && token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
       const b = await req.json().catch(() => ({}));
+      // Testbilder aus dem oeffentlichen Repo (docs/testdaten) duerfen per URL kommen.
+      if (Array.isArray(b.fotoUrls)) {
+        b.fotos = [];
+        for (const url of b.fotoUrls.slice(0, 10)) {
+          if (typeof url !== "string" || !url.startsWith("https://raw.githubusercontent.com/lernzeit/lernzeit/")) continue;
+          const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+          let bin = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          b.fotos.push(`data:image/jpeg;base64,${btoa(bin)}`);
+        }
+      }
       const fotos = fotosPruefen(b.fotos);
       if (typeof fotos === "string" || fotos.length === 0) {
         return new Response(JSON.stringify({ error: typeof fotos === "string" ? fotos : "Keine Fotos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
