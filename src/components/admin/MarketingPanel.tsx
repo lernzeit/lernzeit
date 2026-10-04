@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RegistrierungsTrichter } from '@/components/admin/RegistrierungsTrichter';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Info, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -227,6 +228,8 @@ export function MarketingPanel() {
           </table>
         </CardContent>
       </Card>
+
+      <RegistrierungsTrichter />
 
       {/* Kanaele und Anzeigen */}
       <Card>

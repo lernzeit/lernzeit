@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { istNativeApp, oauthImAppBrowser } from '@/services/nativeOAuth';
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
+import { fehlerTyp, useRegistrierungsMessung } from '@/hooks/useRegistrierungsMessung';
 import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound } from 'lucide-react';
 import { useTurnstile } from '@/hooks/useTurnstile';
 import { validateReferralCode, REFERRAL_CODE_HINT } from '@/utils/referralCode';
@@ -89,6 +90,8 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [referralCode, setReferralCode] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
+  // Schritte, Fehler und Abbrueche der Registrierung (seit 04.10.2026)
+  const messung = useRegistrierungsMessung();
 
   // Registrierungsformular geöffnet (Signup ist der Standard-Tab)
   useEffect(() => {
@@ -101,6 +104,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     resetWidget: resetCaptcha,
     isEnabled: isCaptchaEnabled,
   } = useTurnstile('turnstile-container');
+
+  // Sicherheitspruefung laedt nicht (Skript blockiert, Domain nicht frei):
+  // sichtbare Fehlermeldung im Formular, deshalb mitgezaehlt.
+  useEffect(() => {
+    if (captchaStatus === 'error') messung.fehler(`captcha_laden:${captchaErrorCode ?? 'unbekannt'}`);
+  }, [captchaStatus, captchaErrorCode, messung]);
 
   /**
    * Merkt sich, dass eine Anmeldung über Google oder Apple die Seite verlassen
@@ -226,6 +235,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   };
 
   const handleCaptchaFailure = () => {
+    messung.fehler('captcha');
     toast({
       title: 'Sicherheitsprüfung fehlgeschlagen',
       description: getCaptchaErrorDescription(),
@@ -398,12 +408,14 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    messung.schritt('absenden');
 
     try {
       const tokenToUse = await resolveCaptchaToken();
       if (tokenToUse === null) { setLoading(false); return; }
 
       if (role !== 'parent' && role !== 'child') {
+        messung.fehler('rolle_fehlt');
         toast({
           title: 'Bitte zuerst auswählen',
           description: 'Wähle aus, ob du Elternteil oder Kind bist.',
@@ -416,6 +428,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       // Child without email registration
       if (role === 'child' && childNoEmail) {
         if (!validateUsername(username)) {
+          messung.fehler('benutzername_ungueltig');
           toast({
             title: 'Ungültiger Benutzername',
             description: 'Der Benutzername muss 3–20 Zeichen lang sein und darf nur Buchstaben, Zahlen und _ enthalten.',
@@ -426,6 +439,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         }
 
         if (invitationCode && invitationCode.length !== 6) {
+          messung.fehler('code_unvollstaendig');
           toast({
             title: 'Einladungscode unvollständig',
             description: 'Der Code hat 6 Ziffern. Lass ihn leer, wenn du dich später verbinden möchtest.',
@@ -437,6 +451,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         const isAvailable = await checkUsernameAvailability(username);
         if (!isAvailable) {
+          messung.fehler('benutzername_vergeben');
           toast({
             title: 'Benutzername vergeben',
             description: 'Dieser Benutzername ist bereits vergeben. Bitte wähle einen anderen.',
@@ -474,6 +489,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               errorMsg = errBody?.error || errorMsg;
             } catch { /* fallback to generic */ }
           }
+          messung.fehler('kinderkonto_fehlgeschlagen');
           toast({
             title: 'Registrierung fehlgeschlagen',
             description: errorMsg,
@@ -520,6 +536,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         // kann verloren gehen — und genau das ist hier offenbar passiert.
         // Seit Messbeginn am 18.08.2026 sind 16 Konten entstanden und
         // `sign_up_completed` stand null Mal im Protokoll.
+        messung.abgeschlossen();
         await track('sign_up_completed', { role: 'child', method: 'username' });
         if (invitationCode) {
           trackFireAndForget('invitation_code_redeemed', {});
@@ -538,6 +555,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
         if (manualCodeRaw) {
           const check = validateReferralCode(manualCodeRaw);
           if (!check.valid) {
+            messung.fehler('empfehlungscode_ungueltig');
             toast({
               title: 'Empfehlungs-Code ungültig',
               description: `${check.message} ${REFERRAL_CODE_HINT}`,
@@ -572,6 +590,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       });
 
       if (error) throw error;
+      messung.abgeschlossen();
       // Abgewartet — siehe der Kind-Weg weiter oben. Unmittelbar danach wird
       // auf die Bestaetigungsseite gewechselt.
       await track('sign_up_completed', { role, method: 'email' });
@@ -581,6 +600,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
       navigate(`/email-bestaetigung?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       if (isCaptchaEnabled) resetCaptcha();
+      messung.fehler(fehlerTyp(error?.message));
       toast({
         title: "Fehler",
         description: translateError(error.message),
@@ -668,7 +688,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         <Card className="shadow-card">
           <CardContent className="p-6">
-            <Tabs defaultValue="signup" className="w-full">
+            <Tabs defaultValue="signup" className="w-full" onValueChange={messung.tabGewechselt}>
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
                 <TabsTrigger value="signup" className="data-[state=active]:bg-background">Registrieren</TabsTrigger>
                 <TabsTrigger value="signin" className="data-[state=active]:bg-background">Anmelden</TabsTrigger>
@@ -841,7 +861,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         type="button"
                         role="radio"
                         aria-checked={role === 'parent'}
-                        onClick={() => { setRole('parent'); setChildNoEmail(false); }}
+                        onClick={() => { setRole('parent'); setChildNoEmail(false); messung.schritt('rolle_gewaehlt', { rolle: 'parent' }); }}
                         className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
                           role === 'parent'
                             ? 'border-primary bg-primary/5'
@@ -862,7 +882,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                         type="button"
                         role="radio"
                         aria-checked={role === 'child'}
-                        onClick={() => setRole('child')}
+                        onClick={() => { setRole('child'); messung.schritt('rolle_gewaehlt', { rolle: 'child' }); }}
                         className={`w-full flex items-center gap-4 p-5 border-2 rounded-2xl text-left transition-all duration-200 ${
                           role === 'child'
                             ? 'border-primary bg-primary/5'
@@ -912,7 +932,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     type="button"
                     variant="outline"
                     className="w-full h-12 text-base font-medium border-2 hover:bg-muted/50 transition-all duration-200"
-                    onClick={handleGoogleSignIn}
+                    onClick={() => { messung.schritt('oauth', { anbieter: 'google' }); void handleGoogleSignIn(); }}
                     disabled={loading}
                   >
                     <GoogleIcon />
@@ -921,7 +941,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   <Button
                     type="button"
                     className="w-full h-12 text-base font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-all duration-200"
-                    onClick={handleAppleSignIn}
+                    onClick={() => { messung.schritt('oauth', { anbieter: 'apple' }); void handleAppleSignIn(); }}
                     disabled={loading}
                   >
                     <AppleIcon />
@@ -941,7 +961,12 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </div>
                 </div>
 
-                <form onSubmit={handleSignUp} className="space-y-4">
+                <form
+                  onSubmit={handleSignUp}
+                  onFocusCapture={() => messung.schritt('eingabe_begonnen')}
+                  onInvalidCapture={messung.browserFehler}
+                  className="space-y-4"
+                >
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-sm font-medium">Name</Label>
                     <div className="relative">

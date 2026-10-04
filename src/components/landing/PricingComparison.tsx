@@ -36,7 +36,7 @@ const PricingComparison = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-24 px-4 relative overflow-hidden">
+    <section ref={sectionRef} data-abschnitt="preise" className="py-24 px-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background pointer-events-none" />
 
       <div className="relative max-w-4xl mx-auto">

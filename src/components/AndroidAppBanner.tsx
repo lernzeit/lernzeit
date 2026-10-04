@@ -1,6 +1,5 @@
 import { BookOpen, X } from 'lucide-react';
 import { useAppStoreBanner } from '@/hooks/useAndroidAppBanner';
-import { trackFireAndForget } from '@/lib/analytics';
 
 const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=de.lernzeit.app&utm_source=web_banner';
@@ -48,13 +47,10 @@ export function AndroidAppBanner() {
           href={storeUrl}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => {
-            // Bis 03.10.2026 nicht erfasst — dabei ist das fuer Besucher auf
-            // dem Handy der Weg zur App, und damit der Schritt, an dem sich der
-            // Erfolg einer Anzeige ablesen laesst (Marketing-Dashboard).
-            trackFireAndForget('app_store_click', { store: isIOS ? 'ios' : 'android', position: 'banner' });
-            dismiss();
-          }}
+          // `app_store_click` zaehlt AnalyticsTracker fuer alle Store-Links
+          // der Website zentral; die Stelle kommt aus data-stelle.
+          data-stelle="banner"
+          onClick={() => dismiss()}
           className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           {isIOS ? (

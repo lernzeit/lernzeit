@@ -38,7 +38,7 @@ const HowItWorks = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-24 px-4">
+    <section ref={sectionRef} data-abschnitt="so_funktionierts" className="py-24 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="scroll-fade opacity-0 translate-y-4 transition-all duration-700 text-center mb-16">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">So einfach geht's</span>

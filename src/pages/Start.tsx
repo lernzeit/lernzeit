@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,10 +11,14 @@ import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
 import { trackFireAndForget } from '@/lib/analytics';
+import { useAbschnittMessung } from '@/hooks/useAbschnittMessung';
 
 const Start = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  // Welche Abschnitte gesehen wurden (data-abschnitt), seit 04.10.2026
+  const seite = useRef<HTMLElement>(null);
+  useAbschnittMessung(seite);
 
   // Einladungslink der Eltern (/start?code=123456) → direkt zur Kind-Registrierung
   useEffect(() => {
@@ -25,7 +29,7 @@ const Start = () => {
   }, [searchParams, navigate]);
 
   return (
-    <main className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
+    <main ref={seite} className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="LernZeit – Lernen belohnen. Handyzeit verdienen."
         description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Lehrplanorientiert für Klasse 1–10. Jetzt starten."
@@ -38,7 +42,8 @@ const Start = () => {
       <SetupSteps />
       <PricingComparison />
 
-      {/* Footer CTA */}
+      {/* Footer CTA und rechtliche Links: Abschnitt "fusszeile" */}
+      <div data-abschnitt="fusszeile">
       <section className="py-24 px-4 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
         <div className="relative">
@@ -63,6 +68,7 @@ const Start = () => {
       </section>
 
       <LegalFooter className="pb-8" />
+      </div>
     </main>
   );
 };

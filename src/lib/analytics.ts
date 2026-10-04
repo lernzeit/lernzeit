@@ -13,6 +13,7 @@
  * - Funktioniert auf Web und nativ (Capacitor), `platform` wird korrekt gesetzt
  */
 import { supabase } from '@/lib/supabase';
+import { SUPABASE_ANON_KEY, SUPABASE_PROJECT_URL } from '@/integrations/supabase/client';
 import type { Database, Json } from '@/integrations/supabase/types';
 import { Capacitor } from '@capacitor/core';
 
@@ -27,6 +28,19 @@ export type AnalyticsEventName =
   // Fuer Anzeigen, die zur App fuehren sollen, der eigentliche Erfolg.
   | 'app_store_click'
   | 'demo_started'
+  // Messung seit 04.10.2026 (Auftrag: warum registrieren sich Besucher nicht).
+  // Abschnitt der Startseite zu mindestens 50 % sichtbar, einmal je Besuch.
+  | 'abschnitt_gesehen'
+  // Wechsel zwischen "Registrieren" und "Anmelden" im Formular.
+  | 'auth_tab_gewechselt'
+  // Ein Schritt im Registrierungsformular, eine angezeigte Fehlermeldung, ein
+  // Verlassen ohne Abschluss. Nie mit Eingaben, nur Schritt bzw. Fehlertyp.
+  | 'sign_up_step'
+  | 'sign_up_error'
+  | 'sign_up_abandoned'
+  // Tab wird verborgen (Seite verlassen, App gewechselt): Sekunden seit dem
+  // ersten Aufruf in diesem Tab.
+  | 'page_leave'
   | 'demo_question_answered'
   | 'demo_completed_cta_click'
   | 'sign_up_started'
@@ -430,6 +444,79 @@ function pushToDataLayer(eventName: string, properties: AnalyticsProperties): vo
 }
 
 /* ------------------------------------------------------------------ */
+/* Geraeteklasse und Besuchsdauer                                      */
+/* ------------------------------------------------------------------ */
+
+export type Geraet = 'ios' | 'android' | 'desktop' | 'sonstige';
+
+/**
+ * Grobe Geraeteklasse eines Website-Besuchers, abgeleitet aus dem
+ * Browser-Kennzeichen. Gespeichert wird nur eine von vier Klassen, nie das
+ * Kennzeichen selbst — damit laesst sich niemand wiedererkennen.
+ */
+export function geraetKlasse(): Geraet {
+  try {
+    const ua = navigator.userAgent || '';
+    // iPadOS meldet sich als Mac; erkennbar an der Touch-Bedienung.
+    if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'ios';
+    if (/Android/i.test(ua)) return 'android';
+    if (/Mobi|Tablet|Silk|Kindle/i.test(ua)) return 'sonstige';
+    return 'desktop';
+  } catch {
+    return 'sonstige';
+  }
+}
+
+/** Sekunden seit dem ersten Aufruf in diesem Tab (Ladezeitpunkt der Seite). */
+export function sekundenSeitErstemAufruf(): number {
+  try {
+    return Math.min(Math.round(performance.now() / 1000), 6 * 3600);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Sendet ein Event so, dass es auch beim Schliessen des Tabs ankommt
+ * (`fetch` mit `keepalive`). Ohne Nutzer-ID: Beim Verlassen ist keine Zeit fuer
+ * die Sitzungsabfrage, und die anonyme ID genuegt fuer den Trichter.
+ */
+export function trackBeimVerlassen(eventName: AnalyticsEventName, properties: AnalyticsProperties = {}): void {
+  try {
+    const platform = getPlatform();
+    const attribution = getAttribution();
+    const payload: AnalyticsEventInsert = {
+      event_name: eventName,
+      user_id: null,
+      anonymous_id: getAnonymousId(),
+      properties: { ...(platform === 'web' ? { geraet: geraetKlasse() } : {}), ...properties } as Json,
+      utm_source: attribution.utm_source ?? null,
+      utm_medium: attribution.utm_medium ?? null,
+      utm_campaign: attribution.utm_campaign ?? null,
+      utm_content: attribution.utm_content ?? null,
+      utm_term: attribution.utm_term ?? null,
+      gclid: null,
+      referrer: attribution.referrer ?? null,
+      page_path: getPagePath(),
+      platform,
+    };
+    void fetch(`${SUPABASE_PROJECT_URL}/rest/v1/analytics_events`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(payload),
+    }).catch(() => { /* Tracking darf nie stoeren */ });
+  } catch {
+    /* ignore */
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* track()                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -471,8 +558,10 @@ export async function track(
       user_id: userId,
       anonymous_id: anonymousId,
       // AnalyticsProperties laesst undefined zu, jsonb nicht — undefined
-      // verschwindet beim Serialisieren ohnehin.
-      properties: properties as Json,
+      // verschwindet beim Serialisieren ohnehin. Auf der Website zusaetzlich
+      // die grobe Geraeteklasse (seit 04.10.2026); `platform` sagt nur
+      // Website oder App.
+      properties: (platform === 'web' ? { geraet: geraetKlasse(), ...properties } : properties) as Json,
       utm_source: attribution.utm_source ?? null,
       utm_medium: attribution.utm_medium ?? null,
       utm_campaign: attribution.utm_campaign ?? null,
