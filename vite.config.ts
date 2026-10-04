@@ -1,6 +1,8 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
+import { sichtbareArtikel } from "./src/content/ratgeber/index";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
 import prerender from "@prerenderer/rollup-plugin";
@@ -9,7 +11,36 @@ import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 // Marketing-Routen, die für Crawler ohne JavaScript als statisches HTML
 // vorgerendert werden. Interaktive Routen (App/Login/Dashboard) bleiben
 // weiterhin klassische SPA.
-const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support', '/konto-loeschen'];
+// Ratgeber: /ratgeber plus alle sichtbaren Artikel, automatisch aus den Daten.
+const RATGEBER_ARTIKEL_ROUTES = sichtbareArtikel().map((a) => `/ratgeber/${a.slug}`);
+const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/support', '/konto-loeschen', '/ratgeber', ...RATGEBER_ARTIKEL_ROUTES];
+
+// Schreibt nach dem Build die Ratgeber-Routen für scripts/verify-prerender.mjs
+// und ergänzt dist/sitemap.xml um /ratgeber und alle sichtbaren Artikel
+// (nur wenn es mindestens einen Artikel gibt; sonst ist /ratgeber noindex).
+const ratgeberBuildPlugin = (): Plugin => ({
+  name: 'ratgeber-routen',
+  apply: 'build',
+  closeBundle() {
+    const dist = path.resolve(__dirname, 'dist');
+    if (!fs.existsSync(dist)) return;
+    const artikel = sichtbareArtikel();
+    fs.writeFileSync(
+      path.join(dist, 'ratgeber-routes.json'),
+      JSON.stringify(artikel.length ? ['/ratgeber', ...RATGEBER_ARTIKEL_ROUTES] : []),
+    );
+    const sitemap = path.join(dist, 'sitemap.xml');
+    if (artikel.length && fs.existsSync(sitemap)) {
+      const eintraege = [
+        `  <url>\n    <loc>https://lernzeit.app/ratgeber</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
+        ...artikel.map((a) =>
+          `  <url>\n    <loc>https://lernzeit.app/ratgeber/${a.slug}</loc>\n    <lastmod>${(a.aktualisiert ?? a.datum).slice(0, 10)}</lastmod>\n    <priority>0.6</priority>\n  </url>`),
+      ].join('\n');
+      const xml = fs.readFileSync(sitemap, 'utf8').replace('</urlset>', `${eintraege}\n</urlset>`);
+      fs.writeFileSync(sitemap, xml);
+    }
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -19,6 +50,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    ratgeberBuildPlugin(),
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',

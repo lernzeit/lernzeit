@@ -24,6 +24,14 @@ const ROUTES = [
   { path: '/konto-loeschen',     needle: 'Konto' },
 ];
 
+// Ratgeber-Routen schreibt vite.config.ts beim Build aus sichtbareArtikel().
+const ratgeberDatei = resolve(DIST, 'ratgeber-routes.json');
+if (existsSync(ratgeberDatei)) {
+  for (const path of JSON.parse(readFileSync(ratgeberDatei, 'utf8'))) {
+    ROUTES.push({ path, needle: 'Ratgeber' });
+  }
+}
+
 // Minimum bytes of visible text (excluding `<script>` blocks). A JS-only
 // SPA shell is a few hundred bytes; a real prerender is > 2 kB.
 const MIN_TEXT_BYTES = 800;
