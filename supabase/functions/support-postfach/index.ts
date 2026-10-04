@@ -20,7 +20,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { Buffer } from "node:buffer";
 import { simpleParser } from "npm:mailparser@3.7.1";
 import MailComposer from "npm:nodemailer@6.9.15/lib/mail-composer/index.js";
-import { Imap, smtpSenden } from "../_shared/mailverbindung.ts";
+import { adresseLesen, Imap, smtpSenden } from "../_shared/mailverbindung.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -202,23 +202,43 @@ Deno.serve(async (req) => {
     if (!PASSWORT) return json({ error: "Secret IONOS_POSTFACH_PASSWORT fehlt" }, 500);
 
     if (body.aktion === "neu") {
+      // Zuerst nur Kopfzeilen (billig), dann hoechstens PRO_AUFRUF Mails ganz
+      // lesen: Edge Functions haben nur wenig CPU-Zeit je Aufruf.
+      const PRO_AUFRUF = 5;
       const tage = Math.min(Math.max(body.tage ?? 14, 1), 60);
       const seit = new Date(Date.now() - tage * 86_400_000);
-      const mails = await imap(async (c) => {
-        const uids = await c.suchenSeit(seit);
-        const ergebnis: Mail[] = [];
-        for (const uid of uids.slice(-50)) {
-          const m = await mailLesen(c, uid);
-          if (m) ergebnis.push(m);
+      const ergebnis = await imap(async (c) => {
+        const uids = (await c.suchenSeit(seit)).slice(-200);
+        const koepfe = await c.koepfe(uids, ["MESSAGE-ID", "FROM", "REPLY-TO", "SUBJECT", "DATE", "AUTO-SUBMITTED"]);
+        const liste = uids.map((uid) => {
+          const k = koepfe.get(uid) ?? {};
+          const von = adresseLesen(k["reply-to"] || k["from"]);
+          return {
+            uid,
+            message_id: (k["message-id"] ?? "").trim() || `uid-${uid}`,
+            von: von.adresse,
+            von_name: adresseLesen(k["from"]).name,
+            betreff: k["subject"] ?? "",
+            datum: k["date"] ?? "",
+            automatisch: automatisch(von.adresse) || Boolean(k["auto-submitted"] && k["auto-submitted"] !== "no"),
+          };
+        });
+        const ids = liste.map((m) => m.message_id);
+        const { data: erledigt } = await supabase.from("support_postfach_protokoll")
+          .select("message_id").in("message_id", ids.length ? ids : ["-"]);
+        const bekannt = new Set((erledigt ?? []).map((e) => e.message_id));
+        const offen = liste.filter((m) => !bekannt.has(m.message_id));
+        // Automatische Mails nur mit Kopfzeilen melden, Kundenmails ganz lesen.
+        const automatische = offen.filter((m) => m.automatisch);
+        const kunden = offen.filter((m) => !m.automatisch);
+        const gelesen: Mail[] = [];
+        for (const m of kunden.slice(0, PRO_AUFRUF)) {
+          const voll = await mailLesen(c, m.uid);
+          if (voll) gelesen.push(voll);
         }
-        return ergebnis;
+        return { mails: gelesen, automatische, weitere: Math.max(0, kunden.length - PRO_AUFRUF) };
       });
-      const ids = mails.map((m) => m.message_id);
-      const { data: erledigt } = await supabase.from("support_postfach_protokoll")
-        .select("message_id").in("message_id", ids.length ? ids : ["-"]);
-      const bekannt = new Set((erledigt ?? []).map((e) => e.message_id));
-      const offen = mails.filter((m) => !bekannt.has(m.message_id));
-      return json({ anzahl: offen.length, mails: offen });
+      return json({ anzahl: ergebnis.mails.length, ...ergebnis });
     }
 
     if (body.aktion === "erledigt") {

@@ -151,13 +151,26 @@ export class Imap {
     return uids;
   }
 
-  /** Rohquelle einer Mail, ohne sie als gelesen zu markieren (hoechstens 2 MB). */
+  /** Rohquelle einer Mail, ohne sie als gelesen zu markieren (hoechstens 300 KB; Anhaenge werden abgeschnitten). */
   async quelle(uid: number): Promise<Uint8Array | null> {
-    const res = await this.befehl(`UID FETCH ${uid} (UID BODY.PEEK[]<0.2000000>)`);
+    const res = await this.befehl(`UID FETCH ${uid} (UID BODY.PEEK[]<0.300000>)`);
     for (const a of res) {
       if (/^\* \d+ FETCH /.test(a.text) && a.literale.length) return a.literale[0];
     }
     return null;
+  }
+
+  /** Ausgewaehlte Kopfzeilen mehrerer Mails in einem Befehl (wenig Rechenzeit). */
+  async koepfe(uids: number[], felder: string[]): Promise<Map<number, Record<string, string>>> {
+    const ergebnis = new Map<number, Record<string, string>>();
+    if (!uids.length) return ergebnis;
+    const res = await this.befehl(`UID FETCH ${uids.join(",")} (UID BODY.PEEK[HEADER.FIELDS (${felder.join(" ")})])`);
+    for (const a of res) {
+      const uid = a.text.match(/UID (\d+)/)?.[1];
+      if (!/^\* \d+ FETCH /.test(a.text) || !uid || !a.literale.length) continue;
+      ergebnis.set(Number(uid), kopfzeilenLesen(a.literale[0]));
+    }
+    return ergebnis;
   }
 
   async ordnerListe(): Promise<{ name: string; attribute: string[] }[]> {
@@ -240,4 +253,49 @@ export async function smtpSenden(
   } finally {
     try { l.close(); } catch { /* egal */ }
   }
+}
+
+// ---------------------------------------------------------------- Kopfzeilen
+
+/** Kopfzeilen (entfaltet, Namen klein, RFC-2047-Woerter dekodiert). */
+export function kopfzeilenLesen(roh: Uint8Array): Record<string, string> {
+  const text = bytesZuText(roh).replace(/\r\n[ \t]+/g, " ");
+  const k: Record<string, string> = {};
+  for (const z of text.split(/\r?\n/)) {
+    const i = z.indexOf(":");
+    if (i <= 0) continue;
+    const name = z.slice(0, i).trim().toLowerCase();
+    if (!(name in k)) k[name] = woerterDekodieren(z.slice(i + 1).trim());
+  }
+  return k;
+}
+
+function woerterDekodieren(s: string): string {
+  return s
+    .replace(/(=\?[^?]+\?[bBqQ]\?[^?]*\?=)\s+(?==\?)/g, "$1")
+    .replace(/=\?([^?*]+)(?:\*[^?]*)?\?([bBqQ])\?([^?]*)\?=/g, (_, zs: string, art: string, inhalt: string) => {
+      let bytes: Uint8Array;
+      if (art.toUpperCase() === "B") {
+        const bin = atob(inhalt);
+        bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+      } else {
+        const t = inhalt.replace(/_/g, " ");
+        const out: number[] = [];
+        for (let i = 0; i < t.length; i++) {
+          if (t[i] === "=" && /^[0-9a-fA-F]{2}$/.test(t.slice(i + 1, i + 3))) { out.push(parseInt(t.slice(i + 1, i + 3), 16)); i += 2; }
+          else out.push(t.charCodeAt(i) & 0xff);
+        }
+        bytes = Uint8Array.from(out);
+      }
+      try { return new TextDecoder(zs.trim().toLowerCase()).decode(bytes); } catch { return bytesZuText(bytes); }
+    });
+}
+
+/** "Name <adresse>" -> { name, adresse } (erste Adresse). */
+export function adresseLesen(s: string | undefined): { name: string; adresse: string } {
+  if (!s) return { name: "", adresse: "" };
+  const m = s.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>/);
+  if (m) return { name: m[1].trim(), adresse: m[2].trim().toLowerCase() };
+  const a = s.match(/[^\s<>,;"]+@[^\s<>,;"]+/);
+  return { name: "", adresse: (a?.[0] ?? "").toLowerCase() };
 }
