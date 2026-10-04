@@ -52,3 +52,13 @@ Lovable. An Lovable hängen nur noch:
 Die Fassungen von `analyze-feedback`, `ai-question-generator` und `generate-learning-plan`
 ohne Lovable-Schlüssel sind seit 03.10.2026 eingespielt; `LOVABLE_API_KEY` kann aus den
 Supabase-Secrets gelöscht werden.
+
+## E-Mails an Eltern und Support (Stand 04.10.2026)
+
+- Service-Mails (`service-mails`, Cron `service-mails-taeglich` 07:13 UTC): Hilfe beim
+  Einrichten, Erinnerung nach einer Woche, Testphase endet (mit/ohne Kind). Nur Service,
+  keine Feedback-Bitten per Mail (BGH VI ZR 225/17) — Gründe fragt die App ab.
+  Auswahl `service_mail_auswahl()`, Protokoll `service_mail_versand`.
+- Support-Postfach info@lernzeit.app: Funktion `support-postfach` (IMAP/SMTP bei IONOS,
+  Secret `IONOS_POSTFACH_PASSWORT`), Regeln in `docs/support/leitfaden.md`, Protokoll
+  `support_postfach_protokoll`. Aus der Claude-Umgebung selbst geht kein IMAP (nur HTTPS).
