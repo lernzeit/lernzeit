@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { differenceInCalendarDays } from 'date-fns';
+import { planTagAm } from '@/lib/lernplan';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
@@ -440,17 +440,12 @@ function usePlanProgress(plan: LearningPlan) {
 
         if (!data) { setLoaded(true); return; }
 
-        // Tag des Plans nach Kalendertagen: Tag 1 = Erstellungstag, wie auf
-        // der Lernplan-Karte des Kindes (CategorySelector).
-        const planStart = new Date(plan.created_at);
+        // Tag des Plans wie auf der Karte des Kindes (lib/lernplan.ts): ab dem
+        // ersten Oeffnen, mit Vorspringen, wenn der Test naeher ist.
         const progress = new Map<number, DayProgress>();
         for (const session of data) {
           if (!session.session_date) continue;
-          const dayIndex = differenceInCalendarDays(new Date(session.session_date), planStart);
-          if (dayIndex < 0) continue;
-          // Nach dem letzten Plantag weiter geuebt: dem letzten Tag zurechnen,
-          // so wie die Karte ab dann den letzten Schwerpunkt zeigt.
-          const tag = Math.min(dayIndex, days.length - 1);
+          const tag = planTagAm(plan, new Date(session.session_date)).tag - 1;
 
           const existing = progress.get(tag) || { totalQuestions: 0, correctAnswers: 0, sessions: 0 };
           existing.totalQuestions += session.total_questions;
@@ -468,7 +463,7 @@ function usePlanProgress(plan: LearningPlan) {
     };
 
     fetchProgress();
-  }, [plan.id, plan.child_id, plan.created_at, days.length]);
+  }, [plan, days.length]);
 
   const totalStats = React.useMemo(() => {
     let practiced = 0, questions = 0, correct = 0;

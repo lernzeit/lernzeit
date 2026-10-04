@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { differenceInCalendarDays, format } from 'date-fns';
+import { planTagAm } from '@/lib/lernplan';
 import { de } from 'date-fns/locale';
 import { Calendar, ChevronRight, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -23,21 +24,17 @@ export interface Lernplan {
   topic: string;
   test_date: string | null;
   created_at: string;
+  /** Tag, an dem das Kind den Plan zum ersten Mal geoeffnet hat */
+  gestartet_am: string | null;
   plan_data: PlanTag[] | null;
 }
 
-/** Tag im Plan (1 …), nach Kalendertagen seit dem Erstellen. */
-export function planStand(plan: Lernplan, heute = new Date()) {
-  const tage = Array.isArray(plan.plan_data) ? plan.plan_data : [];
-  const anzahl = Math.max(tage.length, 1);
-  const seit = differenceInCalendarDays(heute, new Date(plan.created_at));
-  const tag = Math.min(seit + 1, anzahl);
-  const heuteTag = tage[tag - 1];
+/** Tag im Plan (1 …) und heutiger Schwerpunkt, Regeln in lib/lernplan.ts. */
+function planStand(plan: Lernplan) {
+  const z = planTagAm(plan);
+  const heuteTag = Array.isArray(plan.plan_data) ? plan.plan_data[z.tag - 1] : undefined;
   return {
-    anzahl,
-    tag,
-    /** Alle Tage durch und kein Testtermin mehr offen */
-    fertig: seit + 1 > anzahl,
+    ...z,
     schwerpunkt: heuteTag?.focus ?? null,
     topicHint: heuteTag ? `${plan.topic} – Schwerpunkt: ${heuteTag.focus}` : plan.topic,
   };
@@ -51,7 +48,7 @@ export function useLernplaene(kindId: string | undefined) {
     const heute = new Date().toLocaleDateString('sv-SE');
     supabase
       .from('learning_plans')
-      .select('id, subject, topic, test_date, created_at, plan_data')
+      .select('id, subject, topic, test_date, created_at, gestartet_am, plan_data')
       .eq('child_id', kindId)
       .or(`test_date.gte.${heute},test_date.is.null`)
       .order('test_date', { ascending: true, nullsFirst: false })
@@ -62,8 +59,9 @@ export function useLernplaene(kindId: string | undefined) {
         // Ohne Testdatum: zeigen, bis alle Tage durch sind (danach noch 2 Tage).
         const liste = ((data ?? []) as unknown as Lernplan[]).filter((p) => {
           if (p.test_date) return true;
-          const s = planStand(p);
-          return differenceInCalendarDays(new Date(), new Date(p.created_at)) < s.anzahl + 2;
+          if (!p.gestartet_am) return true;
+          const anzahl = Array.isArray(p.plan_data) ? p.plan_data.length : 1;
+          return differenceInCalendarDays(new Date(), new Date(`${p.gestartet_am}T00:00:00`)) < anzahl + 2;
         });
         setPlaene(liste);
       }, () => aktiv && setPlaene([]));
@@ -101,7 +99,11 @@ export function LernplanListe({
             <li key={plan.id}>
               <button
                 type="button"
-                onClick={() => onStart(fach, s.topicHint, plan.id)}
+                onClick={() => {
+                  // Erstes Oeffnen = Tag 1 des Plans (einmalig, s. lernplan_starten()).
+                  if (!plan.gestartet_am) void supabase.rpc('lernplan_starten', { p_plan_id: plan.id });
+                  onStart(fach, s.topicHint, plan.id);
+                }}
                 className="flex w-full items-stretch overflow-hidden rounded-[20px] bg-card text-left ring-1 ring-inset ring-karo transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {/* Heftrand in der Farbe des Fachs */}
@@ -136,7 +138,11 @@ export function LernplanListe({
                       ))}
                     </span>
                     <span className="text-xs font-bold text-muted-foreground">
-                      {s.fertig ? 'Alle Tage durch – jetzt wiederholen' : `Tag ${s.tag} von ${s.anzahl}`}
+                      {s.fertig
+                        ? 'Alle Tage durch – jetzt wiederholen'
+                        : s.gestartet
+                          ? `Tag ${s.tag} von ${s.anzahl}`
+                          : `${s.anzahl} Tage · startet, wenn du loslegst`}
                     </span>
                   </span>
                 </span>

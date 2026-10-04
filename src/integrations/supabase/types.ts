@@ -1080,8 +1080,10 @@ export type Database = {
           child_id: string
           child_name: string
           created_at: string
+          gestartet_am: string | null
           grade: number
           id: string
+          lernstoff: string | null
           parent_id: string
           plan_data: Json
           status: string
@@ -1094,8 +1096,10 @@ export type Database = {
           child_id: string
           child_name?: string
           created_at?: string
+          gestartet_am?: string | null
           grade: number
           id?: string
+          lernstoff?: string | null
           parent_id: string
           plan_data?: Json
           status?: string
@@ -1108,8 +1112,10 @@ export type Database = {
           child_id?: string
           child_name?: string
           created_at?: string
+          gestartet_am?: string | null
           grade?: number
           id?: string
+          lernstoff?: string | null
           parent_id?: string
           plan_data?: Json
           status?: string
@@ -2609,6 +2615,7 @@ export type Database = {
       }
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
+      lernplan_starten: { Args: { p_plan_id: string }; Returns: string }
       revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
       service_mail_auswahl: {
         Args: { p_einrichtung_ab?: string }

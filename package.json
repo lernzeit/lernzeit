@@ -20,6 +20,7 @@
     "typecheck": "tsc -b --noEmit",
     "test:release": "node scripts/test-screen-time-release.mjs",
     "test:streak": "node scripts/test-streak.mjs",
+    "test:lernplan": "node scripts/test-lernplan.mjs",
     "test:kaufaussicht": "node scripts/test-kaufaussicht.mjs",
     "trichter": "node scripts/trichter.mjs",
     "motive:pruefen": "node scripts/pruefe-motive.mjs",

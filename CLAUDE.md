@@ -115,3 +115,7 @@ Supabase-Secrets gelöscht werden.
 - Länge: so viele Tage wie bis zum Test, höchstens 5 (ohne Datum 5). Fach ist freiwillig
   („Automatisch erkennen“): gewählt → Fotos → Stichworte → Flash Lite (`lernplan_fach`) →
   sonst fragt die App. Regeln mit Tests in `_shared/lernplan-regeln.ts`.
+- Tag 1 ist der Tag, an dem das Kind den Plan zum ersten Mal öffnet (`learning_plans.gestartet_am`,
+  RPC `lernplan_starten`), nicht der Erstellungstag. Ist der Test näher als das Planende, springt
+  der Plan vor, sodass der letzte Tag vor dem Test liegt (`src/lib/lernplan.ts`,
+  `npm run test:lernplan`). Kind-Start und Fächer-Seite zeigen alle laufenden Pläne.
