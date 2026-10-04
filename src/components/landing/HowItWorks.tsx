@@ -1,4 +1,5 @@
 import Handy from './Handy';
+import LoopVideo from './LoopVideo';
 
 // Texte unveraendert. Bilder: echte Bildschirme (public/landing, erzeugt mit
 // `npm run werbung:landing` und `npm run werbung:app-bilder`).
@@ -25,23 +26,23 @@ const steps = [
 
 const HowItWorks = () => (
   <section data-abschnitt="so_funktionierts" id="so-funktionierts" className="scroll-mt-20 px-3 sm:px-5">
-    <div className="lp-band lp-karo overflow-hidden rounded-[28px] py-20 sm:rounded-[36px] lg:py-28">
+    <div className="lp-band lp-karo overflow-hidden rounded-lg py-20 lg:py-28">
       <div className="lp-container">
         <h2 className="max-w-xl text-[2.25rem] font-extrabold sm:text-5xl">In drei Schritten zur verdienten Zeit</h2>
 
         <ol className="mt-14 grid gap-5 md:grid-cols-3 lg:mt-16 lg:gap-6">
           {steps.map((s, i) => (
-            <li key={s.title} className="flex flex-col overflow-hidden rounded-[22px] bg-white/[0.06] ring-1 ring-inset ring-white/[0.12]">
+            <li key={s.title} className="flex flex-col overflow-hidden lp-step rounded-lg">
               <div className="p-7 pb-0 sm:p-8 sm:pb-0">
-                <span className="grid h-9 w-9 place-items-center rounded-full text-[0.9375rem] font-bold text-white ring-1 ring-inset ring-white/40">
+                <span className="grid h-9 w-9 place-items-center rounded-full text-[0.9375rem] font-bold lp-step-number ring-1 ring-inset">
                   {i + 1}
                 </span>
                 <h3 className="mt-5 text-[1.375rem] font-bold">{s.title}</h3>
-                <p className="mt-2 text-[0.9375rem] leading-relaxed text-[#b9c4ea]">{s.description}</p>
+                <p className="mt-2 text-[0.9375rem] leading-relaxed text-inherit">{s.description}</p>
               </div>
               {/* Handy ragt unten aus der Karte */}
-              <div className="relative mt-auto flex h-[300px] justify-center overflow-hidden pt-8">
-                <Handy bild={s.bild} alt={s.alt} className="text-[2.45px]" />
+              <div className="relative mt-auto flex h-[340px] justify-center overflow-hidden px-4 pt-8">
+                {i === 0 ? <Handy bild={s.bild} alt={s.alt} className="text-[2.45px]" /> : <LoopVideo name={i === 1 ? 'kind' : 'eltern'} className="max-w-[256px] self-start rounded-lg" />}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[var(--lp-tinte)] to-transparent opacity-70" />
               </div>
             </li>

@@ -5,3 +5,4 @@
 - [ ] Echten angemeldeten Einladungsablauf prüfen – blockiert: externe Anmeldung ohne verfügbare Testsitzung.
 - [ ] Startseite mit vorhandenen Videos und gemeinsamen Scroll-Effekten überarbeiten.
 - [ ] Desktop, 375 px, reduzierte Bewegung und unveränderte Tracking-/Abschnittsattribute prüfen.
+- [ ] Loop-Dateien aus dem angegebenen Commit unter public/videos wiederherstellen (im aktuellen Stand fehlen sie).
