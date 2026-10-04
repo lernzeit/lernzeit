@@ -10,6 +10,9 @@ import SetupSteps from '@/components/landing/SetupSteps';
 import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
+import FaqSection from '@/components/landing/FaqSection';
+import { Link } from 'react-router-dom';
+import { sichtbareArtikel } from '@/content/ratgeber';
 import { trackFireAndForget } from '@/lib/analytics';
 import { useAbschnittMessung } from '@/hooks/useAbschnittMessung';
 
@@ -29,18 +32,27 @@ const Start = () => {
   }, [searchParams, navigate]);
 
   return (
-    <main ref={seite} className="min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
+    <main ref={seite} className="relative min-h-screen bg-background pt-safe-top pb-safe-bottom px-safe">
       <Seo
         title="LernZeit – Lernen belohnen. Handyzeit verdienen."
         description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Lehrplanorientiert für Klasse 1–10. Jetzt starten."
         path="/start"
       />
+      {/* Ratgeber-Link nur, wenn es sichtbare Artikel gibt */}
+      {sichtbareArtikel().length > 0 && (
+        <div className="absolute right-4 top-4 z-20 pt-safe-top">
+          <Link to="/ratgeber" className="text-sm font-medium text-muted-foreground hover:text-foreground">
+            Ratgeber
+          </Link>
+        </div>
+      )}
       <HeroSection />
       <TargetAudience />
       <HowItWorks />
       <USPSection />
       <SetupSteps />
       <PricingComparison />
+      <FaqSection />
 
       {/* Footer CTA und rechtliche Links: Abschnitt "fusszeile" */}
       <div data-abschnitt="fusszeile">

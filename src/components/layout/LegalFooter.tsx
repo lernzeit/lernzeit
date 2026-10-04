@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, FileText, Building2, LifeBuoy, Trash2 } from 'lucide-react';
+import { Shield, FileText, Building2, LifeBuoy, Trash2, BookOpen } from 'lucide-react';
+import { sichtbareArtikel } from '@/content/ratgeber';
 
 interface LegalFooterProps {
   className?: string;
@@ -54,6 +55,16 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
           <Trash2 className="w-3.5 h-3.5" />
           Konto löschen
         </Link>
+        {/* Ratgeber nur, wenn es sichtbare Artikel gibt */}
+        {sichtbareArtikel().length > 0 && (
+          <>
+            <span className={`hidden sm:inline ${variant === 'dark' ? 'text-gray-600' : 'text-muted'}`}>•</span>
+            <Link to="/ratgeber" className={`flex items-center gap-1.5 transition-colors ${textClass}`}>
+              <BookOpen className="w-3.5 h-3.5" />
+              Ratgeber
+            </Link>
+          </>
+        )}
       </div>
       <p className={`text-center text-xs mt-2 ${variant === 'dark' ? 'text-gray-300' : 'text-muted-foreground'}`}>
         © {new Date().getFullYear()} LernZeit. Alle Rechte vorbehalten.
