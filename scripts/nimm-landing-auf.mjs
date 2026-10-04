@@ -86,9 +86,12 @@ try {
     for (let n = 1; n <= 5; n++) {
       const text = await page.locator('body').innerText();
       const frage = Object.keys(ANTWORT).find((f) => text.includes(f));
-      const feld = page.getByPlaceholder(/Antwort/);
-      if (await feld.count()) {
-        await feld.fill(ANTWORT[frage]);
+      // Zahlenaufgaben haben seit dem App-Redesign ein eigenes Ziffernfeld
+      const ziffern = page.getByRole('group', { name: 'Ziffernfeld' });
+      if (await ziffern.count()) {
+        // Meldung und Konfetti der vorigen Aufgabe ("Blitzschnell!") abklingen lassen
+        await page.waitForTimeout(3000);
+        for (const z of ANTWORT[frage]) await ziffern.getByRole('button', { name: z, exact: true }).click();
         await page.waitForTimeout(300);
         await standbild('aufgabe');
         await page.getByRole('button', { name: /Prüfen/ }).click();
@@ -133,9 +136,12 @@ try {
     const text = await page.locator('body').innerText();
     const frage = Object.keys(ANTWORT).find((f) => text.includes(f));
     if (!frage) throw new Error(`Unbekannte Frage bei Nummer ${n}.\n${text}`);
-    const feld = page.getByPlaceholder(/Antwort/);
-    if (await feld.count()) {
-      await feld.pressSequentially(ANTWORT[frage], { delay: 170 });
+    const ziffern = page.getByRole('group', { name: 'Ziffernfeld' });
+    if (await ziffern.count()) {
+      for (const z of ANTWORT[frage]) {
+        await ziffern.getByRole('button', { name: z, exact: true }).click();
+        await page.waitForTimeout(170);
+      }
       await page.waitForTimeout(250);
       await page.getByRole('button', { name: /Prüfen/ }).click();
     } else {

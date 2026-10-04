@@ -7,19 +7,19 @@ const steps = [
     title: 'Fach wählen',
     description: 'Mathe, Deutsch, Englisch und viele weitere Fächer – von Klasse 1 bis 10.',
     bild: '/landing/fach.webp',
-    alt: 'Fachwahl in der Kinder-Ansicht: Mathe, Deutsch, Sachkunde, Englisch',
+    alt: 'Fachwahl in der Kinder-Ansicht: Hefte für Mathe, Deutsch, Sachkunde, Englisch',
   },
   {
     title: 'Aufgaben lösen',
     description: 'Altersgerechte Fragen beantworten – bei Fehlern hilft der KI-Tutor mit Erklärungen.',
     bild: '/landing/aufgabe.webp',
-    alt: 'Aufgabe „Wie viel ist 7 · 6?“ mit eingegebener Antwort',
+    alt: 'Aufgabe „Wie viel ist 300 − 145?“, Antwort 155 in Rechenkästchen, darunter das Ziffernfeld',
   },
   {
     title: 'Zeit verdienen',
     description: 'Pro richtige Antwort erhalten Kinder Bildschirmzeit – Eltern legen die Sekunden pro Fach fest.',
     bild: '/landing/kind-verdient.webp',
-    alt: 'Kinder-Ansicht: Heute verdient 8 Minuten, 8 Minuten anforderbar, Knopf „Bildschirmzeit anfragen“',
+    alt: 'Kinder-Ansicht: Zeit-Uhr mit 8 von 60 Minuten, Knöpfe „Lernen starten“ und „8 Min. anfragen“',
   },
 ];
 

@@ -79,3 +79,17 @@ Supabase-Secrets gelöscht werden.
 - Bericht: `admin_registrierungs_trichter` / Karte im Marketing-Panel.
 - Ratgeber-Artikel (`src/content/ratgeber/`) erscheinen erst mit `veroeffentlicht: true`
   und `geprueftAm` an jeder Quelle; Prüfliste `docs/ratgeber/quellenpruefung.md`.
+
+## App-Gestaltung „Heft“ (Stand 04.10.2026)
+
+- Gleiche Bildwelt wie die Website: Plus Jakarta Sans, Tokens `tinte`, `primary` (Blau),
+  `gruen-hell`/`gruen-text`, `rotstift`, `karo` (tailwind), `.heft-karo`, `font-hand`.
+  Keine Verläufe, Emoji nur bei Avatar und Stickern.
+- Kind: Zeit-Uhr, Lernpflanze statt Lernfeuer (Stufen in `child/LernPflanze.tsx`, auch in
+  den Push-Texten von `send-push`), Fächer als Hefte mit eigener Farbe und Stickern
+  (Tabellen `kind_hefte`, `kind_sticker`, Vergabe nur über `sticker_vergeben()`).
+- Spiel: Kästchen-Fortschritt, eigenes Ziffernfeld für Zahlenaufgaben, Haken/Rotstift.
+- Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Regeln speichern sofort mit
+  „Rückgängig“ (kein Speichern-Knopf).
+- Website-Bilder nach App-Änderungen neu aufnehmen: `npm run build`, dann
+  `npm run werbung:app-bilder` und `npm run werbung:landing` (FFMPEG/CHROMIUM setzen).

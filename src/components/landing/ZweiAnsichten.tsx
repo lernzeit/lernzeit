@@ -40,10 +40,10 @@ const KAPITEL: Kapitel[] = [
   },
   {
     ansicht: 'kind',
-    titel: 'Achievements & Streaks',
-    text: 'Kinder sammeln Achievements und halten Lern-Streaks aufrecht – das motiviert zum regelmäßigen Lernen.',
+    titel: 'Lernpflanze und eigene Hefte',
+    text: 'Jeder Lerntag lässt die Lernpflanze wachsen, vom Samen bis zum Baum. Für eine Runde ohne Fehler gibt es Sticker, die Kinder auf ihre selbst gestalteten Hefte kleben.',
     bild: '/landing/kind-start.webp',
-    notiz: { text: '7 Tage in Folge gelernt', hoehe: 25 },
+    notiz: { text: '7 Tage in Folge gelernt', hoehe: 4 },
   },
   {
     ansicht: 'kind',
@@ -57,14 +57,14 @@ const KAPITEL: Kapitel[] = [
     titel: 'Du entscheidest',
     text: 'Die verdiente Zeit wird nicht automatisch freigegeben. Du siehst, wie viel dein Kind verdient hat, und entscheidest, ob es die Zeit bekommt.',
     bild: '/landing/eltern-anfrage.webp',
-    notiz: { text: 'Genehmigen oder ablehnen', hoehe: 75 },
+    notiz: { text: 'Genehmigen oder ablehnen', hoehe: 40 },
   },
   {
     ansicht: 'eltern',
     titel: 'Eltern behalten die Kontrolle',
     text: 'Ab Werk gibt es 30 Sekunden pro richtig gelöster Aufgabe und höchstens 30 Minuten am Tag, am Wochenende 60. Mit Premium stellst du beides selbst ein, pro Fach und pro Kind.',
     bild: '/landing/eltern-regeln.webp',
-    notiz: { text: '30 Sek. pro Aufgabe, für jedes Fach', hoehe: 64 },
+    notiz: { text: '30 Sek. pro Aufgabe, für jedes Fach', hoehe: 55 },
   },
   {
     ansicht: 'eltern',
@@ -72,7 +72,7 @@ const KAPITEL: Kapitel[] = [
     text: 'Eltern sehen Lerntrends, Erfolgsquoten und Fehlerschwerpunkte. Vor einer Klassenarbeit gibst du Fach, Thema und Termin an – LernZeit erstellt daraus einen Übungsplan, dessen Aufgaben direkt im Spiel des Kindes auftauchen.',
     bild: '/landing/eltern-analyse.webp',
     premium: true,
-    notiz: { text: 'Stärkstes Fach auf einen Blick', hoehe: 33 },
+    notiz: { text: 'Stärkstes Fach auf einen Blick', hoehe: 38 },
   },
 ];
 

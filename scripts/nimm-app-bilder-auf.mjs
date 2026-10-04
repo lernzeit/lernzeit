@@ -84,7 +84,9 @@ const bild = (page, name) => page.screenshot({ path: join(arbeit, `${name}.png`)
 async function ausschnitt(page, name, text, abstand = 14) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(300);
-  const y = await page.getByText(text, { exact: false }).first().evaluate((el, a) => Math.max(0, el.getBoundingClientRect().top + window.scrollY - a), abstand);
+  // `text` darf auch ein Locator sein (z. B. ein Abschnitt mit aria-label)
+  const ziel = typeof text === 'string' ? page.getByText(text, { exact: false }).first() : text;
+  const y = await ziel.evaluate((el, a) => Math.max(0, el.getBoundingClientRect().top + window.scrollY - a), abstand);
   const ganz = join(arbeit, `${name}-ganz.png`);
   await page.screenshot({ path: ganz, fullPage: true });
   const oben = Math.round(y * 2);
@@ -103,8 +105,8 @@ try {
   {
     const { page, ctx } = await anmelden('child');
     await bild(page, 'kind-start');
-    await ausschnitt(page, 'kind-verdient', 'Heute verdient', 28);
-    await page.getByRole('button', { name: /Bildschirmzeit anfragen/ }).click();
+    await ausschnitt(page, 'kind-verdient', page.getByRole('region', { name: 'Deine Bildschirmzeit heute' }), 20);
+    await page.getByRole('button', { name: /Min\. anfragen/ }).click();
     await page.getByLabel(/Nachricht an deine Eltern/).fill(NACHRICHT);
     await page.waitForTimeout(500);
     await bild(page, 'anfragen');
@@ -117,13 +119,18 @@ try {
       d.screen_time_requests = [offeneAnfrage(8, NACHRICHT)];
       d.child_settings[0].screen_time_managed = true;
     });
-    await ausschnitt(page, 'eltern-anfrage', 'Ideen-Forum', 14);
-    await page.getByText('Kinder', { exact: true }).first().click();
+    // Seit dem App-Redesign: "Heute" mit der Anfrage oben, Kind-Details in Bereichen
+    await bild(page, 'eltern-anfrage');
+    await page.getByRole('tab', { name: 'Kinder' }).click();
     await page.waitForTimeout(1000);
     await page.getByText('Mia', { exact: true }).first().click();
     await page.waitForTimeout(1500);
-    await oben(page, 'Bildschirmzeit-Limits', 16);
+    await page.getByRole('tab', { name: 'Regeln' }).click();
+    await page.waitForTimeout(1500);
+    await oben(page, 'Bildschirmzeit am Tag', 16);
     await bild(page, 'eltern-regeln');
+    await page.getByRole('tab', { name: 'Übersicht' }).click();
+    await page.waitForTimeout(1500);
     await oben(page, 'Gesamtübersicht', 16);
     await bild(page, 'eltern-analyse');
     await ctx.close();
