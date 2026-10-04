@@ -990,6 +990,14 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                           Abo verwalten
                         </Button>
                       )}
+                      {!isNativeApp && (
+                        <p className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground">
+                          <Link to="/nutzungsbedingungen" className="underline underline-offset-2 hover:text-foreground">Nutzungsbedingungen</Link>
+                          <Link to="/widerruf" className="underline underline-offset-2 hover:text-foreground">Widerrufsbelehrung</Link>
+                          <Link to="/widerruf#widerrufen" className="underline underline-offset-2 hover:text-foreground">Vertrag widerrufen</Link>
+                          <Link to="/kuendigen" className="underline underline-offset-2 hover:text-foreground">Verträge hier kündigen</Link>
+                        </p>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

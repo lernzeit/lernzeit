@@ -78,6 +78,28 @@ höfliche Antwort; offene Punkte stehen in eckigen Klammern, z. B.
 nachsehen, was zum Konto der Absenderadresse vorliegt, und das im Bericht
 notieren (nicht in der Mail).
 
+### Kündigungen und Widerrufe über die Website
+
+Seit 04.10.2026 gehen Kündigungen (`/kuendigen`, § 312k BGB) und Widerrufe
+(`/widerruf`, § 356a BGB) über die Funktion `vertragserklaerung` ein. Sie
+stehen in der Tabelle `vertragserklaerungen`; der Kunde hat sofort eine
+Eingangsbestätigung bekommen, das Postfach eine Kopie mit Betreff
+„[Kündigung] …“ bzw. „[Widerruf] …“ (Absender ist das eigene Postfach, deshalb
+filtert `neu` sie als Systemmail heraus). Bei jedem Lauf zusätzlich:
+
+```sql
+select * from vertragserklaerungen where bearbeitet_am is null order by eingegangen_am;
+```
+
+Offene Einträge im Bericht **ganz oben** nennen. Die Ausführung macht der
+Betreiber in Stripe: Kündigung zum Laufzeitende (Monatsabo; Jahresabo im
+ersten Jahr) bzw. mit einem Monat Frist (Jahresabo ab dem zweiten Jahr,
+anteilige Erstattung), Widerruf = Abo sofort beenden und alle Zahlungen
+dieses Vertrags erstatten (binnen 14 Tagen). Danach `bearbeitet_am` und
+`notiz` setzen und dem Kunden das Vertragsende bestätigen (Entwurf, Gruppe B).
+Ist `bestaetigung_fehler` gesetzt, die Eingangsbestätigung von Hand
+nachschicken. Store-Abos (App Store, Google Play) kann nur der Store beenden.
+
 ### C — ohne Antwort abhaken (`erledigt`)
 
 Was trotz Filter durchrutscht: Kaltakquise und Spam von unbekannten

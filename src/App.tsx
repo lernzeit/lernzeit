@@ -18,6 +18,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Datenschutz = lazy(() => import("./pages/Datenschutz"));
 const Nutzungsbedingungen = lazy(() => import("./pages/Nutzungsbedingungen"));
 const Impressum = lazy(() => import("./pages/Impressum"));
+const Widerruf = lazy(() => import("./pages/Widerruf"));
+const Kuendigen = lazy(() => import("./pages/Kuendigen"));
 const Support = lazy(() => import("./pages/Support"));
 const IdeaForum = lazy(() => import("./pages/IdeaForum"));
 const KontoLoeschen = lazy(() => import("./pages/KontoLoeschen"));
@@ -79,6 +81,17 @@ const App = () => (
               <KontoLoeschen />
             </Suspense>
           } />
+          <Route path="/widerruf" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <Widerruf />
+            </Suspense>
+          } />
+          <Route path="/kuendigen" element={
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <Kuendigen />
+            </Suspense>
+          } />
+          <Route path="/kündigen" element={<Navigate to="/kuendigen" replace />} />
           <Route path="/account-loeschen" element={<Navigate to="/konto-loeschen" replace />} />
           <Route path="/delete-account" element={<Navigate to="/konto-loeschen" replace />} />
           <Route path="/faq" element={

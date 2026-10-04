@@ -1,236 +1,238 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Seo from '@/components/Seo';
+import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
 
-const Datenschutz = () => {
-  const navigate = useNavigate();
+/**
+ * Datenschutzerklaerung, ergaenzt am 04.10.2026: Verantwortlicher mit
+ * Anschrift, Rechtsgrundlagen je Zweck, Website-Hosting, eigene Messung
+ * (analytics_events, Zufallskennung im Browser), RevenueCat, Kuendigung und
+ * Widerruf, Speicherdauer, Widerspruchsrecht nach Art. 21, zustaendige
+ * Aufsichtsbehoerde. Kein Werbe-Tracking: der Entwurf mit § 8a
+ * (docs/datenschutz-entwurf.md) ist NICHT eingearbeitet, er wartet auf die
+ * Kanzlei. Offene Punkte: docs/rechtstexte-pruefung.md.
+ */
+const Datenschutz = () => (
+  <RechtsSeite titel="Datenschutzerklärung" stand="4. Oktober 2026">
+    <Seo
+      title="Datenschutz – LernZeit"
+      description="Datenschutzerklärung von LernZeit: welche Daten von Eltern und Kindern wir verarbeiten, wozu, auf welcher Rechtsgrundlage und welche Rechte Sie haben."
+      path="/datenschutz"
+    />
 
-  return (
-    <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
-      <Seo
-        title="Datenschutz – LernZeit"
-        description="Datenschutzerklärung von LernZeit: So gehen wir mit den Daten von Eltern und Kindern um. Transparenz und Sicherheit nach DSGVO."
-        path="/datenschutz"
-      />
-      <div className="max-w-4xl mx-auto">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Zurück
-        </Button>
+    <section>
+      <h2>1. Verantwortlicher</h2>
+      <p>
+        LernZeit UG (haftungsbeschränkt), Drachengasse 10, 99084 Erfurt, Deutschland
+        <br />
+        E-Mail: <a href="mailto:info@lernzeit.app">info@lernzeit.app</a>
+      </p>
+      <p>
+        Für alle Fragen zum Datenschutz erreichen Sie uns unter dieser Adresse oder über das{' '}
+        <Link to="/support">Kontaktformular</Link>.
+      </p>
+    </section>
 
-        <Card className="shadow-card">
-          <CardHeader>
-            <h1 className="flex items-center gap-2 text-2xl font-semibold leading-none tracking-tight">
-              <Shield className="w-6 h-6 text-primary" />
-              Datenschutzerklärung
-            </h1>
-          </CardHeader>
-          <CardContent className="prose prose-sm max-w-none">
-            <p className="text-muted-foreground mb-6">
-              Stand: {new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+    <section>
+      <h2>2. Welche Daten wir verarbeiten</h2>
+      <h3>2.1 Konten</h3>
+      <ul>
+        <li>Eltern: E-Mail-Adresse, Passwort (verschlüsselt gespeichert), Name (freiwillig), Rolle</li>
+        <li>Kinder: E-Mail-Adresse oder nur ein Benutzername, Passwort (verschlüsselt), Name (freiwillig), Klassenstufe, gewählter Avatar</li>
+        <li>Verbindung zwischen Eltern- und Kinderkonto sowie die protokollierte Einwilligung der Eltern</li>
+      </ul>
+      <h3>2.2 Nutzung</h3>
+      <ul>
+        <li>gelöste Aufgaben, Antworten, Lernfortschritt und Statistiken</li>
+        <li>verdiente, angefragte und freigegebene Bildschirmzeit, Regeln der Eltern</li>
+        <li>Lerntage (Lernpflanze), Sticker und gestaltete Hefte</li>
+        <li>Meldungen zu fehlerhaften Aufgaben und Bewertungen von Aufgaben</li>
+        <li>Eingaben an den KI-Tutor und für den KI-Lernplan</li>
+      </ul>
+      <h3>2.3 Abo und Verträge</h3>
+      <ul>
+        <li>Tarif, Laufzeit und Status des Premium-Abos; Zahlungsdaten selbst verarbeitet nur der Zahlungsdienstleister</li>
+        <li>Kündigungen und Widerrufe, die Sie über die Website abgeben: Name, E-Mail-Adresse, Vertrag, gewünschter Zeitpunkt, Grund (falls angegeben), Eingangszeit</li>
+      </ul>
+      <h3>2.4 Kontakt</h3>
+      <p>Wenn Sie uns schreiben: Ihre Nachricht, Ihre E-Mail-Adresse und unsere Antwort.</p>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">1. Verantwortlicher</h2>
-              <p className="text-muted-foreground">
-                Verantwortlich für die Datenverarbeitung in dieser App ist der Betreiber, 
-                wie im Impressum angegeben. Bei Fragen zum Datenschutz kontaktieren Sie uns 
-                bitte über die im Impressum angegebenen Kontaktdaten.
-              </p>
-            </section>
+    <section>
+      <h2>3. Zwecke und Rechtsgrundlagen</h2>
+      <ul>
+        <li>
+          <strong>Bereitstellung von LernZeit</strong> (Konten, Aufgaben, Bildschirmzeit, Eltern-Kind-Verbindung,
+          KI-Funktionen, Abo): Art. 6 Abs. 1 lit. b DSGVO (Vertrag).
+        </li>
+        <li>
+          <strong>Konten von Kindern unter 16 Jahren:</strong> Einwilligung der Eltern, Art. 6 Abs. 1 lit. a in
+          Verbindung mit Art. 8 DSGVO.
+        </li>
+        <li>
+          <strong>Service-E-Mails an Eltern</strong> (z. B. Hilfe beim Einrichten, Ende der Testphase) und{' '}
+          <strong>Support:</strong> Art. 6 Abs. 1 lit. b DSGVO, soweit sie den Vertrag betreffen, sonst lit. f
+          (berechtigtes Interesse an einer funktionierenden Nutzung). Service-E-Mails lassen sich jederzeit abbestellen.
+        </li>
+        <li>
+          <strong>Push-Benachrichtigungen:</strong> nur, wenn Sie oder Ihr Kind sie auf dem Gerät erlaubt haben,
+          Art. 6 Abs. 1 lit. a DSGVO.
+        </li>
+        <li>
+          <strong>Kündigungen, Widerrufe, Rechnungen:</strong> Art. 6 Abs. 1 lit. c DSGVO (gesetzliche Pflichten,
+          z. B. §§ 312k, 356a BGB, Aufbewahrung nach Handels- und Steuerrecht).
+        </li>
+        <li>
+          <strong>Sicherheit, Fehlersuche und eigene Auswertung</strong> (Abschnitt 5): Art. 6 Abs. 1 lit. f DSGVO.
+          Unser berechtigtes Interesse ist ein sicherer, funktionierender Dienst und zu verstehen, welche Teile von
+          Website und App genutzt werden.
+        </li>
+      </ul>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">2. Welche Daten werden erhoben?</h2>
-              <div className="text-muted-foreground space-y-4">
-                <div>
-                  <h3 className="font-medium text-foreground">2.1 Registrierungsdaten</h3>
-                  <p>Bei der Registrierung erheben wir:</p>
-                  <ul className="list-disc list-inside ml-4 mt-2">
-                    <li>E-Mail-Adresse</li>
-                    <li>Name (optional)</li>
-                    <li>Klassenstufe</li>
-                    <li>Rolle (Kind oder Elternteil)</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">2.2 Nutzungsdaten</h3>
-                  <p>Während der Nutzung speichern wir:</p>
-                  <ul className="list-disc list-inside ml-4 mt-2">
-                    <li>Lernfortschritte und -statistiken</li>
-                    <li>Verdiente Bildschirmzeit</li>
-                    <li>Beantwortete Fragen und Erfolgsquoten</li>
-                    <li>Achievements und Streaks</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
+    <section>
+      <h2>4. Besondere Bestimmungen für Kinder</h2>
+      <p>LernZeit ist eine Lern-App für Kinder. Für ihre Daten gilt zusätzlich:</p>
+      <ul>
+        <li>Wir erheben nur die Daten, die für das Lernen und die Bildschirmzeit nötig sind.</li>
+        <li>
+          <strong>Keine Werbung:</strong> In LernZeit wird weder personalisierte noch kontextbezogene Werbung Dritter
+          ausgespielt. Es sind keine Werbe-SDKs eingebunden.
+        </li>
+        <li>
+          <strong>Kein Tracking, keine Profile für Dritte:</strong> keine geräte- oder app-übergreifende Verfolgung,
+          keine Werbe-Kennungen (IDFA/AAID). Die App fragt unter iOS deshalb keine Tracking-Erlaubnis (ATT) ab.
+        </li>
+        <li>
+          <strong>Keine Weitergabe an Werbenetzwerke oder Datenhändler.</strong> Nutzungsereignisse aus Kinderkonten
+          bleiben in unserer eigenen Datenbank.
+        </li>
+        <li>
+          <strong>Käufe nur durch Eltern:</strong> Premium ist nur im Elternkonto erhältlich.
+        </li>
+        <li>
+          <strong>Einwilligung der Eltern:</strong> Sie wird beim Verbinden eines Kinderkontos eingeholt und
+          protokolliert. Eltern können die Daten ihrer Kinder jederzeit einsehen und löschen lassen.
+        </li>
+        <li>
+          Service-E-Mails gehen nur an Eltern. Kinder, die sich mit E-Mail-Adresse anmelden, erhalten nur die
+          technisch nötigen Anmelde-E-Mails (z. B. Bestätigung der Adresse).
+        </li>
+      </ul>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">3. Zweck der Datenverarbeitung</h2>
-              <p className="text-muted-foreground">
-                Wir verarbeiten Ihre Daten ausschließlich zu folgenden Zwecken:
-              </p>
-              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
-                <li>Bereitstellung der App-Funktionalitäten</li>
-                <li>Speicherung des Lernfortschritts</li>
-                <li>Berechnung und Anzeige der verdienten Bildschirmzeit</li>
-                <li>Ermöglichung der Eltern-Kind-Verknüpfung</li>
-                <li>Verbesserung der App und der Lernfragen</li>
-              </ul>
-            </section>
+    <section>
+      <h2>5. Website, App-Betrieb und eigene Auswertung</h2>
+      <h3>5.1 Aufruf der Website</h3>
+      <p>
+        Beim Aufruf von lernzeit.app verarbeitet unser Hosting-Dienstleister technisch notwendige Verbindungsdaten
+        (z. B. IP-Adresse, Zeitpunkt, aufgerufene Adresse, Browserkennung), um die Seiten auszuliefern und vor
+        Missbrauch zu schützen.
+      </p>
+      <h3>5.2 Eigene Auswertung ohne Cookies</h3>
+      <p>
+        Wir zählen, wie Website und App genutzt werden, zum Beispiel aufgerufene Seiten, welche Abschnitte der
+        Startseite gesehen wurden, Klicks auf die Store-Links, die Schritte der Registrierung (nie Ihre Eingaben) und
+        einzelne Schritte in der App (z. B. erste Lerneinheit, Zeitanfrage). Dazu legt die Website im Speicher Ihres
+        Browsers (localStorage) eine zufällige Kennung und gegebenenfalls die Kampagnen-Angaben aus dem Link ab, über
+        den Sie gekommen sind (z. B. utm_source, verweisende Seite). Die Ereignisse speichern wir ausschließlich in
+        unserer eigenen Datenbank in der EU; sie gehen an keinen Dritten. Wir setzen keine Cookies für diese
+        Auswertung und kein Analyse- oder Werbewerkzeug eines anderen Anbieters ein.
+      </p>
+      <p>
+        Sie können die Speicherung verhindern, indem Sie die Website-Daten in Ihrem Browser löschen oder blockieren.
+        Widerspruch ist außerdem jederzeit per E-Mail möglich (Abschnitt 9).
+      </p>
+      <h3>5.3 Lokale Speicherung für den Betrieb</h3>
+      <p>
+        Für die Anmeldung und Ihre Einstellungen (z. B. gewählte Ansicht, ob ein Hinweis schon gezeigt wurde) nutzen
+        Website und App den lokalen Speicher des Geräts. Ohne diese Speicherung funktioniert die Anmeldung nicht.
+      </p>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">4. Rechtsgrundlage</h2>
-              <p className="text-muted-foreground">
-                Die Verarbeitung erfolgt auf Grundlage von:
-              </p>
-              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
-                <li>Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)</li>
-                <li>Art. 6 Abs. 1 lit. a DSGVO (Einwilligung bei Minderjährigen)</li>
-                <li>Art. 8 DSGVO (Bedingungen für die Einwilligung von Kindern)</li>
-              </ul>
-            </section>
+    <section>
+      <h2>6. Empfänger und Dienstleister</h2>
+      <p>
+        Wir setzen sorgfältig ausgewählte Dienstleister ein, die Daten nur in unserem Auftrag verarbeiten
+        (Art. 28 DSGVO), soweit sie nicht selbst verantwortlich sind:
+      </p>
+      <ul>
+        <li><strong>Supabase</strong> (Rechenzentrum in der EU): Datenbank, Anmeldung, Server-Funktionen</li>
+        <li><strong>Lovable</strong>: Hosting und Auslieferung der Website lernzeit.app</li>
+        <li><strong>Stripe Payments Europe, Ltd.</strong> (Irland): Bezahlung von Premium auf der Website</li>
+        <li><strong>RevenueCat, Inc.</strong> (USA): Verwaltung der In-App-Abos aus App Store und Google Play</li>
+        <li><strong>Apple</strong> und <strong>Google</strong>: Bereitstellung der Apps und Abrechnung von In-App-Käufen (eigene Verantwortung)</li>
+        <li>
+          <strong>Google (Gemini)</strong> und <strong>OpenRouter</strong>: Erstellen von Aufgaben, Erklärungen,
+          KI-Tutor und Lernplan. Übermittelt werden die Aufgabe und die Eingabe, ohne personenbezogene
+          Kennungen wie Name oder E-Mail-Adresse.
+        </li>
+        <li><strong>OneSignal, Inc.</strong> (USA): Push-Benachrichtigungen und Service-E-Mails an Eltern</li>
+        <li><strong>IONOS SE</strong>: E-Mail-Postfach, Anmelde- und Bestätigungs-E-Mails, Eingangsbestätigungen</li>
+      </ul>
+      <p>
+        Übermittlungen in Länder außerhalb der EU (z. B. USA) erfolgen nur auf Grundlage geeigneter Garantien
+        (EU-Standardvertragsklauseln bzw. EU-US Data Privacy Framework).
+      </p>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">5. Besondere Bestimmungen für Kinder</h2>
-              <p className="text-muted-foreground">
-                LernZeit ist eine Lern-App für Kinder. Wir nehmen den Schutz von Kinderdaten 
-                besonders ernst:
-              </p>
-              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
-                <li>Wir erheben nur die minimal notwendigen Daten</li>
-                <li>Kinder unter 16 Jahren benötigen die Zustimmung eines Erziehungsberechtigten</li>
-                <li>Es werden keine Daten an Dritte zu Werbezwecken weitergegeben</li>
-                <li>Eltern können jederzeit die Daten ihrer Kinder einsehen und löschen lassen</li>
-              </ul>
-              <p className="text-muted-foreground mt-4">
-                In Übereinstimmung mit den Apple App Store „Kids Category"-Richtlinien sowie
-                der DSGVO (insb. Art. 8) gilt zusätzlich:
-              </p>
-              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
-                <li>
-                  <strong>Keine Werbung:</strong> In LernZeit wird weder personalisierte noch
-                  kontextbezogene Werbung Dritter ausgespielt. Es sind keine Werbe-SDKs
-                  (z. B. AdMob, Meta Audience Network) integriert.
-                </li>
-                <li>
-                  <strong>Kein Tracking & keine Profilbildung:</strong> Wir nutzen keine
-                  Tracking-Technologien geräte- oder app-übergreifend. Die App fragt unter
-                  iOS daher auch keine „App Tracking Transparency"-Erlaubnis (ATT) ab.
-                </li>
-                <li>
-                  <strong>Keine Weitergabe an Werbenetzwerke oder Datenhändler:</strong>
-                  Daten von Kindern werden nicht für Marketing-, Profiling- oder
-                  Analysezwecke Dritter verwendet oder verkauft.
-                </li>
-                <li>
-                  <strong>Eingeschränkte Analytics:</strong> Wir verwenden ausschließlich
-                  datensparsame, aggregierte technische Logs zur Stabilitätssicherung – ohne
-                  Werbe-Identifier (IDFA/AAID) und ohne personenbezogene Profilbildung.
-                </li>
-                <li>
-                  <strong>In-App-Käufe nur durch Eltern:</strong> Premium-Abonnements und
-                  Käufe sind ausschließlich im Eltern-Account verfügbar und durch das Eltern-
-                  bzw. App-Store-Konto geschützt.
-                </li>
-                <li>
-                  <strong>Externe Links & Social Media:</strong> Innerhalb der Kinder-Ansicht
-                  gibt es keine Verlinkungen zu externen Webseiten oder sozialen Netzwerken,
-                  die nicht zuvor eine Eltern-Bestätigung erfordern.
-                </li>
-                <li>
-                  <strong>Elterliche Einwilligung:</strong> Bei der Anlage eines Kinder-Accounts
-                  wird die elterliche Einwilligung gemäß Art. 8 DSGVO eingeholt und protokolliert.
-                </li>
-              </ul>
-            </section>
+    <section>
+      <h2>7. Speicherdauer</h2>
+      <ul>
+        <li>Kontodaten und Lernstand speichern wir, bis das Konto gelöscht wird (<Link to="/konto-loeschen">Konto löschen</Link>).</li>
+        <li>Rechnungs- und Zahlungsbelege bewahren wir bzw. unser Zahlungsdienstleister so lange auf, wie es das Handels- und Steuerrecht vorschreibt (bis zu zehn Jahre).</li>
+        <li>Kündigungen und Widerrufe bewahren wir bis zum Ende der gesetzlichen Verjährungsfrist auf (regelmäßig drei Jahre ab Ende des Jahres des Eingangs).</li>
+        <li>Support-Nachrichten löschen wir, wenn die Anfrage erledigt ist und keine Aufbewahrungspflicht besteht.</li>
+      </ul>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">6. Datenspeicherung</h2>
-              <p className="text-muted-foreground">
-                Ihre Daten werden auf Servern von Supabase in der Europäischen Union gespeichert. 
-                Die Übertragung erfolgt verschlüsselt über HTTPS. Wir bewahren Ihre Daten nur so 
-                lange auf, wie es für die Bereitstellung unserer Dienste erforderlich ist oder 
-                gesetzliche Aufbewahrungspflichten bestehen.
-              </p>
-            </section>
+    <section>
+      <h2>8. Datensicherheit</h2>
+      <p>
+        Alle Verbindungen sind verschlüsselt (HTTPS). Der Zugriff auf Daten ist durch Zugriffsregeln in der Datenbank
+        auf die jeweiligen Konten beschränkt; Eltern sehen nur die Daten ihrer verbundenen Kinder.
+      </p>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">6a. Eingesetzte Dienstleister (Auftragsverarbeiter)</h2>
-              <p className="text-muted-foreground">
-                Zur Bereitstellung der App nutzen wir sorgfältig ausgewählte Dienstleister,
-                mit denen Auftragsverarbeitungsverträge (Art. 28 DSGVO) bestehen:
-              </p>
-              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
-                <li><strong>Supabase</strong> (EU-Region) – Hosting, Datenbank, Authentifizierung</li>
-                <li><strong>Stripe Payments Europe, Ltd.</strong> – Zahlungsabwicklung für Premium-Abos (nur Eltern-Accounts)</li>
-                <li><strong>Google (Gemini)</strong> sowie <strong>OpenRouter</strong> – Generierung von Lernfragen und KI-Erklärungen; Eingaben werden ohne personenbezogene Identifikatoren übertragen</li>
-                <li><strong>OneSignal, Inc.</strong> (USA) – Push-Benachrichtigungen in der App sowie Service-E-Mails an Eltern (z. B. Hilfe beim Einrichten, Hinweis auf das Ende der Testphase); keine Werbung, jederzeit abbestellbar</li>
-                <li><strong>IONOS SE</strong> – E-Mail-Postfach und Versand der Anmelde- und Bestätigungs-E-Mails</li>
-                <li><strong>Apple App Store / Google Play</strong> – App-Bereitstellung und ggf. In-App-Käufe</li>
-              </ul>
-              <p className="text-muted-foreground mt-2">
-                Diese Dienste werden ausschließlich zum Betrieb der App eingesetzt und nicht
-                für Werbezwecke. Datenübermittlungen in Drittländer (z. B. USA) erfolgen nur
-                auf Grundlage geeigneter Garantien (Standardvertragsklauseln und ggf. EU-US
-                Data Privacy Framework).
-              </p>
-            </section>
+    <section>
+      <h2>9. Ihre Rechte</h2>
+      <p>Sie haben das Recht auf</p>
+      <ul>
+        <li>Auskunft über Ihre gespeicherten Daten (Art. 15 DSGVO),</li>
+        <li>Berichtigung (Art. 16), Löschung (Art. 17) und Einschränkung der Verarbeitung (Art. 18),</li>
+        <li>Datenübertragbarkeit (Art. 20),</li>
+        <li>Widerruf einer Einwilligung mit Wirkung für die Zukunft (Art. 7 Abs. 3 DSGVO).</li>
+      </ul>
+      <RechtsKasten>
+        <p>
+          <strong>Widerspruchsrecht (Art. 21 DSGVO):</strong> Soweit wir Daten auf Grundlage berechtigter Interessen
+          verarbeiten (Art. 6 Abs. 1 lit. f DSGVO), können Sie aus Gründen, die sich aus Ihrer besonderen Situation
+          ergeben, jederzeit widersprechen. Eine formlose E-Mail an{' '}
+          <a href="mailto:info@lernzeit.app">info@lernzeit.app</a> genügt.
+        </p>
+      </RechtsKasten>
+      <p>
+        Ihre Daten können Sie angemeldet auf der <Link to="/support">Support-Seite</Link> selbst exportieren und Ihr
+        Konto unter <Link to="/konto-loeschen">Konto löschen</Link> selbst löschen. Für alles andere schreiben Sie uns.
+      </p>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">7. Ihre Rechte</h2>
-              <p className="text-muted-foreground">Sie haben folgende Rechte:</p>
-              <ul className="list-disc list-inside ml-4 mt-2 text-muted-foreground">
-                <li><strong>Auskunftsrecht:</strong> Sie können Auskunft über Ihre gespeicherten Daten verlangen</li>
-                <li><strong>Berichtigungsrecht:</strong> Sie können die Berichtigung unrichtiger Daten verlangen</li>
-                <li><strong>Löschungsrecht:</strong> Sie können die Löschung Ihrer Daten verlangen</li>
-                <li><strong>Einschränkungsrecht:</strong> Sie können die Einschränkung der Verarbeitung verlangen</li>
-                <li><strong>Widerspruchsrecht:</strong> Sie können der Verarbeitung widersprechen</li>
-                <li><strong>Datenübertragbarkeit:</strong> Sie können Ihre Daten in einem gängigen Format erhalten</li>
-              </ul>
-            </section>
+    <section>
+      <h2>10. Beschwerderecht</h2>
+      <p>
+        Sie können sich bei einer Datenschutz-Aufsichtsbehörde beschweren. Für uns zuständig ist der Thüringer
+        Landesbeauftragte für den Datenschutz und die Informationsfreiheit, Häßlerstraße 8, 99096 Erfurt,{' '}
+        <a href="https://www.tlfdi.de" target="_blank" rel="noopener noreferrer">www.tlfdi.de</a>.
+      </p>
+    </section>
 
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">8. Cookies und lokale Speicherung</h2>
-              <p className="text-muted-foreground">
-                Wir verwenden technisch notwendige Cookies und lokale Speicherung (localStorage) 
-                ausschließlich für die Authentifizierung und die Speicherung von Einstellungen. 
-                Es werden keine Tracking-Cookies oder Cookies für Werbezwecke verwendet.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">9. Änderungen dieser Datenschutzerklärung</h2>
-              <p className="text-muted-foreground">
-                Wir behalten uns vor, diese Datenschutzerklärung bei Bedarf anzupassen. 
-                Die aktuelle Version ist stets in der App verfügbar. Bei wesentlichen Änderungen 
-                werden wir Sie informieren.
-              </p>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-3">10. Kontakt und Beschwerderecht</h2>
-              <p className="text-muted-foreground">
-                Bei Fragen zum Datenschutz erreichen Sie uns per E-Mail unter{' '}
-                <a href="mailto:info@lernzeit.app" className="text-primary hover:underline">info@lernzeit.app</a>{' '}
-                oder über unsere <a href="/support" className="text-primary hover:underline">Support-Seite</a>.
-                Vollständige Kontaktdaten finden Sie im <a href="/impressum" className="text-primary hover:underline">Impressum</a>.
-                Sie haben außerdem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde
-                über die Verarbeitung Ihrer Daten zu beschweren.
-              </p>
-            </section>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
+    <section>
+      <h2>11. Änderungen</h2>
+      <p>
+        Wir passen diese Datenschutzerklärung an, wenn sich LernZeit oder die Rechtslage ändert. Es gilt die jeweils
+        hier veröffentlichte Fassung; über wesentliche Änderungen informieren wir Eltern per E-Mail.
+      </p>
+    </section>
+  </RechtsSeite>
+);
 
 export default Datenschutz;

@@ -93,3 +93,12 @@ Supabase-Secrets gelöscht werden.
   „Rückgängig“ (kein Speichern-Knopf).
 - Website-Bilder nach App-Änderungen neu aufnehmen: `npm run build`, dann
   `npm run werbung:app-bilder` und `npm run werbung:landing` (FFMPEG/CHROMIUM setzen).
+
+## Rechtstexte (Stand 04.10.2026)
+
+- Impressum, Datenschutz, Nutzungsbedingungen, `/widerruf` (Belehrung, Muster-Formular,
+  „Vertrag widerrufen“ nach § 356a BGB) und `/kuendigen` („Verträge hier kündigen“ nach
+  § 312k BGB) im Rahmen `RechtsSeite`. Beide Formulare → Funktion `vertragserklaerung` →
+  Tabelle `vertragserklaerungen` + Eingangsbestätigung per IONOS-SMTP; ausgeführt wird von
+  Hand in Stripe (`docs/support/leitfaden.md`). Offene Punkte für Betreiber und Kanzlei:
+  `docs/rechtstexte-pruefung.md`. Texte tragen einen festen Stand – bei Änderungen anpassen.

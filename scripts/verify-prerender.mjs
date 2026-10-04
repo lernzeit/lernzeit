@@ -21,6 +21,8 @@ const ROUTES = [
   { path: '/impressum',          needle: 'Impressum' },
   { path: '/datenschutz',        needle: 'Datenschutz' },
   { path: '/nutzungsbedingungen', needle: 'Nutzungsbedingungen' },
+  { path: '/widerruf',           needle: 'Muster-Widerrufsformular' },
+  { path: '/kuendigen',          needle: 'Verträge hier kündigen' },
   { path: '/konto-loeschen',     needle: 'Konto' },
   { path: '/faq',                needle: 'Häufige Fragen' },
 ];

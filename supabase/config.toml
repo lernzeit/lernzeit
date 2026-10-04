@@ -89,3 +89,6 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.test-ai-model]
     verify_jwt = false
+# Kuendigen und Widerrufen ohne Anmeldung (§§ 312k, 356a BGB), 04.10.2026.
+  [functions.vertragserklaerung]
+    verify_jwt = false

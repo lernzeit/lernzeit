@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, FileText, Building2, LifeBuoy, Trash2, BookOpen, HelpCircle } from 'lucide-react';
+import { Shield, FileText, Building2, LifeBuoy, Trash2, BookOpen, HelpCircle, Undo2, CircleX } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { sichtbareArtikel } from '@/content/ratgeber';
 
 interface LegalFooterProps {
@@ -13,9 +14,14 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
     ? 'text-gray-400 hover:text-gray-200' 
     : 'text-muted-foreground hover:text-foreground';
 
+  // Widerruf (§ 356a BGB) und Kuendigung (§ 312k BGB) betreffen Abos, die auf
+  // der Website abgeschlossen werden. In den Apps laeuft der Kauf ueber die
+  // Stores, dort fehlen die beiden Links deshalb.
+  const web = !Capacitor.isNativePlatform();
+
   return (
     <footer className={`py-4 ${className}`}>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-x-4 gap-y-3 text-sm">
         <Link 
           to="/datenschutz" 
           className={`flex items-center gap-1.5 transition-colors ${textClass}`}
@@ -60,6 +66,20 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
           <Trash2 className="w-3.5 h-3.5" />
           Konto löschen
         </Link>
+        {web && (
+          <>
+            <span className={`hidden sm:inline ${variant === 'dark' ? 'text-gray-600' : 'text-muted'}`}>•</span>
+            <Link to="/widerruf#widerrufen" className={`flex items-center gap-1.5 transition-colors ${textClass}`}>
+              <Undo2 className="w-3.5 h-3.5" />
+              Vertrag widerrufen
+            </Link>
+            <span className={`hidden sm:inline ${variant === 'dark' ? 'text-gray-600' : 'text-muted'}`}>•</span>
+            <Link to="/kuendigen" className={`flex items-center gap-1.5 font-semibold transition-colors ${textClass}`}>
+              <CircleX className="w-3.5 h-3.5" />
+              Verträge hier kündigen
+            </Link>
+          </>
+        )}
         {/* Ratgeber nur, wenn es sichtbare Artikel gibt */}
         {sichtbareArtikel().length > 0 && (
           <>
