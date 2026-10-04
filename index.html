@@ -44,6 +44,65 @@
   <body>
     <!-- dataLayer für GA4 / Google Ads (später nur noch per Tag Manager anklemmen) -->
     <script>window.dataLayer = window.dataLayer || [];</script>
+    <!--
+      Selbstheilung beim Start: Liefert ein alter Service Worker oder Cache eine
+      index.html aus, deren Skripte es nach einer Veroeffentlichung nicht mehr
+      gibt, startet main.tsx nie, und die Seite blieb bei "LernZeit lädt..."
+      stehen (04.10.2026, Safari auf dem iPhone). Dann einmal Worker und Caches
+      entfernen und neu laden. main.tsx setzt __LERNZEIT_BOOT__ als erstes.
+    -->
+    <script>
+      (function () {
+        var MERKER = 'lernzeit_start_heilung';
+        var erledigt = false;
+        function hinweis() {
+          var root = document.getElementById('root');
+          if (!root) return;
+          root.innerHTML = '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;text-align:center;font-family:sans-serif;background:#f8fafc;color:#1e293b;">'
+            + '<p style="margin:0;max-width:24rem;">LernZeit konnte nicht geladen werden. Bitte lade die Seite neu.</p>'
+            + '<button type="button" style="padding:0.6rem 1.5rem;background:#3b82f6;color:#fff;border:0;border-radius:8px;font-size:1rem;">Neu laden</button></div>';
+          root.querySelector('button').addEventListener('click', function () { location.reload(); });
+        }
+        function heilen() {
+          if (erledigt || window.__LERNZEIT_BOOT__) return;
+          erledigt = true;
+          var schonVersucht = true;
+          try {
+            var zuletzt = Number(sessionStorage.getItem(MERKER) || 0);
+            schonVersucht = Date.now() - zuletzt < 60000;
+            if (!schonVersucht) sessionStorage.setItem(MERKER, String(Date.now()));
+          } catch (e) { /* ohne sessionStorage kein automatischer Neustart */ }
+          var aufraeumen = [];
+          try {
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+              aufraeumen.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+              }));
+            }
+            if (window.caches && caches.keys) {
+              aufraeumen.push(caches.keys().then(function (keys) {
+                return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+              }));
+            }
+          } catch (e) { /* ignore */ }
+          Promise.all(aufraeumen).catch(function () {}).then(function () {
+            if (schonVersucht) hinweis();
+            else location.reload();
+          });
+        }
+        // Skript oder Stylesheet der Seite liess sich nicht laden (404, falscher Typ)
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && (t.tagName === 'SCRIPT' || (t.tagName === 'LINK' && /stylesheet|modulepreload/.test(t.rel)))) {
+            heilen();
+          }
+        }, true);
+        // Alles geladen, aber main.tsx lief nicht an
+        window.addEventListener('load', function () {
+          setTimeout(heilen, 1500);
+        });
+      })();
+    </script>
     <div id="root">
       <!-- Visible fallback while JS loads - prevents white screen on slow devices -->
       <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;background:#f8fafc;">

@@ -1,6 +1,22 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 
+// Fuer die Selbstheilung in index.html: Das Hauptskript ist angelaufen.
+(window as unknown as { __LERNZEIT_BOOT__?: boolean }).__LERNZEIT_BOOT__ = true;
+
+// Nach einer Veroeffentlichung fehlen die Dateien der alten Fassung. Wer die
+// Seite noch offen hat, bekommt beim Nachladen einer Ansicht (lazy import)
+// einen Fehler — dann einmal neu laden statt haengen zu bleiben.
+window.addEventListener('vite:preloadError', (event) => {
+  try {
+    const merker = 'lernzeit_nachlade_heilung';
+    if (Date.now() - Number(sessionStorage.getItem(merker) || 0) < 60000) return;
+    sessionStorage.setItem(merker, String(Date.now()));
+    event.preventDefault();
+    window.location.reload();
+  } catch { /* ignore */ }
+});
+
 // Capture ?ref=CODE early and persist in localStorage (30 days)
 try {
   const params = new URLSearchParams(window.location.search);
