@@ -1,0 +1,10 @@
+Schriften der Startseite (/start), selbst gehostet, SIL Open Font License 1.1:
+
+plus-jakarta-sans-latin-wght-normal.woff2  Plus Jakarta Sans, variabel 200–800 (Latin)
+                                            aus @fontsource-variable/plus-jakarta-sans 5.3.0
+playpen-sans-notiz.woff2                    Playpen Sans, fest auf Strichstaerke 560, Teilmenge
+                                            (Grundbuchstaben, Umlaute, ß, „“ – …), nur Kerning,
+                                            aus @fontsource-variable/playpen-sans 5.3.0, erzeugt mit
+                                            fontTools: instancer wght=560, pyftsubset --flavor=woff2
+
+Fehlt in einer Randnotiz ein Zeichen, die Teilmenge neu erzeugen.

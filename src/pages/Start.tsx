@@ -1,20 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { ArrowRight, BookOpen } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import HeroSection from '@/components/landing/HeroSection';
 import HowItWorks from '@/components/landing/HowItWorks';
-import USPSection from '@/components/landing/USPSection';
-import TargetAudience from '@/components/landing/TargetAudience';
+import ZweiAnsichten from '@/components/landing/ZweiAnsichten';
 import SetupSteps from '@/components/landing/SetupSteps';
 import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingNav from '@/components/landing/LandingNav';
-import FaktenLeiste from '@/components/landing/FaktenLeiste';
 import { trackFireAndForget } from '@/lib/analytics';
 import { useAbschnittMessung } from '@/hooks/useAbschnittMessung';
-import { useLandingBewegung } from '@/hooks/useLandingBewegung';
 
 const Start = () => {
   const navigate = useNavigate();
@@ -22,7 +18,6 @@ const Start = () => {
   // Welche Abschnitte gesehen wurden (data-abschnitt), seit 04.10.2026
   const seite = useRef<HTMLElement>(null);
   useAbschnittMessung(seite);
-  useLandingBewegung(seite);
 
   // Einladungslink der Eltern (/start?code=123456) → direkt zur Kind-Registrierung
   useEffect(() => {
@@ -41,28 +36,19 @@ const Start = () => {
       />
       <LandingNav />
       <HeroSection />
-      <FaktenLeiste />
       <HowItWorks />
-      <TargetAudience />
-      <USPSection />
+      <ZweiAnsichten />
       <SetupSteps />
       <PricingComparison />
       <FaqSection />
 
       {/* Footer CTA und rechtliche Links: Abschnitt "fusszeile" */}
       <div data-abschnitt="fusszeile">
-        <section className="px-3 pb-6 sm:px-5 sm:pb-10">
-          <div className="lp-dunkel relative overflow-hidden rounded-[28px] bg-[var(--lp-ink)] px-6 py-20 text-center sm:rounded-[36px] lg:py-28">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(45%_60%_at_50%_0%,rgba(59,130,246,0.32),transparent_70%),radial-gradient(30%_40%_at_85%_100%,rgba(18,183,106,0.16),transparent_70%)]"
-            />
-            <div data-zeigen className="relative mx-auto max-w-xl">
-              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg">
-                <BookOpen className="h-7 w-7 text-white" strokeWidth={2.1} />
-              </span>
-              <h2 className="mt-8 text-[2.375rem] font-extrabold leading-[1.05] sm:text-6xl">Jetzt starten</h2>
-              <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-slate-300">
+        <section className="px-3 sm:px-5">
+          <div className="lp-band lp-karo rounded-[28px] py-20 sm:rounded-[36px] lg:py-28">
+            <div className="lp-container">
+              <h2 className="text-[2.5rem] font-extrabold sm:text-6xl">Jetzt starten</h2>
+              <p className="mt-5 max-w-md text-lg leading-relaxed">
                 Melde dich an und teste alle Funktionen – die ersten 4 Wochen sind kostenlos.
               </p>
               <button
@@ -71,10 +57,9 @@ const Start = () => {
                   trackFireAndForget('landing_cta_click', { position: 'footer' });
                   navigate('/?auth=true');
                 }}
-                className="group mt-10 inline-flex h-14 items-center justify-center gap-2 rounded-full bg-white px-8 text-[1.0625rem] font-semibold text-[var(--lp-ink)] transition-colors hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="mt-10 inline-flex h-14 items-center justify-center rounded-full bg-white px-8 text-[1.0625rem] font-bold text-[var(--lp-tinte)] transition-colors hover:bg-[#e8eeff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 Kostenlos registrieren
-                <ArrowRight className="h-[18px] w-[18px] transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>

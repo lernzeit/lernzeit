@@ -71,8 +71,11 @@ Supabase-Secrets gelöscht werden.
   per `addInitScript` auf `false` setzen und den Host prüfen.
 - Daten vor dem 04.10.2026 enthalten Builds, Vorschau-Aufrufe und Meta-Prüf-Crawler; die
   Besucherzahl ist dort um ein Vielfaches zu hoch (Lovable zählte 223 statt ~1.000 in 4 Wochen).
-- Abschnitte der Startseite tragen `data-abschnitt` (hero, so_funktionierts, preise, faq,
-  fusszeile); Store-Links werden zentral im `AnalyticsTracker` gezählt.
+- Abschnitte der Startseite tragen `data-abschnitt` (hero, so_funktionierts, ansichten, preise,
+  faq, fusszeile); Store-Links werden zentral im `AnalyticsTracker` gezählt.
+- Bilder der Startseite sind echte App-Bildschirme: `npm run werbung:landing` (Demo, Video) und
+  `npm run werbung:app-bilder` (eingeloggt, Beispieldaten aus `scripts/lib/supabase-attrappe.mjs`;
+  jeder Supabase-Aufruf wird lokal beantwortet, kein Zugriff auf die Datenbank).
 - Bericht: `admin_registrierungs_trichter` / Karte im Marketing-Panel.
 - Ratgeber-Artikel (`src/content/ratgeber/`) erscheinen erst mit `veroeffentlicht: true`
   und `geprueftAm` an jeder Quelle; Prüfliste `docs/ratgeber/quellenpruefung.md`.

@@ -27,7 +27,7 @@ const LandingNav = () => {
   return (
     <header
       className={`sticky top-0 z-40 pt-safe-top transition-[background-color,box-shadow,backdrop-filter] duration-300 ${
-        gescrollt ? 'bg-white/90 backdrop-blur-xl shadow-[0_1px_0_rgba(15,23,42,0.06)]' : 'bg-transparent'
+        gescrollt ? 'bg-white/90 backdrop-blur-xl shadow-[0_1px_0_var(--lp-karo)]' : 'bg-transparent'
       }`}
     >
       <nav className="lp-container flex h-16 items-center justify-between gap-6" aria-label="Hauptnavigation">
@@ -35,17 +35,17 @@ const LandingNav = () => {
           <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-primary to-secondary shadow-sm">
             <BookOpen className="h-[18px] w-[18px] text-white" strokeWidth={2.25} />
           </span>
-          <span className="lp-display text-[1.0625rem] font-bold">LernZeit</span>
+          <span className="text-[1.125rem] font-extrabold tracking-[-0.02em] text-[var(--lp-tinte)]">LernZeit</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-8 text-[0.9375rem] font-medium">
+        <div className="hidden md:flex items-center gap-8 text-[0.9375rem] font-semibold">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="text-slate-600 transition-colors hover:text-[var(--lp-ink)]">
+            <a key={l.href} href={l.href} className="text-[var(--lp-leise)] transition-colors hover:text-[var(--lp-tinte)]">
               {l.text}
             </a>
           ))}
           {sichtbareArtikel().length > 0 && (
-            <Link to="/ratgeber" className="text-slate-600 transition-colors hover:text-[var(--lp-ink)]">
+            <Link to="/ratgeber" className="text-[var(--lp-leise)] transition-colors hover:text-[var(--lp-tinte)]">
               Ratgeber
             </Link>
           )}
@@ -53,7 +53,7 @@ const LandingNav = () => {
 
         <div className="flex items-center gap-4">
           {sichtbareArtikel().length > 0 && (
-            <Link to="/ratgeber" className="md:hidden text-sm font-medium text-slate-600">
+            <Link to="/ratgeber" className="md:hidden text-sm font-semibold text-[var(--lp-leise)]">
               Ratgeber
             </Link>
           )}
@@ -63,9 +63,9 @@ const LandingNav = () => {
               trackFireAndForget('landing_cta_click', { position: 'nav' });
               navigate('/?auth=true');
             }}
-            className="inline-flex h-10 items-center rounded-full bg-[var(--lp-ink)] px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex h-10 items-center rounded-full bg-[var(--lp-tinte)] px-5 text-sm font-bold text-white transition-colors hover:bg-[#24388a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lp-blau)]"
           >
-            Jetzt starten
+            Registrieren
           </button>
         </div>
       </nav>

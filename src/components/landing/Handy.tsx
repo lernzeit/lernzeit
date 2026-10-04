@@ -1,67 +1,88 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Geraeterahmen fuer echte Bildschirmaufnahmen der App (public/landing,
- * erzeugt mit `npm run werbung:landing`). Groesse ueber die Schriftgroesse:
- * Der Rahmen ist 100em breit, `className="text-[3px]"` ergibt 300 px.
+ * erzeugt mit `npm run werbung:landing` und `npm run werbung:app-bilder`).
+ * Groesse ueber die Schriftgroesse: Der Rahmen ist 100em breit,
+ * `className="text-[3px]"` ergibt 300 px.
  *
- * Mit `video` laeuft eine stumme Schleife, aber nur solange sie sichtbar ist
- * und ohne "Bewegung reduzieren" — sonst bleibt das Standbild (`bild`).
+ * Ohne `children` zeigt er ein Bild oder Video (`bild`, `video`). Mit
+ * `children` bestimmt der Aufrufer den Inhalt (z. B. mehrere Bildschirme
+ * uebereinander, die beim Scrollen wechseln).
  */
 const Handy = ({
   bild,
   video,
-  alt,
+  alt = '',
+  className = '',
+  children,
+}: {
+  bild?: string;
+  video?: string;
+  alt?: string;
+  className?: string;
+  children?: React.ReactNode;
+}) => (
+  <div className={`lp-handy ${className}`}>
+    <div className="lp-handy-schirm">
+      <div className="lp-handy-insel" />
+      <Statusleiste />
+      <div className="absolute inset-x-0 bottom-0" style={{ top: `${(47 / 891) * 100}%` }}>
+        {children ?? (bild ? <Bildschirm bild={bild} video={video} alt={alt} /> : null)}
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * Ein Bildschirm: Bild oder stumme Video-Schleife. Das Video laeuft nur,
+ * solange es sichtbar ist, `spielen` gilt und "Bewegung reduzieren" aus ist —
+ * sonst bleibt das Standbild.
+ */
+export const Bildschirm = ({
+  bild,
+  video,
+  alt = '',
+  spielen = true,
   className = '',
 }: {
   bild: string;
   video?: string;
-  alt: string;
+  alt?: string;
+  spielen?: boolean;
   className?: string;
 }) => {
   const ref = useRef<HTMLVideoElement>(null);
+  const [sichtbar, setSichtbar] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    // React setzt `muted` nicht als Attribut; ohne stumm kein Autoplay.
-    el.muted = true;
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) el.play().catch(() => {});
-      else el.pause();
-    }, { threshold: 0.2 });
+    const io = new IntersectionObserver(([e]) => setSichtbar(e.isIntersecting), { threshold: 0.2 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
 
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (sichtbar && spielen && !ruhig) {
+      // React setzt `muted` nicht als Attribut; ohne stumm kein Autoplay.
+      el.muted = true;
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [sichtbar, spielen]);
+
+  const klassen = `block h-full w-full object-cover object-top ${className}`;
+  if (!video) return <img src={bild} alt={alt} loading="lazy" decoding="async" className={klassen} />;
   return (
-    <div className={`lp-handy ${className}`}>
-      <div className="lp-handy-schirm">
-        <div className="lp-handy-insel" />
-        <Statusleiste />
-        <div className="absolute inset-x-0 bottom-0" style={{ top: `${(47 / 891) * 100}%` }}>
-          {video ? (
-            <video
-              ref={ref}
-              className="block w-full h-full object-cover object-top"
-              poster={bild}
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              disablePictureInPicture
-              aria-label={alt}
-            >
-              <source src={`${video}.mp4`} type='video/mp4; codecs="avc1.4D401F"' />
-              <source src={`${video}.webm`} type='video/webm; codecs="vp9"' />
-            </video>
-          ) : (
-            <img src={bild} alt={alt} loading="lazy" decoding="async" className="block w-full h-full object-cover object-top" />
-          )}
-        </div>
-      </div>
-    </div>
+    <video ref={ref} className={klassen} poster={bild} muted loop playsInline preload="metadata" disablePictureInPicture aria-label={alt || undefined}>
+      <source src={`${video}.mp4`} type='video/mp4; codecs="avc1.4D401F"' />
+      <source src={`${video}.webm`} type='video/webm; codecs="vp9"' />
+    </video>
   );
 };
 
@@ -72,7 +93,7 @@ const Statusleiste = () => (
     className="absolute inset-x-0 top-0 flex items-center justify-between text-[#0b1220]"
     style={{ height: `${(47 / 891) * 100}%`, padding: '0 9.5em 0 11em' }}
   >
-    <span style={{ fontSize: '4.1em', fontWeight: 650, letterSpacing: '-0.01em', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>9:41</span>
+    <span style={{ fontSize: '4.1em', fontWeight: 650, letterSpacing: '-0.01em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>9:41</span>
     <span className="flex items-center" style={{ gap: '1.5em' }}>
       <svg viewBox="0 0 18 12" style={{ width: '4.6em' }} fill="currentColor">
         <rect x="0" y="8" width="3" height="4" rx="1" /><rect x="5" y="5.5" width="3" height="6.5" rx="1" />

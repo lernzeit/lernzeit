@@ -7,7 +7,7 @@
  * Ergebnis in public/landing/:
  *   demo-aufgaben.mp4 / .webm   echte Aufgaben (Klasse 3, Mathe), ohne Ton
  *   demo-aufgaben.webp          Standbild = erstes Bild des Videos
- *   fach.webp, aufgabe.webp, richtig.webp, klasse.webp   Standbilder
+ *   fach.webp, aufgabe.webp     Standbilder (Fachwahl, Aufgabe mit Antwort)
  *
  * Alles ist die echte App im Demo-Modus, nichts nachgestellt (siehe
  * docs/verkaufstest.md 4.1). Supabase und Dritte sind waehrend der Aufnahme
@@ -179,7 +179,7 @@ try {
     '-c:v', 'libvpx-vp9', '-crf', '34', '-b:v', '0', '-row-mt', '1',
     join(ZIEL, 'demo-aufgaben.webm')]);
   ff(['-i', join(arbeit, 'b00000.jpg'), '-vf', `scale=${AUS}:-2:flags=lanczos`, '-quality', '86', join(ZIEL, 'demo-aufgaben.webp')]);
-  for (const name of ['klasse', 'fach', 'aufgabe', 'richtig']) {
+  for (const name of ['fach', 'aufgabe']) {
     ff(['-i', join(arbeit, `${name}.png`), '-vf', `scale=${AUS}:-2:flags=lanczos`, '-quality', '86', join(ZIEL, `${name}.webp`)]);
   }
   console.log(`Fertig: ${ZIEL} (Video ${(ende - anfang).toFixed(1)} s aus ${auswahl.length} Bildern)`);
