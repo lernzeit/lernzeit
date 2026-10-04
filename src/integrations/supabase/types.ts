@@ -2194,6 +2194,57 @@ export type Database = {
         }
         Relationships: []
       }
+      vertragserklaerungen: {
+        Row: {
+          bearbeitet_am: string | null
+          bestaetigung_fehler: string | null
+          bestaetigung_gesendet_am: string | null
+          eingegangen_am: string
+          email: string
+          erklaerung: string
+          grund: string | null
+          id: string
+          kuendigungsart: string | null
+          name: string
+          notiz: string | null
+          nutzer_id: string | null
+          vertrag: string
+          zum: string | null
+        }
+        Insert: {
+          bearbeitet_am?: string | null
+          bestaetigung_fehler?: string | null
+          bestaetigung_gesendet_am?: string | null
+          eingegangen_am?: string
+          email: string
+          erklaerung: string
+          grund?: string | null
+          id?: string
+          kuendigungsart?: string | null
+          name: string
+          notiz?: string | null
+          nutzer_id?: string | null
+          vertrag: string
+          zum?: string | null
+        }
+        Update: {
+          bearbeitet_am?: string | null
+          bestaetigung_fehler?: string | null
+          bestaetigung_gesendet_am?: string | null
+          eingegangen_am?: string
+          email?: string
+          erklaerung?: string
+          grund?: string | null
+          id?: string
+          kuendigungsart?: string | null
+          name?: string
+          notiz?: string | null
+          nutzer_id?: string | null
+          vertrag?: string
+          zum?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       ads_funnel: {
