@@ -46,6 +46,7 @@ import { ZeitUhr } from '@/components/child/ZeitUhr';
 import { HeftRegal, HefteGestalten } from '@/components/child/Hefte';
 import { useHefte } from '@/hooks/useHefte';
 import type { FachId } from '@/lib/hefte';
+import { LernplanListe, useLernplaene } from '@/components/child/Lernplaene';
 import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
@@ -57,7 +58,7 @@ interface UserProfileProps {
   onStartGame: (grade: number) => void;
   onStartStreakRecovery?: (grade: number) => void;
   /** Heft antippen: Fach direkt starten */
-  onStartSubject?: (grade: number, subject: FachId) => void;
+  onStartSubject?: (grade: number, subject: FachId, topicHint?: string, planId?: string) => void;
 }
 
 export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery, onStartSubject }: UserProfileProps) {
@@ -113,6 +114,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
   // Hefte des Kindes (Farbe, Sticker, sichtbare Faecher)
   const hefte = useHefte(profile?.role === 'child' ? user?.id : undefined, profile?.grade || 1);
+  const lernplaene = useLernplaene(profile?.role === 'child' ? user?.id : undefined);
 
   // Use streak hook for children
   const { streak, status: streakStatus, inactiveDays, loading: streakLoading } = useStreak(
@@ -588,6 +590,15 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
               <EarnedTimeWidget userId={user.id} hasParentLink={hasParentLink} />
             </div>
           </section>
+
+          {/* Lernplaene der Eltern (alle laufenden), gleich unter der Zeit (04.10.2026) */}
+          <LernplanListe
+            plaene={lernplaene}
+            hefte={hefte.hefte}
+            onStart={(fach, topicHint, planId) =>
+              onStartSubject ? onStartSubject(klasse, fach, topicHint, planId) : onStartGame(klasse)
+            }
+          />
 
           {/* Freiminuten stehen ueber dem Rest: Wer heute noch welche hat, muss nicht fragen. */}
           <BaseTimeCard childId={user.id} />
