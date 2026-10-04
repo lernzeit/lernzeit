@@ -74,3 +74,28 @@ pro Tag, Honigtopf-Feld). Ausführung in Stripe von Hand, siehe
 
 Der Entwurf zur Werbemessung (`docs/datenschutz-entwurf.md`, § 8a) ist
 **nicht** eingearbeitet; er wartet weiter auf die Kanzlei.
+
+## Checkliste „Vibe Coding“ (Screenshot vom 04.10.2026)
+
+| # | Punkt | Stand |
+|---|---|---|
+| 1 | Impressum | erledigt (§ 5 DDG), Geschäftsführer bitte bestätigen |
+| 2 | Datenschutzerklärung | erledigt, Kanzlei-Fragen oben |
+| 3 | Cookie-Banner | keine Cookies, kein Drittanbieter-Tool → kein Banner nötig; offen nur die Zufallskennung im localStorage (Kanzlei-Frage 2). Kommt Werbemessung, braucht es eine CMP (Entwurf liegt vor) |
+| 4 | Zustimmung → Statistik-Tool | kein fremdes Statistik-Tool; eigene Messung in `analytics_events`, siehe 3 |
+| 5 | Schriften vom eigenen Server | ja: Plus Jakarta Sans und Playpen Sans aus `public/fonts`, keine Google-Fonts-Aufrufe |
+| 6 | AVV | vom Betreiber zu prüfen, ob abgeschlossen: Supabase, Stripe, OneSignal, IONOS, Google (Gemini API), OpenRouter, RevenueCat, Lovable |
+| 7 | AGB | erledigt |
+| 8 | Widerrufsbelehrung | erledigt, mit Widerrufsfunktion (§ 356a BGB) |
+| 9 | Kontaktformular mit DS-Erklärung | Hinweis mit Link ergänzt. Das Formular öffnet nur das E-Mail-Programm; ein zweiter schneller Kontaktweg neben der E-Mail (z. B. Telefon) fehlt weiter |
+| 10 | Barrierefreiheit | axe-Prüfung (WCAG 2.1 AA) über 12 Seiten bei 390 und 1280 px: nur Kontrast auf der 404-Seite (behoben) und die absichtlich blassen, nicht aktiven Randnotizen der Startseite am Desktop. BFSG: Kleinstunternehmen mit Dienstleistungen sind ausgenommen (< 10 Beschäftigte und ≤ 2 Mio. € Umsatz) – bitte bestätigen |
+| 11 | robots.txt | vorhanden, verweist auf die Sitemap |
+| 12 | sitemap.xml | bereinigt: `/`, `/reset-password`, `/email-bestaetigung` raus, `/widerruf`, `/kuendigen`, `/support` rein, `lastmod` gesetzt; Ratgeber kommt beim Build dazu |
+| 13 | 404 | eigene Seite im Heft-Stil, `noindex`. Lovable liefert für unbekannte Pfade technisch Status 200 (SPA-Fallback) – das lässt sich erst beim Hosting-Umzug ändern |
+| 14 | Canonical URLs | auf allen Website-Seiten (`Seo`), beim Build geprüft |
+| 15 | Meta-Title | auf allen Seiten eindeutig |
+| 16 | Meta-Description | auf allen Seiten vorhanden |
+| 17 | Vorschau (OG-Bild) | neu im Heft-Stil mit echtem App-Bildschirm (`public/og-image.png`, 1200×630). Facebook/WhatsApp zeigen das alte Bild, bis ihr Zwischenspeicher abläuft |
+| 18 | Favicon | vorhanden (ico, png, Apple-Touch, PWA) |
+| 19 | Alt-Texte | alle `<img>` haben `alt` |
+| 20 | Mobile | alle geprüften Seiten ohne waagerechtes Scrollen bei 390 px |

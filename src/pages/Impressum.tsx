@@ -34,7 +34,7 @@ const Impressum = () => (
       <p>
         E-Mail: <a href="mailto:info@lernzeit.app">info@lernzeit.app</a>
         <br />
-        Kontaktformular: <Link to="/support">lernzeit.app/support</Link>
+        Hilfe und Anfragen: <Link to="/support">lernzeit.app/support</Link>
       </p>
     </section>
 

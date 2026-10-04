@@ -484,7 +484,9 @@ const Support = () => {
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Das Formular öffnet dein E-Mail-Programm mit vorausgefülltem Text an{' '}
-                  <strong>{targetEmail}</strong>.
+                  <strong>{targetEmail}</strong>. Wir verwenden deine Angaben nur, um deine Anfrage zu beantworten;
+                  mehr dazu in der{' '}
+                  <a href="/datenschutz" className="underline underline-offset-2 hover:text-foreground">Datenschutzerklärung</a>.
                 </p>
               </form>
             </section>

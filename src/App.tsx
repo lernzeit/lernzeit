@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { NoIndex } from "@/components/Seo";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/auth" element={<Navigate to="/?auth=true" replace />} />
           <Route path="/reset-password" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <NoIndex />
               <ResetPassword />
             </Suspense>
           } />
@@ -53,6 +55,7 @@ const App = () => (
           } />
           <Route path="/email-bestaetigung" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+              <NoIndex />
               <EmailBestaetigung />
             </Suspense>
           } />

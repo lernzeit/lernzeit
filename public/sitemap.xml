@@ -1,49 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Stand 04.10.2026. /ratgeber und die Artikel ergaenzt vite.config.ts beim Build.
+     Nicht aufgenommen: / (leitet auf /start), /reset-password und
+     /email-bestaetigung (noindex), /ideen. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://lernzeit.app/</loc>
+    <loc>https://lernzeit.app/start</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://lernzeit.app/start</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://lernzeit.app/faq</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://lernzeit.app/support</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://lernzeit.app/impressum</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://lernzeit.app/datenschutz</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://lernzeit.app/nutzungsbedingungen</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://lernzeit.app/impressum</loc>
+    <loc>https://lernzeit.app/widerruf</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://lernzeit.app/reset-password</loc>
+    <loc>https://lernzeit.app/kuendigen</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://lernzeit.app/email-bestaetigung</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://lernzeit.app/support</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>https://lernzeit.app/konto-loeschen</loc>

@@ -34,32 +34,26 @@ const NotFound = () => {
         title="404 – Seite nicht gefunden | LernZeit"
         description="Diese Seite gibt es nicht. Zurück zur LernZeit-Startseite oder direkt zum Support."
         path="/404"
+        noindex
       />
 
-      {/* dezente animierte Hintergrund-Blobs im Markenlook */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl animate-pulse"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-accent/10 blur-3xl animate-pulse [animation-delay:1.5s]"
-      />
+      {/* Karopapier wie im Heft (App-Gestaltung, keine Verlaeufe) */}
+      <div aria-hidden className="heft-karo pointer-events-none absolute inset-0 opacity-70" />
 
       <section className="relative z-10 w-full max-w-2xl px-6 py-16 text-center">
         {/* Rechen-Zeile mit "Ergebnis" 404 – der Fehler als Aufgabe */}
         <div
-          className="mx-auto mb-8 inline-flex items-baseline gap-3 rounded-2xl border border-border/60 bg-card/70 px-5 py-3 shadow-card backdrop-blur"
+          className="mx-auto mb-8 inline-flex items-baseline gap-3 rounded-2xl bg-card px-5 py-3 ring-1 ring-inset ring-karo"
           aria-hidden
         >
           <span className="font-mono text-2xl text-muted-foreground tabular-nums">
             {puzzle.a} × {puzzle.b}
           </span>
           <span className="text-2xl text-muted-foreground">=</span>
-          <span className="font-mono text-2xl font-semibold text-foreground tabular-nums line-through decoration-destructive decoration-[3px]">
+          <span className="font-mono text-2xl font-semibold text-foreground tabular-nums line-through decoration-rotstift decoration-[3px]">
             {puzzle.result}
           </span>
-          <span className="ml-1 rounded-md bg-destructive/15 px-2 py-0.5 text-sm font-semibold text-destructive">
+          <span className="ml-1 font-hand text-lg text-[#b42318]">
             falsch
           </span>
         </div>
@@ -78,7 +72,7 @@ const NotFound = () => {
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-3">
-          <Button size="lg" onClick={() => navigate("/")} className="gap-2">
+          <Button size="lg" onClick={() => navigate("/start")} className="gap-2">
             <Home className="h-4 w-4" />
             Zur Startseite
           </Button>

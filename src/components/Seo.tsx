@@ -5,19 +5,21 @@ interface SeoProps {
   description: string;
   path: string;
   image?: string;
+  /** Seite nicht in Suchmaschinen aufnehmen (404, Hilfsseiten) */
+  noindex?: boolean;
 }
 
 const SITE_URL = 'https://lernzeit.app';
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
-const Seo = ({ title, description, path, image }: SeoProps) => {
+const Seo = ({ title, description, path, image, noindex }: SeoProps) => {
   const url = `${SITE_URL}${path}`;
   const ogImage = image ?? DEFAULT_OG_IMAGE;
   return (
     <Helmet prioritizeSeoTags>
       <title>{title}</title>
       <meta name="description" content={description} />
-      <link rel="canonical" href={url} />
+      {noindex ? <meta name="robots" content="noindex, follow" /> : <link rel="canonical" href={url} />}
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
@@ -32,5 +34,12 @@ const Seo = ({ title, description, path, image }: SeoProps) => {
     </Helmet>
   );
 };
+
+/** Nur "nicht indexieren", fuer Seiten ohne eigene Seo-Angaben (Passwort, E-Mail-Bestaetigung). */
+export const NoIndex = () => (
+  <Helmet>
+    <meta name="robots" content="noindex, follow" />
+  </Helmet>
+);
 
 export default Seo;
