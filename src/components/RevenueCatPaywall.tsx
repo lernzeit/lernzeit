@@ -64,10 +64,10 @@ const BILLING_TERMS: Record<BillingPlatform, { charge: string; renewal: string; 
     renewal:
       'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird.',
     manage:
-      'Verwaltung und Kündigung des Abos sind jederzeit in den Einstellungen Ihres Apple-ID-Kontos möglich.',
+      'Verwaltung und Kündigung des Abos sind jederzeit in den Einstellungen deines Apple-ID-Kontos möglich.',
   },
   android: {
-    charge: 'Die Zahlung wird bei Kaufbestätigung über Ihr Google-Play-Konto abgerechnet.',
+    charge: 'Die Zahlung wird bei Kaufbestätigung über dein Google-Play-Konto abgerechnet.',
     renewal:
       'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird.',
     manage:
@@ -75,7 +75,7 @@ const BILLING_TERMS: Record<BillingPlatform, { charge: string; renewal: string; 
   },
   web: {
     charge:
-      'Die Zahlung wird bei Kaufbestätigung über das von Ihnen gewählte Zahlungsmittel abgerechnet.',
+      'Die Zahlung wird bei Kaufbestätigung über das von dir gewählte Zahlungsmittel abgerechnet.',
     renewal:
       'Das Abo verlängert sich automatisch zum oben genannten Preis, sofern es nicht vor Ende des aktuellen Abrechnungszeitraums gekündigt wird.',
     manage:
@@ -175,7 +175,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       if (!stripeUrlLeavesPage()) {
         toast({
           title: 'Checkout geöffnet',
-          description: 'Schließen Sie den Kauf im Browser ab – der Status wird beim nächsten App-Wechsel aktualisiert.',
+          description: 'Schließ den Kauf im Browser ab – der Status wird beim nächsten App-Wechsel aktualisiert.',
         });
       }
       openStripeUrl(url);
@@ -184,7 +184,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       setActionError(
         err?.message
           ? `Alternative Zahlung fehlgeschlagen: ${err.message}`
-          : 'Alternative Zahlung fehlgeschlagen. Bitte versuchen Sie es später erneut.'
+          : 'Alternative Zahlung fehlgeschlagen. Bitte versuch es später erneut.'
       );
     } finally {
       setStripeFallbackLoading(null);
@@ -208,7 +208,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       setAnnual(a);
       if (!m && !a) {
         trackEvent('paywall_offerings_empty', { platform: getActivePlatform() ?? 'unknown' });
-        setLoadError('Derzeit sind keine Abo-Pakete verfügbar. Bitte versuchen Sie es später erneut.');
+        setLoadError('Derzeit sind keine Abo-Pakete verfügbar. Bitte versuch es später erneut.');
       } else {
         trackEvent('paywall_offerings_loaded', {
           has_monthly: !!m,
@@ -295,7 +295,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
           title: 'Kauf verarbeitet',
           description: 'Der Kauf wurde übermittelt, ist aber noch nicht aktiv. Bitte in Kürze „Käufe wiederherstellen“ nutzen.',
         });
-        setActionError('Kauf abgeschlossen, aber Premium konnte nicht aktiviert werden. Bitte versuchen Sie „Käufe wiederherstellen“.');
+        setActionError('Kauf abgeschlossen, aber Premium konnte nicht aktiviert werden. Bitte tippe auf „Käufe wiederherstellen“.');
       }
     } catch (err: any) {
       console.error('Purchase failed:', err);
@@ -306,13 +306,13 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       });
       toast({
         title: 'Kauf fehlgeschlagen',
-        description: err?.message ?? 'Bitte versuchen Sie es erneut.',
+        description: err?.message ?? 'Bitte versuch es erneut.',
         variant: 'destructive',
       });
       setActionError(
         err?.message
           ? `Kauf fehlgeschlagen: ${err.message}`
-          : 'Kauf fehlgeschlagen. Bitte versuchen Sie es erneut.'
+          : 'Kauf fehlgeschlagen. Bitte versuch es erneut.'
       );
     } finally {
       setPurchasing(null);
@@ -343,13 +343,13 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
       trackEvent('paywall_restore_failed', { platform, message: err?.message ?? 'unknown' });
       toast({
         title: 'Wiederherstellung fehlgeschlagen',
-        description: err?.message ?? 'Bitte versuchen Sie es erneut.',
+        description: err?.message ?? 'Bitte versuch es erneut.',
         variant: 'destructive',
       });
       setActionError(
         err?.message
           ? `Wiederherstellung fehlgeschlagen: ${err.message}`
-          : 'Wiederherstellung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+          : 'Wiederherstellung fehlgeschlagen. Bitte versuch es erneut.'
       );
     } finally {
       setRestoring(false);
@@ -371,7 +371,7 @@ export function RevenueCatPaywall({ open, onOpenChange, onPurchased }: Props) {
                 <DialogTitle>LernZeit Premium</DialogTitle>
               </div>
               <DialogDescription>
-                Der Kauf ist momentan nicht verfügbar. Bitte versuchen Sie es später erneut.
+                Der Kauf ist momentan nicht verfügbar. Bitte versuch es später erneut.
               </DialogDescription>
             </DialogHeader>
           </DialogContent>

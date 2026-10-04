@@ -384,7 +384,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       return;
     }
     if (!consentChecked) {
-      toast({ title: "Einwilligung erforderlich", description: "Bitte bestätigen Sie die Einwilligung zur Datenverarbeitung.", variant: "destructive" });
+      toast({ title: "Einwilligung erforderlich", description: "Bitte bestätige die Einwilligung zur Datenverarbeitung.", variant: "destructive" });
       return;
     }
     setNewCodeLoading(true);
@@ -449,7 +449,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
       setPasswordChanging(true);
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast({ title: "Passwort geändert", description: "Ihr Passwort wurde erfolgreich aktualisiert." });
+      toast({ title: "Passwort geändert", description: "Dein Passwort wurde erfolgreich aktualisiert." });
       setNewPassword('');
       setConfirmPassword('');
     } catch {
@@ -668,23 +668,24 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
         testphaseVorbei={!isPremium && !isTrialing && !!sub.trialEnd && new Date(sub.trialEnd) < new Date()}
       />
 
+      {/* Offene Anfrage: kein Fehler, sondern der Normalfall (Kind hat gelernt).
+          Darum ruhig in der Markenfarbe statt rot und ohne Pulsieren. */}
       {totalPendingRequests > 0 && (
-        <Card className="border-destructive bg-destructive/10 shadow-lg animate-pulse-subtle">
+        <Card className="border-primary/30 bg-primary/5 shadow-sm">
           <CardContent className="py-5 px-5">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Smartphone className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-base text-destructive">
-                  {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'}!
+                <p className="font-bold text-base text-foreground">
+                  {totalPendingRequests} offene {totalPendingRequests === 1 ? 'Anfrage' : 'Anfragen'}
                 </p>
-                <p className="text-sm text-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {pendingChildren.map((child) => child.name || 'Kind').join(', ')} {pendingChildren.length === 1 ? 'wartet' : 'warten'} auf deine Antwort.
                 </p>
                 <Button 
                   size="sm" 
-                  variant="destructive"
                   className="mt-3"
                   onClick={() => {
                     setActiveTab('requests');
@@ -692,11 +693,10 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                     setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
                   }}
                 >
-                  <Smartphone className="h-4 w-4 mr-2" />
                   Jetzt antworten
                 </Button>
               </div>
-              <Badge variant="destructive" className="shrink-0 text-sm px-3 py-1">
+              <Badge className="shrink-0 text-sm px-3 py-1">
                 {totalPendingRequests}
               </Badge>
             </div>
@@ -981,7 +981,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Crown className="h-5 w-5" />
-                Ihr Plan
+                Dein Plan
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1129,7 +1129,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                   <div className="space-y-1">
                     <p className="font-semibold text-sm text-foreground">Kostenlos testen</p>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      Premium-Features stehen Ihnen während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
+                      Premium-Funktionen stehen dir während einer 4-wöchigen kostenlosen Testphase zur Verfügung.
                     </p>
                     <p className="text-xs text-muted-foreground/80 font-medium">
                       ✓ Monatlich kündbar · Keine Mindestlaufzeit
@@ -1318,8 +1318,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </DialogHeader>
           <div className="space-y-4 text-sm">
             <p className="text-muted-foreground leading-relaxed">
-              Mit dem LernZeit-Empfehlungsprogramm verschenken Sie <strong>2 Monate Premium</strong> an
-              Freunde und sichern sich pro aktivem Kind <strong>1 Monat Premium gratis</strong> – bis zu
+              Mit dem LernZeit-Empfehlungsprogramm verschenkst du <strong>2 Monate Premium</strong> an
+              Freunde und sicherst dir pro aktivem Kind <strong>1 Monat Premium gratis</strong> – bis zu
               insgesamt <strong>6 Bonus-Monate</strong>.
             </p>
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -1360,7 +1360,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           </DialogHeader>
           <div className="space-y-4 text-sm">
             <p className="text-muted-foreground leading-relaxed">
-              Vielen Dank für Ihr Vertrauen. Als Premium-Mitglied genießen Sie ab sofort alle Vorteile:
+              Vielen Dank für dein Vertrauen. Als Premium-Mitglied hast du ab sofort alle Vorteile:
             </p>
             <ul className="space-y-2">
               {[

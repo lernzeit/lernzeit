@@ -15,6 +15,14 @@ const emojis: Record<AnimationType, string[]> = {
   correct: ['✨', '⭐'],
 };
 
+// Markenfarben: Tempo Bernstein, Serien Blau, richtig Gruen (Kontrast fuer grosse Schrift)
+const FARBE: Record<AnimationType, string> = {
+  speed: 'bg-amber-400 text-amber-950',
+  combo: 'bg-primary text-primary-foreground',
+  perfect: 'bg-amber-400 text-amber-950',
+  correct: 'bg-emerald-600 text-white',
+};
+
 export function InGameAnimation({ type, message, onComplete }: InGameAnimationProps) {
   const [particles, setParticles] = useState<{ id: number; emoji: string; x: number; y: number; delay: number }[]>([]);
   const onCompleteRef = React.useRef(onComplete);
@@ -60,10 +68,11 @@ export function InGameAnimation({ type, message, onComplete }: InGameAnimationPr
         </span>
       ))}
 
-      {/* Center message */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      {/* Meldung oben statt in der Mitte: In der Mitte lag sie zwei Sekunden lang
+          ueber dem Knopf "Weiter". Oben steht nur die schon beantwortete Aufgabe. */}
+      <div className="absolute inset-x-0 flex justify-center px-4" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 4.5rem)' }}>
         <div
-          className="px-6 py-3 rounded-2xl bg-black/70 text-white font-bold text-lg md:text-2xl animate-scale-in-bounce shadow-2xl"
+          className={`px-5 py-2.5 rounded-full font-bold text-lg md:text-xl animate-scale-in-bounce shadow-lg ${FARBE[type]}`}
           style={{ animationDuration: '0.4s' }}
         >
           {message}

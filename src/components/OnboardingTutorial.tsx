@@ -88,7 +88,7 @@ const parentSteps: Step[] = [
   {
     emoji: '⏰',
     title: 'Bildschirmzeit verwalten',
-    description: 'Legen Sie Tageslimits fest, genehmigen Sie Zeitanfragen und passen Sie die verdienten Minuten pro Fach individuell an.',
+    description: 'Lege Tageslimits fest, genehmige Zeitanfragen und passe die verdienten Minuten pro Fach individuell an.',
     icon: <Clock className="w-8 h-8" />,
   },
   {

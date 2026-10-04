@@ -868,7 +868,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 shrink-0 bg-blue-600 rounded-full flex items-center justify-center">
                           <Shield className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
@@ -889,7 +889,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                             : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <div className="w-12 h-12 shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 shrink-0 bg-emerald-600 rounded-full flex items-center justify-center">
                           <Heart className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">

@@ -191,7 +191,7 @@ export function ScreenTimeRequestCard({ userId, earnedMinutes, hasParentLink }: 
                   
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                      <Button className="w-full">
                         <Smartphone className="w-4 h-4 mr-2" />
                         Zeit anfragen
                       </Button>

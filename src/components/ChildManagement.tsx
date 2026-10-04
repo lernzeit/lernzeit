@@ -366,7 +366,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
           <User className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-medium mb-2">Noch keine Kinder verknüpft</h3>
           <p className="text-muted-foreground">
-            Erstellen Sie einen Einladungscode, um Kinder zu verknüpfen.
+            Erstelle einen Einladungscode, um Kinder zu verknüpfen.
           </p>
         </CardContent>
       </Card>
@@ -521,7 +521,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
               <CardHeader>
                 <CardTitle>Sichtbare Fächer</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Bestimmen Sie, welche Fächer {selectedChild.name} lernen kann.
+                  Bestimme, welche Fächer {selectedChild.name} lernen kann.
                 </p>
               </CardHeader>
               <CardContent>
@@ -563,7 +563,7 @@ export function ChildManagement({ linkedChildren, parentId, onChildUpdate }: Chi
               <CardHeader>
                 <CardTitle>Belohnungen pro richtige Antwort</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Legen Sie fest, wie viele Sekunden {selectedChild.name} pro richtig gelöster Aufgabe bekommt.
+                  Lege fest, wie viele Sekunden {selectedChild.name} pro richtig gelöster Aufgabe bekommt.
                 </p>
               </CardHeader>
               <CardContent>

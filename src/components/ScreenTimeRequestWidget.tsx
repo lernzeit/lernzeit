@@ -287,7 +287,7 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
                     <Dialog open={showDialog} onOpenChange={setShowDialog}>
                       <DialogTrigger asChild>
                         <Button 
-                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                          className="w-full"
                           disabled={availableMinutes < 5}
                         >
                           <Smartphone className="w-4 h-4 mr-2" />

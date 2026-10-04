@@ -227,7 +227,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
 
       toast({
         title: "Profil aktualisiert",
-        description: "Ihr Name wurde erfolgreich gespeichert.",
+        description: "Dein Name wurde erfolgreich gespeichert.",
       });
     } catch (error: any) {
       toast({
@@ -270,7 +270,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
 
       toast({
         title: "Passwort geändert",
-        description: "Ihr Passwort wurde erfolgreich aktualisiert.",
+        description: "Dein Passwort wurde erfolgreich aktualisiert.",
       });
       
       setNewPassword('');
@@ -303,7 +303,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
       return;
     }
     if (!consentChecked) {
-      toast({ title: "Einwilligung erforderlich", description: "Bitte bestätigen Sie die Einwilligung zur Datenverarbeitung.", variant: "destructive" });
+      toast({ title: "Einwilligung erforderlich", description: "Bitte bestätige die Einwilligung zur Datenverarbeitung.", variant: "destructive" });
       return;
     }
     setNewCodeLoading(true);
@@ -411,7 +411,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             <CardContent>
               {linkedChildren.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
-                  Noch keine Kinder verknüpft. Erstellen Sie einen Einladungscode im "Codes" Tab.
+                  Noch keine Kinder verknüpft. Erstelle einen Einladungscode im Tab „Codes“.
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -461,14 +461,14 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="profile-name">Ihr Name</Label>
+                <Label htmlFor="profile-name">Dein Name</Label>
                 <div className="flex gap-2">
                   <Input
                     id="profile-name"
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="Ihr Name"
+                    placeholder="Dein Name"
                   />
                   <Button
                     onClick={saveProfileName}
@@ -489,7 +489,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                 Passwort ändern
               </CardTitle>
               <CardDescription>
-                Aktualisieren Sie Ihr Konto-Passwort
+                Ändere das Passwort deines Kontos
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -543,7 +543,7 @@ export function ParentSettingsMenu({ userId, onBack }: ParentSettingsMenuProps) 
                 Einladungscodes verwalten
               </CardTitle>
               <CardDescription>
-                Erstellen Sie Codes zum Verknüpfen neuer Kinder
+                Erstelle Codes, um weitere Kinder zu verknüpfen
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -179,7 +179,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
   }
 
   return (
-    <Card className="shadow-card bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-blue-200">
+    <Card className="shadow-card border-primary/20 bg-primary/5">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-lg">
           <div className="flex items-center gap-2">
@@ -314,7 +314,7 @@ export function EarnedTimeWidget({ userId, hasParentLink }: EarnedTimeWidgetProp
                   <DialogTrigger asChild>
                     <Button 
                       size="sm"
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                      className="w-full"
                     >
                       <Smartphone className="w-4 h-4 mr-2" />
                       Bildschirmzeit anfragen

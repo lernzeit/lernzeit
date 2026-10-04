@@ -215,8 +215,8 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           </div>
           <h3 className="text-lg font-bold">KI-Lernplan-Generator</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Lassen Sie die KI einen personalisierten 5-Tage-Lernplan erstellen – perfekt 
-            abgestimmt auf die Klassenstufe und das Prüfungsthema Ihres Kindes.
+            Lass die KI einen persönlichen 5-Tage-Lernplan erstellen – passend
+            zur Klassenstufe und zum Prüfungsthema deines Kindes.
           </p>
           <Badge variant="secondary" className="gap-1">
             <Crown className="h-3 w-3" /> Premium-Feature
@@ -231,7 +231,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
       <Card>
         <CardContent className="py-8 text-center">
           <p className="text-muted-foreground">
-            Verknüpfen Sie zuerst ein Kind, um einen Lernplan zu erstellen.
+            Verknüpfe zuerst ein Kind, um einen Lernplan zu erstellen.
           </p>
         </CardContent>
       </Card>
@@ -248,7 +248,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
             KI-Lernplan erstellen
           </CardTitle>
           <CardDescription>
-            Beschreiben Sie die Prüfung oder das Thema – die KI erstellt einen 5-Tage-Lernplan.
+            Beschreibe die Prüfung oder das Thema – die KI erstellt einen 5-Tage-Lernplan.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -361,7 +361,7 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
             <CardContent className="py-8 text-center">
               <Sparkles className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">
-                Noch keine Lernpläne erstellt. Probieren Sie es aus!
+                Noch keine Lernpläne erstellt. Probier es aus!
               </p>
             </CardContent>
           </Card>
