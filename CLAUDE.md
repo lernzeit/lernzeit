@@ -119,3 +119,13 @@ Supabase-Secrets gelöscht werden.
   RPC `lernplan_starten`), nicht der Erstellungstag. Ist der Test näher als das Planende, springt
   der Plan vor, sodass der letzte Tag vor dem Test liegt (`src/lib/lernplan.ts`,
   `npm run test:lernplan`). Kind-Start und Fächer-Seite zeigen alle laufenden Pläne.
+
+## Fragen-Erzeugung (Stand 05.10.2026)
+
+- `ai-question-generator` nutzt ein Werkzeug-Schema mit getypten Feldern (`options` string[],
+  `correct_index`, `pairs` {left,right}[], `correct_answer` string); `uebertrageGetypteFelder()`
+  bringt sie ins alte Format. Ohne Typen lieferte Gemini Listen als `"["` (bis 88 % verworfen).
+- Formatfehler stehen mit Rohantwort im Funktionsprotokoll (`🧾 Roh …`). Kontrolle:
+  `query_logs` nach `Unrenderable` bzw. `Cache fallback: serving` zählen.
+- Lernplan-Fragen: nur Inhalte des Plans (Thema, Tages-Schwerpunkte, Foto-Stoff), bis zu drei
+  Versuche, nie eine Ersatzfrage aus dem Cache.
