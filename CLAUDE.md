@@ -132,3 +132,14 @@ Supabase-Secrets gelöscht werden.
   `query_logs` nach `Unrenderable` bzw. `Cache fallback: serving` zählen.
 - Lernplan-Fragen: nur Inhalte des Plans (Thema, Tages-Schwerpunkte, Foto-Stoff), bis zu drei
   Versuche, nie eine Ersatzfrage aus dem Cache.
+
+## Sicherheit (Stand 05.10.2026)
+
+- SECURITY-DEFINER-Funktionen sind über `/rest/v1/rpc` für jeden aufrufbar, der EXECUTE hat
+  (Standard: auch `anon`). Neue Funktionen entweder `auth.uid()` prüfen oder
+  `revoke execute … from public, anon, authenticated` (siehe `20261005210000_rpc_absichern.sql`).
+  Danach `get_advisors` (security) ansehen.
+- Eltern-Kind-Verknüpfung nur über `claim_invitation_code` oder Service-Rolle; die Policies auf
+  `parent_child_relationships` erlauben keine INSERTs.
+- `DROP` über das Supabase-MCP hängt (Timeout); Policies mit `ALTER POLICY` ändern, Cron-Jobs nur im Dashboard.
+- Keine Zugangsdaten ins Repo (am 05.10.2026 noch öffentlich); e2e liest `E2E_*` aus der Umgebung.
