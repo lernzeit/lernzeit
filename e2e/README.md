@@ -13,9 +13,10 @@ Diese Suite deckt den kompletten Registrierungs- und Login-Flow ab:
 ## Voraussetzungen
 
 - Vite-Dev-Server läuft auf `http://localhost:8080` (`npm run dev` bzw. `bun dev`).
-- Test-Accounts existieren in Supabase:
-  - Elternteil: `apple.review.parent@lernzeit.app` / `AppleReview!2026`
-  - Kind (Username-Login): `applereviewkind` / `AppleReview!2026`
+- Test-Accounts existieren in Supabase (Elternteil und Kind mit Username-Login).
+  Zugangsdaten stehen nicht im Repo, sondern kommen aus der Umgebung:
+  `E2E_PARENT_EMAIL`, `E2E_PARENT_PASSWORD`, `E2E_CHILD_USERNAME`, `E2E_CHILD_PASSWORD`
+  (Werte wie in App Store Connect → App-Review-Informationen).
 
 ## Ausführen
 

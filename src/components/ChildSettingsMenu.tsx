@@ -14,7 +14,6 @@ import {
   Star,
   Target,
   Check,
-  X,
   AlertCircle,
   Loader2,
   Bell
@@ -152,39 +151,6 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
   // Determine if there's a parent link based on parentInfoList
   const hasParentLink = parentInfoList.length > 0;
 
-  const handleUnlinkParent = async (parentId: string) => {
-    if (!user?.id) return;
-    
-    try {
-      console.log('🔥 Unlinking parent:', parentId, 'from child:', user.id);
-      
-      const { error } = await supabase
-        .from('parent_child_relationships')
-        .delete()
-        .eq('child_id', user.id)
-        .eq('parent_id', parentId);
-
-      if (error) {
-        console.error('❌ Error unlinking parent:', error);
-        throw error;
-      }
-
-      console.log('✅ Successfully unlinked parent');
-      setParentInfoList(prev => prev.filter(p => p.id !== parentId));
-      
-      toast({
-        title: "Verknüpfung entfernt",
-        description: "Die Verbindung wurde getrennt.",
-      });
-    } catch (error: any) {
-      console.error('❌ Error in handleUnlinkParent:', error);
-      toast({
-        title: "Fehler",
-        description: "Verknüpfung konnte nicht entfernt werden.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleSignOut = async () => {
     await unregisterPushDevice(user?.id);
@@ -289,16 +255,12 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                               Verknüpft mit: <span className="font-semibold">{parent.displayName || parent.name}</span>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                            onClick={() => handleUnlinkParent(parent.id)}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
                         </div>
                       ))}
+                      {/* Trennen nur durch die Eltern (Kinder → Kind → Konto). Der Knopf
+                          hier meldete "getrennt", die Datenbank liess es aber nie zu
+                          (Release-Pruefung 05.10.2026). */}
+                      <p className="text-xs text-muted-foreground">Die Verbindung können nur deine Eltern lösen.</p>
                       
                       <div className="space-y-3">
                         <h4 className="font-medium">Was bedeutet das?</h4>

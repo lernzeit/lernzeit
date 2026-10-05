@@ -11,15 +11,23 @@ export const makeSupabase = () =>
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+// Zugangsdaten nur aus der Umgebung (05.10.2026): Sie standen hier im
+// oeffentlichen Repo. Werte wie in App Store Connect → App-Review-Informationen.
+const pflicht = (name: string): string => {
+  const wert = process.env[name];
+  if (!wert) throw new Error(`${name} fehlt (siehe e2e/README.md)`);
+  return wert;
+};
+
 export const TEST_PARENT = {
-  email: 'apple.review.parent@lernzeit.app',
-  password: 'AppleReview!2026',
+  get email() { return pflicht('E2E_PARENT_EMAIL'); },
+  get password() { return pflicht('E2E_PARENT_PASSWORD'); },
 };
 
 export const TEST_CHILD = {
-  username: 'applereviewkind',
+  get username() { return pflicht('E2E_CHILD_USERNAME'); },
   // The child logs in via username; the app resolves the pseudo email
   // `<username>@lernzeit.internal` server-side.
-  pseudoEmail: 'applereviewkind@lernzeit.internal',
-  password: 'AppleReview!2026',
+  get pseudoEmail() { return `${pflicht('E2E_CHILD_USERNAME')}@lernzeit.internal`; },
+  get password() { return pflicht('E2E_CHILD_PASSWORD'); },
 };
