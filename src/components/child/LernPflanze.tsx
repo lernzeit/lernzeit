@@ -98,10 +98,15 @@ interface Props {
   loading?: boolean;
   reactivationTrigger?: number;
   onStartRecovery: () => void;
+  /**
+   * 'abzeichen': kleiner Knopf (frueher oben im Kopf). 'kachel': grosse Kachel
+   * im Bereich "Deine Erfolge" auf dem Kind-Start (seit 05.10.2026).
+   */
+  variante?: 'abzeichen' | 'kachel';
 }
 
-/** Abzeichen oben auf dem Kind-Start; antippen zeigt die Pflanze gross. */
-export function LernPflanze({ streak, status, inactiveDays, loading, reactivationTrigger = 0, onStartRecovery }: Props) {
+/** Lernpflanze auf dem Kind-Start; antippen zeigt sie gross mit allen Stufen. */
+export function LernPflanze({ streak, status, inactiveDays, loading, reactivationTrigger = 0, onStartRecovery, variante = 'abzeichen' }: Props) {
   const [offen, setOffen] = useState(false);
   const [gegossen, setGegossen] = useState(false);
   const rettbar = inactiveDays > 0 && inactiveDays <= 2 && streak > 0;
@@ -118,12 +123,48 @@ export function LernPflanze({ streak, status, inactiveDays, loading, reactivatio
     return () => window.clearTimeout(t);
   }, [reactivationTrigger]);
 
+  const beschriftung = `Lernpflanze: ${stufe.name}, ${tage} ${tage === 1 ? 'Tag' : 'Tage'} in Folge gelernt`;
+  // Fortschritt bis zur naechsten Stufe als Kaestchen (wie im Spiel)
+  const kaestchen = naechste ? naechste.ab - stufe.ab : 0;
+  const gefuellt = naechste ? tage - stufe.ab : 0;
+
   return (
     <>
+      {variante === 'kachel' ? (
+        <button
+          type="button"
+          onClick={() => setOffen(true)}
+          aria-label={beschriftung}
+          className={cn(
+            'flex h-full w-full flex-col items-center gap-1 rounded-[20px] bg-card px-3 pb-3 pt-2 text-center ring-1 ring-inset ring-karo transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+            gegossen && 'animate-scale-in-bounce',
+          )}
+        >
+          <PflanzenBild stufe={stufe.id} zustand={zustand} className="h-16 w-16" />
+          <span className="text-2xl font-extrabold leading-none text-tinte">
+            <span className="tabular">{loading ? '…' : tage}</span> {tage === 1 ? 'Tag' : 'Tage'}
+          </span>
+          <span className={cn('text-xs font-bold', zustand === 'frisch' ? 'text-gruen-text' : 'text-primary')}>
+            {neu ? 'Lern heute, dann keimt er' : zustand === 'welk' ? 'Gieß deine Pflanze' : zustand === 'durstig' ? 'Deine Pflanze hat Durst' : 'in Folge gelernt'}
+          </span>
+          {naechste && kaestchen <= 16 && !loading && (
+            <span className="mt-1 flex flex-wrap justify-center gap-0.5" aria-hidden="true">
+              {Array.from({ length: kaestchen }, (_, i) => (
+                <span key={i} className={cn('h-2 w-2 rounded-[2px]', i < gefuellt ? 'bg-gruen-hell' : 'bg-karo')} />
+              ))}
+            </span>
+          )}
+          {naechste && !loading && (
+            <span className="text-[11px] text-muted-foreground">
+              Noch {naechste.ab - tage} {naechste.ab - tage === 1 ? 'Tag' : 'Tage'} bis {naechste.name}
+            </span>
+          )}
+        </button>
+      ) : (
       <button
         type="button"
         onClick={() => setOffen(true)}
-        aria-label={`Lernpflanze: ${stufe.name}, ${tage} ${tage === 1 ? 'Tag' : 'Tage'} in Folge gelernt`}
+        aria-label={beschriftung}
         className={cn(
           'inline-flex h-10 items-center gap-1 rounded-full pl-1 pr-3 text-sm font-extrabold ring-1 ring-inset transition-colors',
           zustand === 'frisch' ? 'bg-gruen-hell/10 text-gruen-text ring-gruen-hell/30' : 'bg-card text-tinte ring-karo',
@@ -134,6 +175,7 @@ export function LernPflanze({ streak, status, inactiveDays, loading, reactivatio
         <span className="tabular">{loading ? '…' : tage}</span>
         {zustand !== 'frisch' && <Droplets className="h-4 w-4 text-primary" />}
       </button>
+      )}
 
       <Dialog open={offen} onOpenChange={setOffen}>
         <DialogContent className="max-w-sm">

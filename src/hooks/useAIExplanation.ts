@@ -60,7 +60,9 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
       console.error('Explanation error:', err);
       
       // Set fallback explanation
-      const fallback = "Toll gemacht! Übung macht den Meister - versuche es gleich nochmal! 💪";
+      // Neutral: Der Ersatz erscheint meist nach einer falschen Antwort, ein
+      // "Toll gemacht!" passte dort nicht (Release-Pruefung 05.10.2026).
+      const fallback = 'Die Erklärung lädt gerade nicht. Schau dir die richtige Lösung oben an und probier die nächste Aufgabe.';
       setExplanation(fallback);
       setIsFallback(true);
       return { explanation: fallback, verdict: null, verifiedCorrectAnswer: null };

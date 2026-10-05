@@ -27,7 +27,7 @@ const LazyAdminDashboard = React.lazy(() =>
 );
 // ParentSettingsMenu removed - functionality now integrated into ParentDashboard
 import { AchievementDisplay } from '@/components/AchievementDisplay';
-import { AchievementQuickView } from '@/components/AchievementQuickView';
+import { ErfolgeKachel } from '@/components/child/ErfolgeKachel';
 import { EarnedTimeWidget } from '@/components/EarnedTimeWidget';
 
 import { ProfileEdit } from '@/components/ProfileEdit';
@@ -43,7 +43,6 @@ import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
 import { LernPflanze } from '@/components/child/LernPflanze';
 import { ZeitUhr } from '@/components/child/ZeitUhr';
-import { HeftRegal, HefteGestalten } from '@/components/child/Hefte';
 import { useHefte } from '@/hooks/useHefte';
 import type { FachId } from '@/lib/hefte';
 import { LernplanListe, useLernplaene } from '@/components/child/Lernplaene';
@@ -78,7 +77,6 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const [streakReactivationTrigger, setStreakReactivationTrigger] = useState(0);
   const childLinkingRef = useRef<HTMLDivElement | null>(null);
   const [parentPaywallOpen, setParentPaywallOpen] = useState(false);
-  const [hefteGestalten, setHefteGestalten] = useState(false);
   const { toast } = useToast();
   const { trialJustExpired, trialDaysLeft, isTrialing } = useSubscription();
 
@@ -534,7 +532,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           <OnboardingTutorial role="child" grade={klasse} onComplete={handleOnboardingComplete} />
         )}
         <div className="mx-auto w-full max-w-xl space-y-6 px-4 pb-10 pt-4">
-          {/* Kopf: Avatar, Name, Lernpflanze, Einstellungen */}
+          {/* Kopf: Avatar, Name, Einstellungen */}
           <header className="flex items-center gap-3">
             <button
               type="button"
@@ -552,14 +550,6 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                 {profile?.username ? `, @${profile.username}` : ''}
               </p>
             </div>
-            <LernPflanze
-              streak={streak}
-              status={streakStatus}
-              inactiveDays={inactiveDays}
-              loading={streakLoading}
-              reactivationTrigger={streakReactivationTrigger}
-              onStartRecovery={() => onStartStreakRecovery?.(klasse)}
-            />
             <Button variant="ghost" size="icon" onClick={() => setShowSettingsMenu(true)} aria-label="Einstellungen">
               <Settings className="h-5 w-5" />
             </Button>
@@ -605,12 +595,29 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
           <DailyChallenge userId={user.id} />
 
-          {/* Faecher als Hefte, antippen startet das Fach */}
-          <HeftRegal
-            hefte={hefte.hefte}
-            onWaehlen={(fach) => (onStartSubject ? onStartSubject(klasse, fach) : onStartGame(klasse))}
-            onGestalten={() => setHefteGestalten(true)}
-          />
+          {/* Pflanze und Erfolge statt der Hefte (05.10.2026): Gelernt wird ueber
+              "Lernen starten", die Faecher-Hefte stehen auf der Faecher-Seite. */}
+          <section aria-labelledby="erfolge-titel">
+            <h2 id="erfolge-titel" className="mb-3 text-lg font-extrabold leading-tight">Deine Erfolge</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <LernPflanze
+                variante="kachel"
+                streak={streak}
+                status={streakStatus}
+                inactiveDays={inactiveDays}
+                loading={streakLoading}
+                reactivationTrigger={streakReactivationTrigger}
+                onStartRecovery={() => onStartStreakRecovery?.(klasse)}
+              />
+              <ErfolgeKachel
+                userId={user.id}
+                onClick={() => {
+                  setSettingsInitialSection('achievements');
+                  setShowSettingsMenu(true);
+                }}
+              />
+            </div>
+          </section>
 
           {!hasParentLink && !checkingParentLink && (
             <ChildLinkPromptCard
@@ -618,17 +625,6 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
               onConnect={() =>
                 childLinkingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
               }
-            />
-          )}
-
-          {/* Ab Klasse 5: Erfolge als eine Zeile */}
-          {klasse > 4 && (
-            <AchievementQuickView
-              userId={user.id}
-              onClick={() => {
-                setSettingsInitialSection('achievements');
-                setShowSettingsMenu(true);
-              }}
             />
           )}
 
@@ -644,15 +640,6 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
             </div>
           )}
         </div>
-
-        <HefteGestalten
-          offen={hefteGestalten}
-          onOffen={setHefteGestalten}
-          hefte={hefte.hefte}
-          sammlung={hefte.sammlung}
-          frei={hefte.frei}
-          speichern={hefte.speichern}
-        />
       </div>
     );
   }

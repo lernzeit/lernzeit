@@ -88,6 +88,9 @@ Supabase-Secrets gelöscht werden.
 - Kind: Zeit-Uhr, Lernpflanze statt Lernfeuer (Stufen in `child/LernPflanze.tsx`, auch in
   den Push-Texten von `send-push`), Fächer als Hefte mit eigener Farbe und Stickern
   (Tabellen `kind_hefte`, `kind_sticker`, Vergabe nur über `sticker_vergeben()`).
+  Kind-Start (seit 05.10.2026): Uhr mit „Lernen starten“, Lernpläne, Tagesaufgabe,
+  „Deine Erfolge“ (Pflanze + `child/ErfolgeKachel.tsx`). Hefte nur auf der Fächer-Seite,
+  dort auch „Gestalten“.
 - Spiel: Kästchen-Fortschritt, eigenes Ziffernfeld für Zahlenaufgaben, Haken/Rotstift.
 - Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Regeln speichern sofort mit
   leisem Hinweis „Wird gespeichert …“ (kein Speichern-Knopf, keine Toasts).

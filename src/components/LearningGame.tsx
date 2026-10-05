@@ -157,6 +157,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Antwortzeit der aktuellen Frage, festgehalten beim Absenden (checkAnswer).
   const answerTimeRef = useRef(0);
   const [spellingHint, setSpellingHint] = useState<string | null>(null);
+  // "Lösung zeigen" getippt: kein "Fast."/"Nicht ganz.", das Kind hat nichts falsch gemacht
+  const [loesungGezeigt, setLoesungGezeigt] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
   const [showStreakAnimation, setShowStreakAnimation] = useState(false);
   const [newStreakValue, setNewStreakValue] = useState(0);
@@ -299,6 +301,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setShowExplanation(false);
     setSelectedFeedback(null);
     setSpellingHint(null);
+    setLoesungGezeigt(false);
     clearExplanation();
   };
 
@@ -610,6 +613,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     
     // Mark as answered but incorrect
     setIsCorrect(false);
+    setLoesungGezeigt(true);
     setHasAnswered(true);
     
     // Pause timer
@@ -1244,7 +1248,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="text-2xl font-extrabold text-tinte">
-                      {isCorrect ? 'Richtig!' : grade <= 4 ? 'Fast.' : 'Nicht ganz.'}
+                      {isCorrect ? 'Richtig!' : loesungGezeigt ? 'Kein Problem.' : grade <= 4 ? 'Fast.' : 'Nicht ganz.'}
                     </span>
                     {isCorrect && !isStreakRecovery && (
                       <span className="font-hand text-lg text-gruen-text">+{sekundenProAufgabe} Sek.</span>
@@ -1545,6 +1549,7 @@ const FreetextRenderer: React.FC<{
     // Nach dem Pruefen kein Platzhalter mehr: Er sah durchgestrichen aus wie
     // eine falsche Antwort (Rueckmeldung 04.10.2026).
     placeholder={hasAnswered ? '' : 'Deine Antwort …'}
+    aria-label="Deine Antwort"
     disabled={hasAnswered}
     className={cn(
       "h-16 rounded-2xl font-hand text-2xl text-tinte",

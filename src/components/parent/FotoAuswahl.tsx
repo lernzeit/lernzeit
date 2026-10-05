@@ -101,6 +101,7 @@ export function FotoAuswahl({
         multiple
         className="sr-only"
         tabIndex={-1}
+        aria-label="Fotos auswählen"
         onChange={(e) => void hinzufuegen(e.target.files)}
       />
       {fehler && <p className="text-xs text-destructive">{fehler}</p>}

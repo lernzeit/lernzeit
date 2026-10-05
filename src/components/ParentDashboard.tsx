@@ -219,7 +219,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
     revokeInvitationCode,
   } = useFamilyLinking();
 
-  const { summaries, loading: summariesLoading } = useChildDaySummary(userId, linkedChildren);
+  const { summaries, loading: summariesLoading, refresh: zusammenfassungNeuLaden } = useChildDaySummary(userId, linkedChildren);
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
   const isNativeApp = Capacitor.isNativePlatform();
 
@@ -717,7 +717,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                 <span className="tabular rounded-full bg-primary px-2 text-xs font-bold text-white">{totalPendingRequests}</span>
               )}
             </h2>
-            <ParentScreenTimeRequestsDashboard userId={userId} refreshTrigger={requestsRefreshTrigger} />
+            <ParentScreenTimeRequestsDashboard userId={userId} refreshTrigger={requestsRefreshTrigger} onOffeneGeaendert={zusammenfassungNeuLaden} />
           </section>
 
           {linkedChildren.length > 0 && (

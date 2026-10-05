@@ -271,9 +271,9 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
           {/* Child Selection – only when not fixed to a single child */}
           {!fixedChildId && (
             <div className="space-y-2">
-              <Label>Kind auswählen</Label>
+              <Label htmlFor="lernplan-kind">Kind auswählen</Label>
               <Select value={selectedChildId} onValueChange={setSelectedChildId}>
-                <SelectTrigger>
+                <SelectTrigger id="lernplan-kind">
                   <SelectValue placeholder="Kind wählen..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -289,9 +289,9 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
           {/* Subject */}
           <div className="space-y-2">
-            <Label>Fach</Label>
+            <Label htmlFor="lernplan-fach">Fach</Label>
             <Select value={subject} onValueChange={(v) => { setSubject(v); setFachFehlt(false); }}>
-              <SelectTrigger className={fachFehlt ? 'border-destructive ring-2 ring-destructive/20' : undefined}>
+              <SelectTrigger id="lernplan-fach" className={fachFehlt ? 'border-destructive ring-2 ring-destructive/20' : undefined}>
                 <SelectValue placeholder="Fach wählen..." />
               </SelectTrigger>
               <SelectContent>
@@ -306,8 +306,9 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
           {/* Topic */}
           <div className="space-y-2">
-            <Label>Thema / Prüfung{fotos.length > 0 && <span className="font-normal text-muted-foreground"> (bei Fotos optional)</span>}</Label>
+            <Label htmlFor="lernplan-thema">Thema / Prüfung{fotos.length > 0 && <span className="font-normal text-muted-foreground"> (bei Fotos optional)</span>}</Label>
             <Textarea
+              id="lernplan-thema"
               placeholder="z.B. 'Mathe-Test über Bruchrechnung' oder 'Deutscharbeit: Erörterung schreiben'"
               value={topic}
               onChange={e => setTopic(e.target.value)}
@@ -323,11 +324,12 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
           {/* Test Date */}
           <div className="space-y-2">
-            <Label className="flex items-center gap-1">
+            <Label htmlFor="lernplan-datum" className="flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
               Testdatum (optional)
             </Label>
             <Input
+              id="lernplan-datum"
               type="date"
               value={testDate}
               min={new Date().toLocaleDateString('sv-SE')}
@@ -346,8 +348,9 @@ export function LearningPlanGenerator({ userId, linkedChildren, fixedChildId }: 
 
           {/* Additional Info */}
           <div className="space-y-2">
-            <Label>Zusätzliche Hinweise (optional)</Label>
+            <Label htmlFor="lernplan-hinweise">Zusätzliche Hinweise (optional)</Label>
             <Input
+              id="lernplan-hinweise"
               placeholder="z.B. 'Schwäche bei Textaufgaben' oder 'Nur 15 Min pro Tag'"
               value={additionalInfo}
               onChange={e => setAdditionalInfo(e.target.value)}
@@ -536,7 +539,7 @@ function LearningPlanCard({ plan, onDelete }: { plan: LearningPlan; onDelete: (i
             </CollapsibleTrigger>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-xs text-muted-foreground">{createdDate}</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(plan.id)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(plan.id)} aria-label={`Lernplan „${plan.topic}“ löschen`}>
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </Button>
             </div>

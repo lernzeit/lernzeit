@@ -243,7 +243,7 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
                             <div className="flex items-center gap-2">
                               <span className="text-lg">{achievement.icon}</span>
                               <div>
-                                <div className={`font-medium ${achievement.is_completed ? 'text-green-600' : ''}`}>
+                                <div className={`font-medium ${achievement.is_completed ? 'text-gruen-text' : ''}`}>
                                   {achievement.name}
                                   {achievement.is_completed && <Star className="w-4 h-4 text-yellow-500 inline ml-1" />}
                                 </div>
@@ -262,6 +262,7 @@ export function AchievementDisplay({ userId, variant = 'full' }: AchievementDisp
                           <Progress 
                             value={progress} 
                             className="h-2"
+                            aria-label={`${achievement.name}: ${current} von ${required}`}
                           />
                         </div>
                       );

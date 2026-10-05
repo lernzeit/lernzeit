@@ -121,7 +121,7 @@ export function AntwortKaestchen({
   const felder = Math.max(zeichen.length + (mitCursor ? 1 : 0), 3);
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="relative flex" aria-label={wert ? `Deine Antwort: ${wert}` : 'Noch keine Antwort'}>
+      <div className="relative flex" role="group" aria-label={wert ? `Deine Antwort: ${wert}` : 'Noch keine Antwort'}>
         {Array.from({ length: felder }, (_, i) => (
           <span
             key={i}

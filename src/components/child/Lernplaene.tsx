@@ -110,7 +110,7 @@ export function LernplanListe({
                 <span aria-hidden="true" className="w-2.5 shrink-0" style={{ backgroundColor: farbe }} />
                 <span className="min-w-0 flex-1 px-4 py-3.5">
                   <span className="flex flex-wrap items-center gap-x-2 text-sm font-bold text-muted-foreground">
-                    <span style={{ color: farbe }} className="brightness-75">{name}</span>
+                    <span className="text-tinte">{name}</span>
                     {plan.test_date && (
                       <span className="inline-flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />

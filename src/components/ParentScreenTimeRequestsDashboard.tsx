@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +20,11 @@ import { ShieldSetupNotice } from '@/components/screenTime/ShieldSetupNotice';
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
   refreshTrigger?: number;
+  /** Zahl der offenen Anfragen hat sich geaendert (genehmigt, abgelehnt, neu) */
+  onOffeneGeaendert?: () => void;
 }
 
-export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: ParentScreenTimeRequestsDashboardProps) {
+export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOffeneGeaendert }: ParentScreenTimeRequestsDashboardProps) {
   const [responseMessage, setResponseMessage] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
@@ -33,6 +35,16 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger }: Pa
   
   const { requests, loading, respondToRequest, refreshRequests } = useScreenTimeRequests('parent');
   const { toast } = useToast();
+
+  // Zaehler in der Navigation und bei "Kinder" mitziehen: Bis 05.10.2026 stand
+  // dort nach dem Genehmigen weiter "1", bis die App neu geladen wurde.
+  const offen = requests.filter((r) => r.status === 'pending').length;
+  const offenVorher = useRef<number | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    if (offenVorher.current !== null && offenVorher.current !== offen) onOffeneGeaendert?.();
+    offenVorher.current = offen;
+  }, [offen, loading, onOffeneGeaendert]);
 
   // Refresh requests when parent component signals (e.g. user clicked "Jetzt antworten")
   useEffect(() => {

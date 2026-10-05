@@ -6,7 +6,7 @@ import { useChildSettings } from '@/hooks/useChildSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useAgeGroup } from '@/hooks/useAgeGroup';
 import { useHefte } from '@/hooks/useHefte';
-import { HeftRegal } from '@/components/child/Hefte';
+import { HeftRegal, HefteGestalten } from '@/components/child/Hefte';
 import { LernplanListe, useLernplaene } from '@/components/child/Lernplaene';
 import { de } from 'date-fns/locale';
 
@@ -38,6 +38,8 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
   const age = useAgeGroup(grade);
   const hefte = useHefte(user?.id, grade);
   const plaene = useLernplaene(user?.id);
+  // Hefte gestalten (Farbe, Sticker): seit 05.10.2026 hier, der Kind-Start zeigt keine Hefte mehr
+  const [gestalten, setGestalten] = useState(false);
 
   const getSecondsForCategory = (categoryId: string) => {
     if (!settings) return 30;
@@ -79,6 +81,16 @@ export function CategorySelector({ grade, onCategorySelect, onBack }: CategorySe
           titel={plaene.length ? 'Oder ein Fach frei wählen' : 'Wähle ein Fach zum Lernen'}
           hefte={hefte.hefte}
           onWaehlen={(fach) => onCategorySelect(fach)}
+          onGestalten={() => setGestalten(true)}
+        />
+
+        <HefteGestalten
+          offen={gestalten}
+          onOffen={setGestalten}
+          hefte={hefte.hefte}
+          sammlung={hefte.sammlung}
+          frei={hefte.frei}
+          speichern={hefte.speichern}
         />
 
         {!isYoung && (

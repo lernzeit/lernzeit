@@ -559,7 +559,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                       <span>{formatTime(stat.avgTimePerQuestion)} pro Aufgabe</span>
                     </div>
                     
-                    <Progress value={stat.successRate} className="h-2" />
+                    <Progress value={stat.successRate} className="h-2" aria-label={`${stat.displayName}: ${Math.round(stat.successRate)} % richtig`} />
                     
                     <div className="text-xs text-muted-foreground">
                       <span>{stat.sessionCount} Übungseinheiten</span>
