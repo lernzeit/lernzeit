@@ -488,153 +488,167 @@ serve(async (req) => {
       }
     };
 
-    // ── SINGLE AI attempt (callAI handles the provider fallback internally) ──
-    try {
-      console.log('🤖 Generating question via callAI (single attempt)');
-      const { response, provider } = await callAI({
-        model: 'google/gemini-3.1-flash-lite',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.9,
-        tools: [questionTool],
-        tool_choice: { type: "function", function: { name: "submit_question" } },
-      }, undefined, 'question_generator_live');
+    // Lernplan-Fragen: bis zu drei Versuche, ab dem zweiten mit einfacherem
+    // Fragetyp. Vorher sprang bei einem Formatfehler (haeufig bei MC/SORT/MATCH)
+    // sofort eine beliebige Cache-Frage des Fachs ein – daher die fachfremden
+    // Fragen im Knochen-Plan (05.10.2026).
+    const versuche = planRahmen ? 3 : 1;
+    for (let versuch = 0; versuch < versuche && !(question && rawQuestionText); versuch++) {
+      const versuchTyp = versuch === 0 ? questionType : versuch === 1 ? 'MULTIPLE_CHOICE' : 'FREETEXT';
+      const versuchPrompt = versuch === 0
+        ? prompt
+        : buildQuestionPrompt(sourceGrade, subject, difficulty, versuchTyp, excludeTexts, topicHint, category, lernstand, lernstoff, planRahmen);
+      if (versuch > 0) console.log(`🔁 Lernplan-Frage, Versuch ${versuch + 1} als ${versuchTyp} (${lastError})`);
+      question = null;
+      rawQuestionText = undefined;
+      // ── SINGLE AI attempt (callAI handles the provider fallback internally) ──
+      try {
+        console.log('🤖 Generating question via callAI (single attempt)');
+        const { response, provider } = await callAI({
+          model: 'google/gemini-3.1-flash-lite',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: versuchPrompt }
+          ],
+          temperature: 0.9,
+          tools: [questionTool],
+          tool_choice: { type: "function", function: { name: "submit_question" } },
+        }, undefined, 'question_generator_live');
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log(`✅ Got response (provider: ${provider})`);
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`✅ Got response (provider: ${provider})`);
         
-        const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-        const content = result.choices?.[0]?.message?.content;
+          const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+          const content = result.choices?.[0]?.message?.content;
         
-        if (toolCall?.function?.arguments) {
-          try {
-            question = typeof toolCall.function.arguments === 'string' 
-              ? JSON.parse(toolCall.function.arguments) 
-              : toolCall.function.arguments;
-            console.log('🔧 Parsed from tool_call arguments');
-          } catch (e) {
-            console.warn('⚠️ Failed to parse tool_call arguments:', e);
-          }
-        } else if (content) {
-          try {
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              question = JSON.parse(jsonMatch[0]);
-              console.log('📝 Parsed from content fallback');
+          if (toolCall?.function?.arguments) {
+            try {
+              question = typeof toolCall.function.arguments === 'string' 
+                ? JSON.parse(toolCall.function.arguments) 
+                : toolCall.function.arguments;
+              console.log('🔧 Parsed from tool_call arguments');
+            } catch (e) {
+              console.warn('⚠️ Failed to parse tool_call arguments:', e);
             }
-          } catch (e) {
-            console.warn('⚠️ Failed to parse content:', e);
+          } else if (content) {
+            try {
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                question = JSON.parse(jsonMatch[0]);
+                console.log('📝 Parsed from content fallback');
+              }
+            } catch (e) {
+              console.warn('⚠️ Failed to parse content:', e);
+            }
           }
+        } else if (response.status === 429) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          const errorText = await response.text();
+          lastError = `AI error: ${response.status}`;
+          console.error(`AI error: ${response.status} - ${errorText}`);
         }
-      } else if (response.status === 429) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Zu viele Anfragen. Bitte warte einen Moment.' 
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } else {
-        const errorText = await response.text();
-        lastError = `AI error: ${response.status}`;
-        console.error(`AI error: ${response.status} - ${errorText}`);
+      } catch (aiError) {
+        lastError = `AI call failed: ${(aiError as Error).message}`;
+        console.error(lastError);
       }
-    } catch (aiError) {
-      lastError = `AI call failed: ${(aiError as Error).message}`;
-      console.error(lastError);
-    }
 
-    // ── Validate & normalize the AI response ──
-    if (question) {
-      rawType = question.question_type ?? question.questionType;
-      rawCorrectAnswer = tryParseStructuredValue(question.correct_answer ?? question.correctAnswer);
-      rawOptions = tryParseStructuredValue(question.options ?? null);
-      rawQuestionText = question.question_text ?? question.questionText;
-      const rawTask = typeof question.task === 'string' ? question.task : null;
+      // ── Validate & normalize the AI response ──
+      if (question) {
+        rawType = question.question_type ?? question.questionType;
+        rawCorrectAnswer = tryParseStructuredValue(question.correct_answer ?? question.correctAnswer);
+        rawOptions = tryParseStructuredValue(question.options ?? null);
+        rawQuestionText = question.question_text ?? question.questionText;
+        const rawTask = typeof question.task === 'string' ? question.task : null;
 
-      if (rawType === 'MULTIPLE_CHOICE') {
-        const directOptions = extractChoiceOptions(rawOptions);
-        const taskOptions = extractChoiceOptions(rawTask);
-        const normalizedOptions = directOptions.length >= 2 ? directOptions : taskOptions;
-        rawOptions = normalizedOptions.length > 0 ? normalizedOptions : null;
+        if (rawType === 'MULTIPLE_CHOICE') {
+          const directOptions = extractChoiceOptions(rawOptions);
+          const taskOptions = extractChoiceOptions(rawTask);
+          const normalizedOptions = directOptions.length >= 2 ? directOptions : taskOptions;
+          rawOptions = normalizedOptions.length > 0 ? normalizedOptions : null;
 
-        if (typeof rawCorrectAnswer === 'string') {
-          const trimmed = rawCorrectAnswer.trim();
-          const index = Number(trimmed);
-          if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
-            rawCorrectAnswer = index;
-          }
-        }
-
-        if (typeof rawCorrectAnswer === 'object' && rawCorrectAnswer && 'value' in rawCorrectAnswer) {
-          const nestedValue = (rawCorrectAnswer as { value?: unknown }).value;
-          if (typeof nestedValue === 'string') {
-            const index = Number(nestedValue.trim());
+          if (typeof rawCorrectAnswer === 'string') {
+            const trimmed = rawCorrectAnswer.trim();
+            const index = Number(trimmed);
             if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
               rawCorrectAnswer = index;
             }
           }
+
+          if (typeof rawCorrectAnswer === 'object' && rawCorrectAnswer && 'value' in rawCorrectAnswer) {
+            const nestedValue = (rawCorrectAnswer as { value?: unknown }).value;
+            if (typeof nestedValue === 'string') {
+              const index = Number(nestedValue.trim());
+              if (Number.isInteger(index) && normalizedOptions[index] !== undefined) {
+                rawCorrectAnswer = index;
+              }
+            }
+          }
         }
-      }
 
-      if (rawType === 'SORT') {
-        const normalizedOrder = Array.isArray(rawCorrectAnswer)
-          ? sanitizeStringArray(rawCorrectAnswer)
-          : sanitizeStringArray((rawCorrectAnswer as { order?: unknown } | null)?.order);
-        rawCorrectAnswer = { order: normalizedOrder };
-        rawOptions = shuffleArray(normalizedOrder);
-      }
-
-      if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
-        const metaKeys = ['pairs', 'value', 'order', 'blanks', 'alternatives', 'placements'];
-        const pairEntries = Object.entries(rawCorrectAnswer).filter(([key, value]) => !metaKeys.includes(key) && String(value).trim());
-        if (pairEntries.length > 0) {
-          rawCorrectAnswer = Object.fromEntries(pairEntries);
-          rawOptions = {
-            leftItems: pairEntries.map(([left]) => left),
-            rightItems: shuffleArray(pairEntries.map(([, right]) => String(right)))
-          };
+        if (rawType === 'SORT') {
+          const normalizedOrder = Array.isArray(rawCorrectAnswer)
+            ? sanitizeStringArray(rawCorrectAnswer)
+            : sanitizeStringArray((rawCorrectAnswer as { order?: unknown } | null)?.order);
+          rawCorrectAnswer = { order: normalizedOrder };
+          rawOptions = shuffleArray(normalizedOrder);
         }
-      }
 
-      if (rawType === 'FILL_BLANK') {
-        const blanks = extractFillBlankAnswers(rawCorrectAnswer);
-        rawCorrectAnswer = { blanks };
-      }
+        if (rawType === 'MATCH' && rawCorrectAnswer && typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer)) {
+          const metaKeys = ['pairs', 'value', 'order', 'blanks', 'alternatives', 'placements'];
+          const pairEntries = Object.entries(rawCorrectAnswer).filter(([key, value]) => !metaKeys.includes(key) && String(value).trim());
+          if (pairEntries.length > 0) {
+            rawCorrectAnswer = Object.fromEntries(pairEntries);
+            rawOptions = {
+              leftItems: pairEntries.map(([left]) => left),
+              rightItems: shuffleArray(pairEntries.map(([, right]) => String(right)))
+            };
+          }
+        }
 
-      if (!isRenderableQuestionPayload(rawType, rawCorrectAnswer, rawOptions, rawQuestionText, rawTask)) {
-        lastError = `invalid ${String(rawType).toLowerCase()} payload`;
-        console.warn(`⚠️ Unrenderable: ${lastError}`);
-        question = null;
-      }
+        if (rawType === 'FILL_BLANK') {
+          const blanks = extractFillBlankAnswers(rawCorrectAnswer);
+          rawCorrectAnswer = { blanks };
+        }
 
-      const isEmptyAnswer = rawCorrectAnswer === null || 
-        rawCorrectAnswer === undefined || 
-        rawCorrectAnswer === '' || 
-        (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
-        (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
-      
-      if (question && isEmptyAnswer) {
-        lastError = 'empty correct_answer';
-        console.warn('⚠️ Empty correct_answer');
-        question = null;
-      }
-
-      if (question && (!rawQuestionText || rawQuestionText.trim() === '')) {
-        lastError = 'empty question_text';
-        console.warn('⚠️ Empty question_text');
-        question = null;
-      }
-
-      if (question && rawQuestionText) {
-        const generatedSignature = questionSignature(rawQuestionText);
-        if (generatedSignature && excludeSignatureSet.has(generatedSignature)) {
-          lastError = 'generated repeated question';
-          console.warn(`🔁 AI repeat rejected: ${rawQuestionText.substring(0, 80)}`);
+        if (!isRenderableQuestionPayload(rawType, rawCorrectAnswer, rawOptions, rawQuestionText, rawTask)) {
+          lastError = `invalid ${String(rawType).toLowerCase()} payload`;
+          console.warn(`⚠️ Unrenderable: ${lastError}`);
           question = null;
+        }
+
+        const isEmptyAnswer = rawCorrectAnswer === null || 
+          rawCorrectAnswer === undefined || 
+          rawCorrectAnswer === '' || 
+          (Array.isArray(rawCorrectAnswer) && rawCorrectAnswer.length === 0) ||
+          (typeof rawCorrectAnswer === 'object' && !Array.isArray(rawCorrectAnswer) && Object.keys(rawCorrectAnswer).length === 0);
+      
+        if (question && isEmptyAnswer) {
+          lastError = 'empty correct_answer';
+          console.warn('⚠️ Empty correct_answer');
+          question = null;
+        }
+
+        if (question && (!rawQuestionText || rawQuestionText.trim() === '')) {
+          lastError = 'empty question_text';
+          console.warn('⚠️ Empty question_text');
+          question = null;
+        }
+
+        if (question && rawQuestionText) {
+          const generatedSignature = questionSignature(rawQuestionText);
+          if (generatedSignature && excludeSignatureSet.has(generatedSignature)) {
+            lastError = 'generated repeated question';
+            console.warn(`🔁 AI repeat rejected: ${rawQuestionText.substring(0, 80)}`);
+            question = null;
+          }
         }
       }
     }
