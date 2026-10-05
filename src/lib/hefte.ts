@@ -46,7 +46,7 @@ export const STANDARD_FARBE: Record<FachId, string> = {
 export const farbeVon = (id: string | undefined, fach: FachId): string =>
   (HEFTFARBEN.find((f) => f.id === id) ?? HEFTFARBEN.find((f) => f.id === STANDARD_FARBE[fach]) ?? HEFTFARBEN[0]).farbe;
 
-/** Muss mit dem Katalog in sticker_vergeben() und sticker_waehlen() uebereinstimmen. */
+/** Muss mit dem Katalog in sticker_waehlen() uebereinstimmen (sticker_vergeben() kennt nur die ersten 24). */
 export const STICKER: Record<string, { zeichen: string; name: string }> = {
   fuchs: { zeichen: '🦊', name: 'Fuchs' },
   panda: { zeichen: '🐼', name: 'Panda' },
@@ -72,6 +72,40 @@ export const STICKER: Record<string, { zeichen: string; name: string }> = {
   dino: { zeichen: '🦖', name: 'Dino' },
   farben: { zeichen: '🎨', name: 'Farbpalette' },
   puzzle: { zeichen: '🧩', name: 'Puzzle' },
+  // Seit 05.10.2026 (Auswahl durch das Kind): nur Emoji bis Version 5, damit
+  // sie auch auf aelteren Handys erscheinen. Nur sticker_waehlen() kennt sie.
+  katze: { zeichen: '🐱', name: 'Katze' },
+  hund: { zeichen: '🐶', name: 'Hund' },
+  hase: { zeichen: '🐰', name: 'Hase' },
+  loewe: { zeichen: '🦁', name: 'Löwe' },
+  tiger: { zeichen: '🐯', name: 'Tiger' },
+  koala: { zeichen: '🐨', name: 'Koala' },
+  pinguin: { zeichen: '🐧', name: 'Pinguin' },
+  frosch: { zeichen: '🐸', name: 'Frosch' },
+  elefant: { zeichen: '🐘', name: 'Elefant' },
+  giraffe: { zeichen: '🦒', name: 'Giraffe' },
+  igel: { zeichen: '🦔', name: 'Igel' },
+  krabbe: { zeichen: '🦀', name: 'Krabbe' },
+  wal: { zeichen: '🐳', name: 'Wal' },
+  marienkaefer: { zeichen: '🐞', name: 'Marienkäfer' },
+  baer: { zeichen: '🐻', name: 'Bär' },
+  schwein: { zeichen: '🐷', name: 'Schwein' },
+  drache: { zeichen: '🐉', name: 'Drache' },
+  eis: { zeichen: '🍦', name: 'Eis' },
+  donut: { zeichen: '🍩', name: 'Donut' },
+  wassermelone: { zeichen: '🍉', name: 'Wassermelone' },
+  kuchen: { zeichen: '🍰', name: 'Kuchen' },
+  sonne: { zeichen: '☀️', name: 'Sonne' },
+  mond: { zeichen: '🌙', name: 'Mond' },
+  krone: { zeichen: '👑', name: 'Krone' },
+  roboter: { zeichen: '🤖', name: 'Roboter' },
+  ufo: { zeichen: '🛸', name: 'Ufo' },
+  basketball: { zeichen: '🏀', name: 'Basketball' },
+  fahrrad: { zeichen: '🚲', name: 'Fahrrad' },
+  pilz: { zeichen: '🍄', name: 'Pilz' },
+  kaktus: { zeichen: '🌵', name: 'Kaktus' },
+  geschenk: { zeichen: '🎁', name: 'Geschenk' },
+  schneemann: { zeichen: '⛄', name: 'Schneemann' },
 };
 
 /** Hoechstens so viele Sticker passen auf ein Heft (wie in der Datenbank). */

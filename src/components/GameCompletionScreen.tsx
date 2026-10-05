@@ -153,7 +153,7 @@ export function GameCompletionScreen({
         <section aria-labelledby="sticker-wahl" className="rounded-[28px] bg-card p-5 ring-1 ring-inset ring-karo">
           <h2 id="sticker-wahl" className="text-lg font-extrabold text-tinte">Such dir einen Sticker aus!</h2>
           <p className="font-hand text-gruen-text">Für alles richtig. Tipp auf deinen Lieblings-Sticker.</p>
-          <ul className="mt-4 grid grid-cols-6 gap-1.5">
+          <ul className="mt-4 grid grid-cols-6 gap-1.5 sm:grid-cols-8">
             {angebot.map((id) => (
               <li key={id}>
                 <button
