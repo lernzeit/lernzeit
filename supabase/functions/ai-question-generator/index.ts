@@ -621,6 +621,10 @@ serve(async (req) => {
         if (!isRenderableQuestionPayload(rawType, rawCorrectAnswer, rawOptions, rawQuestionText, rawTask)) {
           lastError = `invalid ${String(rawType).toLowerCase()} payload`;
           console.warn(`⚠️ Unrenderable: ${lastError}`);
+          // Rohantwort zur Fehlersuche (nur Frageninhalt, keine Nutzerdaten).
+          try {
+            console.warn(`🧾 Roh ${String(rawType)}: ${JSON.stringify({ a: question.correct_answer ?? question.correctAnswer, o: question.options, t: question.task }).slice(0, 600)}`);
+          } catch { /* egal */ }
           question = null;
         }
 
