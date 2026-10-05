@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Camera, Loader2, X } from 'lucide-react';
+import { Camera, ImagePlus, Loader2, X } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 /**
  * Fotos von Heft, Buch oder Arbeitsblatt fuer den KI-Lernplan (04.10.2026).
@@ -12,11 +13,29 @@ import { Camera, Loader2, X } from 'lucide-react';
 export const FOTOS_HOECHSTENS = 10;
 const LANGE_SEITE = 1600;
 
+/**
+ * Bild ueber ein <img> laden: Browser und WebViews (iOS ab 13.1, Android
+ * Chrome ab 81) drehen es dabei nach der EXIF-Ausrichtung. createImageBitmap
+ * tat das in aelteren WKWebViews nicht – Handyfotos kamen dann quer an.
+ */
+function bildLaden(datei: File): Promise<HTMLImageElement> {
+  return new Promise((ok, fehler) => {
+    const url = URL.createObjectURL(datei);
+    const bild = new Image();
+    bild.onload = () => { URL.revokeObjectURL(url); ok(bild); };
+    bild.onerror = () => { URL.revokeObjectURL(url); fehler(new Error('Bild konnte nicht gelesen werden.')); };
+    bild.src = url;
+  });
+}
+
 export async function fotoVerkleinern(datei: File): Promise<string> {
-  const bild = await createImageBitmap(datei);
-  const faktor = Math.min(1, LANGE_SEITE / Math.max(bild.width, bild.height));
-  const breite = Math.round(bild.width * faktor);
-  const hoehe = Math.round(bild.height * faktor);
+  const bild = await bildLaden(datei);
+  const b = bild.naturalWidth;
+  const h = bild.naturalHeight;
+  if (!b || !h) throw new Error('Bild konnte nicht gelesen werden.');
+  const faktor = Math.min(1, LANGE_SEITE / Math.max(b, h));
+  const breite = Math.round(b * faktor);
+  const hoehe = Math.round(h * faktor);
   const leinwand = document.createElement('canvas');
   leinwand.width = breite;
   leinwand.height = hoehe;
@@ -25,7 +44,6 @@ export async function fotoVerkleinern(datei: File): Promise<string> {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, breite, hoehe);
   ctx.drawImage(bild, 0, 0, breite, hoehe);
-  bild.close?.();
   return leinwand.toDataURL('image/jpeg', 0.82);
 }
 
@@ -39,6 +57,12 @@ export function FotoAuswahl({
   disabled?: boolean;
 }) {
   const eingabe = useRef<HTMLInputElement>(null);
+  const kamera = useRef<HTMLInputElement>(null);
+  // Eigener Kamera-Knopf (05.10.2026): Die Android-App bietet bei der
+  // normalen Auswahl nur Galerie und Dateien an, keine Kamera. Mit capture
+  // oeffnet sich auf Android und iOS direkt die Kamera. Am Computer nicht noetig.
+  const mitKamera =
+    Capacitor.isNativePlatform() || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches);
   const [laedt, setLaedt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -48,7 +72,8 @@ export function FotoAuswahl({
     setLaedt(true);
     try {
       const frei = FOTOS_HOECHSTENS - fotos.length;
-      const auswahl = Array.from(dateien).filter((d) => d.type.startsWith('image/')).slice(0, frei);
+      // Manche Android-Galerien liefern keinen Typ mit; dann entscheidet das Laden.
+      const auswahl = Array.from(dateien).filter((d) => !d.type || d.type.startsWith('image/')).slice(0, frei);
       const neu: string[] = [];
       for (const d of auswahl) {
         try {
@@ -62,6 +87,7 @@ export function FotoAuswahl({
     } finally {
       setLaedt(false);
       if (eingabe.current) eingabe.current.value = '';
+      if (kamera.current) kamera.current.value = '';
     }
   };
 
@@ -82,15 +108,28 @@ export function FotoAuswahl({
             </button>
           </div>
         ))}
+        {fotos.length < FOTOS_HOECHSTENS && mitKamera && (
+          <button
+            type="button"
+            onClick={() => kamera.current?.click()}
+            disabled={disabled || laedt}
+            className="flex h-20 w-16 flex-col items-center justify-center gap-1 rounded-lg border-[1.5px] border-dashed border-karo bg-card text-xs font-bold text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
+            aria-label="Foto aufnehmen"
+          >
+            {laedt ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+            Kamera
+          </button>
+        )}
         {fotos.length < FOTOS_HOECHSTENS && (
           <button
             type="button"
             onClick={() => eingabe.current?.click()}
             disabled={disabled || laedt}
-            className="grid h-20 w-16 place-items-center rounded-lg border-[1.5px] border-dashed border-karo bg-card text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
-            aria-label="Fotos hinzufügen"
+            className="flex h-20 w-16 flex-col items-center justify-center gap-1 rounded-lg border-[1.5px] border-dashed border-karo bg-card text-xs font-bold text-primary transition-colors hover:bg-primary/5 disabled:opacity-50"
+            aria-label="Fotos auswählen"
           >
-            {laedt ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+            {laedt && !mitKamera ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" />}
+            {mitKamera ? 'Galerie' : 'Fotos'}
           </button>
         )}
       </div>
@@ -102,6 +141,16 @@ export function FotoAuswahl({
         className="sr-only"
         tabIndex={-1}
         aria-label="Fotos auswählen"
+        onChange={(e) => void hinzufuegen(e.target.files)}
+      />
+      <input
+        ref={kamera}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Foto aufnehmen"
         onChange={(e) => void hinzufuegen(e.target.files)}
       />
       {fehler && <p className="text-xs text-destructive">{fehler}</p>}
