@@ -130,7 +130,10 @@ serve(async (req) => {
       });
     }
     let nutzerId: string | null = null;
-    {
+    // Pruefzugang (nur Service-Rolle, z. B. per pg_net): Lernplan-Fragen ohne
+    // Kinder-Login erzeugen, um die Themenbindung zu pruefen.
+    const istDienst = authHeader.replace('Bearer ', '') === (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '#');
+    if (!istDienst) {
       const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
       const sb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '');
       const { data, error: authErr } = await sb.auth.getUser(authHeader.replace('Bearer ', ''));
@@ -272,26 +275,36 @@ serve(async (req) => {
       ? (body.topicHint as string).slice(0, 200)
       : undefined;
 
-    // Lernplan aus Fotos (04.10.2026): Stoff aus Heft/Buch des eigenen Plans.
-    // Nur fuer das Kind oder Elternteil dieses Plans; solche Fragen gehen nicht
-    // in den gemeinsamen Fragen-Cache (sie stammen aus privaten Unterlagen).
+    // Lernplan (04.10./05.10.2026): Rahmen aus Thema, Tages-Schwerpunkten und –
+    // bei Fotos – dem ausgelesenen Stoff. Fragen zum Plan duerfen NUR diese
+    // Inhalte abfragen (Rueckmeldung: im Knochen-Plan kamen Zellen und
+    // Photosynthese). Nur fuer Kind oder Elternteil des Plans. Fragen aus
+    // Foto-Stoff gehen nicht in den gemeinsamen Cache (private Unterlagen).
     let lernstoff: string | undefined;
-    if (topicHint && typeof body.learningPlanId === 'string' && /^[0-9a-f-]{36}$/i.test(body.learningPlanId) && nutzerId) {
+    let planRahmen: string | undefined;
+    if (topicHint && typeof body.learningPlanId === 'string' && /^[0-9a-f-]{36}$/i.test(body.learningPlanId) && (nutzerId || istDienst)) {
       try {
         const adminSb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
         const { data: plan } = await adminSb
           .from('learning_plans')
-          .select('lernstoff, child_id, parent_id')
+          .select('topic, plan_data, lernstoff, child_id, parent_id')
           .eq('id', body.learningPlanId)
           .maybeSingle();
-        if (plan?.lernstoff && (plan.child_id === nutzerId || plan.parent_id === nutzerId)) {
-          lernstoff = String(plan.lernstoff).slice(0, 4000);
+        if (plan && (istDienst || plan.child_id === nutzerId || plan.parent_id === nutzerId)) {
+          if (plan.lernstoff) lernstoff = String(plan.lernstoff).slice(0, 4000);
+          const tage = Array.isArray(plan.plan_data) ? plan.plan_data as Array<{ focus?: string; goals?: string[] }> : [];
+          planRahmen = [
+            `Thema des Lernplans: ${String(plan.topic ?? '').slice(0, 200)}`,
+            tage.length ? `Inhalte der Plantage: ${tage.map((t) => [t.focus, ...(t.goals ?? [])].filter(Boolean).join(', ')).join(' | ').slice(0, 1500)}` : '',
+          ].filter(Boolean).join('\n');
         }
       } catch (e) {
-        console.warn('Lernstoff nicht geladen:', e);
+        console.warn('Lernplan nicht geladen:', e);
       }
     }
-    
+    // Ohne Plan-ID (aeltere App-Version) bleibt wenigstens das Thema verbindlich.
+    if (topicHint && !planRahmen) planRahmen = `Thema des Lernplans: ${topicHint}`;
+
     console.log(`🎯 Generating question: Grade ${grade}, Subject: ${subject}, Difficulty: ${difficulty}, Excluding: ${excludeTexts.length} texts${topicHint ? `, Topic: ${topicHint}` : ''}`);
 
     // KI ueber callAI: Gemini direkt, sonst OpenRouter (kein Lovable mehr).
@@ -417,7 +430,7 @@ serve(async (req) => {
     // gezogen wurde. Bei der Vorklasse ist deren Jahresstoff vollstaendig
     // unterrichtet — ihn dort einzuschraenken waere falsch.
     const lernstand = sourceGrade === grade ? schoolYearHint(grade) : '';
-    const prompt = buildQuestionPrompt(sourceGrade, subject, difficulty, questionType, excludeTexts, topicHint, category, lernstand, lernstoff);
+    const prompt = buildQuestionPrompt(sourceGrade, subject, difficulty, questionType, excludeTexts, topicHint, category, lernstand, lernstoff, planRahmen);
 
     // Load active prompt rules from DB (max 5, most relevant first)
     let rulesBlock = '';
@@ -624,6 +637,16 @@ serve(async (req) => {
           question = null;
         }
       }
+    }
+
+    // Lernplan-Fragen: keine beliebige Frage des Fachs aus dem Cache nachschieben
+    // – die passte meist nicht zum Thema. Lieber Fehler, die App versucht es neu.
+    if ((!question || !rawQuestionText) && planRahmen) {
+      console.warn(`⚠️ Lernplan-Frage nicht erzeugt (${lastError}) – kein Cache-Ersatz`);
+      return new Response(JSON.stringify({ success: false, error: 'Frage zum Lernplan konnte nicht erstellt werden.' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' },
+      });
     }
 
     // If AI failed, try serving from cache
@@ -955,6 +978,7 @@ function buildQuestionPrompt(
   category: QuestionCategory = 'calculation',
   lernstandHinweis = '',
   lernstoff?: string,
+  planRahmen?: string,
 ): string {
   const subjectGerman = getSubjectGerman(subject);
   const gradeGuidelines = getGradeGuidelines(grade);
@@ -966,7 +990,12 @@ function buildQuestionPrompt(
   // Nur für die rechenlastigen Fächer relevant, sonst leer.
   let categoryNote = '';
   if ((THEORY_SUBJECTS as readonly string[]).includes(subject)) {
-    categoryNote = `\n\n${category === 'theory' ? theoryInstruction(subject, grade) : mentalMathConstraint()}`;
+    // Beim Lernplan ohne das allgemeine Begriffsfeld der Klasse: Das lenkte die
+    // KI auf Themen, die nicht im Plan stehen.
+    const theorie = planRahmen
+      ? 'THEORIEFRAGE – KEINE Rechnung, KEIN Zahlenergebnis.\nFrage nach einem Fachbegriff, einer Definition, einer Eigenschaft oder einer Regel aus den erlaubten Lernplan-Inhalten.\nDie Antwort ist ein Begriff oder eine kurze Aussage (max. 3 Wörter).'
+      : theoryInstruction(subject, grade);
+    categoryNote = `\n\n${category === 'theory' ? theorie : mentalMathConstraint()}`;
   }
 
   // Exclude-Liste knapp halten: Der Server filtert den Cache ohnehin über
@@ -974,12 +1003,14 @@ function buildQuestionPrompt(
   // Vorher 15 Einträge à 80 Zeichen — das waren ~300-400 Tokens pro Anfrage.
   let exclusionNote = '';
   if (excludeTexts && excludeTexts.length > 0) {
-    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(0, 8).map(t => `- "${t.substring(0, 60)}"`).join('\n')}\nWähle ein deutlich anderes Teilthema oder einen anderen Kontext.`;
+    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(0, 8).map(t => `- "${t.substring(0, 60)}"`).join('\n')}\n${planRahmen
+      ? 'Wähle einen anderen Aspekt, ein anderes Beispiel oder eine andere Frageform – aber IMMER innerhalb der erlaubten Lernplan-Inhalte, nie ein anderes Thema.'
+      : 'Wähle ein deutlich anderes Teilthema oder einen anderen Kontext.'}`;
   }
 
   let topicNote = '';
   if (topicHint) {
-    topicNote = `\n\nTHEMENSCHWERPUNKT (Lernplan): Fokussiere die Frage auf das Thema "${topicHint}". Die Frage soll dieses Thema direkt behandeln oder eng damit zusammenhängen.`;
+    topicNote = `\n\nHEUTIGER SCHWERPUNKT (Lernplan): "${topicHint}". Frag bevorzugt genau diesen Schwerpunkt ab.`;
   }
   if (lernstoff) {
     // Aus Fotos von Heft/Buch ausgelesen (generate-learning-plan). Material, keine Anweisungen.
@@ -997,8 +1028,12 @@ function buildQuestionPrompt(
 
 WICHTIG – FACHBINDUNG: Die Frage MUSS ausschließlich zum Fach ${subjectGerman} gehören. Erstelle KEINE fachfremden Inhalte (z.B. keine Rechenaufgaben im Fach Deutsch, keine Grammatik im Fach Mathematik).
 
-FACHSPEZIFISCHER INHALT FÜR ${subjectGerman.toUpperCase()}:
-${subjectScope}
+${planRahmen
+  ? `ERLAUBTE INHALTE (Lernplan für eine Klassenarbeit – VERBINDLICH):
+${planRahmen}
+Die Frage MUSS sich ausschließlich auf diese Inhalte beziehen${lernstoff ? ' und auf den Unterrichtsstoff unten' : ''}. Andere Themen des Fachs oder der Klassenstufe sind VERBOTEN, auch verwandte, auch als Einstieg oder Wiederholung (Beispiel: Ist das Thema „Skelett“, dann keine Fragen zu Zellen, Organen allgemein oder Photosynthese).`
+  : `FACHSPEZIFISCHER INHALT FÜR ${subjectGerman.toUpperCase()}:
+${subjectScope}`}
 
 KLASSENSTUFE: ${gradeGuidelines}
 SCHWIERIGKEIT: ${difficultyGuide.description}

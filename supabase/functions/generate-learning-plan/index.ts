@@ -173,7 +173,7 @@ serve(async (req) => {
 Du erstellst strukturierte Lernpläne mit ${tage} Tag${tage === 1 ? "" : "en"} für Schüler.
 
 WICHTIGE REGELN:
-1. Der Lernplan muss EXAKT zum deutschen Lehrplan der angegebenen Klassenstufe passen.
+1. INHALTE: Ausschließlich das, was im Thema, in den Hinweisen der Eltern und – falls vorhanden – im Unterrichtsstoff von den Fotos steht. KEINE weiteren Themen des Lehrplans, auch nicht als Grundlagen, Einstieg oder Ausblick (Beispiel: Thema „Skelett“ → keine Zellen, keine Photosynthese). Niveau und Fachbegriffe passend zur Klassenstufe.
 2. Jeder Tag hat ein klares Thema, konkrete Lernziele und empfohlene Übungen.
 3. ${ablauf}
 4. Jeder Tag gehört zum Fach ${subjectDE}; "appCategory" ist immer "${fach}".
