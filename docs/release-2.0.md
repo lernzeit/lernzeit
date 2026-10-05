@@ -6,7 +6,7 @@
 |---|---|
 | iOS | `codemagic.yaml`: `IOS_MARKETING_VERSION: "2.0"` (gesetzt). Workflow `ios-release` von Hand starten. |
 | Android | In Android Studio `android/app/build.gradle`: `versionCode 18`, `versionName "2.0"` (steht auf 17 / "1.3.0"). Danach `git pull`, `npm install`, `npm run build`, `npx cap sync android`. |
-| Beide | `.npmrc` (`legacy-peer-deps=true`) ist im Repo – ohne sie bricht `npm install` mit ERESOLVE ab. |
+| Beide | Keine `.npmrc` mit `legacy-peer-deps` (05.10.2026 wieder entfernt): Damit fehlte bei frischem `npm install` in Codemagic `ajv` 8, der Build brach ab. Lokal nachgestellt: frisches `npm install` → Capacitor-Update → `npm run build` läuft, ebenso `npm ci`. |
 
 ## Auf dem Gerät prüfen (je iPhone und Android)
 
