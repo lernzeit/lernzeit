@@ -468,6 +468,11 @@ serve(async (req) => {
     let lastError = '';
 
     // Tool definition for structured output
+    // Feste Typen je Feld (05.10.2026): Ohne "type" lieferte Gemini Listen als
+    // abgeschnittene Zeichenkette "[" – 59 % der Multiple-Choice-, 88 % der
+    // Sortier- und 43 % der Zuordnungsfragen wurden deshalb verworfen und durch
+    // eine beliebige Cache-Frage ersetzt. Jede Antwortform hat jetzt ein eigenes,
+    // getyptes Feld; vor der Pruefung wird es in das alte Format uebertragen.
     const questionTool = {
       type: "function" as const,
       function: {
@@ -476,14 +481,20 @@ serve(async (req) => {
         parameters: {
           type: "object",
           properties: {
-            question_text: { type: "string", description: "The question text in German" },
-            question_type: { type: "string", enum: ["MULTIPLE_CHOICE", "FREETEXT", "SORT", "MATCH", "DRAG_DROP", "FILL_BLANK"] },
-            correct_answer: { description: "The correct answer: number (MC index 0-3), string (FREETEXT), array (SORT/DRAG_DROP), or object (MATCH pairs)" },
-            options: { description: "Array of 4 options for MULTIPLE_CHOICE, shuffled items for SORT, or null" },
-            hint: { type: "string", description: "Optional hint for the student" },
-            task: { type: "string", description: "Task instruction for FILL_BLANK/DRAG_DROP, or null" }
+            question_text: { type: "string", description: "Die Frage auf Deutsch (bei FILL_BLANK mit ___ für jede Lücke)" },
+            question_type: { type: "string", enum: ["MULTIPLE_CHOICE", "FREETEXT", "SORT", "MATCH", "FILL_BLANK"] },
+            options: { type: "array", items: { type: "string" }, description: "MULTIPLE_CHOICE: genau 4 Antwortoptionen. SORT: die Elemente in der RICHTIGEN Reihenfolge (die App mischt sie). Sonst leer lassen." },
+            correct_index: { type: "integer", description: "Nur MULTIPLE_CHOICE: Index 0-3 der richtigen Option in options" },
+            pairs: {
+              type: "array",
+              description: "Nur MATCH: 3-5 Paare",
+              items: { type: "object", properties: { left: { type: "string" }, right: { type: "string" } }, required: ["left", "right"] },
+            },
+            correct_answer: { type: "string", description: "FREETEXT: die Antwort. FILL_BLANK: das fehlende Wort; bei zwei Lücken beide durch | getrennt. Sonst leer lassen." },
+            hint: { type: "string", description: "Optionaler Hinweis" },
+            task: { type: "string", description: "Kurze Aufgabenstellung (FILL_BLANK, SORT, MATCH)" }
           },
-          required: ["question_text", "question_type", "correct_answer"]
+          required: ["question_text", "question_type"]
         }
       }
     };
@@ -562,6 +573,7 @@ serve(async (req) => {
 
       // ── Validate & normalize the AI response ──
       if (question) {
+        uebertrageGetypteFelder(question);
         rawType = question.question_type ?? question.questionType;
         rawCorrectAnswer = tryParseStructuredValue(question.correct_answer ?? question.correctAnswer);
         rawOptions = tryParseStructuredValue(question.options ?? null);
@@ -884,6 +896,37 @@ function hasNonEmptyTextAnswer(value: unknown): boolean {
   return typeof value === 'number';
 }
 
+/**
+ * Uebertraegt die getypten Felder des Tools (correct_index, pairs, Listen in
+ * options) in das bisherige Format (correct_answer/options), das Pruefung,
+ * Cache und App erwarten. Aeltere Antworten ohne diese Felder bleiben, wie sie sind.
+ */
+function uebertrageGetypteFelder(q: Record<string, unknown>): void {
+  const typ = q.question_type ?? q.questionType;
+  const liste = Array.isArray(q.options) ? (q.options as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean) : null;
+  if (typ === 'MULTIPLE_CHOICE' && liste && typeof q.correct_index === 'number') {
+    q.options = liste;
+    q.correct_answer = q.correct_index;
+  }
+  if (typ === 'SORT' && liste && liste.length >= 2) {
+    const a = tryParseStructuredValue(q.correct_answer);
+    if (!Array.isArray(a) || a.length < 2) q.correct_answer = liste;
+    q.options = null;
+  }
+  if (typ === 'MATCH' && Array.isArray(q.pairs)) {
+    const paare = (q.pairs as Array<{ left?: unknown; right?: unknown }>)
+      .map((p) => [String(p?.left ?? '').trim(), String(p?.right ?? '').trim()] as const)
+      .filter(([l, r]) => l && r);
+    if (paare.length >= 2) {
+      q.correct_answer = Object.fromEntries(paare);
+      q.options = null;
+    }
+  }
+  if (typ === 'FILL_BLANK' && typeof q.correct_answer === 'string' && q.correct_answer.includes('|')) {
+    q.correct_answer = q.correct_answer.split('|').map((x) => x.trim()).filter(Boolean);
+  }
+}
+
 function isRenderableQuestionPayload(
   questionType: unknown,
   correctAnswer: unknown,
@@ -1059,15 +1102,12 @@ FRAGETYP: ${questionType}${categoryNote}${exclusionNote}${topicNote}${youngLangu
 
 ${typeInstructions}
 
-Antworte mit diesem JSON-Format:
-{
-  "question_text": "Die Frage hier",
-  "question_type": "${questionType}",
-  "correct_answer": <korrekte Antwort im passenden Format>,
-  "options": <Array von Optionen nur bei MULTIPLE_CHOICE, sonst null>,
-  "hint": "Optionaler Hinweis für schwierige Aufgaben",
-  "task": <Aufgabenstellung für FILL_BLANK, sonst null>
-}`;
+Gib die Frage über submit_question zurück (als JSON, falls kein Werkzeug verfügbar ist):
+- question_text, question_type "${questionType}", optional hint und task
+- MULTIPLE_CHOICE: options (4 Strings) und correct_index (0-3)
+- SORT: options in richtiger Reihenfolge
+- MATCH: pairs [{"left": "...", "right": "..."}]
+- FREETEXT und FILL_BLANK: correct_answer als Text`;
 }
 
 function getSubjectGerman(subject: string): string {
@@ -1195,10 +1235,10 @@ function getTypeSpecificInstructions(questionType: string, category: QuestionCat
 
   const instructions: Record<string, string> = {
     'MULTIPLE_CHOICE': `MULTIPLE_CHOICE:
-- correct_answer: Index 0-3 der korrekten Option
+- correct_index: Index 0-3 der korrekten Option
 - ${mcAnswerRule}
 - Plausible Distraktoren, eine eindeutig korrekte Antwort
-- Prüfe: correct_answer zeigt auf die richtige Option!`,
+- Prüfe: correct_index zeigt auf die richtige Option!`,
 
     'FREETEXT': `FREETEXT:
 - ${freetextAnswerRule}
@@ -1206,13 +1246,13 @@ function getTypeSpecificInstructions(questionType: string, category: QuestionCat
 - Prüfe Berechnung doppelt!`,
     
     'SORT': `SORT – Elemente sortieren:
-- correct_answer: Array von Strings in richtiger Reihenfolge
-- options: null (wird automatisch gemischt)
+- options: Array von Strings in RICHTIGER Reihenfolge (wird automatisch gemischt)
+- task: kurze Anweisung, wonach sortiert wird
 - GENAU 4-6 Elemente. NIEMALS mehr als 6, NIEMALS weniger als 4!`,
     
     'MATCH': `MATCH – Zuordnung:
-- correct_answer: Object {"Begriff": "Zuordnung"} mit Paaren
-- options: null
+- pairs: Array von Paaren [{"left": "Begriff", "right": "Zuordnung"}]
+- Jede rechte Seite nur einmal (eindeutige Zuordnung)
 - GENAU 3-5 Paare. NIEMALS mehr als 5!`,
     
     'DRAG_DROP': `DRAG_DROP – Kategorisierung:
@@ -1224,7 +1264,7 @@ function getTypeSpecificInstructions(questionType: string, category: QuestionCat
     'FILL_BLANK': `FILL_BLANK – Lückentext:
 - question_text MUSS ___ (drei Unterstriche) enthalten
 - task: Kurze Anweisung
-- correct_answer: String oder Array der fehlenden Wörter
+- correct_answer: das fehlende Wort; bei zwei Lücken beide durch | getrennt
 - Maximal 2 Lücken! Rechtschreibung beachten (Nomen groß, Verben klein)
 - Bei Verben: Grundform in Klammern hinter die Lücke (z.B. "___ (singen)")`
   };
