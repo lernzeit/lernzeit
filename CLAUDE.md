@@ -87,7 +87,7 @@ Supabase-Secrets gelöscht werden.
   Keine Verläufe, Emoji nur bei Avatar und Stickern.
 - Kind: Zeit-Uhr, Lernpflanze statt Lernfeuer (Stufen in `child/LernPflanze.tsx`, auch in
   den Push-Texten von `send-push`), Fächer als Hefte mit eigener Farbe und Stickern
-  (Tabellen `kind_hefte`, `kind_sticker`, Vergabe nur über `sticker_vergeben()`).
+  (Tabellen `kind_hefte`, `kind_sticker`). Sticker bei 5/5: Kind wählt selbst (`sticker_darf_waehlen()`, `sticker_waehlen()`), `sticker_vergeben()` (zufällig) nur noch für alte App-Versionen. Konfetti bei 5/5 genau einmal (`triggerAllesRichtig`).
   Kind-Start (seit 05.10.2026): Uhr mit „Lernen starten“, Lernpläne, Tagesaufgabe,
   „Deine Erfolge“ (Pflanze + `child/ErfolgeKachel.tsx`). Hefte nur auf der Fächer-Seite,
   dort auch „Gestalten“.

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Check, UserPlus, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sticker } from '@/components/child/Hefte';
+import { STICKER } from '@/lib/hefte';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -19,6 +20,9 @@ interface GameCompletionScreenProps {
   onDemoSignUp?: () => void;
   /** Kennung eines eben gewonnenen Stickers (alles richtig) */
   neuerSticker?: string | null;
+  /** Alles richtig: Sticker zur Auswahl; Wert = Sticker, die das Kind schon hat */
+  stickerWahl?: string[] | null;
+  onStickerWaehlen?: (id: string) => Promise<void>;
 }
 
 export function GameCompletionScreen({
@@ -34,7 +38,13 @@ export function GameCompletionScreen({
   demoMode = false,
   onDemoSignUp,
   neuerSticker = null,
+  stickerWahl = null,
+  onStickerWaehlen,
 }: GameCompletionScreenProps) {
+  const [speichert, setSpeichert] = useState<string | null>(null);
+  // Noch fehlende Sticker zuerst; hat das Kind alle, darf es jeden nochmal nehmen
+  const fehlend = Object.keys(STICKER).filter((id) => !stickerWahl?.includes(id));
+  const angebot = fehlend.length ? fehlend : Object.keys(STICKER);
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
   const perfectSessionBonusSeconds = isStreakRecovery ? 0 : perfectSessionBonus * 60;
@@ -138,6 +148,35 @@ export function GameCompletionScreen({
           </div>
         )}
       </div>
+
+      {!neuerSticker && stickerWahl && onStickerWaehlen && (
+        <section aria-labelledby="sticker-wahl" className="rounded-[28px] bg-card p-5 ring-1 ring-inset ring-karo">
+          <h2 id="sticker-wahl" className="text-lg font-extrabold text-tinte">Such dir einen Sticker aus!</h2>
+          <p className="font-hand text-gruen-text">Für alles richtig. Tipp auf deinen Lieblings-Sticker.</p>
+          <ul className="mt-4 grid grid-cols-6 gap-1.5">
+            {angebot.map((id) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  disabled={speichert !== null}
+                  onClick={async () => {
+                    setSpeichert(id);
+                    try { await onStickerWaehlen(id); } finally { setSpeichert(null); }
+                  }}
+                  aria-label={`${STICKER[id].name} aussuchen`}
+                  className={cn(
+                    'grid aspect-square w-full place-items-center rounded-2xl text-3xl transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    speichert === id ? 'bg-primary/15' : 'hover:bg-primary/5',
+                    speichert !== null && speichert !== id && 'opacity-40',
+                  )}
+                >
+                  <Sticker id={id} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {neuerSticker && (
         <div className="flex items-center gap-4 rounded-[28px] bg-card p-5 ring-1 ring-inset ring-karo">

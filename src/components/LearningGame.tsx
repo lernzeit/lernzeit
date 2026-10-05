@@ -23,7 +23,7 @@ import { useQuestionReport } from '@/hooks/useQuestionReport';
 import { QuestionReportDialog } from '@/components/game/QuestionReportDialog';
 import { KITutorDialog } from '@/components/game/KITutorDialog';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
-import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerRainbow } from '@/utils/confetti';
+import { triggerSparkle, triggerSpeedBonus, triggerCombo, triggerAllesRichtig } from '@/utils/confetti';
 import { InGameAnimation, type AnimationType } from '@/components/game/InGameAnimation';
 import { AntwortKaestchen, KaestchenFortschritt, VerdienteZeit, Ziffernfeld, istZahlAntwort } from '@/components/game/heft/Heft';
 import { StreakAnimation } from '@/components/game/StreakAnimation';
@@ -169,6 +169,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   // Ergebnis je Aufgabe fuer den Kaestchen-Fortschritt (nur Anzeige)
   const [antwortVerlauf, setAntwortVerlauf] = useState<Record<number, boolean>>({});
   const [neuerSticker, setNeuerSticker] = useState<string | null>(null);
+  // Alles richtig: Das Kind sucht seinen Sticker selbst aus (05.10.2026).
+  // null = keine Wahl, sonst die Sticker, die es schon hat.
+  const [stickerWahl, setStickerWahl] = useState<string[] | null>(null);
   useEffect(() => {
     if (hasAnswered) setAntwortVerlauf((v) => (v[currentIndex] === isCorrect ? v : { ...v, [currentIndex]: isCorrect }));
   }, [hasAnswered, isCorrect, currentIndex]);
@@ -572,7 +575,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         triggerCombo();
         setGameAnimation({ type: 'combo', message: 'Drei richtig in Folge!' });
       } else if (newStreak === 5) {
-        triggerCombo();
+        // Ohne Konfetti: Bei fuenf Aufgaben folgt gleich der Abschluss mit
+        // seinem eigenen (einzigen) Konfetti (05.10.2026).
         setGameAnimation({ type: 'combo', message: 'Fünf richtig in Folge!' });
       }
       // Normale richtige Antwort: kein Einblenden und kein Konfetti mehr. Der
@@ -776,12 +780,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
 
-          // Sticker fuer eine Runde mit allen Aufgaben richtig (die Datenbank
-          // prueft selbst und vergibt hoechstens drei am Tag)
+          // Sticker fuer eine Runde mit allen Aufgaben richtig: Das Kind waehlt
+          // ihn selbst aus. Die Datenbank prueft (je Runde einer, hoechstens
+          // drei am Tag) und vergibt erst beim Antippen.
           if (!isStreakRecovery && score === totalQuestions && totalQuestions >= 5) {
             try {
-              const { data: sticker } = await supabase.rpc('sticker_vergeben');
-              if (typeof sticker === 'string' && sticker) setNeuerSticker(sticker);
+              const { data: darf } = await supabase.rpc('sticker_darf_waehlen');
+              if (darf === true) {
+                const { data: vorhanden } = await supabase.from('kind_sticker').select('sticker').eq('child_id', user.id);
+                setStickerWahl((vorhanden ?? []).map((z) => z.sticker));
+              }
             } catch {
               /* ohne Sticker weiter */
             }
@@ -917,13 +925,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setSortOrder(newOrder);
   };
 
+  // Alles richtig: genau ein ruhiger Konfetti-Stoss. Bis 05.10.2026 stand
+  // triggerRainbow() direkt im Rendern und feuerte bei jedem Neuzeichnen
+  // erneut (Sticker kommt an, Sitzung gespeichert, ...).
+  const konfettiGezeigt = useRef(false);
+  useEffect(() => {
+    if (!showCompletionScreen || konfettiGezeigt.current || isStreakRecovery) return;
+    if (score === totalQuestions && totalQuestions > 0) {
+      konfettiGezeigt.current = true;
+      triggerAllesRichtig();
+    }
+  }, [showCompletionScreen, score, totalQuestions, isStreakRecovery]);
+
   // Game completion screen
   if (showCompletionScreen) {
     const secondsPerTask = getSecondsPerTask();
-    // Trigger rainbow for perfect score
-    if (score === totalQuestions) {
-      triggerRainbow();
-    }
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background pt-safe-top pb-safe-bottom">
           <GameCompletionScreen
@@ -934,6 +950,12 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           achievementBonusMinutes={achievementBonusMinutes}
           perfectSessionBonus={score === totalQuestions ? 1 : 0}
           neuerSticker={neuerSticker}
+          stickerWahl={neuerSticker ? null : stickerWahl}
+          onStickerWaehlen={async (id) => {
+            const { data } = await supabase.rpc('sticker_waehlen', { p_sticker: id });
+            if (typeof data === 'string' && data) setNeuerSticker(data);
+            else setStickerWahl(null); // nicht (mehr) erlaubt: Auswahl ausblenden
+          }}
           grade={grade}
             isStreakRecovery={isStreakRecovery}
           onContinue={handleCompletionContinue}

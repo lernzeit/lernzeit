@@ -46,7 +46,7 @@ export const STANDARD_FARBE: Record<FachId, string> = {
 export const farbeVon = (id: string | undefined, fach: FachId): string =>
   (HEFTFARBEN.find((f) => f.id === id) ?? HEFTFARBEN.find((f) => f.id === STANDARD_FARBE[fach]) ?? HEFTFARBEN[0]).farbe;
 
-/** Muss mit dem Katalog in sticker_vergeben() uebereinstimmen. */
+/** Muss mit dem Katalog in sticker_vergeben() und sticker_waehlen() uebereinstimmen. */
 export const STICKER: Record<string, { zeichen: string; name: string }> = {
   fuchs: { zeichen: '🦊', name: 'Fuchs' },
   panda: { zeichen: '🐼', name: 'Panda' },

@@ -75,15 +75,36 @@ export function triggerFireworks() {
   }, 250);
 }
 
-/** Speed bonus effect – lightning burst */
+/** Schnell richtig: kleiner Funke (05.10.2026 von 60 auf 18 Teilchen, kam bei jeder schnellen Antwort) */
 export function triggerSpeedBonus() {
   confetti({
-    particleCount: 60,
-    spread: 100,
-    startVelocity: 45,
-    origin: { y: 0.5 },
-    colors: ['#facc15', '#fbbf24', '#f59e0b', '#eab308'],
-    scalar: 1.2,
+    particleCount: 18,
+    spread: 60,
+    startVelocity: 25,
+    ticks: 90,
+    origin: { y: 0.55 },
+    colors: ['#f2b21b', '#facc15'],
+    scalar: 0.8,
+    disableForReducedMotion: true,
+    zIndex: 9999,
+  });
+}
+
+/**
+ * Alles richtig: ein einzelner, ruhiger Stoss von unten in den Farben der App
+ * (05.10.2026, vorher zwei Wellen mit 200 Teilchen).
+ */
+export function triggerAllesRichtig() {
+  confetti({
+    particleCount: 45,
+    spread: 70,
+    startVelocity: 32,
+    gravity: 1.1,
+    ticks: 140,
+    origin: { x: 0.5, y: 0.75 },
+    colors: ['#2563eb', '#13c96a', '#f2b21b'],
+    scalar: 0.9,
+    disableForReducedMotion: true,
     zIndex: 9999,
   });
 }
@@ -117,12 +138,14 @@ export function triggerRainbow() {
 /** Combo burst for streaks */
 export function triggerCombo() {
   confetti({
-    particleCount: 80,
-    spread: 120,
-    startVelocity: 40,
-    origin: { y: 0.5 },
-    colors: ['#f97316', '#ef4444', '#eab308'],
-    scalar: 1.0,
+    particleCount: 30,
+    spread: 80,
+    startVelocity: 30,
+    ticks: 110,
+    origin: { y: 0.55 },
+    colors: ['#2563eb', '#13c96a', '#f2b21b'],
+    scalar: 0.9,
+    disableForReducedMotion: true,
     zIndex: 9999,
   });
 }

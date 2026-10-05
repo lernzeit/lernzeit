@@ -2666,6 +2666,8 @@ export type Database = {
         Returns: string
       }
       sticker_vergeben: { Args: never; Returns: string }
+      sticker_darf_waehlen: { Args: never; Returns: boolean }
+      sticker_waehlen: { Args: { p_sticker: string }; Returns: string }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {
