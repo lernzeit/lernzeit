@@ -487,7 +487,7 @@ serve(async (req) => {
             correct_index: { type: "integer", description: "Nur MULTIPLE_CHOICE: Index 0-3 der richtigen Option in options" },
             pairs: {
               type: "array",
-              description: "Nur MATCH: 3-5 Paare",
+              description: "Nur MATCH: 3-5 Paare, jede rechte Seite genau EINMAL (1:1). Keine Gruppen wie Obst/Gemüse oder Tag/Nacht, bei denen zwei Begriffe dieselbe Zuordnung haben – dafür MULTIPLE_CHOICE nehmen.",
               items: { type: "object", properties: { left: { type: "string" }, right: { type: "string" } }, required: ["left", "right"] },
             },
             correct_answer: { type: "string", description: "FREETEXT: die Antwort. FILL_BLANK: das fehlende Wort; bei zwei Lücken beide durch | getrennt. Sonst leer lassen." },
@@ -917,7 +917,24 @@ function uebertrageGetypteFelder(q: Record<string, unknown>): void {
     const paare = (q.pairs as Array<{ left?: unknown; right?: unknown }>)
       .map((p) => [String(p?.left ?? '').trim(), String(p?.right ?? '').trim()] as const)
       .filter(([l, r]) => l && r);
-    if (paare.length >= 2) {
+    // Gruppen (Apfel→Obst, Birne→Obst) kann die App nicht darstellen; sie
+    // waren am 05.10.2026 der einzige verbliebene Formatfehler. Doppelte
+    // Zuordnungen fallen weg; bleiben mindestens 3 Paare, ist die Aufgabe noch gut.
+    const linksGesehen = new Set<string>();
+    const rechtsGesehen = new Set<string>();
+    const eindeutig = paare.filter(([l, r]) => {
+      if (linksGesehen.has(l) || rechtsGesehen.has(r)) return false;
+      linksGesehen.add(l);
+      rechtsGesehen.add(r);
+      return true;
+    });
+    if (eindeutig.length < paare.length) {
+      console.log(`🔀 MATCH: ${paare.length - eindeutig.length} doppelte Zuordnung(en) entfernt, ${eindeutig.length} Paare bleiben`);
+    }
+    if (eindeutig.length >= 3 || (eindeutig.length >= 2 && eindeutig.length === paare.length)) {
+      q.correct_answer = Object.fromEntries(eindeutig);
+      q.options = null;
+    } else if (paare.length >= 2) {
       q.correct_answer = Object.fromEntries(paare);
       q.options = null;
     }
