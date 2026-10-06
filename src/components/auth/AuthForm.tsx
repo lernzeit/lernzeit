@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { istNativeApp, oauthImAppBrowser } from '@/services/nativeOAuth';
+import { googleDirekterWeg, googleImAppBrowserGesperrt, googleNativ, googleWebAbschliessen, googleWebStarten } from '@/services/googleAnmeldung';
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { fehlerTyp, useRegistrierungsMessung } from '@/hooks/useRegistrierungsMessung';
@@ -72,6 +73,16 @@ const TAB =
 const ABSENDEN =
   'w-full h-12 rounded-full bg-[var(--lp-blau)] text-base font-bold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.7)] hover:bg-[#1d4ed8]';
 
+/** Statt des Google-Knopfs im Facebook-/Instagram-Browser (Google sperrt dort). */
+function GoogleImAppBrowserHinweis() {
+  return (
+    <p className="rounded-2xl bg-[var(--lp-heft)] px-4 py-3 text-center text-sm text-[var(--lp-tinte)]" role="note">
+      Mit Google geht es in diesem Browser nicht. Öffne die Seite über „…“ → „Im Browser öffnen“
+      oder registriere dich unten mit E-Mail.
+    </p>
+  );
+}
+
 export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -105,6 +116,29 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   useEffect(() => {
     trackFireAndForget('sign_up_started', {});
   }, []);
+
+  // Rücksprung von Google (Website, direkter Weg): Token an Supabase geben
+  useEffect(() => {
+    let aktiv = true;
+    void (async () => {
+      const ergebnis = await googleWebAbschliessen();
+      if (!aktiv || ergebnis.status === 'keiner' || ergebnis.status === 'abgebrochen') return;
+      if (ergebnis.status === 'ok') {
+        onAuthSuccess();
+        return;
+      }
+      toast({
+        title: 'Fehler bei Google-Anmeldung',
+        description: translateError(ergebnis.meldung ?? ''),
+        variant: 'destructive',
+      });
+    })();
+    return () => { aktiv = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Im Facebook-/Instagram-Browser lässt Google keine Anmeldung zu
+  const googleGesperrt = googleImAppBrowserGesperrt();
   const {
     status: captchaStatus,
     errorCode: captchaErrorCode,
@@ -272,6 +306,20 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // Direkt bei Google, sobald eingerichtet (config/google.ts): Google zeigt
+      // dann „lernzeit.app“ statt der Supabase-Adresse.
+      const direkt = googleDirekterWeg();
+      if (direkt === 'web') {
+        oauthRedirectPending.current = true;
+        await googleWebStarten();
+        return;
+      }
+      if (direkt === 'nativ') {
+        const ergebnis = await googleNativ();
+        if (ergebnis === 'ok') onAuthSuccess();
+        setLoading(false);
+        return;
+      }
       // Role/grade/referral will be captured AFTER OAuth via GoogleRoleSelection.
       // Ab hier verlässt der Nutzer die Seite — beim Zurückkommen muss der
       // Ladezustand aufgelöst werden, sonst bleibt der Bildschirm gesperrt.
@@ -779,6 +827,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
                 {/* Social sign-in (fast path) — shown above the manual form */}
                 <div className="space-y-3">
+                  {googleGesperrt ? (
+                    <GoogleImAppBrowserHinweis />
+                  ) : (
                   <Button
                     type="button"
                     variant="outline"
@@ -789,6 +840,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     <GoogleIcon />
                     <span className="ml-2">Mit Google anmelden</span>
                   </Button>
+                  )}
                   <Button
                     type="button"
                     className="w-full h-12 rounded-full bg-black text-base font-bold text-white hover:bg-black/85"
@@ -984,6 +1036,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
                 {/* Social sign-up (fast path) — shown above the manual form */}
                 <div className="space-y-3">
+                  {googleGesperrt ? (
+                    <GoogleImAppBrowserHinweis />
+                  ) : (
                   <Button
                     type="button"
                     variant="outline"
@@ -994,6 +1049,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     <GoogleIcon />
                     <span className="ml-2">Mit Google registrieren</span>
                   </Button>
+                  )}
                   <Button
                     type="button"
                     className="w-full h-12 rounded-full bg-black text-base font-bold text-white hover:bg-black/85"

@@ -12,7 +12,7 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
  * Kanzlei. Offene Punkte: docs/rechtstexte-pruefung.md.
  */
 const Datenschutz = () => (
-  <RechtsSeite titel="Datenschutzerklärung" stand="4. Oktober 2026">
+  <RechtsSeite titel="Datenschutzerklärung" stand="6. Oktober 2026">
     <Seo
       title="Datenschutz – LernZeit"
       description="Datenschutzerklärung von LernZeit: welche Daten von Eltern und Kindern wir verarbeiten, wozu, auf welcher Rechtsgrundlage und welche Rechte Sie haben."
@@ -166,6 +166,12 @@ const Datenschutz = () => (
         <li><strong>Stripe Payments Europe, Ltd.</strong> (Irland): Bezahlung von Premium auf der Website</li>
         <li><strong>RevenueCat, Inc.</strong> (USA): Verwaltung der In-App-Abos aus App Store und Google Play</li>
         <li><strong>Apple</strong> und <strong>Google</strong>: Bereitstellung der Apps und Abrechnung von In-App-Käufen (eigene Verantwortung)</li>
+        <li>
+          <strong>Anmeldung mit Google oder Apple</strong> (nur, wenn Sie diese Möglichkeit wählen): Die Anmeldung findet
+          bei Google bzw. Apple statt (eigene Verantwortung). Wir erhalten Ihren Namen, Ihre E-Mail-Adresse und eine
+          Kennung des Kontos, um Ihr LernZeit-Konto anzulegen und Sie wiederzuerkennen. Auf unseren Seiten laden wir
+          dafür keine Skripte von Google oder Apple.
+        </li>
         <li>
           <strong>Google (Gemini)</strong> und <strong>OpenRouter</strong>: Erstellen von Aufgaben, Erklärungen,
           KI-Tutor und Lernplan, Auswertung von Lernplan-Fotos. Übermittelt werden die Aufgabe und die Eingabe bzw. die Fotos, ohne personenbezogene

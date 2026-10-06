@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>LernZeit – Anmeldung</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f8f9fe; color: #1a2b6d;
+         font: 600 17px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+</style>
+</head>
+<body>
+<p>Einen Moment …</p>
+<script>
+// Rücksprung von Google (src/services/googleAnmeldung.ts). Legt das ID-Token in
+// den sessionStorage desselben Tabs und kehrt ohne Token in der Adresse zur
+// App zurück. Kein Tracking, keine fremden Skripte.
+(function () {
+  var hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  var query = new URLSearchParams(location.search);
+  var token = hash.get('id_token');
+  var fehler = hash.get('error') || query.get('error');
+  var state = hash.get('state') || query.get('state');
+  try {
+    var erwartet = sessionStorage.getItem('lz_google_state');
+    if (token && erwartet && state === erwartet) {
+      sessionStorage.setItem('lz_google_id_token', token);
+    } else {
+      sessionStorage.setItem('lz_google_fehler', fehler || 'ungueltiger_ruecksprung');
+    }
+  } catch (e) { /* ohne sessionStorage keine Anmeldung möglich */ }
+  location.replace('/?auth=true');
+})();
+</script>
+</body>
+</html>

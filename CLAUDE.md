@@ -143,3 +143,14 @@ Supabase-Secrets gelöscht werden.
   `parent_child_relationships` erlauben keine INSERTs.
 - `DROP` über das Supabase-MCP hängt (Timeout); Policies mit `ALTER POLICY` ändern, Cron-Jobs nur im Dashboard.
 - Keine Zugangsdaten ins Repo (am 05.10.2026 noch öffentlich); e2e liest `E2E_*` aus der Umgebung.
+
+## Anmeldung mit Google (Stand 06.10.2026)
+
+- Über Supabase zeigte Google „Weiter zu fsmgynpdfxkaiiuguqyr.supabase.co“; aus den Apps kam seit
+  29.09. keine Google-Anmeldung durch. Neu: direkt bei Google, Supabase bekommt nur das ID-Token
+  (`services/googleAnmeldung.ts`). Website: Weiterleitung + `public/google-rueckkehr.html`; Apps:
+  `@capgo/capacitor-social-login` (nur Google, `facebook: false` in `capacitor.config.ts` und
+  codemagic – kein Facebook-SDK in der Kinder-App, Build bricht sonst ab).
+- Schalter in `config/google.ts` (Web, iOS-Client-ID, Android); aus = bisheriger Weg. Einrichtung
+  in Google Cloud/Supabase: `docs/google-anmeldung.md`. Kein eigenes Budget für eine Supabase-Domain.
+- Im Facebook-/Instagram-Browser sperrt Google jede Anmeldung; dort steht ein Hinweis statt des Knopfs.

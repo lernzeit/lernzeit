@@ -55,7 +55,9 @@ workflows:
       - name: Prepare Android platform
         script: |
           npm install @capacitor/android @capacitor/cli
-          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
+          # Massgeblich ist capacitor.config.ts (Capacitor liest .ts vor .json);
+          # SocialLogin steht zur Sicherheit auch hier: nur Google, kein Facebook-SDK.
+          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist","plugins":{"SocialLogin":{"providers":{"google":true,"facebook":false,"apple":false,"twitter":false},"logLevel":1}}}' > capacitor.config.json
           rm -rf android
           npx cap add android
           npx cap sync android
@@ -165,7 +167,9 @@ workflows:
 
       - name: Prepare and Sync iOS platform
         script: |
-          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
+          # Massgeblich ist capacitor.config.ts (Capacitor liest .ts vor .json);
+          # SocialLogin steht zur Sicherheit auch hier: nur Google, kein Facebook-SDK.
+          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist","plugins":{"SocialLogin":{"providers":{"google":true,"facebook":false,"apple":false,"twitter":false},"logLevel":1}}}' > capacitor.config.json
           
           rm -rf ios
           echo "Adding iOS platform..."
@@ -181,6 +185,14 @@ workflows:
           # Apple-Berechtigung nicht" (Befund 30.09.2026). Lieber rot hier.
           grep -q 'LernzeitScreenTime' ios/App/CapApp-SPM/Package.swift \
             || { echo "ERROR: Bildschirmzeit-Plugin fehlt in ios/App/CapApp-SPM/Package.swift."; exit 1; }
+
+          # Google-Anmeldung (06.10.2026): Das Plugin darf das Facebook-SDK nicht
+          # mitbringen (Kinder-App, Datenschutz). Der Hook beim Sync kommentiert
+          # es in seinem Package.swift aus; sonst lieber hier abbrechen.
+          SL_PKG="node_modules/@capgo/capacitor-social-login/Package.swift"
+          if [ -f "$SL_PKG" ] && grep -Eq '^[[:space:]]*\.product\(name: "Facebook' "$SL_PKG"; then
+            echo "ERROR: Facebook-SDK waere im Build (SocialLogin providers.facebook=false greift nicht)."; exit 1
+          fi
 
           # 1. ERZWINGEN: Manuell hochgeladenes Podfile an die richtige Stelle setzen
           if [ -f "ios-icons/Podfile" ]; then
@@ -272,6 +284,26 @@ workflows:
               /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLName string de.lernzeit.app.auth" "$PLIST_PATH"
               /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLSchemes array" "$PLIST_PATH"
               /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLSchemes:0 string de.lernzeit.app" "$PLIST_PATH"
+            fi
+
+            # 9. Google-Anmeldung direkt (06.10.2026): Googles Bibliothek braucht
+            # die umgekehrte iOS-Client-ID als URL-Schema, sonst beendet sie die
+            # App beim Antippen. Quelle ist dieselbe Datei wie in der App.
+            GOOGLE_IOS_ID=$(grep -o "GOOGLE_IOS_CLIENT_ID = '[^']*'" src/config/google.ts | sed "s/.*= '\(.*\)'/\1/")
+            if [ -n "$GOOGLE_IOS_ID" ]; then
+              GOOGLE_SCHEMA="com.googleusercontent.apps.${GOOGLE_IOS_ID%.apps.googleusercontent.com}"
+              echo "Registriere Google-URL-Schema $GOOGLE_SCHEMA..."
+              if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" | grep -q "$GOOGLE_SCHEMA"; then
+                URL_TYPE_INDEX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" | grep -c "Dict {" || true)
+                /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX dict" "$PLIST_PATH"
+                /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLName string de.lernzeit.app.google" "$PLIST_PATH"
+                /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLSchemes array" "$PLIST_PATH"
+                /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$URL_TYPE_INDEX:CFBundleURLSchemes:0 string $GOOGLE_SCHEMA" "$PLIST_PATH"
+              fi
+              /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST_PATH" | grep -q "$GOOGLE_SCHEMA" \
+                || { echo "ERROR: Google-URL-Schema fehlt in Info.plist."; exit 1; }
+            else
+              echo "Google iOS-Client-ID leer: bisheriger Weg ueber Supabase."
             fi
 
             echo "--- Info.plist: URL-Schemata ---"
@@ -611,7 +643,9 @@ workflows:
 
       - name: Add Android platform
         script: |
-          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist"}' > capacitor.config.json
+          # Massgeblich ist capacitor.config.ts (Capacitor liest .ts vor .json);
+          # SocialLogin steht zur Sicherheit auch hier: nur Google, kein Facebook-SDK.
+          echo '{"appId":"de.lernzeit.app","appName":"LernZeit","webDir":"dist","plugins":{"SocialLogin":{"providers":{"google":true,"facebook":false,"apple":false,"twitter":false},"logLevel":1}}}' > capacitor.config.json
           npx cap add android || true
           npx cap sync android
 

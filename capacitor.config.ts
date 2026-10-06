@@ -36,6 +36,18 @@ const config: CapacitorConfig = {
     },
     OneSignal: {
       appId: '84cb5453-b878-47ca-aa31-1ec1405bdd5d'
+    },
+    // Anmeldung mit Google direkt (src/services/googleAnmeldung.ts, 06.10.2026).
+    // Nur Google: Ohne diese Angabe bindet das Plugin das Facebook-SDK mit ein –
+    // in einer Kinder-App ausgeschlossen. Apple läuft über apple-sign-in.
+    SocialLogin: {
+      providers: {
+        google: true,
+        facebook: false,
+        apple: false,
+        twitter: false
+      },
+      logLevel: 1
     }
   },
   android: {
