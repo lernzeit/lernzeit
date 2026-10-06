@@ -2251,6 +2251,24 @@ export type Database = {
         }
         Relationships: []
       }
+      zz_claude_testfotos: {
+        Row: {
+          daten: string | null
+          name: string | null
+          teil: number | null
+        }
+        Insert: {
+          daten?: string | null
+          name?: string | null
+          teil?: number | null
+        }
+        Update: {
+          daten?: string | null
+          name?: string | null
+          teil?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       ads_funnel: {
@@ -2550,6 +2568,7 @@ export type Database = {
         Returns: boolean
       }
       is_premium: { Args: { user_id: string }; Returns: boolean }
+      lernplan_starten: { Args: { p_plan_id: string }; Returns: string }
       link_referral: { Args: { p_code: string }; Returns: Json }
       lz_nutzung_familien: {
         Args: never
@@ -2615,7 +2634,6 @@ export type Database = {
       }
       purge_ad_attribution: { Args: never; Returns: number }
       purge_shield_attempts: { Args: never; Returns: number }
-      lernplan_starten: { Args: { p_plan_id: string }; Returns: string }
       revoke_unlock: { Args: { p_unlock_id: string }; Returns: undefined }
       service_mail_auswahl: {
         Args: { p_einrichtung_ab?: string }
@@ -2665,8 +2683,9 @@ export type Database = {
         Args: { p_spalte: string; p_tabelle: string }
         Returns: string
       }
-      sticker_vergeben: { Args: never; Returns: string }
       sticker_darf_waehlen: { Args: never; Returns: boolean }
+      sticker_sitzung: { Args: never; Returns: string }
+      sticker_vergeben: { Args: never; Returns: string }
       sticker_waehlen: { Args: { p_sticker: string }; Returns: string }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
