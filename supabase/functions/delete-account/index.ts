@@ -60,14 +60,19 @@ serve(async (req) => {
           const subs = await stripe.subscriptions.list({
             customer: customers.data[0].id,
             status: "active",
-            limit: 1,
+            limit: 10,
           });
-          if (subs.data.length > 0) {
+          // Nur ein Abo, das sich noch verlaengert, haelt die Loeschung auf.
+          // Bereits gekuendigte Abos laufen nur noch bis zum Ende des Zeitraums
+          // (cancel_at_period_end / cancel_at) – bis 06.10.2026 blockierten
+          // auch sie, Eltern konnten nach der Kuendigung nicht loeschen.
+          const laufend = subs.data.filter((sub) => !sub.cancel_at_period_end && !sub.cancel_at);
+          if (laufend.length > 0) {
             logStep("Active Stripe subscription found, blocking deletion");
             return new Response(
               JSON.stringify({
                 error: "active_subscription",
-                message: "Bitte kündige zuerst dein Premium-Abo über die Abo-Verwaltung, bevor du deinen Account löschst.",
+                message: "Du hast noch ein laufendes Premium-Abo. Bitte kündige es zuerst unter Abo → „Abo kündigen“, danach kannst du dein Konto löschen.",
               }),
               {
                 status: 400,

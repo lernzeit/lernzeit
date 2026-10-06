@@ -35,6 +35,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { edgeAntwort } from '@/lib/edgeAntwort';
 import { useToast } from '@/hooks/use-toast';
 import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
@@ -227,10 +228,12 @@ const Support = () => {
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('Keine aktive Sitzung gefunden.');
 
-      const { data, error } = await supabase.functions.invoke('delete-account', {
+      const { data: rohDaten, error } = await supabase.functions.invoke('delete-account', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (error) throw error;
+      // Bei Status 400 (z. B. laufendes Abo) steht der Grund in der Fehler-Antwort
+      const data = await edgeAntwort<{ error?: string; message?: string; success?: boolean }>(rohDaten, error);
+      if (error && !data?.error) throw error;
 
       if (data?.error === 'active_subscription') {
         toast({
@@ -241,7 +244,7 @@ const Support = () => {
         });
         return;
       }
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.message || data.error);
 
       toast({
         title: 'Konto gelöscht',

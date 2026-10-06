@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2, AlertTriangle, Loader2, Crown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { edgeAntwort } from '@/lib/edgeAntwort';
 import { useToast } from '@/hooks/use-toast';
 import { GruendeAuswahl, umfrageSpeichern } from '@/components/parent/AbwanderungUmfrage';
 
@@ -52,11 +53,12 @@ export function AccountDeleteSection({ isPremium = false, onDeleted, umfrageUser
         await umfrageSpeichern(umfrageUserId, 'konto_loeschen', gruende, '').catch(() => { /* freiwillig */ });
       }
 
-      const { data, error } = await supabase.functions.invoke('delete-account', {
+      const { data: rohDaten, error } = await supabase.functions.invoke('delete-account', {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (error) throw error;
+      // Bei Status 400 (z. B. laufendes Abo) steht der Grund in der Fehler-Antwort
+      const data = await edgeAntwort<{ error?: string; message?: string; success?: boolean }>(rohDaten, error);
+      if (error && !data?.error) throw error;
 
       if (data?.error === 'active_subscription') {
         toast({
@@ -69,7 +71,7 @@ export function AccountDeleteSection({ isPremium = false, onDeleted, umfrageUser
       }
 
       if (data?.error) {
-        throw new Error(data.error);
+        throw new Error(data.message || data.error);
       }
 
       toast({ title: 'Account gelöscht', description: 'Dein Account wurde endgültig gelöscht.' });
