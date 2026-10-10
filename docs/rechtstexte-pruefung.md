@@ -124,3 +124,14 @@ Datenschutzerklärung 2.2 und 6 ergänzt. Für die Kanzlei: Reicht der Hinweis
 im Formular, Seiten mit Namen/Noten möglichst nicht zu fotografieren, oder
 braucht es eine ausdrückliche Bestätigung? Urheberrecht an Buchseiten:
 Auswertung nur für den privaten Lernplan, keine Speicherung der Seite.
+
+## Anbieter im Google Play Store (10.10.2026)
+
+Das Play-Entwicklerkonto (Konto-ID 7984747740140544163) läuft auf die **sgk UG
+(haftungsbeschränkt), Drachengasse 2, 99084 Erfurt**. Impressum, AGB und Widerruf nennen die
+**LernZeit UG (haftungsbeschränkt), Drachengasse 10**, HRB 524759. Im Store steht damit ein anderer
+Anbieter als auf der Website. Den Namen nicht im bestehenden Konto ändern (erneute
+Identitätsprüfung, Konto hat eine Entfernungswarnung zum 01.11.2026), sondern nach Klärung der
+Warnung: eigenes Entwicklerkonto der LernZeit UG (D-U-N-S) und App-Übertragung. Für Kanzlei und
+Steuerberater: Wer ist bis dahin Vertragspartner bei Käufen über Google Play, und wem stehen die
+Erlöse zu? Apple (App Store Connect) auf dieselbe Frage prüfen.
