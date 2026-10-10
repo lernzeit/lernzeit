@@ -27,6 +27,16 @@ export const useAIExplanation = (options: UseAIExplanationOptions = {}) => {
     setVerifiedCorrectAnswer(null);
 
     try {
+      // Demo (ohne Anmeldung): ai-explain verlangt ein Konto und antwortet sonst
+      // mit 401. Statt „lädt gerade nicht“ ein ehrlicher Hinweis, ohne KI-Aufruf.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const hinweis = 'In der Demo gibt es keine Erklärung. Nach der kostenlosen Registrierung erklärt LernZeit jeden Fehler Schritt für Schritt.';
+        setExplanation(hinweis);
+        setIsFallback(true);
+        return { explanation: hinweis, verdict: null, verifiedCorrectAnswer: null };
+      }
+
       const { data, error: invokeError } = await supabase.functions.invoke('ai-explain', {
         body: {
           question,
