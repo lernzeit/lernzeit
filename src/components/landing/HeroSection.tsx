@@ -1,4 +1,5 @@
 import { Check, Play } from 'lucide-react';
+import { StoreLinks } from '@/components/landing/StoreLinks';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { trackFireAndForget } from '@/lib/analytics';
@@ -90,6 +91,10 @@ const HeroSection = () => {
               Anmelden
             </button>
           </p>
+
+          <div className="lp-auftritt mt-4" style={verzug(280)}>
+            <StoreLinks stelle="hero" />
+          </div>
 
           <ul className="lp-auftritt mt-9 grid max-w-[40rem] gap-x-8 gap-y-2.5 text-[0.9375rem] sm:grid-cols-2" style={verzug(320)}>
             {FAKTEN.map((t) => (

@@ -8,6 +8,7 @@ import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
 import FaqSection from '@/components/landing/FaqSection';
+import { StoreLinks } from '@/components/landing/StoreLinks';
 import LandingNav from '@/components/landing/LandingNav';
 import { trackFireAndForget } from '@/lib/analytics';
 import { useAbschnittMessung } from '@/hooks/useAbschnittMessung';
@@ -69,6 +70,9 @@ const Start = () => {
               >
                 Kostenlos registrieren
               </button>
+              <div className="mt-6">
+                <StoreLinks stelle="fusszeile" dunkel />
+              </div>
             </div>
           </div>
         </section>
