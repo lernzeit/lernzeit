@@ -30,7 +30,7 @@ export const GOOGLE_WEB_HOSTS = ['lernzeit.app', 'www.lernzeit.app'];
  * ein – ohne Schema bricht Googles Bibliothek beim Antippen ab.
  * In Supabase unter Authentication → Providers → Google → Client IDs ergänzen.
  */
-export const GOOGLE_IOS_CLIENT_ID = '';
+export const GOOGLE_IOS_CLIENT_ID = '249121461672-okt1ljt5guu46pr5hlv8seveue1ffena.apps.googleusercontent.com';
 
 /**
  * Android: true, sobald ein Android-Client (Paket de.lernzeit.app, SHA-1 des

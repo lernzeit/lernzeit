@@ -49,6 +49,10 @@ Bestehende Einträge nicht löschen.
 `bash scripts/pruefe-google-rueckkehr.sh` – fragt Google ohne Anmeldung, ob die
 Rücksprungadressen aus Schritt 1 eingetragen sind (seit 10.10.2026: ja, Website umgestellt).
 
+Stand 10.10.2026: Schritt 1 erledigt, iOS-Client `249121461672-okt1ljt5guu46pr5hlv8seveue1ffena`
+angelegt und im Code eingetragen (wirkt ab dem nächsten iOS-Build). Offen: Schritt 3
+(Google meldete noch „auf Testnutzer beschränkt“), 5 (Android) und die Prüfung von 6.
+
 ## Danach (Claude im Code)
 
 - Nach 1, 3 und 7: `GOOGLE_WEB_BEREIT = true` → Website nutzt den direkten Weg.
