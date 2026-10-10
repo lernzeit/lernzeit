@@ -31,3 +31,13 @@ Eltern
 2. **Passwörter der Review-Konten ändern** (Eltern- und Kind-Konto für Apple/Google). Sie standen bis heute im öffentlichen Repo (`e2e/`). Neue Werte in App Store Connect und Play Console bei den Review-Informationen eintragen, für e2e als `E2E_*`-Variablen.
 3. Supabase-Dashboard: doppelten Cron-Auftrag `push-hourly-dispatch` (Nutzer `supabase_read_only_user`) löschen – er wird stündlich mit 401 abgewiesen, schadet nicht. Unter Auth: „Leaked password protection“ einschalten, OTP-Ablauf unter 1 Stunde, Postgres-Update einspielen.
 4. Tabelle `zz_claude_testfotos` löschen (Testrest).
+
+## Android: Offene Hinweise aus der Play Console (10.10.2026)
+
+- **DEX-Codeoptimierung 0 % – Frist Februar 2027 (mindestens 25 %).** Ursache: pauschale
+  `-keep … { *; }` für `com.google.android.gms`, `com.google.firebase`, `com.onesignal` in
+  `android/app/proguard-rules.pro`. Diese Bibliotheken bringen eigene Consumer-Regeln mit; die
+  Capacitor-Regeln bleiben. Nach 2.0.1: Regeln eingrenzen, Testbuild (Push, Google-/Apple-Anmeldung,
+  Kauf, Biometrie), dann hochladen.
+- Randlose Anzeige (Android 15): nur Empfehlungen, kommen aus Capacitor/Plugins. Auf einem
+  Android-15-Gerät prüfen, ob oben/unten Inhalt verdeckt ist.
