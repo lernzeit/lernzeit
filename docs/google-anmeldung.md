@@ -47,7 +47,7 @@ Bestehende Einträge nicht löschen.
 ## Stand prüfen
 
 `bash scripts/pruefe-google-rueckkehr.sh` – fragt Google ohne Anmeldung, ob die
-Rücksprungadressen aus Schritt 1 eingetragen sind (10.10.2026: noch nicht).
+Rücksprungadressen aus Schritt 1 eingetragen sind (seit 10.10.2026: ja, Website umgestellt).
 
 ## Danach (Claude im Code)
 

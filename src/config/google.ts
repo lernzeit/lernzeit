@@ -19,7 +19,7 @@ export const GOOGLE_WEB_CLIENT_ID = '249121461672-1jjba17n9sagviqjani0jj3h4cj94j
  * https://lernzeit.app/google-rueckkehr.html und
  * https://www.lernzeit.app/google-rueckkehr.html eingetragen sind.
  */
-export const GOOGLE_WEB_BEREIT = false;
+export const GOOGLE_WEB_BEREIT = true; // 10.10.2026: Rücksprungadressen bei Google eingetragen (scripts/pruefe-google-rueckkehr.sh)
 
 /** Nur hier ist die Rücksprungadresse bei Google eingetragen (nicht in Vorschau/lokal). */
 export const GOOGLE_WEB_HOSTS = ['lernzeit.app', 'www.lernzeit.app'];
