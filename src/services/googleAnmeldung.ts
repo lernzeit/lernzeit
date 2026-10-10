@@ -126,7 +126,10 @@ export async function googleNativ(): Promise<'ok' | 'abgebrochen'> {
   try {
     const antwort = await SocialLogin.login({
       provider: 'google',
-      options: { scopes: ['email', 'profile'], nonce: await sha256Hex(roh) },
+      // Keine scopes angeben: Beide Plattformen fragen ohne Angabe email/profile/openid ab.
+      // Mit scopes lehnt das Plugin auf Android ab („You CANNOT use scopes without
+      // modifying the main activity“), und android/ bleibt unangetastet.
+      options: { nonce: await sha256Hex(roh) },
     });
     idToken = (antwort.result as { idToken?: string | null }).idToken;
   } catch (err) {

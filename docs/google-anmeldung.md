@@ -52,7 +52,8 @@ Rücksprungadressen aus Schritt 1 eingetragen sind (seit 10.10.2026: ja, Website
 Stand 10.10.2026: Schritt 1 erledigt, iOS-Client `249121461672-okt1ljt5guu46pr5hlv8seveue1ffena`
 angelegt und im Code eingetragen (wirkt ab dem nächsten iOS-Build). Schritt 3 erledigt am
 10.10.2026 (bis dahin stand die App auf „Test“ – nur Testnutzer kamen mit Google durch, auch
-über Supabase). Datenzugriff: keine Bereiche, keine Prüfung nötig. Offen: 5 (Android), Prüfung von 6.
+über Supabase). Datenzugriff: keine Bereiche, keine Prüfung nötig. Schritt 5 erledigt (Clients „LernZeit Android (Play)“ und „(Upload)“),
+Android im Code eingeschaltet – wirkt ab dem nächsten Android-Studio-Build.
 
 ## Später: Markenprüfung (Name und Logo im Google-Fenster)
 

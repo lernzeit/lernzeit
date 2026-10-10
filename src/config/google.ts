@@ -36,4 +36,4 @@ export const GOOGLE_IOS_CLIENT_ID = '249121461672-okt1ljt5guu46pr5hlv8seveue1ffe
  * Android: true, sobald ein Android-Client (Paket de.lernzeit.app, SHA-1 des
  * Play-App-Signaturschlüssels und des eigenen Upload-Schlüssels) angelegt ist.
  */
-export const GOOGLE_ANDROID_BEREIT = false;
+export const GOOGLE_ANDROID_BEREIT = true; // 10.10.2026: Android-Clients (Play- und Upload-Schlüssel) angelegt
