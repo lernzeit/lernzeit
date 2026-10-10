@@ -131,6 +131,10 @@ const { offeneGenehmigungen, nachzuholendeMinuten, gleicheFreigabenAb, starteGru
     ) === 40,
     'bei mehreren Zeilen zaehlt die spaeteste',
   );
+  pruefe(
+    nachzuholendeMinuten(bis1230, null, jetzt, 25) === 0,
+    'Zeit nach Nutzung laeuft: nichts nachholen',
+  );
 }
 
 // ── 3. Der Abgleich von Anfang bis Ende ──────────────────────────────────

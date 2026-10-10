@@ -70,6 +70,28 @@ export function ShieldSetupNotice({ parentId }: ShieldSetupNoticeProps) {
   // Nur zeigen, wo noch nichts eingerichtet ist. Wo die Sperre läuft, ist der
   // Hinweis überflüssig — Eltern merken es daran, dass Anfragen kommen.
   const offen = staende.filter((stand) => !stand.verwaltet && !!freigaben?.has(stand.childId));
+  // Kinder, auf deren Handy die alte LernZeit-Sperre noch läuft, die aber
+  // nicht freigeschaltet sind: Mit dem neuen Build hebt LernZeit die Sperre
+  // dort auf (useHandysperreAbschalten). Eltern sollen das vorher wissen.
+  const pausiert = freigaben
+    ? staende.filter((stand) => stand.verwaltet && !freigaben.has(stand.childId))
+    : [];
+
+  if (pausiert.length > 0) {
+    return (
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Smartphone className="h-4 w-4 text-amber-600" />
+          LernZeit-Handysperre pausiert
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Mit dem nächsten Update hebt LernZeit sie auf dem Handy von {pausiert.map((stand) => stand.name).join(' und ')} auf.
+          Bitte stattdessen Apples Bildschirmzeit nutzen: Einstellungen → Bildschirmzeit.
+        </p>
+      </div>
+    );
+  }
+
   if (offen.length === 0) return null;
 
   // Kurz (Rückmeldung 10.10.2026: überall zu viel Text)

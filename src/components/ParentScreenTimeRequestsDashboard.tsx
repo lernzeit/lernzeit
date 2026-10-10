@@ -16,6 +16,7 @@ import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import { ShieldAttemptsNotice } from '@/components/ShieldAttemptsNotice';
 import { ShieldSetupNotice } from '@/components/screenTime/ShieldSetupNotice';
+import { GeraetFreigabenKarte } from '@/components/screenTime/GeraetFreigabenKarte';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
@@ -207,6 +208,7 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
     <div className="space-y-4">
       {/* Steht die Sperre auf dem Kindgeraet? Versuche am Sperrbildschirm?
           Beides beschreibt die Lage und steht deshalb ueber den Anfragen. */}
+      <GeraetFreigabenKarte />
       <ShieldSetupNotice parentId={userId} />
       <ShieldAttemptsNotice parentId={userId} />
 

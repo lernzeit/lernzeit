@@ -50,7 +50,7 @@ import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
 import { BaseTimeCard } from '@/components/screenTime/BaseTimeCard';
-import { useHandysperreAbschalten, useHandysperreFreigaben } from '@/hooks/useHandysperre';
+import { useHandysperreAbschalten, useHandysperreFreigaben, useRuhezeitAbgleich } from '@/hooks/useHandysperre';
 
 interface UserProfileProps {
   user: any;
@@ -153,6 +153,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // Genehmigte Zeit auf dem Gerät einlösen. Ebenfalls nur auf dem Kindgerät:
   // Die Sperre liegt dort, und nur dort lässt sie sich öffnen.
   useScreenTimeRelease(user?.id, profile?.role === 'child' && handysperreAn);
+  useRuhezeitAbgleich(user?.id, profile?.role === 'child' && handysperreAn);
 
   // Check for parent-child relationship
   const checkParentLink = async () => {

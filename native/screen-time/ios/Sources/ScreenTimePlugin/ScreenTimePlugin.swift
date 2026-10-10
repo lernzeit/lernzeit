@@ -47,7 +47,9 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "restoreShield", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopManaging", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "pendingShieldRequests", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "pendingShieldRequests", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pickCountedApps", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setRuhezeit", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Zustand
@@ -92,6 +94,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     @available(iOS 16.0, *)
     private func statusPayload() -> [String: Any] {
         reshieldIfExpired()
+        // Ruhezeit nach der Uhr nachziehen, falls die Erweiterung nicht lief.
+        if LernzeitScreenTime.ruheVon != nil,
+           LernzeitScreenTime.ruheAktiv != LernzeitScreenTime.ruheNachUhr() {
+            LernzeitScreenTime.ruheAktiv = LernzeitScreenTime.ruheNachUhr()
+            shieldNow()
+        }
 
         let authorization: String
         switch AuthorizationCenter.shared.authorizationStatus {
@@ -109,7 +117,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "authorization": authorization,
             "managing": managing,
             "shieldAll": LernzeitScreenTime.shieldAll,
-            "shieldedCount": shieldedCount
+            "shieldedCount": shieldedCount,
+            "zaehltNutzung": LernzeitScreenTime.zaehltNutzung,
+            "ruhezeit": LernzeitScreenTime.ruheAktiv,
+            "ruheVon": LernzeitScreenTime.ruheVon.map { $0 as Any } ?? NSNull(),
+            "ruheBis": LernzeitScreenTime.ruheBis.map { $0 as Any } ?? NSNull(),
+            "freiMinuten": LernzeitScreenTime.nutzungRest.map { $0 as Any } ?? NSNull()
         ]
         if let probeEnde = LernzeitScreenTime.trialUntil, probeEnde > Date() {
             payload["trialUntil"] = ISO8601DateFormatter().string(from: probeEnde)
@@ -134,7 +147,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "shieldAll": true,
             "shieldedCount": 0,
             "trialUntil": NSNull(),
-            "releasedUntil": NSNull()
+            "releasedUntil": NSNull(),
+            "zaehltNutzung": false,
+            "ruhezeit": false,
+            "ruheVon": NSNull(),
+            "ruheBis": NSNull(),
+            "freiMinuten": NSNull()
         ])
     }
 
@@ -192,6 +210,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
 
             let view = AppPickerView(
                 initial: start,
+                titel: "Immer erlaubt",
                 onDone: { [weak self] result in
                     controller?.dismiss(animated: true)
                     guard let self else { return }
@@ -229,6 +248,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         managing = true
         releasedUntil = nil
+        LernzeitScreenTime.beendeNutzung(sperren: false)
 
         if let probeMinuten = call.getInt("trialMinutes"), probeMinuten > 0 {
             let gewuenscht = Date().addingTimeInterval(TimeInterval(probeMinuten * 60))
@@ -268,16 +288,11 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         let minutes = call.getInt("minutes") ?? 0
         guard minutes > 0 else { return call.reject("minutes muss groesser als 0 sein") }
 
-        // Verlaengern statt ersetzen: Wer waehrend einer laufenden Freigabe
-        // weiterlernt, bekommt die neuen Minuten hinten angehaengt. Andersherum
-        // waere es eine Bestrafung fuers Weiterlernen.
-        let basis = max(releasedUntil ?? Date(), Date())
-        let ablauf = basis.addingTimeInterval(TimeInterval(minutes * 60))
-        releasedUntil = ablauf
-        unshieldNow()
-        // Ab hier uebernimmt das System: Auch wenn LernZeit geschlossen wird,
-        // schnappt die Sperre zu.
-        LernzeitScreenTime.startMonitoring(until: ablauf)
+        // Nach Nutzung, wenn eingerichtet (zaehlAuswahl), sonst nach Uhr.
+        // Laufende Zeit wird verlaengert, nie ersetzt — sonst waere
+        // Weiterlernen eine Bestrafung. Das Zuschnappen uebernimmt danach
+        // das System, auch wenn LernZeit geschlossen ist.
+        LernzeitScreenTime.freigeben(minuten: minutes)
 
         var payload = statusPayload()
         payload["cancelled"] = false
@@ -288,6 +303,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func restoreShield(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         releasedUntil = nil
+        LernzeitScreenTime.beendeNutzung(sperren: false)
         LernzeitScreenTime.stopMonitoring()
         shieldNow()
         call.resolve(statusPayload())
@@ -301,6 +317,9 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         storedSelection = nil
         LernzeitScreenTime.trialUntil = nil
         LernzeitScreenTime.stopMonitoring()
+        LernzeitScreenTime.beendeNutzung(sperren: false)
+        LernzeitScreenTime.zaehlAuswahl = nil
+        LernzeitScreenTime.setzeRuhezeit(von: nil, bis: nil)
         unshieldNow()
         call.resolve(statusPayload())
     }
@@ -328,22 +347,67 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+extension ScreenTimePlugin {
+    /// Was als Handyzeit zaehlt (freie Zeit nach Nutzung). Gedacht: „Alle
+    /// Apps & Kategorien“, LernZeit und die immer erlaubten Apps abwaehlen.
+    /// Leere Auswahl = wieder nach Uhr.
+    @objc func pickCountedApps(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else {
+            return call.resolve(["count": 0, "cancelled": true])
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let host = self.bridge?.viewController else {
+                return call.resolve(["count": 0, "cancelled": true])
+            }
+            let start = LernzeitScreenTime.zaehlAuswahl ?? FamilyActivitySelection()
+            var controller: UIViewController?
+            let view = AppPickerView(
+                initial: start,
+                titel: "Was zählt als Handyzeit?",
+                onDone: { result in
+                    controller?.dismiss(animated: true)
+                    guard let result else {
+                        return call.resolve(["count": 0, "cancelled": true])
+                    }
+                    LernzeitScreenTime.zaehlAuswahl = result
+                    let count = result.applicationTokens.count + result.categoryTokens.count
+                        + result.webDomainTokens.count
+                    call.resolve(["count": count, "cancelled": false])
+                }
+            )
+            let hosting = UIHostingController(rootView: view)
+            controller = hosting
+            host.present(hosting, animated: true)
+        }
+    }
+
+    /// Ruhezeit setzen: `von`/`bis` in Minuten nach Mitternacht, beide
+    /// weglassen = keine Ruhezeit. Wirkt taeglich, auch ohne LernZeit.
+    @objc func setRuhezeit(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        LernzeitScreenTime.setzeRuhezeit(von: call.getInt("von"), bis: call.getInt("bis"))
+        call.resolve(statusPayload())
+    }
+}
+
 /// Apples Auswahldialog. Zeigt Namen und Symbole, ohne dass unser Code die
 /// Identitaet der Apps erfaehrt — zurueck kommen ausschliesslich opake Tokens.
 @available(iOS 16.0, *)
 private struct AppPickerView: View {
     @State private var selection: FamilyActivitySelection
+    private let titel: String
     private let onDone: (FamilyActivitySelection?) -> Void
 
-    init(initial: FamilyActivitySelection, onDone: @escaping (FamilyActivitySelection?) -> Void) {
+    init(initial: FamilyActivitySelection, titel: String, onDone: @escaping (FamilyActivitySelection?) -> Void) {
         _selection = State(initialValue: initial)
+        self.titel = titel
         self.onDone = onDone
     }
 
     var body: some View {
         NavigationView {
             FamilyActivityPicker(selection: $selection)
-                .navigationTitle("Apps sperren")
+                .navigationTitle(titel)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {

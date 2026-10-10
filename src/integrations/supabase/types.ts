@@ -596,6 +596,8 @@ export type Database = {
           science_seconds_per_task: number
           screen_time_auto_release: boolean
           screen_time_base_minutes: number
+          ruhezeit_bis: number | null
+          ruhezeit_von: number | null
           screen_time_managed: boolean
           screen_time_unlock_mode: string
           updated_at: string
@@ -619,6 +621,8 @@ export type Database = {
           science_seconds_per_task?: number
           screen_time_auto_release?: boolean
           screen_time_base_minutes?: number
+          ruhezeit_bis?: number | null
+          ruhezeit_von?: number | null
           screen_time_managed?: boolean
           screen_time_unlock_mode?: string
           updated_at?: string
@@ -642,6 +646,8 @@ export type Database = {
           science_seconds_per_task?: number
           screen_time_auto_release?: boolean
           screen_time_base_minutes?: number
+          ruhezeit_bis?: number | null
+          ruhezeit_von?: number | null
           screen_time_managed?: boolean
           screen_time_unlock_mode?: string
           updated_at?: string
@@ -1023,6 +1029,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      geraet_freigaben: {
+        Row: {
+          beantwortet_am: string | null
+          beantwortet_von: string | null
+          child_id: string
+          created_at: string
+          id: string
+          status: string
+          zweck: string
+        }
+        Insert: {
+          beantwortet_am?: string | null
+          beantwortet_von?: string | null
+          child_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          zweck: string
+        }
+        Update: {
+          beantwortet_am?: string | null
+          beantwortet_von?: string | null
+          child_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          zweck?: string
+        }
+        Relationships: []
       }
       handysperre_freigaben: {
         Row: {
@@ -2497,6 +2533,11 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_codes: { Args: never; Returns: undefined }
+      geraet_freigabe_anfragen: { Args: { p_zweck: string }; Returns: string }
+      geraet_freigabe_beantworten: {
+        Args: { p_erlauben: boolean; p_id: string }
+        Returns: string
+      }
       cleanup_expired_screen_time_requests: { Args: never; Returns: undefined }
       forget_ad_attribution: { Args: never; Returns: number }
       funnel_report: {

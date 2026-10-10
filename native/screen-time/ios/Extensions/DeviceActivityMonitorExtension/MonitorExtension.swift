@@ -17,8 +17,16 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        // Fremde Aktivitaeten ignorieren. Heute gibt es nur eine, aber ein
-        // stiller Fehlgriff waere spaeter kaum zu finden.
+        // Freie Zeit nach Nutzung: Fenster (knapp 24 h) vorbei, Rest verfällt.
+        if activity == LernzeitScreenTime.nutzungName {
+            LernzeitScreenTime.nutzungFensterBeendet()
+            return
+        }
+        if activity == LernzeitScreenTime.ruheNameA || activity == LernzeitScreenTime.ruheNameB {
+            LernzeitScreenTime.ruheFenster(activity, beginnt: false)
+            return
+        }
+        // Fremde Aktivitaeten ignorieren.
         guard activity == LernzeitScreenTime.activityName else { return }
 
         // Zuerst der Probelauf: Laeuft eine unbestaetigte Probesperre ab,
@@ -40,11 +48,20 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
     }
 
-    /// Wird beim Start des Fensters aufgerufen. Hier ist nichts zu tun — die
-    /// Freigabe hat die App bereits erteilt. Die Ueberschreibung steht
-    /// trotzdem da, damit sichtbar ist, dass sie bedacht und nicht vergessen
-    /// wurde.
+    /// Beginn eines Fensters. Nur die Ruhezeit braucht hier etwas: sperren.
+    /// Freigaben hat die App beim Start bereits erteilt.
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
+        if activity == LernzeitScreenTime.ruheNameA || activity == LernzeitScreenTime.ruheNameB {
+            LernzeitScreenTime.ruheFenster(activity, beginnt: true)
+        }
+    }
+
+    /// Freie Zeit nach Nutzung: Schwelle (oder 5-Minuten-Zwischenstand)
+    /// erreicht. Am Ende sperrt das wieder — wie Apples App-Limits.
+    override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
+        super.eventDidReachThreshold(event, activity: activity)
+        guard activity == LernzeitScreenTime.nutzungName else { return }
+        LernzeitScreenTime.nutzungSchwelleErreicht(event)
     }
 }

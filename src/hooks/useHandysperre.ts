@@ -70,3 +70,43 @@ export function useHandysperreAbschalten(childId: string | undefined, istKind: b
     })();
   }, [childId, istKind, freigaben]);
 }
+
+/**
+ * Kind-Gerät: Ruhezeit aus `child_settings` an Apple weitergeben
+ * (ScreenTime.setRuhezeit). Beim Start und bei jeder Rückkehr in die App —
+ * aus der Ferne geht es nicht (kein Fernzugriff auf ManagedSettings).
+ * Ältere Builds kennen die Ruhezeit nicht (`ruheVon` fehlt im Status): dann
+ * nichts tun.
+ */
+export function useRuhezeitAbgleich(childId: string | undefined, aktiv: boolean) {
+  useEffect(() => {
+    if (!childId || !aktiv || !screenTimeSupportedPlatform()) return;
+    let laeuft = false;
+    const abgleichen = async () => {
+      if (laeuft) return;
+      laeuft = true;
+      try {
+        const status = await ScreenTime.getStatus();
+        if (!status.managing || !('ruheVon' in status)) return;
+        const { data, error } = await supabase
+          .from('child_settings')
+          .select('ruhezeit_von, ruhezeit_bis')
+          .eq('child_id', childId)
+          .maybeSingle();
+        if (error) return;
+        const von = data?.ruhezeit_von ?? null;
+        const bis = data?.ruhezeit_bis ?? null;
+        if ((status.ruheVon ?? null) === von && (status.ruheBis ?? null) === bis) return;
+        await ScreenTime.setRuhezeit(von !== null && bis !== null ? { von, bis } : {});
+      } catch {
+        /* beim nächsten Öffnen erneut */
+      } finally {
+        laeuft = false;
+      }
+    };
+    void abgleichen();
+    const sichtbar = () => { if (document.visibilityState === 'visible') void abgleichen(); };
+    document.addEventListener('visibilitychange', sichtbar);
+    return () => document.removeEventListener('visibilitychange', sichtbar);
+  }, [childId, aktiv]);
+}

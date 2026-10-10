@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Smartphone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ScreenTime, screenTimeSupportedPlatform } from '@/services/screenTime/plugin';
-import { starteGrundzeit } from '@/services/screenTime/release';
+import { istOffen, offenText, starteGrundzeit } from '@/services/screenTime/release';
+import type { ShieldStatus } from '@/services/screenTime/types';
 
 interface BaseTimeCardProps {
   childId: string;
@@ -24,10 +25,9 @@ interface BaseTimeCardProps {
  *
  * ── Warum ein Knopf und kein Automatismus ────────────────────────────────
  *
- * Die Minuten laufen ab dem Start, nicht nur während der Nutzung. Apples
- * eigener Mechanismus (Nutzungsschwelle über DeviceActivityEvent) ließe sich
- * nicht nachbauen — er verlangt ApplicationTokens, und die gibt es nur aus
- * dem Auswahldialog, den wir dem Kind gerade erspart haben.
+ * Ohne „Was zählt als Handyzeit?“ laufen die Minuten ab dem Start; mit
+ * dieser Auswahl (seit 10.10.2026) nur während der Nutzung
+ * (DeviceActivityEvent, siehe ScreenTimeShared.swift).
  *
  * Deshalb entscheidet das Kind, WANN die Uhr läuft. Ein automatischer Start
  * beim Öffnen hätte an einem Tag, an dem das Telefon nur kurz in der Hand
@@ -36,7 +36,7 @@ interface BaseTimeCardProps {
 export function BaseTimeCard({ childId }: BaseTimeCardProps) {
   const [minuten, setMinuten] = useState<number | null>(null);
   const [heuteBenutzt, setHeuteBenutzt] = useState(false);
-  const [offenBis, setOffenBis] = useState<string | null>(null);
+  const [stand, setStand] = useState<ShieldStatus | null>(null);
   const [sperreLaeuft, setSperreLaeuft] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -46,7 +46,7 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
     try {
       const status = await ScreenTime.getStatus();
       setSperreLaeuft(status.managing);
-      setOffenBis(status.releasedUntil);
+      setStand(status);
       // Wird gar nicht gesperrt, hat ein Freikontingent keinen Sinn — das
       // Telefon ist ohnehin offen.
       if (!status.managing) return;
@@ -90,10 +90,7 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
 
   if (!sperreLaeuft || minuten === null || minuten < 1) return null;
 
-  const laeuftGerade = Boolean(offenBis && new Date(offenBis) > new Date());
-  const bis = offenBis
-    ? new Date(offenBis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-    : null;
+  const laeuftGerade = istOffen(stand);
 
   return (
     <Card className="rounded-2xl">
@@ -105,19 +102,18 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
 
         {laeuftGerade ? (
           <p className="text-sm text-muted-foreground">
-            Dein Handy ist offen bis <strong>{bis} Uhr</strong>.
+            Dein Handy ist offen: <strong>{offenText(stand)}</strong>
           </p>
         ) : heuteBenutzt ? (
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Deine {minuten} Freiminuten hast du heute schon genutzt. Mehr Zeit
-            gibt es fürs Lernen — deine Eltern geben sie dann frei.
+          <p className="text-sm text-muted-foreground">
+            Heute schon genutzt. Mehr Zeit gibt es fürs Lernen.
           </p>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Du hast heute <strong>{minuten} Minuten</strong>, für die du nichts
-              tun musst. Du entscheidest, wann sie laufen — sobald du startest,
-              tickt die Uhr.
+            <p className="text-sm text-muted-foreground">
+              {stand?.zaehltNutzung
+                ? 'Zählen nur, wenn du das Handy nutzt.'
+                : 'Ab dem Start läuft die Uhr.'}
             </p>
             <Button className="w-full" disabled={busy} onClick={() => void starten()}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}

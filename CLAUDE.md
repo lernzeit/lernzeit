@@ -162,4 +162,9 @@ Supabase-Secrets gelöscht werden.
   keine Sperr-Hinweise; Eltern werden auf Apples Bildschirmzeit/Family Link verwiesen
   (`hooks/useHandysperre.ts`). Kinder ohne Freischaltung, auf deren iPhone LernZeit noch sperrt,
   bekommen die Sperre beim ersten Start der neuen Version aufgehoben (`stopManaging`).
+- Änderungen an der Sperre auf dem Kinder-Handy erlaubt ein Elternteil auf dem eigenen Handy
+  (`geraet_freigaben`, Push `geraet_freigabe_neu`, Karte auf „Heute“); Passwort nur Notweg.
+- Freie Zeit zählt nach Nutzung, sobald „Was zählt als Handyzeit?“ gewählt ist (Swift:
+  `ScreenTimeShared.swift`, `freigeben`/`starteNutzung`), sonst nach Uhr. Ruhezeit:
+  `child_settings.ruhezeit_von/_bis` (Minuten), Kinder-Handy übernimmt sie (`useRuhezeitAbgleich`).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.

@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { ScreenTime } from '@/services/screenTime/plugin';
+import type { ShieldStatus } from '@/services/screenTime/types';
 
 /**
  * Das Einlösen von Bildschirmzeit auf dem Gerät des Kindes — ohne React,
@@ -78,6 +79,26 @@ export function offeneGenehmigungen(
 }
 
 /**
+ * Ist das Handy gerade freigegeben — nach Uhr (`releasedUntil`) oder nach
+ * Nutzung (`freiMinuten`, seit 10.10.2026)?
+ */
+export function istOffen(status: Pick<ShieldStatus, 'releasedUntil' | 'freiMinuten'> | null, jetzt: number = Date.now()): boolean {
+  if (!status) return false;
+  if (status.freiMinuten != null) return true;
+  return Boolean(status.releasedUntil && new Date(status.releasedUntil).getTime() > jetzt);
+}
+
+/** Kurzer Satz für das Kind: „noch 25 Min.“ bzw. „bis 16:30 Uhr“. */
+export function offenText(status: Pick<ShieldStatus, 'releasedUntil' | 'freiMinuten'> | null): string | null {
+  if (!status) return null;
+  if (status.freiMinuten != null) return `noch ${status.freiMinuten} Min.`;
+  if (status.releasedUntil && new Date(status.releasedUntil) > new Date()) {
+    return `bis ${new Date(status.releasedUntil).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+  }
+  return null;
+}
+
+/**
  * Wie viele Minuten nachzuholen sind, wenn das Gerät eine laufende Freigabe
  * verloren hat — 0, wenn nichts nachzuholen ist.
  *
@@ -94,8 +115,11 @@ export function nachzuholendeMinuten(
   freigaben: Freigabe[],
   releasedUntil: string | null,
   jetzt: number = Date.now(),
+  freiMinuten: number | null = null,
 ): number {
   if (releasedUntil && new Date(releasedUntil).getTime() > jetzt) return 0;
+  // Zeit nach Nutzung läuft: nichts nachholen (sonst doppelt).
+  if (freiMinuten != null) return 0;
 
   const spaetestesEnde = freigaben
     .map((zeile) => new Date(zeile.expires_at).getTime())
@@ -156,7 +180,7 @@ export async function gleicheFreigabenAb(childId: string): Promise<void> {
   }
 
   if (offen.length === 0) {
-    const minuten = nachzuholendeMinuten((freigaben ?? []) as Freigabe[], status.releasedUntil);
+    const minuten = nachzuholendeMinuten((freigaben ?? []) as Freigabe[], status.releasedUntil, Date.now(), status.freiMinuten ?? null);
     if (minuten >= 1) {
       try {
         await ScreenTime.releaseFor({ minutes: minuten });
@@ -192,8 +216,7 @@ export async function starteGrundzeit(): Promise<number> {
   const status = await ScreenTime.getStatus().catch(() => null);
   // Nur als erteilt melden, wenn das Gerät auch wirklich offen ist. Sonst
   // hätte das Kind eine Zahl gelesen und nichts davon gehabt.
-  const offen = status?.releasedUntil ? new Date(status.releasedUntil) > new Date() : false;
-  return offen ? erteilt.minutes : 0;
+  return istOffen(status) ? erteilt.minutes : 0;
 }
 
 /**
@@ -228,11 +251,12 @@ async function entsperreOderNimmZurueck(
 
     // Ohne diese Meldung passiert das Wichtigste unsichtbar: Das Telefon geht
     // auf, und das Kind erfährt es erst, wenn es eine App ausprobiert.
-    const bis = ergebnis.releasedUntil
-      ? new Date(ergebnis.releasedUntil).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-      : null;
     toast.success(`${erteilt.minutes} Minuten sind freigegeben`, {
-      description: bis ? `Dein Handy ist bis ${bis} Uhr offen.` : undefined,
+      description: ergebnis.freiMinuten != null
+        ? 'Sie zählen nur, wenn du das Handy nutzt.'
+        : ergebnis.releasedUntil
+          ? `Dein Handy ist ${offenText(ergebnis)} offen.`
+          : undefined,
     });
   } catch {
     await supabase.rpc('revoke_unlock', { p_unlock_id: erteilt.unlock_id });

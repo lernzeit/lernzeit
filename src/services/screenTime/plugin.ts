@@ -35,6 +35,8 @@ const nichtVerfuegbar: ScreenTimePlugin = {
   // Anfragen von dort. Leere Liste statt Fehler — der Aufrufer soll nicht
   // plattformabhaengig verzweigen muessen.
   pendingShieldRequests: async () => ({ requestedAt: [] }),
+  pickCountedApps: async () => ({ count: 0, cancelled: true }),
+  setRuhezeit: async () => EMPTY_STATUS,
 };
 
 const ScreenTime = registerPlugin<ScreenTimePlugin>('ScreenTime', {

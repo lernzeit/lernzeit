@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone, TimerReset } from 'lucide-react';
+import { Hourglass, Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone, TimerReset } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { ScreenTime, screenTimeAvailability } from '@/services/screenTime/plugin';
 import { EMPTY_STATUS, type ScreenTimeAvailability, type ShieldStatus } from '@/services/screenTime/types';
-import { ParentGate } from '@/components/screenTime/ParentGate';
+import { ParentGate, type GeraetFreigabeZweck } from '@/components/screenTime/ParentGate';
+import { istOffen, offenText } from '@/services/screenTime/release';
 
 /**
  * Dauer des Probelaufs bei der ersten Aktivierung.
@@ -64,7 +65,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
   const [status, setStatus] = useState<ShieldStatus>(EMPTY_STATUS);
   const [busy, setBusy] = useState<string | null>(null);
   const [gateOffen, setGateOffen] = useState(false);
-  const [gateZweck, setGateZweck] = useState('');
+  const [gateZweck, setGateZweck] = useState<GeraetFreigabeZweck>('ausnahmen');
   const [nachGate, setNachGate] = useState<(() => void) | null>(null);
   // Apples Begruendung, falls die Zustimmung scheitert. Bleibt stehen, bis
   // es neu versucht wird — damit man sie abfotografieren kann.
@@ -132,7 +133,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
   };
 
   /** Öffnet die Eltern-Hürde und führt die Aktion erst danach aus. */
-  const mitElternfreigabe = (zweck: string, aktion: () => void) => {
+  const mitElternfreigabe = (zweck: GeraetFreigabeZweck, aktion: () => void) => {
     setGateZweck(zweck);
     setNachGate(() => aktion);
     setGateOffen(true);
@@ -173,7 +174,9 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
   }
 
   const zugestimmt = status.authorization === 'approved';
-  const freigabeLaeuft = Boolean(status.releasedUntil && new Date(status.releasedUntil) > new Date());
+  const freigabeLaeuft = istOffen(status);
+  // Neuer Build (10.10.2026): kennt „Was zählt als Handyzeit?“ und Ruhezeit
+  const kannNutzung = 'zaehltNutzung' in status;
   const probeLaeuft = Boolean(status.trialUntil && new Date(status.trialUntil) > new Date());
 
   // Der Probelauf bekommt die ganze Karte. Alles andere — Ausnahmen,
@@ -190,17 +193,13 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
             <TimerReset className="h-4 w-4 text-amber-600" />
             Probelauf bis {bis} Uhr
           </CardTitle>
-          <CardDescription>
-            Die Sperre ist an — aber nur auf Probe. Wenn du sie nicht
-            bestätigst, löst sie sich bis {bis} Uhr von selbst wieder auf.
-          </CardDescription>
+          <CardDescription>Ohne Bestätigung löst sich die Sperre von selbst.</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <ol className="text-sm space-y-2 list-decimal pl-5 leading-relaxed">
-            <li>Schließe LernZeit und öffne eine andere App. Es sollte ein Sperrbildschirm erscheinen.</li>
-            <li>Öffne LernZeit wieder. <strong>Das muss gehen</strong> — sonst kann dein Kind keine Zeit verdienen.</li>
-            <li>Erst wenn beides stimmt: unten bestätigen.</li>
+          <ol className="text-sm space-y-1 list-decimal pl-5">
+            <li>Andere App öffnen: gesperrt?</li>
+            <li>LernZeit öffnen: geht?</li>
           </ol>
 
           <div className="grid gap-2">
@@ -224,11 +223,6 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
             </Button>
           </div>
 
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Ließ sich LernZeit nicht mehr öffnen, tu nichts — warte einfach ab.
-            Die Sperre fällt von allein, auch wenn du diese Seite nicht
-            erreichst.
-          </p>
         </CardContent>
       </Card>
     );
@@ -245,24 +239,17 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
             </span>
             {status.managing && (
               <Badge variant="secondary" className="font-normal">
-                {freigabeLaeuft ? 'gerade freigegeben' : 'aktiv'}
+                {status.ruhezeit ? 'Ruhezeit' : freigabeLaeuft ? 'frei' : 'aktiv'}
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>
-            Ein Elternteil richtet das einmal auf diesem Gerät ein. Danach genügt
-            eine Genehmigung — ganz ohne Apps auszuwählen.
-          </CardDescription>
+          <CardDescription>Telefon und LernZeit bleiben immer offen.</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {!zugestimmt ? (
             <>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                iOS fragt gleich nach der Bildschirmzeit-Kennung oder der Apple-ID
-                eines Elternteils. Danach sind die Apps auf diesem Gerät gesperrt,
-                bis Zeit verdient und genehmigt wurde.
-              </p>
+              <p className="text-sm text-muted-foreground">iOS fragt gleich nach der Bildschirmzeit-Kennung.</p>
               <Button className="w-full" disabled={busy !== null} onClick={() => void einrichten()}>
                 {busy === 'Einrichten'
                   ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -288,14 +275,16 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
               <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                 <dt className="text-muted-foreground">Gesperrt</dt>
                 <dd>{beschreibeSperre(status)}</dd>
-                {freigabeLaeuft && status.releasedUntil && (
+                {freigabeLaeuft && (
                   <>
-                    <dt className="text-muted-foreground">Freigegeben bis</dt>
-                    <dd>
-                      {new Date(status.releasedUntil).toLocaleTimeString('de-DE', {
-                        hour: '2-digit', minute: '2-digit',
-                      })} Uhr
-                    </dd>
+                    <dt className="text-muted-foreground">Frei</dt>
+                    <dd>{offenText(status)}</dd>
+                  </>
+                )}
+                {kannNutzung && (
+                  <>
+                    <dt className="text-muted-foreground">Zeit zählt</dt>
+                    <dd>{status.zaehltNutzung ? 'nur bei Nutzung' : 'nach Uhr'}</dd>
                   </>
                 )}
               </dl>
@@ -320,13 +309,28 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                       disabled={busy !== null}
                       onClick={() =>
                         mitElternfreigabe(
-                          'Du wählst gleich Apps aus, die trotz Sperre offen bleiben.',
-                          () => void fuehreAus('Ausnahmen wählen', () => ScreenTime.pickShieldedApps()),
+                          'ausnahmen',
+                          () => void fuehreAus('Immer erlaubt', () => ScreenTime.pickShieldedApps()),
                         )}
                     >
                       <SlidersHorizontal className="h-4 w-4 mr-2" />
-                      {status.shieldedCount === 0 ? 'Ausnahmen wählen' : 'Ausnahmen ändern'}
+                      Immer erlaubt{status.shieldedCount > 0 ? ` (${status.shieldedCount})` : ''}
                     </Button>
+
+                    {kannNutzung && (
+                      <Button
+                        variant="outline"
+                        disabled={busy !== null}
+                        onClick={() =>
+                          mitElternfreigabe(
+                            'zaehlen',
+                            () => void fuehreAus('Handyzeit wählen', () => ScreenTime.pickCountedApps()),
+                          )}
+                      >
+                        <Hourglass className="h-4 w-4 mr-2" />
+                        Was zählt als Handyzeit?
+                      </Button>
+                    )}
 
                     <Button
                       variant="ghost"
@@ -334,7 +338,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                       disabled={busy !== null}
                       onClick={() =>
                         mitElternfreigabe(
-                          'Du hebst gleich die Sperre vollständig auf.',
+                          'aufheben',
                           () => void fuehreAus('Sperre aufheben', () => ScreenTime.stopManaging()),
                         )}
                     >
@@ -345,14 +349,11 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Gesperrt ist standardmäßig alles. Einzelne Apps lassen sich als
-                Ausnahme offenhalten — welche das sind, sieht LernZeit nicht, Apple
-                gibt nur eine Anzahl heraus. Läuft genehmigte Zeit ab, schnappt die
-                Sperre von selbst wieder zu, auch wenn LernZeit geschlossen ist.
-                Rückgängig geht es hier über „Sperre aufheben“ oder in den
-                iOS-Einstellungen unter „Bildschirmzeit“.
-              </p>
+              {kannNutzung && !status.zaehltNutzung && (
+                <p className="text-xs text-muted-foreground">
+                  Tipp „Handyzeit“: „Alle Apps &amp; Kategorien“ wählen, LernZeit abwählen.
+                </p>
+              )}
             </>
           )}
         </CardContent>
@@ -362,7 +363,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
         open={gateOffen}
         onOpenChange={setGateOffen}
         childId={childId}
-        purpose={gateZweck}
+        zweck={gateZweck}
         onVerified={() => nachGate?.()}
       />
     </>
@@ -428,9 +429,7 @@ function beschreibeSperre(status: ShieldStatus): string {
 
   if (status.shieldAll) {
     if (status.shieldedCount === 0) return 'alle Apps';
-    return status.shieldedCount === 1
-      ? 'alle Apps bis auf eine Ausnahme'
-      : `alle Apps bis auf ${status.shieldedCount} Ausnahmen`;
+    return `alle Apps außer ${status.shieldedCount} immer erlaubten`;
   }
 
   if (status.shieldedCount === 0) return 'nichts — es ist nichts ausgewählt';

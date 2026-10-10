@@ -140,6 +140,27 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         data: { type: "screen_time_request_new", request_id: body.request_id },
       });
     }
+    case "geraet_freigabe_neu": {
+      // Kinder-Handy möchte an der Handysperre etwas ändern (ParentGate.tsx).
+      // Geht an alle verknüpften Eltern; erlaubt wird auf „Heute“.
+      const childId = body.child_id as string;
+      const childName = await getChildName(childId);
+      const { data: eltern } = await supabase
+        .from("parent_child_relationships")
+        .select("parent_id")
+        .eq("child_id", childId);
+      const was: Record<string, string> = {
+        ausnahmen: "Apps auszuwählen, die immer offen bleiben",
+        aufheben: "die Handysperre aufzuheben",
+        zaehlen: "die Handysperre einzurichten",
+      };
+      return sendOneSignalPush({
+        userIds: (eltern ?? []).map((e) => e.parent_id as string),
+        title: `🔓 ${childName}s Handy fragt`,
+        message: `Erlaubst du, ${was[body.zweck as string] ?? "die Handysperre zu ändern"}? Tippe auf „Heute“.`,
+        data: { type: "geraet_freigabe_neu", freigabe_id: body.freigabe_id },
+      });
+    }
     case "screen_time_approved": {
       const minutes = body.requested_minutes;
       const variants = [

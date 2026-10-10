@@ -117,6 +117,19 @@ export interface ShieldStatus {
    * einer laufenden Freigabe 0 gemeldet und damit "alles zu" behauptet.
    */
   releasedUntil: string | null;
+  /**
+   * Seit 10.10.2026 (ältere Builds liefern die Felder nicht):
+   * `zaehltNutzung` — Freigaben zählen nach NUTZUNG statt nach Uhr
+   * (Eltern haben „Was zählt als Handyzeit?“ gewählt).
+   * `freiMinuten` — restliche freie Minuten nach Nutzung, null wenn keine laufen.
+   * `ruhezeit` — gerade Ruhezeit (alles zu außer „Immer erlaubt“).
+   * `ruheVon`/`ruheBis` — eingestellte Ruhezeit in Minuten nach Mitternacht.
+   */
+  zaehltNutzung?: boolean;
+  freiMinuten?: number | null;
+  ruhezeit?: boolean;
+  ruheVon?: number | null;
+  ruheBis?: number | null;
 }
 
 export interface ReleaseResult extends ShieldStatus {
@@ -242,6 +255,16 @@ export interface ScreenTimePlugin {
    * erfahren.
    */
   pendingShieldRequests(): Promise<{ requestedAt: string[] }>;
+
+  /**
+   * Apples Auswahldialog „Was zählt als Handyzeit?“. Danach zählen
+   * Freigaben nach Nutzung. Leere Auswahl = wieder nach Uhr.
+   * NUR für Eltern erreichbar machen. Ab Build 10.10.2026.
+   */
+  pickCountedApps(): Promise<{ count: number; cancelled: boolean }>;
+
+  /** Ruhezeit in Minuten nach Mitternacht; ohne Werte = keine. Ab Build 10.10.2026. */
+  setRuhezeit(options: { von?: number; bis?: number }): Promise<ShieldStatus>;
 }
 
 /**

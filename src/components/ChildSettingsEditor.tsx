@@ -33,6 +33,7 @@ import {
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
+import { RuhezeitEinstellung } from '@/components/parent/RuhezeitEinstellung';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
   DEFAULT_BASE_MINUTES,
@@ -447,6 +448,12 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           )}
         </Gruppe>
       </PremiumFeature>
+
+      {handysperreAn && (
+        <Gruppe titel="Handysperre">
+          <RuhezeitEinstellung childId={childId} />
+        </Gruppe>
+      )}
 
       <Gruppe titel="Fächer und Zeit pro richtiger Aufgabe" premium>
         {availableSubjects.map((subject) => {

@@ -12,11 +12,28 @@ Bildschirmzeit verwiesen.
 | 4 | Keine Limits je App. | Je App ein eigenes Limit (Schwelle wie in 2). Auswahl nur auf dem Kind-Handy möglich (Apple-Vorgabe). | groß, optional |
 | 5 | „Ausnahmen wählen“ gibt es (Apps bleiben trotz Sperre offen), aber versteckt. Telefon und Einstellungen sperrt Apple laut Doku nie. Auf dem Gerät nicht geprüft. | Ausnahmen sichtbar machen („Immer erlauben“); Telefon/Notruf auf Klaras Handy prüfen. | klein |
 
-## Auf Klaras Handy prüfen (vor dem Umbau)
+## Stand 10.10.2026 (abends)
 
-- [ ] Sperre aktiv: Lässt sich telefonieren (auch Notruf)? Öffnet LernZeit?
-- [ ] Ausnahme wählen (z. B. Nachrichten) → bleibt sie offen?
-- [ ] 10 Minuten genehmigen, Handy 10 Minuten nicht anfassen → ist die Zeit danach weg? (heute: ja)
+| # | Umgesetzt | Wirkt ab |
+|---|---|---|
+| Eltern-Hürde | Kinder-Handy fragt, Elternteil tippt auf dem eigenen Handy „Erlauben“ (Push + Karte auf „Heute“, Tabelle `geraet_freigaben`, RPCs `geraet_freigabe_anfragen`/`_beantworten`). Passwort nur noch als Notweg, ohne globales Abmelden. | nächster App-Build |
+| 1 | Einrichtungskarte, Probelauf, Freiminuten gekürzt. | nächster App-Build |
+| 2 | „Was zählt als Handyzeit?“ (Apple-Auswahl, einmal). Danach zählt freie Zeit nur bei Nutzung (`DeviceActivityEvent`, ab iOS 17.4 ohne frühere Nutzung). Gilt knapp 24 h, dann verfällt der Rest. Ohne Auswahl: weiter nach Uhr. | nächster iOS-Build |
+| 3 | Ruhezeit bei den Eltern unter Regeln (`child_settings.ruhezeit_von/_bis`). Das Kinder-Handy übernimmt sie beim Öffnen; Apple sperrt dann täglich, auch ohne LernZeit. | nächster iOS-Build |
+| 5 | „Immer erlaubt (N)“ als eigener Knopf. Telefon bleibt offen (auf Klaras Handy geprüft). | nächster App-Build |
+
+Bekannte Grenzen: Apps, die als Handyzeit zählen, zählen auch, wenn sie „Immer erlaubt“
+sind – deshalb im Auswahldialog LernZeit und die immer erlaubten Apps abwählen. Ob iOS ein
+Zählfenster über Mitternacht annimmt, ist nicht dokumentiert; sonst gilt es bis 23:59.
+
+## Auf Klaras Handy prüfen (nach dem nächsten Build)
+
+- [x] Sperre aktiv: Telefonieren geht, LernZeit öffnet (10.10.2026).
+- [ ] „Immer erlaubt“ → Kinder-Handy fragt → auf dem Eltern-Handy kommt Push, „Erlauben“ → Apple-Auswahl öffnet sich.
+- [ ] „Was zählt als Handyzeit?“: „Alle Apps & Kategorien“, LernZeit abwählen.
+- [ ] 10 Minuten genehmigen, Handy 15 Minuten liegen lassen → Zeit ist noch da („noch 10 Min.“).
+- [ ] 10 Minuten nutzen → Sperre kommt wieder.
+- [ ] Ruhezeit in den Regeln setzen (z. B. in 5 Minuten), LernZeit auf Klaras Handy öffnen → Sperre kommt zur Uhrzeit, Telefon bleibt offen, endet zur Endzeit.
 
 ## Grenzen (Apple)
 
