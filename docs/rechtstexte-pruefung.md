@@ -135,3 +135,7 @@ Identitätsprüfung, Konto hat eine Entfernungswarnung zum 01.11.2026), sondern 
 Warnung: eigenes Entwicklerkonto der LernZeit UG (D-U-N-S) und App-Übertragung. Für Kanzlei und
 Steuerberater: Wer ist bis dahin Vertragspartner bei Käufen über Google Play, und wem stehen die
 Erlöse zu? Apple (App Store Connect) auf dieselbe Frage prüfen.
+
+Die Entfernungswarnung kam vom Zahlungsprofil („Maßnahmen für dein Zahlungskonto erforderlich“,
+10.10.2026); nach Bestätigung der Zahlungsmethode am selben Tag verschwunden. Offen: Steuer-
+informationen für Irland im Zahlungsprofil.
