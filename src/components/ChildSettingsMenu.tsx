@@ -32,6 +32,7 @@ import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { unregisterPushDevice } from '@/hooks/useOneSignal';
+import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 
 interface ChildSettingsMenuProps {
   user: any;
@@ -51,6 +52,9 @@ interface ParentInfo {
 
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSection }: ChildSettingsMenuProps) {
   const istAndroid = Capacitor.getPlatform() === 'android';
+  // Einrichtung der LernZeit-Sperre nur für freigeschaltete Kinder (useHandysperre.ts)
+  const handysperreFreigaben = useHandysperreFreigaben();
+  const handysperreAn = !!handysperreFreigaben?.has(user.id);
   const [activeSection, setActiveSection] = useState<string | null>(initialSection || null);
   const [parentInfoList, setParentInfoList] = useState<ParentInfo[]>([]);
   const [loadingParentInfo, setLoadingParentInfo] = useState(true);
@@ -353,7 +357,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
               {/* Auf Android gibt es keine Geraetesperre (Family Link bietet
                   Dritten keine Schnittstelle). Statt einer Karte, die nur
                   erklaert, dass es nicht geht, dort gar nichts. */}
-              {!istAndroid && <ScreenTimeSetup childId={user.id} />}
+              {!istAndroid && handysperreAn && <ScreenTimeSetup childId={user.id} />}
               {/*
                 Werkbank mit den Einzelschritten — nur zur Fehlersuche, hinter
                 einer Build-Variablen. Zum Erproben VITE_SCREENTIME_UI=1 setzen:
@@ -362,7 +366,7 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
                 stand sie frueher fest und waere irgendwann in den Store
                 gegangen.
               */}
-              {!istAndroid && import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
+              {!istAndroid && handysperreAn && import.meta.env.VITE_SCREENTIME_UI === '1' && <ScreenTimeTestPanel />}
             </>
           )}
           

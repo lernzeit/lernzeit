@@ -154,3 +154,12 @@ Supabase-Secrets gelöscht werden.
 - Schalter in `config/google.ts` (Web, iOS-Client-ID, Android); aus = bisheriger Weg. Einrichtung
   in Google Cloud/Supabase: `docs/google-anmeldung.md`. Kein eigenes Budget für eine Supabase-Domain.
 - Im Facebook-/Instagram-Browser sperrt Google jede Anmeldung; dort steht ein Hinweis statt des Knopfs.
+
+## LernZeit-Handysperre (Stand 10.10.2026)
+
+- Vorerst nur für Kinder in `handysperre_freigaben` (Klara, Testgerät mit Store-App; Eltern/Kind lesen,
+  eintragen nur per Dashboard/Service-Rolle). Alle anderen: keine Einrichtung, keine Freiminuten,
+  keine Sperr-Hinweise; Eltern werden auf Apples Bildschirmzeit/Family Link verwiesen
+  (`hooks/useHandysperre.ts`). Kinder ohne Freischaltung, auf deren iPhone LernZeit noch sperrt,
+  bekommen die Sperre beim ersten Start der neuen Version aufgehoben (`stopManaging`).
+- Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.

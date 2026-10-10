@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Smartphone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 
 interface ShieldSetupNoticeProps {
   parentId: string;
@@ -32,6 +33,8 @@ interface KindStand {
  */
 export function ShieldSetupNotice({ parentId }: ShieldSetupNoticeProps) {
   const [staende, setStaende] = useState<KindStand[]>([]);
+  // Nur freigeschaltete Kinder (useHandysperre.ts, 10.10.2026)
+  const freigaben = useHandysperreFreigaben();
 
   useEffect(() => {
     if (!parentId) { setStaende([]); return; }
@@ -66,29 +69,18 @@ export function ShieldSetupNotice({ parentId }: ShieldSetupNoticeProps) {
 
   // Nur zeigen, wo noch nichts eingerichtet ist. Wo die Sperre läuft, ist der
   // Hinweis überflüssig — Eltern merken es daran, dass Anfragen kommen.
-  const offen = staende.filter((stand) => !stand.verwaltet);
+  const offen = staende.filter((stand) => !stand.verwaltet && !!freigaben?.has(stand.childId));
   if (offen.length === 0) return null;
 
+  // Kurz (Rückmeldung 10.10.2026: überall zu viel Text)
   return (
-    <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 space-y-2">
+    <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 space-y-1">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Smartphone className="h-4 w-4 text-blue-600" />
-        Handysperre noch nicht eingerichtet
+        Handysperre einrichten
       </div>
-
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        {offen.length === 1
-          ? `Auf dem Handy von ${offen[0].name} sperrt LernZeit noch nicht.`
-          : `Auf den Handys von ${offen.map((stand) => stand.name).join(' und ')} sperrt LernZeit noch nicht.`}
-        {' '}Du gibst genehmigte Zeit bis dahin wie bisher von Hand frei.
-      </p>
-
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Zum Einrichten brauchst du das Handy deines Kindes einmal in der Hand:
-        LernZeit öffnen, Einstellungen, „Handy sperren“ — ein Knopf, danach
-        fragt iOS nach deiner Bildschirmzeit-Kennung. Apps auswählen musst du
-        nicht. Von hier aus geht es nicht: Apple lässt eine Sperre nur auf dem
-        Gerät setzen, auf dem sie greift.
+      <p className="text-sm text-muted-foreground">
+        Auf dem Handy von {offen.map((stand) => stand.name).join(' und ')}: LernZeit → Einstellungen → „Handy sperren“.
       </p>
     </div>
   );

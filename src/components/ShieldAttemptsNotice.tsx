@@ -1,5 +1,6 @@
 import { Lock } from 'lucide-react';
 import { useShieldAttempts } from '@/hooks/useShieldAttempts';
+import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 
 interface ShieldAttemptsNoticeProps {
   parentId: string;
@@ -21,12 +22,15 @@ interface ShieldAttemptsNoticeProps {
  * nicht zwischen ihnen.
  */
 export function ShieldAttemptsNotice({ parentId }: ShieldAttemptsNoticeProps) {
-  const { summaries } = useShieldAttempts(parentId, Boolean(parentId));
+  const { summaries: alle } = useShieldAttempts(parentId, Boolean(parentId));
+  // Nur freigeschaltete Kinder (useHandysperre.ts, 10.10.2026)
+  const freigaben = useHandysperreFreigaben();
+  const summaries = alle.filter((eintrag) => !!freigaben?.has(eintrag.childId));
 
   if (summaries.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Lock className="h-4 w-4 text-amber-600" />
         Gesperrte Apps wurden angetippt
@@ -38,17 +42,13 @@ export function ShieldAttemptsNotice({ parentId }: ShieldAttemptsNoticeProps) {
             <span className="font-medium text-foreground">{eintrag.childName}</span>
             {' hat '}
             {eintrag.count === 1 ? 'einmal' : `${eintrag.count}-mal`}
-            {' um Zeit gebeten — zuletzt '}
+            {' um Zeit gebeten, zuletzt '}
             {formatiereZeitpunkt(eintrag.lastAttemptAt)}.
           </li>
         ))}
       </ul>
 
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        Gezählt wird der Knopf „Eltern fragen“ auf dem Sperrbildschirm. Welche App
-        es war, sehen wir nicht — das gibt Apple nicht heraus. Angezeigt werden die
-        letzten sieben Tage.
-      </p>
+      <p className="text-xs text-muted-foreground">Letzte 7 Tage, Knopf „Eltern fragen“ auf dem Sperrbildschirm.</p>
     </div>
   );
 }

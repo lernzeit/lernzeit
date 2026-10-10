@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
+import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
   DEFAULT_BASE_MINUTES,
@@ -119,6 +120,9 @@ const DEFAULT_SETTINGS: ChildSettings = {
 
 export function ChildSettingsEditor({ childId, childName, parentId, currentGrade, onSettingsChanged }: ChildSettingsEditorProps) {
   const [settings, setSettings] = useState<ChildSettings>(DEFAULT_SETTINGS);
+  // Freiminuten wirken nur mit der LernZeit-Sperre, die vorerst nur freigeschaltete Kinder haben
+  const handysperreFreigaben = useHandysperreFreigaben();
+  const handysperreAn = !!handysperreFreigaben?.has(childId);
   const [visibility, setVisibility] = useState<SubjectVisibility>({});
   const [priorities, setPriorities] = useState<SubjectPriority>({});
   const [grade, setGrade] = useState<number>(currentGrade || 1);
@@ -436,9 +440,11 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           <Zeile titel="Am Wochenende" hinweis="höchstens">
             <Stepper label="Am Wochenende" wert={settings.weekend_max_minutes} min={5} max={180} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('weekend_max_minutes', v)} />
           </Zeile>
+          {handysperreAn && (
           <Zeile titel="Freiminuten" hinweis="ohne Lernen, nur mit Handysperre">
             <Stepper label="Freiminuten" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
           </Zeile>
+          )}
         </Gruppe>
       </PremiumFeature>
 

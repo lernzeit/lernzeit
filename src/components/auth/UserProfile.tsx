@@ -50,6 +50,7 @@ import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
 import { BaseTimeCard } from '@/components/screenTime/BaseTimeCard';
+import { useHandysperreAbschalten, useHandysperreFreigaben } from '@/hooks/useHandysperre';
 
 interface UserProfileProps {
   user: any;
@@ -140,11 +141,18 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // Drücke auf „Eltern fragen“ am Sperrbildschirm einsammeln. Läuft nur auf
   // dem Gerät des Kindes — dort liegen sie in der App Group, und nur LernZeit
   // selbst kann sie weitergeben.
-  useSyncShieldAttempts(user?.id, profile?.role === 'child');
+  // LernZeit-Sperre nur für freigeschaltete Kinder (10.10.2026, useHandysperre.ts).
+  // Alle anderen: kein Einsammeln, kein Einlösen, und eine noch aktive Sperre
+  // wird einmal aufgehoben.
+  const handysperreFreigaben = useHandysperreFreigaben();
+  const handysperreAn = !!user?.id && !!handysperreFreigaben?.has(user.id);
+  useHandysperreAbschalten(user?.id, profile?.role === 'child', handysperreFreigaben);
+
+  useSyncShieldAttempts(user?.id, profile?.role === 'child' && handysperreAn);
 
   // Genehmigte Zeit auf dem Gerät einlösen. Ebenfalls nur auf dem Kindgerät:
   // Die Sperre liegt dort, und nur dort lässt sie sich öffnen.
-  useScreenTimeRelease(user?.id, profile?.role === 'child');
+  useScreenTimeRelease(user?.id, profile?.role === 'child' && handysperreAn);
 
   // Check for parent-child relationship
   const checkParentLink = async () => {
@@ -591,7 +599,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           />
 
           {/* Freiminuten stehen ueber dem Rest: Wer heute noch welche hat, muss nicht fragen. */}
-          <BaseTimeCard childId={user.id} />
+          {handysperreAn && <BaseTimeCard childId={user.id} />}
 
           <DailyChallenge userId={user.id} />
 

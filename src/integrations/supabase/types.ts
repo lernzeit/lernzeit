@@ -1024,6 +1024,24 @@ export type Database = {
           },
         ]
       }
+      handysperre_freigaben: {
+        Row: {
+          child_id: string
+          created_at: string
+          notiz: string | null
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          notiz?: string | null
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          notiz?: string | null
+        }
+        Relationships: []
+      }
       kind_hefte: {
         Row: {
           child_id: string
