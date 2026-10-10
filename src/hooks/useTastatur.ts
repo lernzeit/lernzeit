@@ -107,4 +107,14 @@ export function ausschnittKorrekturEinrichten() {
       if (!istTextfeld(document.activeElement)) ausschnittZuruecksetzen();
     }, 120);
   });
+  // Auch wenn die Tastatur zugeht, ohne dass ein focusout kommt – etwa weil
+  // das Feld beim Seitenwechsel verschwindet (Startseite liess sich am
+  // 10.10.2026 wieder nicht bis oben scrollen).
+  let vorher = window.visualViewport?.height ?? 0;
+  window.visualViewport?.addEventListener('resize', () => {
+    const jetzt = window.visualViewport?.height ?? 0;
+    const groesser = jetzt > vorher + 80;
+    vorher = jetzt;
+    if (groesser && !istTextfeld(document.activeElement)) setTimeout(ausschnittZuruecksetzen, 50);
+  });
 }

@@ -21,6 +21,17 @@ const Start = () => {
   const seite = useRef<HTMLElement>(null);
   useAbschnittMessung(seite);
 
+  // Ohne Sprungmarke oben anfangen und eine offene Tastatur schliessen: Kam man
+  // aus dem Anmeldeformular zurueck, blieb auf iOS der Ausschnitt verschoben und
+  // die Seite liess sich nicht bis oben scrollen (10.10.2026).
+  useEffect(() => {
+    if (hash) return;
+    const el = document.activeElement;
+    if (el instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) el.blur();
+    window.scrollTo(0, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Sprungmarke aus einer Unterseite (/start#preise): nach dem Zeichnen hinscrollen
   useEffect(() => {
     if (!hash) return;
