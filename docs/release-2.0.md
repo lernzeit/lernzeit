@@ -39,5 +39,7 @@ Eltern
   `android/app/proguard-rules.pro`. Diese Bibliotheken bringen eigene Consumer-Regeln mit; die
   Capacitor-Regeln bleiben. Nach 2.0.1: Regeln eingrenzen, Testbuild (Push, Google-/Apple-Anmeldung,
   Kauf, Biometrie), dann hochladen.
+- Symboldatei fehlt (Warnung bei versionCode 18): in `android/app/build.gradle` unter
+  `buildTypes.release` `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` ergänzen (nächster Build).
 - Randlose Anzeige (Android 15): nur Empfehlungen, kommen aus Capacitor/Plugins. Auf einem
   Android-15-Gerät prüfen, ob oben/unten Inhalt verdeckt ist.
