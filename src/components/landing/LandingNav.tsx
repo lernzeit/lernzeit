@@ -84,6 +84,13 @@ const LandingNav = () => {
               )}
           <button
             type="button"
+            onClick={() => navigate('/?auth=true&anmelden=1')}
+            className="hidden sm:inline text-sm font-bold text-[var(--lp-tinte)] transition-colors hover:text-[var(--lp-blau)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lp-blau)]"
+          >
+            Anmelden
+          </button>
+          <button
+            type="button"
             onClick={() => {
               trackFireAndForget('landing_cta_click', { position: aufStart ? 'nav' : `nav_${pathname.split('/')[1] || 'start'}` });
               navigate('/?auth=true');

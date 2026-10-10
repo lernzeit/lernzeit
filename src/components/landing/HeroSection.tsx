@@ -80,6 +80,17 @@ const HeroSection = () => {
             )}
           </div>
 
+          <p className="lp-auftritt mt-4 text-[0.9375rem] text-[var(--lp-leise)]" style={verzug(260)}>
+            Schon ein Konto?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/?auth=true&anmelden=1')}
+              className="font-bold text-[var(--lp-blau)] underline-offset-4 hover:underline"
+            >
+              Anmelden
+            </button>
+          </p>
+
           <ul className="lp-auftritt mt-9 grid max-w-[40rem] gap-x-8 gap-y-2.5 text-[0.9375rem] sm:grid-cols-2" style={verzug(320)}>
             {FAKTEN.map((t) => (
               <li key={t} className="flex items-center gap-2.5">

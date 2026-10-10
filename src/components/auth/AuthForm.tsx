@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,6 +111,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
   const navigate = useNavigate();
   // Schritte, Fehler und Abbrueche der Registrierung (seit 04.10.2026)
   const messung = useRegistrierungsMessung();
+  // „Anmelden“ auf Startseite und Apps führt mit ?anmelden=1 direkt zum Reiter Anmelden
+  const [suchParameter] = useSearchParams();
+  const startReiter = suchParameter.get('anmelden') === '1' ? 'signin' : 'signup';
 
   // Registrierungsformular geöffnet (Signup ist der Standard-Tab)
   useEffect(() => {
@@ -792,7 +795,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
         <Card className="rounded-[28px] border-[var(--lp-karo)] shadow-[0_30px_70px_-40px_rgba(26,43,109,0.35)]">
           <CardContent className="p-5 sm:p-8">
-            <Tabs defaultValue="signup" className="w-full" onValueChange={messung.tabGewechselt}>
+            <Tabs defaultValue={startReiter} className="w-full" onValueChange={messung.tabGewechselt}>
               <TabsList className="mb-7 grid h-12 w-full grid-cols-2 rounded-full bg-[var(--lp-heft)] p-1">
                 <TabsTrigger value="signup" className={TAB}>Registrieren</TabsTrigger>
                 <TabsTrigger value="signin" className={TAB}>Anmelden</TabsTrigger>
