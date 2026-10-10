@@ -50,8 +50,20 @@ Bestehende Einträge nicht löschen.
 Rücksprungadressen aus Schritt 1 eingetragen sind (seit 10.10.2026: ja, Website umgestellt).
 
 Stand 10.10.2026: Schritt 1 erledigt, iOS-Client `249121461672-okt1ljt5guu46pr5hlv8seveue1ffena`
-angelegt und im Code eingetragen (wirkt ab dem nächsten iOS-Build). Offen: Schritt 3
-(Google meldete noch „auf Testnutzer beschränkt“), 5 (Android) und die Prüfung von 6.
+angelegt und im Code eingetragen (wirkt ab dem nächsten iOS-Build). Schritt 3 erledigt am
+10.10.2026 (bis dahin stand die App auf „Test“ – nur Testnutzer kamen mit Google durch, auch
+über Supabase). Datenzugriff: keine Bereiche, keine Prüfung nötig. Offen: 5 (Android), Prüfung von 6.
+
+## Später: Markenprüfung (Name und Logo im Google-Fenster)
+
+Ohne Prüfung zeigt Google „Weiter zu lernzeit.app“ statt „LernZeit“ mit Logo – Anmeldung
+funktioniert trotzdem. Einreichen erst, wenn alle App-Builds den direkten Weg nutzen:
+1. Autorisierte Domains `fsmgynpdfxkaiiuguqyr.supabase.co` und `lernzeit.lovable.app` entfernen
+   (Branding) und die Supabase-Weiterleitungs-URI am Web-Client löschen – sonst lehnt Google
+   ab, weil diese Domains nicht in der Search Console bestätigt werden können.
+2. `lernzeit.app` in der Google Search Console bestätigen (HTML-Datei in `public/`, kein
+   IONOS-Eintrag nötig).
+3. Google Auth Platform → Branding → „Branding überprüfen lassen“.
 
 ## Danach (Claude im Code)
 
