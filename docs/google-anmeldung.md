@@ -44,6 +44,11 @@ Bestehende Einträge nicht löschen.
 7. **Prüfen, dass die Rücksprungseite live ist**: `https://lernzeit.app/google-rueckkehr.html`
    aufrufen. Erwartet: kurz „Einen Moment …“, dann die Anmeldeseite.
 
+## Stand prüfen
+
+`bash scripts/pruefe-google-rueckkehr.sh` – fragt Google ohne Anmeldung, ob die
+Rücksprungadressen aus Schritt 1 eingetragen sind (10.10.2026: noch nicht).
+
 ## Danach (Claude im Code)
 
 - Nach 1, 3 und 7: `GOOGLE_WEB_BEREIT = true` → Website nutzt den direkten Weg.
