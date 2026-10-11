@@ -16,7 +16,7 @@ Lernpläne und Schwerpunkte der Eltern.
 |---|---|
 | Maskottchen | **Klecks** (animiert: atmen, blinzeln, umsehen, winken, Tropfen; Stimmungen freut sich / denkt nach / macht Mut) |
 | Spielgeld | **Tintentropfen** |
-| Reise | Seiten mit je 12 Feldern (Stil noch offen, siehe unten). Jede geschaffte Runde in einem beliebigen Fach malt ein Feld in der Heftfarbe dieses Fachs aus. |
+| Reise | **Kleckis Heftrand-Reise** (entschieden 11.10.2026): Seiten mit je 12 Feldern. Jede geschaffte Runde in einem beliebigen Fach malt ein Feld in der Heftfarbe dieses Fachs aus. |
 | Doppelt weit | Runden im **Lernplan** oder in einem **Schwerpunkt-Fach** der Eltern (`is_priority`) zählen zwei Felder (Stern am Feld). |
 | Alle Fächer | **Bunte Seite**: 3 verschiedene Fächer auf einer Seite (oder alle sichtbaren, wenn es weniger sind) → +20 Tinte am Seitenende. Hinweis statt Pflicht. |
 | Seitenende | +30 Tinte und ein Sammelstück; Eltern können Extra-Minuten festlegen (Stufe 3). |
@@ -24,14 +24,12 @@ Lernpläne und Schwerpunkte der Eltern.
 | Sammlung | **Federmäppchen**: Figuren (Avatare) gegen Tinte |
 | Erfolge | **Urkunden**: die bestehenden Erfolge mit Bonus-Minuten und Langfristzielen |
 
-Zwei Stile zur Wahl (Entwurf: Artefakt „Klecks – eine Reise für alle Fächer, zwei Stile“):
-- **A: Kleckis Heftrand-Reise** – Felder sind Heftrand-Kritzel (Kästchen, Würfel, Stern …) auf
+Stil (Entwurf: Artefakt „Klecks und die Heftrand-Reise“):
+- Felder sind Heftrand-Kritzel (Kästchen, Würfel, Stern …) auf
   einem Pfad von unten nach oben; Klecks steht auf dem nächsten Feld, hinter ihm eine
   Tintenspur. Am Seitenende faltet Klecks etwas aus Papier (Flieger, Frosch, Himmel & Hölle,
   Schiff …) für das Regal.
-- **B: Der magische Comic** – jede Seite ist eine Folge; jede Runde ist ein Strich, das Bild
-  wird von Bleistift über Tinte zu Farbe. Das Kind (mit seiner Figur) ist der Held, Klecks
-  zeichnet. Das Boot wächst alle drei Folgen; am Schuljahresende entsteht ein Buch.
+- Verworfen: „Der magische Comic“ (jede Seite eine Folge, Bild von Bleistift zu Farbe).
 
 „Geschafft“ heißt: Runde beendet mit mindestens 3 von 5 richtig (Vorschlag). Nichts geht verloren,
 Pausen kosten nichts.
@@ -104,5 +102,6 @@ in `docs/release-2.0.md`). Stufe 1 kann zusammen mit 2.0.2 kommen.
 
 ## Offen (Betreiber)
 
-- Stil der Reise: Heftrand (A) oder Comic (B).
+- Aussehen von Klecks: drei Versionen im Entwurf (Spritzer, Tropfen, mit Füßchen). „Karl Klecks“
+  (pme Lernwelten) ist ein ähnliches Maskottchen – Name und Aussehen vor dem Start prüfen.
 - Ab wann eine Runde „geschafft“ ist (Vorschlag: 3 von 5).
