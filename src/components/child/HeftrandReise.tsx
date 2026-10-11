@@ -5,8 +5,10 @@
  * = Lernplan oder Schwerpunkt (doppelt weit). Klecksi steht auf dem naechsten
  * Feld, oben wartet, was er am Seitenende faltet. Regeln: lib/reise.ts.
  */
+import { useState } from 'react';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { Faltung } from '@/components/child/Faltung';
+import { FaltAnleitung } from '@/components/child/FaltAnleitung';
 import {
   BUNT_AB_FAECHERN, FALTUNG_NAME, FELDER_JE_SEITE, faecherAufSeite, faltungFuer, istDoppelt,
   type ReiseFeld, type ReiseSeite,
@@ -99,6 +101,7 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
   const fehlen = Math.max(0, BUNT_AB_FAECHERN - faecher.length);
   const [kx, ky] = FELDER[Math.min(gemalt, FELDER_JE_SEITE - 1)];
   const regal = seiten.slice(-3);
+  const [anleitung, setAnleitung] = useState<ReiseSeite['faltung'] | null>(null);
 
   return (
     <section aria-labelledby="reise-titel" className="rounded-[28px] bg-card p-4 ring-1 ring-inset ring-karo">
@@ -186,11 +189,17 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
         <h3 className="text-[13px] font-extrabold text-tinte">Schon gefaltet</h3>
         <div className="mt-1 flex items-end justify-between gap-1 border-b-4 border-tinte px-1 pb-2 pt-2">
           {regal.map((s) => (
-            <figure key={s.seite} className="flex w-[70px] flex-col items-center gap-0.5 text-center">
+            <button
+              key={s.seite}
+              type="button"
+              onClick={() => setAnleitung(s.faltung)}
+              aria-label={`${FALTUNG_NAME[s.faltung]} nachfalten`}
+              className="flex w-[70px] flex-col items-center gap-0.5 rounded-xl text-center transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
               <Faltung art={s.faltung} bunt={s.bunt} />
-              <figcaption className="text-xs font-bold leading-tight text-tinte">{FALTUNG_NAME[s.faltung]}</figcaption>
-              <span className="text-[11px] font-semibold text-muted-foreground">Seite {s.seite}</span>
-            </figure>
+              <span className="text-xs font-bold leading-tight text-tinte">{FALTUNG_NAME[s.faltung]}</span>
+              <span className="text-[11px] font-semibold text-primary">Nachfalten</span>
+            </button>
           ))}
           <figure className="flex w-[70px] flex-col items-center gap-0.5 text-center">
             <Faltung art={faltung} offen />
@@ -199,7 +208,9 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
           </figure>
           {regal.length < 3 && <span className="flex-1" />}
         </div>
+        {regal.length > 0 && <p className="mt-1.5 text-xs text-muted-foreground">Tipp drauf: Klecksi zeigt dir, wie du es nachfaltest.</p>}
       </div>
+      <FaltAnleitung art={anleitung} offen={anleitung !== null} onOpenChange={(o) => !o && setAnleitung(null)} />
     </section>
   );
 }

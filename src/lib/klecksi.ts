@@ -7,15 +7,13 @@ import type { KlecksiStimmung } from '@/components/klecksi/Klecksi';
 
 export const FALTUNG_MIT_ARTIKEL: Record<Faltung, string> = {
   papierflieger: 'einen Papierflieger',
-  frosch: 'einen Frosch',
-  himmel_hoelle: 'ein Himmel & Hölle',
-  papierschiff: 'ein Papierschiff',
-  kranich: 'einen Kranich',
-  fisch: 'einen Fisch',
-  hut: 'einen Papierhut',
-  stern: 'einen Stern',
-  herz: 'ein Herz',
+  hund: 'einen Hund',
   becher: 'einen Becher',
+  hut: 'einen Papierhut',
+  papierschiff: 'ein Papierschiff',
+  katze: 'eine Katze',
+  himmel_hoelle: 'ein Himmel & Hölle',
+  tulpe: 'eine Tulpe',
 };
 
 export interface KlecksiLage {

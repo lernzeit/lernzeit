@@ -222,8 +222,8 @@ declare
   v_bunt boolean;
   v_bonus integer;
   v_faltung text;
-  v_faltungen text[] := array['papierflieger', 'frosch', 'himmel_hoelle', 'papierschiff', 'kranich',
-                              'fisch', 'hut', 'stern', 'herz', 'becher'];
+  v_faltungen text[] := array['papierflieger', 'hund', 'becher', 'hut', 'papierschiff', 'katze',
+                              'himmel_hoelle', 'tulpe'];
   v_ergebnis jsonb;
 begin
   if v_kind is null or p_sitzung is null then

@@ -7,6 +7,7 @@ import { Sticker } from '@/components/child/Hefte';
 import { STICKER, farbeVon, type FachId } from '@/lib/hefte';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { Faltung } from '@/components/child/Faltung';
+import { FaltAnleitung } from '@/components/child/FaltAnleitung';
 import { TintenTropfen } from '@/components/child/KlecksiStart';
 import { rundenSatz } from '@/lib/klecksi';
 import { FALTUNG_NAME, belohnungsText, istDoppelt, type RundenBelohnung } from '@/lib/reise';
@@ -243,6 +244,7 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
   istBerichtigung: boolean;
 }) {
   const geschafft = belohnung ? belohnung.geschafft : totalQuestions >= 3 && score * 5 >= totalQuestions * 3;
+  const [anleitungOffen, setAnleitungOffen] = useState(false);
   // Felder in der Heftfarbe, die das Kind gewaehlt hat (wie auf der Reise)
   const [heftFarben, setHeftFarben] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -291,6 +293,7 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
         </div>
       )}
       {belohnung?.seite_fertig && (
+        <>
         <div className="mt-3 flex items-center gap-3 rounded-2xl bg-[#fff4c9] px-4 py-3">
           <span className="heft-sticker-neu"><Faltung art={belohnung.seite_fertig.faltung} bunt={belohnung.seite_fertig.bunt} groesse={48} /></span>
           <div className="min-w-0">
@@ -301,6 +304,11 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
             </p>
           </div>
         </div>
+        <Button variant="outline" className="mt-2 w-full" onClick={() => setAnleitungOffen(true)}>
+          Zeig mir, wie ich das nachfalte
+        </Button>
+        <FaltAnleitung art={belohnung.seite_fertig.faltung} offen={anleitungOffen} onOpenChange={setAnleitungOffen} />
+        </>
       )}
     </section>
   );

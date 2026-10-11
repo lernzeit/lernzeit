@@ -10,7 +10,8 @@
  *   - 12 Felder je Seite; hoechstens 24 Felder am Tag.
  *   - Tinte: 1 je richtige Aufgabe (Berichtigung 2), alles richtig +5,
  *     Seite fertig +30, bunte Seite (3 Faecher) +20.
- *   - Am Seitenende faltet Klecksi etwas aus Papier fuer das Regal.
+ *   - Am Seitenende faltet Klecksi etwas aus Papier fuer das Regal; jede Figur
+ *     hat eine Anleitung zum Nachfalten (lib/falten.ts).
  */
 
 export const FELDER_JE_SEITE = 12;
@@ -27,22 +28,19 @@ export interface ReiseFeld {
 
 /** Reihenfolge muss zu v_faltungen in runde_belohnen passen. */
 export const FALTUNGEN = [
-  'papierflieger', 'frosch', 'himmel_hoelle', 'papierschiff', 'kranich',
-  'fisch', 'hut', 'stern', 'herz', 'becher',
+  'papierflieger', 'hund', 'becher', 'hut', 'papierschiff', 'katze', 'himmel_hoelle', 'tulpe',
 ] as const;
 export type Faltung = (typeof FALTUNGEN)[number];
 
 export const FALTUNG_NAME: Record<Faltung, string> = {
   papierflieger: 'Papierflieger',
-  frosch: 'Frosch',
-  himmel_hoelle: 'Himmel & Hölle',
-  papierschiff: 'Papierschiff',
-  kranich: 'Kranich',
-  fisch: 'Fisch',
-  hut: 'Papierhut',
-  stern: 'Stern',
-  herz: 'Herz',
+  hund: 'Hund',
   becher: 'Becher',
+  hut: 'Papierhut',
+  papierschiff: 'Papierschiff',
+  katze: 'Katze',
+  himmel_hoelle: 'Himmel & Hölle',
+  tulpe: 'Tulpe',
 };
 
 export interface ReiseSeite {

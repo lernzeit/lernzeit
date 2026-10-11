@@ -19,6 +19,25 @@ export function TintenTropfen({ groesse = 18 }: { groesse?: number }) {
   );
 }
 
+/** Tintenkiller fuer die Berichtigung: wischt eine Tintenlinie weg */
+export function Tintenkiller({ blass = false, groesse = 34 }: { blass?: boolean; groesse?: number }) {
+  const rand = blass ? '#8a96b8' : '#1a2b6d';
+  const blau = blass ? '#c9d6f7' : '#2563eb';
+  return (
+    <svg width={groesse} height={(groesse * 26) / 34} viewBox="0 0 34 26" aria-hidden="true">
+      {!blass && <path d="M1 22.5 C3 20.8 5 24 7.5 22.3" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" />}
+      <path d="M8.5 22.2 C11 20.6 13 23.8 15.5 22.2" fill="none" stroke="#c9d6f7" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="1.2 2.6" />
+      <g transform="translate(8 21) rotate(-38)" strokeDasharray={blass ? '2.5 2' : undefined}>
+        <path d="M5 -3 C2 -3 0 -1.4 0 0 C0 1.4 2 3 5 3 Z" fill="#fff" stroke={rand} strokeWidth="1.7" strokeLinejoin="round" />
+        <rect x="5" y="-3.6" width="15" height="7.2" rx="1.4" fill="#fff" stroke={rand} strokeWidth="1.7" />
+        <path d="M9 -3.6 V3.6 M11 -3.6 V3.6" stroke={rand} strokeWidth="1" opacity="0.5" />
+        <rect x="19" y="-3.9" width="7" height="7.8" rx="2" fill={blau} stroke={rand} strokeWidth="1.7" />
+        <path d="M26 -1.6 L29.5 0 L26 1.6 Z" fill={rand} />
+      </g>
+    </svg>
+  );
+}
+
 /** Tinte oben auf dem Start, fuehrt ins Federmaeppchen */
 export function TintenPille({ stand, onClick }: { stand: number | null; onClick: () => void }) {
   return (
@@ -145,23 +164,14 @@ export function HeuteFuerDieReise({ hefte, berichtigung, spaeter, onBerichtigung
       {berichtigung > 0 ? (
         <Zeile
           onClick={onBerichtigung}
-          icon={
-            <svg width="30" height="26" viewBox="0 0 34 26" aria-hidden="true">
-              <rect x="3" y="6" width="28" height="14" rx="4" transform="rotate(-12 17 13)" fill="#fff" stroke="#d4483b" strokeWidth="2.4" />
-              <path d="M14 3.5 L18.5 22.5" stroke="#d4483b" strokeWidth="2.4" />
-            </svg>
-          }
+          icon={<Tintenkiller />}
           titel="Berichtigung"
           text={berichtigung === 1 ? '1 Klecks wegwischen' : `${berichtigung} Kleckse wegwischen`}
           abzeichen="+1"
         />
       ) : spaeter > 0 ? (
         <Zeile
-          icon={
-            <svg width="30" height="26" viewBox="0 0 34 26" aria-hidden="true">
-              <rect x="3" y="6" width="28" height="14" rx="4" transform="rotate(-12 17 13)" fill="#fff" stroke="#8a96b8" strokeWidth="2.2" strokeDasharray="3 3" />
-            </svg>
-          }
+          icon={<Tintenkiller blass />}
           titel="Berichtigung"
           text={spaeter === 1 ? 'Bald wartet 1 Klecks auf dich' : `Bald warten ${spaeter} Kleckse auf dich`}
         />

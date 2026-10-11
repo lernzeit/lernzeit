@@ -24,6 +24,7 @@ const laden = async (datei) => {
 const reise = await laden('src/lib/reise.ts');
 const klecksi = await laden('src/lib/klecksi.ts');
 const feder = await laden('src/lib/federmaeppchen.ts');
+const falten = await laden('src/lib/falten.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 
 let fehler = 0;
@@ -39,7 +40,7 @@ pruefe('volle Seite: naechste leer', reise.aktuelleSeite(Array.from({ length: 12
 pruefe('Faecher, haeufigstes zuerst',
   reise.faecherAufSeite([feld(1, 1, 'english'), feld(1, 2, 'math'), feld(1, 3, 'math')]),
   [{ fach: 'math', anzahl: 2 }, { fach: 'english', anzahl: 1 }]);
-pruefe('Seite 1 Papierflieger, Seite 11 wieder', [reise.faltungFuer(1), reise.faltungFuer(11)], ['papierflieger', 'papierflieger']);
+pruefe('Seite 1 Papierflieger, Seite 9 wieder', [reise.faltungFuer(1), reise.faltungFuer(9)], ['papierflieger', 'papierflieger']);
 
 // Reihenfolge der Faltungen wie in runde_belohnen
 const sqlFaltungen = [...sql.match(/v_faltungen text\[\] := array\[([^\]]+)\]/s)[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
@@ -57,7 +58,19 @@ pruefe('Satz: Lernplan doppelt', saetze.includes('Dein Lernplan in Englisch zäh
 pruefe('Satz: Berichtigung', saetze.includes('3 kleine Kleckse warten in der Berichtigung.'), true);
 pruefe('Runde 2/5: Mut', klecksi.rundenSatz({ richtig: 2, gesamt: 5, geschafft: false }).stimmung, 'mut');
 pruefe('Runde 5/5: Jubel', klecksi.rundenSatz({ richtig: 5, gesamt: 5, geschafft: true }).stimmung, 'jubel');
-pruefe('Seite fertig: Faltung im Satz', klecksi.rundenSatz({ richtig: 3, gesamt: 5, geschafft: true, faltung: 'frosch' }).satz,
-  'Seite fertig! Ich falte dir einen Frosch.');
+pruefe('Seite fertig: Faltung im Satz', klecksi.rundenSatz({ richtig: 3, gesamt: 5, geschafft: true, faltung: 'katze' }).satz,
+  'Seite fertig! Ich falte dir eine Katze.');
+
+// Jede Faltung hat eine Anleitung, jeder Schritt laesst Papier uebrig
+pruefe('Anleitung fuer jede Faltung', reise.FALTUNGEN.filter((f) => !falten.MODELLE[f]), []);
+for (const [id, m] of Object.entries(falten.MODELLE)) {
+  let ok = true;
+  for (let i = 0; i <= m.schritte.length; i++) {
+    const z = falten.zustandNach(m, i);
+    const flaeche = z.flaechen.reduce((s, f) => s + falten.flaecheninhalt(f.pts), 0);
+    if (!(flaeche > 500) || z.flaechen.some((f) => f.pts.some((p) => !Number.isFinite(p[0]) || !Number.isFinite(p[1])))) ok = false;
+  }
+  pruefe(`Faltanleitung ${id}: jeder Schritt gueltig`, ok, true);
+}
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }
