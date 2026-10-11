@@ -16,8 +16,9 @@ export interface GrundlagenFrage {
   thema: string;
   questionText: string;
   questionType: 'FREETEXT' | 'MULTIPLE_CHOICE';
-  /** FREETEXT: { value }, MULTIPLE_CHOICE: Text der richtigen Option */
-  correctAnswer: { value: string } | string;
+  /** FREETEXT: { value }, MULTIPLE_CHOICE: Index der richtigen Option (wie im Cache).
+   *  Kein Text: Die App liest "2" als Index, auch wenn "2" eine Option ist. */
+  correctAnswer: { value: string } | number;
   options?: string[];
   hint: string;
 }
@@ -46,7 +47,7 @@ function auswahl(thema: string, text: string, richtig: string, falsch: string[],
     const j = Math.floor(r() * (i + 1));
     [optionen[i], optionen[j]] = [optionen[j], optionen[i]];
   }
-  return { thema, questionText: text, questionType: 'MULTIPLE_CHOICE', correctAnswer: richtig, options: optionen, hint };
+  return { thema, questionText: text, questionType: 'MULTIPLE_CHOICE', correctAnswer: optionen.indexOf(richtig), options: optionen, hint };
 }
 
 // ── Bausteine ─────────────────────────────────────────────────────────────────

@@ -227,9 +227,13 @@ All colors MUST be HSL.
 .reise-klecksi .klecksi-atmen { animation: reise-huepfen 1.6s cubic-bezier(.3,1.4,.5,1) infinite; }
 @keyframes reise-spur { to { stroke-dashoffset: -32; } }
 @keyframes reise-huepfen { 0%, 100% { transform: translateY(0) scale(1.06, .94); } 30% { transform: translateY(-14px) scale(.95, 1.06); } 55% { transform: translateY(0) scale(1.08, .92); } 75% { transform: none; } }
+/* Weihnachtszeit: leiser Schnee auf Klecksis Karte (lib/weihnachten.ts) */
+.schnee-flocke { position: absolute; top: -8px; border-radius: 9999px; background: #b9c9ef; animation: schnee-fallen linear infinite; }
+@keyframes schnee-fallen { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: .9; } 50% { transform: translate(6px, 70px); } 100% { transform: translate(-4px, 150px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .klecksi-atmen, .klecksi-huepft-a, .klecksi-huepft-b, .klecksi-jubelt .klecksi-atmen, .klecksi-denkt .klecksi-atmen,
   .klecksi-blinzeln, .klecksi-schauen, .klecksi-schweben, .klecksi-frage, .reise-spur, .reise-klecksi .klecksi-atmen { animation: none; }
+  .schnee-flocke { display: none; }
 }
 
 /* Responsive page container – fluid width that scales with viewport */

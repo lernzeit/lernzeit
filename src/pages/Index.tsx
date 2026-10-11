@@ -9,6 +9,7 @@ import LegalFooter from '@/components/layout/LegalFooter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
+import { adventFaecher } from '@/lib/weihnachten';
 import { Capacitor } from '@capacitor/core';
 import { trackFireAndForget } from '@/lib/analytics';
 import type { ReviewItem } from '@/hooks/useReviewQueue';
@@ -47,9 +48,11 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
   const [learningPlanId, setLearningPlanId] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery' | 'berichtigung'>('normal');
+  const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery' | 'berichtigung' | 'advent'>('normal');
   // Berichtigung: Aufgaben aus der Fehlerkiste (useBerichtigung)
   const [berichtigung, setBerichtigung] = useState<ReviewItem[] | null>(null);
+  // Adventskalender: Tuerchen, Faecher dieser Runde, Faecher fuer weitere Versuche
+  const [advent, setAdvent] = useState<{ tag: number; faecher: string[]; auswahl: string[]; versuch: number } | null>(null);
   // Sessions always use 5 questions
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
@@ -125,6 +128,7 @@ const Index = () => {
 
     // Go back to grade/category selection
     setBerichtigung(null);
+    setAdvent(null);
     if (user) {
       setSelectedGrade(null);
       setSelectedCategory(null);
@@ -256,6 +260,14 @@ const Index = () => {
             setLearningPlanTopic(null);
             setLearningPlanId(null);
             setGameMode('berichtigung');
+          }}
+          onStartAdvent={(grade, tag, faecher, auswahl) => {
+            setAdvent({ tag, faecher, auswahl, versuch: 1 });
+            setSelectedGrade(grade);
+            setSelectedCategory(faecher[0] as Category);
+            setLearningPlanTopic(null);
+            setLearningPlanId(null);
+            setGameMode('advent');
           }} />
 
       </Suspense>);
@@ -266,23 +278,31 @@ const Index = () => {
   // Show learning game if grade and category are selected (always 5 questions)
   if (selectedGrade && selectedCategory) {
     return (
-      <ErrorBoundary onBack={() => { setSelectedCategory(null); setBerichtigung(null); }} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
+      <ErrorBoundary onBack={() => { setSelectedCategory(null); setBerichtigung(null); setAdvent(null); }} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
         <Suspense fallback={<LoadingFallback />}>
           <LearningGame
+            key={gameMode === 'advent' && advent ? `advent-${advent.tag}-${advent.versuch}` : 'spiel'}
             grade={selectedGrade}
             subject={selectedCategory}
             onComplete={handleGameComplete}
             onBack={() => {
               setSelectedCategory(null);
-              // Berichtigung abgebrochen: zurueck zum Start statt zur Fachauswahl
-              if (gameMode === 'berichtigung') {
+              // Berichtigung oder Adventskalender abgebrochen: zurueck zum Start statt zur Fachauswahl
+              if (gameMode === 'berichtigung' || gameMode === 'advent') {
                 setBerichtigung(null);
+                setAdvent(null);
                 setGameMode('normal');
                 if (user) setSelectedGrade(null);
               }
             }}
             totalQuestions={gameMode === 'berichtigung' && berichtigung ? berichtigung.length : 5}
             berichtigung={gameMode === 'berichtigung' ? berichtigung ?? undefined : undefined}
+            advent={gameMode === 'advent' && advent ? { tag: advent.tag, faecher: advent.faecher } : undefined}
+            onNochmal={gameMode === 'advent' && advent ? () => {
+              const faecher = adventFaecher(advent.auswahl);
+              setAdvent({ ...advent, faecher, versuch: advent.versuch + 1 });
+              setSelectedCategory(faecher[0] as Category);
+            } : undefined}
             topicHint={learningPlanTopic || undefined}
             learningPlanId={learningPlanId || undefined}
             mode={gameMode}

@@ -8,6 +8,8 @@ import { useState } from 'react';
 import { ChevronLeft, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { AVATAR_LIBRARY } from '@/data/avatars';
+import { WEIHNACHTS_FIGUREN } from '@/lib/federmaeppchen';
+import { istWeihnachtszeit } from '@/lib/weihnachten';
 import { useFreigeschaltet } from '@/hooks/useFreigeschaltet';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { TintenTropfen } from '@/components/child/KlecksiStart';
@@ -27,6 +29,13 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
   onZurueck: () => void;
 }) {
   const { gesperrt, laden } = useFreigeschaltet(kindId);
+  // Weihnachts-Figuren: in der Weihnachtszeit vorne, sonst nur, wer sie schon hat
+  const weihnachten = istWeihnachtszeit();
+  const figuren = [
+    ...(weihnachten ? AVATAR_LIBRARY.filter((a) => WEIHNACHTS_FIGUREN.includes(a.id)) : []),
+    ...AVATAR_LIBRARY.filter((a) => !WEIHNACHTS_FIGUREN.includes(a.id)),
+    ...(weihnachten ? [] : AVATAR_LIBRARY.filter((a) => WEIHNACHTS_FIGUREN.includes(a.id) && (gesperrt(a.id) === null || a.id === avatarId))),
+  ];
   const [frage, setFrage] = useState<{ id: string; name: string; preis: number } | null>(null);
   const [hinweis, setHinweis] = useState<string | null>(null);
   const [beschaeftigt, setBeschaeftigt] = useState(false);
@@ -51,7 +60,9 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
       setHinweis(
         r.grund === 'zu_wenig'
           ? `Dir fehlen noch ${Math.max(0, (r.preis ?? frage.preis) - (r.stand ?? 0))} Tinte.`
-          : 'Das hat nicht geklappt. Versuch es gleich noch einmal.',
+          : r.grund === 'saison'
+            ? 'Diese Figur gibt es nur in der Weihnachtszeit.'
+            : 'Das hat nicht geklappt. Versuch es gleich noch einmal.',
       );
       setFrage(null);
       return;
@@ -92,7 +103,7 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
         <section aria-labelledby="figuren-titel" className="rounded-[24px] bg-card p-4 ring-1 ring-inset ring-karo">
           <h2 id="figuren-titel" className="mb-3 text-lg font-extrabold">Deine Figur</h2>
           <div className="grid grid-cols-4 gap-2.5">
-            {AVATAR_LIBRARY.map((a) => {
+            {figuren.map((a) => {
               const preis = gesperrt(a.id);
               const gewaehlt = a.id === avatarId;
               return (
@@ -122,6 +133,11 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
           <p className="mt-3 text-[13px] text-muted-foreground">
             Tinte gibt es für jede richtige Aufgabe, jede Berichtigung und jede fertige Reise-Seite.
           </p>
+          {weihnachten && (
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Weihnachts-Figuren gibt es bis 6. Januar. Hinter Türchen 6 und 24 im Adventskalender steckt je eine.
+            </p>
+          )}
         </section>
       </div>
 

@@ -3,7 +3,7 @@ export interface Avatar {
   id: string;
   emoji: string;
   name: string;
-  category: 'animals' | 'faces' | 'objects' | 'nature';
+  category: 'animals' | 'faces' | 'objects' | 'nature' | 'weihnachten';
   colors: string[];
 }
 
@@ -41,6 +41,13 @@ export const AVATAR_LIBRARY: Avatar[] = [
   { id: 'moon', emoji: '🌙', name: 'Mond', category: 'nature', colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#64748b'] },
   { id: 'flower', emoji: '🌸', name: 'Blume', category: 'nature', colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b', '#06b6d4', '#ec4899'] },
   { id: 'tree', emoji: '🌳', name: 'Baum', category: 'nature', colors: ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#64748b', '#06b6d4', '#10b981'] },
+
+  // Weihnachten (nur 1. Dezember bis 6. Januar freizuschalten, lib/federmaeppchen.ts)
+  { id: 'weihnachtsmann', emoji: '🎅', name: 'Weihnachtsmann', category: 'weihnachten', colors: ['#d4483b', '#15a05a', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b', '#06b6d4', '#ec4899'] },
+  { id: 'rentier', emoji: '🦌', name: 'Rentier', category: 'weihnachten', colors: ['#15a05a', '#d4483b', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b', '#06b6d4', '#ec4899'] },
+  { id: 'schneemann', emoji: '⛄', name: 'Schneemann', category: 'weihnachten', colors: ['#3b82f6', '#06b6d4', '#8b5cf6', '#15a05a', '#d4483b', '#64748b', '#f59e0b', '#ec4899'] },
+  { id: 'elf', emoji: '🧝', name: 'Wichtel', category: 'weihnachten', colors: ['#15a05a', '#d4483b', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b', '#06b6d4', '#ec4899'] },
+  { id: 'tannenbaum', emoji: '🎄', name: 'Tannenbaum', category: 'weihnachten', colors: ['#d4483b', '#3b82f6', '#8b5cf6', '#f59e0b', '#15a05a', '#64748b', '#06b6d4', '#ec4899'] },
 ];
 
 export const AVATAR_CATEGORIES = [
@@ -48,6 +55,7 @@ export const AVATAR_CATEGORIES = [
   { id: 'faces', name: 'Gesichter', emoji: '😊' },
   { id: 'objects', name: 'Objekte', emoji: '🎭' },
   { id: 'nature', name: 'Natur', emoji: '🌟' },
+  { id: 'weihnachten', name: 'Weihnachten', emoji: '🎄' },
 ] as const;
 
 export function getAvatarById(id: string): Avatar | undefined {

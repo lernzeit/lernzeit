@@ -68,6 +68,24 @@ function heuteSchonGegruesst(kindId: string): boolean {
   }
 }
 
+/** Ein paar Flocken, die hinter Klecksi fallen (nur Weihnachtszeit, ruhig bei reduzierter Bewegung) */
+const FLOCKEN = [
+  { x: 6, g: 4, d: 7.5, v: 0 }, { x: 18, g: 3, d: 9, v: -3 }, { x: 31, g: 5, d: 8, v: -6 },
+  { x: 47, g: 3, d: 10, v: -1.5 }, { x: 62, g: 4, d: 8.5, v: -5 }, { x: 76, g: 3, d: 9.5, v: -7.5 },
+  { x: 88, g: 5, d: 7, v: -2.5 }, { x: 95, g: 3, d: 11, v: -8 },
+];
+
+function Schnee() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      {FLOCKEN.map((f, i) => (
+        <span key={i} className="schnee-flocke"
+          style={{ left: `${f.x}%`, width: f.g, height: f.g, animationDuration: `${f.d}s`, animationDelay: `${f.v}s` }} />
+      ))}
+    </div>
+  );
+}
+
 export function KlecksiGruss({ kindId, lage }: { kindId: string; lage: KlecksiLage }) {
   const saetze = useMemo(() => startSaetze(lage), [lage]);
   const [i, setI] = useState(0);
@@ -79,11 +97,12 @@ export function KlecksiGruss({ kindId, lage }: { kindId: string; lage: KlecksiLa
   }, [saetze.length]);
 
   return (
-    <div className="flex items-center gap-2 rounded-[28px] bg-card py-3 pl-3 pr-4 ring-1 ring-inset ring-karo">
+    <div className="relative flex items-center gap-2 overflow-hidden rounded-[28px] bg-card py-3 pl-3 pr-4 ring-1 ring-inset ring-karo">
+      {lage.weihnachten && <Schnee />}
       <button
         type="button"
         aria-label="Klecksi antippen"
-        className="shrink-0 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="relative shrink-0 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         onClick={() => {
           klecksi.current?.huepfen();
           klecksi.current?.gruessen();
@@ -92,7 +111,7 @@ export function KlecksiGruss({ kindId, lage }: { kindId: string; lage: KlecksiLa
       >
         <Klecksi ref={klecksi} groesse={88} gruessen={gruessen} />
       </button>
-      <div className="min-w-0 flex-1">
+      <div className="relative min-w-0 flex-1">
         <p aria-live="polite" className="font-hand rounded-[18px] rounded-bl-[4px] border-2 border-tinte bg-background px-3 py-2.5 text-[15px] leading-snug text-tinte">
           {saetze[i % saetze.length]}
         </p>

@@ -182,3 +182,23 @@ Supabase-Secrets gelöscht werden.
 - Berichtigung: Runde aus `review_queue` (`useBerichtigung`, LearningGame `mode='berichtigung'`),
   richtig = `is_retired`. Supabase-Anfragen ohne `await`/`.then()` werden nie abgeschickt.
 - DELETE über das Supabase-MCP wartet auf Bestätigung und läuft in eine Zeitüberschreitung.
+- Faltfiguren (8, `FALTUNGEN` = `v_faltungen` in `runde_belohnen`) mit Anleitung zum Nachfalten:
+  Falt-Simulator `lib/falten.ts`, Dialog `child/FaltAnleitung.tsx` (Regal und Rundenende).
+
+## Weihnachtszeit und Adventskalender (Stand 11.10.2026)
+
+- Jährlich 1.12.–6.1. (Berliner Zeit, `lib/weihnachten.ts` = SQL `ist_weihnachtszeit`): Klecksi mit
+  Mütze, Schnee auf der Begrüßung, Weihnachtssätze, 12 Weihnachts-Sticker (`sticker_waehlen` nur dann)
+  und 5 Figuren (`mit_tinte_freischalten` nur dann; Besitz bleibt).
+- Adventskalender: Türchen bis heute, nachholen bis 6.1.; 5 Aufgaben aus zufälligen Fächern
+  (`faecher` im Vorlader), ab 4 richtigen `advent_runde` → `advent_tueren` (Sticker, Tür 6/24 Figur).
+  Keine `game_sessions`-Zeile, also keine Zeit, Tinte, Reise, Erfolge, kein Streak, keine Berichtigung.
+- Testen: Playwright-Uhr auf Dezember (`clock.setFixedTime`, Sitzung `expires_at` passend);
+  SQL über `advent_runde_werten(kind, tag, richtig, gesamt, p_heute)` (nur Service-Rolle).
+
+## Mathe-Grundlagen ohne KI (Stand 11.10.2026)
+
+- `ai-question-generator` liefert bei Mathe ohne Thema einen Anteil kurzer Aufgaben aus
+  `_shared/grundlagen-mathe.ts` (Klasse ≤4: 50 %, ≤6: 35 %, 7: 25 %): Runden, Vorgänger, Stellenwerte,
+  Einmaleins, negative Zahlen, Brüche … Auswahlfragen tragen den Index der richtigen Option (wie der
+  Cache); ein Text wie „3“ würde in älteren Apps als Option Nr. 3 gelesen.

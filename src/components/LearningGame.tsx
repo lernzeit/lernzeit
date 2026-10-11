@@ -34,6 +34,8 @@ import type { RundenBelohnung } from '@/lib/reise';
 import { useStreak } from '@/hooks/useStreak';
 import { useSeitenanfang, useTastaturOffen } from '@/hooks/useTastatur';
 import { berechneStreak, lokalerTag } from '@/lib/streak';
+import { ADVENT_SCHWIERIGKEIT, type AdventErgebnis } from '@/lib/weihnachten';
+import { AdventAbschluss } from '@/components/child/AdventAbschluss';
 
 interface LearningGameProps {
   grade: number;
@@ -44,9 +46,13 @@ interface LearningGameProps {
   topicHint?: string;
   /** Lernplan, aus dem die Runde gestartet wurde — zaehlt nur dann als Plan-Fortschritt. */
   learningPlanId?: string;
-  mode?: 'normal' | 'streak_recovery' | 'berichtigung';
+  mode?: 'normal' | 'streak_recovery' | 'berichtigung' | 'advent';
   /** Aufgaben aus der Fehlerkiste fuer eine Berichtigung (mode 'berichtigung') */
   berichtigung?: ReviewItem[];
+  /** Adventskalender (mode 'advent'): Tuerchen und ein Fach je Aufgabe */
+  advent?: { tag: number; faecher: string[] };
+  /** Adventskalender nicht geschafft: neue Runde fuer dasselbe Tuerchen */
+  onNochmal?: () => void;
   demoMode?: boolean;
 }
 
@@ -71,6 +77,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   learningPlanId,
   mode = 'normal',
   berichtigung,
+  advent,
+  onNochmal,
   demoMode = false
 }) => {
   const { user, loading: isAuthLoading } = useAuth();
@@ -100,13 +108,17 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   // Use preloader with adaptive difficulty sequence
   const istBerichtigung = mode === 'berichtigung';
+  // Adventskalender: Aufgaben aus zufaelligen Faechern, eher leicht; sonst
+  // keine Belohnung (keine Zeit, Tinte, Reise, Erfolge, kein Streak)
+  const istAdvent = mode === 'advent';
   const vorlader = useQuestionPreloader({
     grade,
     subject,
     totalQuestions,
     topicHint,
     learningPlanId,
-    difficultySequence: adaptiveDifficultySequence,
+    difficultySequence: istAdvent ? ADVENT_SCHWIERIGKEIT : adaptiveDifficultySequence,
+    faecher: istAdvent ? advent?.faecher : undefined,
     // Index has already resolved auth before it can render a signed-in game.
     // Do not derive demo mode from this component's second useAuth instance:
     // on slower Chrome/WebView starts it can briefly report no user and would
@@ -176,6 +188,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [dailyChallengeCompleted, setDailyChallengeCompleted] = useState(false);
   const streakBeforeSession = useRef<number | null>(null);
   const isStreakRecovery = mode === 'streak_recovery';
+  // Zeit gibt es nicht fuer die Rettungsrunde und nicht im Adventskalender
+  const ohneZeit = isStreakRecovery || istAdvent;
+  // Ergebnis von advent_runde (Tuerchen offen?)
+  const [adventErgebnis, setAdventErgebnis] = useState<AdventErgebnis | null>(null);
+  const [adventFehler, setAdventFehler] = useState(false);
 
   // Ergebnis je Aufgabe fuer den Kaestchen-Fortschritt (nur Anzeige)
   const [antwortVerlauf, setAntwortVerlauf] = useState<Record<number, boolean>>({});
@@ -211,7 +228,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       question: question.questionText,
       statedAnswer: correctAnswerText,
       grade,
-      subject,
+      subject: fragenFach,
     });
   };
 
@@ -260,6 +277,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   // Get current question from preloaded questions
   const question = useMemo(() => getQuestion(currentIndex), [getQuestion, currentIndex, questions]);
+  // Fach dieser Aufgabe: im Adventskalender je Aufgabe ein anderes
+  const fragenFach = istAdvent && question?.subject ? question.subject : subject;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -371,6 +390,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
     if (typeof ca === 'string') {
       const trimmed = ca.trim();
+      // Steht der Text als Option da, ist er die Antwort ("3" bei 2, 3, 4, 5),
+      // nicht der Index. Bis 11.10.2026 wurde "3" als Option Nr. 3 gelesen.
+      if (options.includes(trimmed)) return trimmed;
       const index = Number(trimmed);
       if (Number.isInteger(index) && options[index] !== undefined) {
         return options[index];
@@ -521,7 +543,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             correctAnswer: statedAnswerText,
             userAnswer: userAnswerText.trim(),
             grade,
-            subject,
+            subject: fragenFach,
           },
         });
         if (!error && data?.accepted) {
@@ -543,7 +565,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
               statedAnswer: statedAnswerText,
               userAnswer: userAnswerText.trim(),
               grade,
-              subject,
+              subject: fragenFach,
               templateId: question.id,
             });
             markReviewReported(question.questionText);
@@ -568,8 +590,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       trackFireAndForget('demo_question_answered', { correct });
     }
 
-    // Track performance for adaptive difficulty system (Berichtigung zaehlt nicht)
-    if (!istBerichtigung) updateAdaptivePerformance(correct, answerTimeMs);
+    // Track performance for adaptive difficulty system (Berichtigung und Adventskalender zaehlen nicht)
+    if (!istBerichtigung && !istAdvent) updateAdaptivePerformance(correct, answerTimeMs);
 
     if (correct) {
       setScore(prev => prev + 1);
@@ -606,8 +628,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     } else {
       setCorrectStreak(0);
 
-      // Add to spaced repetition review queue
-      if (question) {
+      // Add to spaced repetition review queue (nicht aus dem Adventskalender:
+      // dessen Aufgaben bringen auch spaeter nichts)
+      if (question && !istAdvent) {
         addToReviewQueue(question, grade);
       }
     }
@@ -624,7 +647,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       getAufgabeText(),
       correctAnswerText,
       grade,
-      subject,
+      fragenFach,
       userAnswerText
     );
     maybeRecoverAnswer(result, correctAnswerText, userAnswerText);
@@ -643,7 +666,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     pauseTimer();
     
     // Track as incorrect in adaptive system (long response = gave up)
-    updateAdaptivePerformance(false, 60000);
+    if (!istBerichtigung && !istAdvent) updateAdaptivePerformance(false, 60000);
     
     // Automatically show explanation
     setShowExplanation(true);
@@ -654,7 +677,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       getAufgabeText(),
       correctAnswerText,
       grade,
-      subject,
+      fragenFach,
       'Ich konnte die Antwort nicht finden.'
     );
   };
@@ -695,7 +718,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       userAnswer: userAnswerText,
       explanation: result?.explanation,
       grade,
-      subject,
+      subject: fragenFach,
       templateId: question.id,
     });
     markReviewReported(question.questionText);
@@ -770,6 +793,13 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       pauseTimer(); // Make sure timer is paused
       setShowCompletionScreen(true);
       
+      // Adventskalender: nur das Tuerchen pruefen, keine Runde speichern
+      // (keine Zeit, Tinte, Reise, Erfolge, kein Streak)
+      if (istAdvent) {
+        void adventSenden();
+        return;
+      }
+
       // Calculate earned time based on child settings
       const timeSpentSeconds = Math.floor(elapsedTime / 1000);
       const secondsPerTask = getSecondsPerTask();
@@ -932,11 +962,27 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
   };
 
+  // Adventskalender: Ergebnis an die Datenbank, die das Tuerchen oeffnet (ab 4 richtig)
+  const adventSenden = async () => {
+    if (!advent) return;
+    setAdventFehler(false);
+    setAdventErgebnis(null);
+    try {
+      const { data, error } = await supabase.rpc('advent_runde', {
+        p_tag: advent.tag, p_richtig: score, p_gesamt: totalQuestions,
+      });
+      if (error || !data) setAdventFehler(true);
+      else setAdventErgebnis(data as unknown as AdventErgebnis);
+    } catch {
+      setAdventFehler(true);
+    }
+  };
+
   // Handle completion screen continue button
   const handleCompletionContinue = () => {
     const timeSpentSeconds = Math.floor(elapsedTime / 1000);
     const secondsPerTask = getSecondsPerTask();
-    const earnedSeconds = isStreakRecovery ? 0 : score * secondsPerTask;
+    const earnedSeconds = ohneZeit ? 0 : score * secondsPerTask;
     const earnedMinutes = Math.ceil(earnedSeconds / 60);
     
     onComplete({
@@ -967,6 +1013,22 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       triggerAllesRichtig();
     }
   }, [showCompletionScreen, score, totalQuestions, isStreakRecovery]);
+
+  // Ende einer Adventskalender-Runde
+  if (showCompletionScreen && istAdvent && advent) {
+    return (
+      <AdventAbschluss
+        tag={advent.tag}
+        richtig={score}
+        gesamt={totalQuestions}
+        ergebnis={adventErgebnis}
+        fehler={adventFehler}
+        onErneutSenden={() => void adventSenden()}
+        onNochmal={onNochmal}
+        onFertig={handleCompletionContinue}
+      />
+    );
+  }
 
   // Game completion screen
   if (showCompletionScreen) {
@@ -1109,7 +1171,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   // Verdiente Zeit dieser Runde (wie beim Speichern: Punkte x Sekunden je Aufgabe)
   const sekundenProAufgabe = getSecondsPerTask();
-  const verdienteSekunden = isStreakRecovery ? 0 : score * sekundenProAufgabe;
+  const verdienteSekunden = ohneZeit ? 0 : score * sekundenProAufgabe;
   const zahlAntwort =
     (question?.questionType === 'FREETEXT' || shouldUseTextFallbackForMultipleChoice) &&
     istZahlAntwort(getCorrectAnswerText());
@@ -1139,7 +1201,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           <div className="flex min-w-0 flex-1 justify-center">
             <KaestchenFortschritt anzahl={totalQuestions} aktuell={currentIndex} verlauf={antwortVerlauf} />
           </div>
-          {!isStreakRecovery ? (
+          {!ohneZeit ? (
             <VerdienteZeit
               sekunden={verdienteSekunden}
               gutschrift={hasAnswered && isCorrect ? sekundenProAufgabe : null}
@@ -1154,7 +1216,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         {question && (
           <div className="heft-karo relative flex flex-1 flex-col rounded-t-[28px] bg-card px-5 pt-6 shadow-[0_-1px_0_hsl(var(--karo))] sm:px-8">
             <div className="flex items-center justify-between gap-3 text-sm font-semibold text-muted-foreground">
-              <span>{istBerichtigung ? 'Berichtigung: ' : ''}{getSubjectName(subject)}{grade > 4 ? `, Klasse ${grade}` : ''}</span>
+              <span>{istBerichtigung ? 'Berichtigung: ' : ''}{istAdvent ? `Türchen ${advent?.tag ?? ''} · ` : ''}{getSubjectName(fragenFach)}{grade > 4 ? `, Klasse ${grade}` : ''}</span>
               <span className="flex items-center gap-2">
                 {grade > 4 && (
                   <span className={cn('tabular inline-flex items-center gap-1', !isRunning && 'opacity-60')}>
@@ -1255,7 +1317,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   options={Array.isArray(question.options) ? question.options : []}
                   correctAnswers={question.correctAnswer?.blanks || []}
                   hasAnswered={hasAnswered}
-                  subject={subject}
+                  subject={fragenFach}
                   onChange={(index, value) => {
                     const newBlanks = [...fillBlanks];
                     newBlanks[index] = value;
@@ -1305,7 +1367,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                     <span className="text-2xl font-extrabold text-tinte">
                       {isCorrect ? 'Richtig!' : loesungGezeigt ? 'Kein Problem.' : grade <= 4 ? 'Fast.' : 'Nicht ganz.'}
                     </span>
-                    {isCorrect && !isStreakRecovery && (
+                    {isCorrect && !ohneZeit && (
                       <span className="font-hand text-lg text-gruen-text">+{sekundenProAufgabe} Sek.</span>
                     )}
                     {!isCorrect && !zahlAntwort && (
@@ -1491,7 +1553,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           userAnswer={getUserAnswerText()}
           explanation={explanation || undefined}
           grade={grade}
-          subject={subject}
+          subject={fragenFach}
           templateId={question.id}
           onReported={() => {
             // Mark in review queue so reported questions won't reappear
@@ -1509,7 +1571,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           correctAnswer={getCorrectAnswerText()}
           userAnswer={getUserAnswerText()}
           grade={grade}
-          subject={subject}
+          subject={fragenFach}
         />
       )}
     </div>

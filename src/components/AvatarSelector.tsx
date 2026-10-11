@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AVATAR_LIBRARY, AVATAR_CATEGORIES, getAvatarById, type Avatar as AvatarType } from '@/data/avatars';
+import { istWeihnachtszeit } from '@/lib/weihnachten';
 
 interface AvatarSelectorProps {
   selectedAvatarId?: string;
@@ -20,7 +21,12 @@ export function AvatarSelector({ selectedAvatarId, selectedColor, onAvatarChange
   const [tempColor, setTempColor] = useState(selectedColor || '#3b82f6');
 
   const selectedAvatar: AvatarType | undefined = getAvatarById(tempAvatarId);
-  const avatarsInCategory = AVATAR_LIBRARY.filter(avatar => avatar.category === activeCategory);
+  // Weihnachts-Figuren nur vom 1. Dezember bis 6. Januar, ausser man hat sie schon
+  const weihnachten = istWeihnachtszeit();
+  const sichtbar = (a: AvatarType) =>
+    a.category !== 'weihnachten' || weihnachten || a.id === selectedAvatarId || (!!gesperrt && gesperrt(a.id) === null);
+  const kategorien = AVATAR_CATEGORIES.filter((k) => AVATAR_LIBRARY.some((a) => a.category === k.id && sichtbar(a)));
+  const avatarsInCategory = AVATAR_LIBRARY.filter(avatar => avatar.category === activeCategory && sichtbar(avatar));
 
   const handleSave = () => {
     onAvatarChange(tempAvatarId, tempColor);
@@ -41,7 +47,7 @@ export function AvatarSelector({ selectedAvatarId, selectedColor, onAvatarChange
 
       {/* Categories */}
       <div className="flex gap-2 flex-wrap justify-center">
-        {AVATAR_CATEGORIES.map((category) => (
+        {kategorien.map((category) => (
           <Button
             key={category.id}
             variant={activeCategory === category.id ? "default" : "outline"}

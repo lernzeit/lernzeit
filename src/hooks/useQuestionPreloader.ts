@@ -95,6 +95,7 @@ const resolveMultipleChoiceAnswerText = (
   if (typeof answer === 'string') {
     const trimmed = answer.trim();
     if (!trimmed) return null;
+    if (options.includes(trimmed)) return trimmed;
 
     const numericIndex = Number(trimmed);
     if (Number.isInteger(numericIndex) && options[numericIndex] !== undefined) {
@@ -254,6 +255,8 @@ interface UseQuestionPreloaderOptions {
   /** Lernplan aus Fotos: Der Server holt dazu den ausgelesenen Stoff. */
   learningPlanId?: string;
   difficultySequence?: ('easy' | 'medium' | 'hard')[];
+  /** Adventskalender: ein Fach je Aufgabe (Index = Aufgabe), sonst immer subject */
+  faecher?: string[];
   demoMode?: boolean;
   enabled?: boolean;
 }
@@ -275,6 +278,7 @@ export const useQuestionPreloader = ({
   topicHint,
   learningPlanId,
   difficultySequence,
+  faecher,
   demoMode = false,
   enabled = true,
 }: UseQuestionPreloaderOptions) => {
@@ -304,6 +308,8 @@ export const useQuestionPreloader = ({
   const learningPlanIdRef = useRef(learningPlanId);
   learningPlanIdRef.current = learningPlanId;
   const difficultySequenceRef = useRef(difficultySequence);
+  const faecherRef = useRef(faecher);
+  faecherRef.current = faecher;
   
   useEffect(() => {
     gradeRef.current = grade;
@@ -337,8 +343,10 @@ export const useQuestionPreloader = ({
   const generateSingleQuestion = useCallback(async (
     difficulty: 'easy' | 'medium' | 'hard',
     signal?: AbortSignal,
-    excludeTexts?: Set<string>
+    excludeTexts?: Set<string>,
+    fach?: string
   ): Promise<PreloadedQuestion | null> => {
+    const fachJetzt = fach || subjectRef.current;
     const attemptedExclusions = new Set(excludeTexts ?? []);
 
     for (let attempt = 0; attempt < ALTERNATIVE_ATTEMPTS; attempt++) {
@@ -352,7 +360,7 @@ export const useQuestionPreloader = ({
       const fetchPromise = supabase.functions.invoke('ai-question-generator', {
         body: {
           grade: gradeRef.current,
-          subject: subjectRef.current,
+          subject: fachJetzt,
           difficulty,
           // Mehr Kontext an die Edge-Function schicken, damit Cache-Filter und
           // KI-Prompt zuverlässig Wiederholungen vermeiden.
@@ -443,6 +451,7 @@ export const useQuestionPreloader = ({
       }
       
       const normalizedQuestion = normalizeQuestionPayload(data.question);
+      if (fach) normalizedQuestion.subject = fach;
       const telemetrySource = normalizeQuestionSource(
         data.question?.source ?? (data.question?.id ? 'api' : undefined)
       );
@@ -471,7 +480,7 @@ export const useQuestionPreloader = ({
       logQuestionSource(telemetrySource, normalizedQuestion.questionText, {
         demoMode: demoModeRef.current,
         grade: gradeRef.current,
-        subject: subjectRef.current,
+        subject: fachJetzt,
         difficulty
       });
 
@@ -592,7 +601,8 @@ export const useQuestionPreloader = ({
     const firstQuestion = await generateSingleQuestion(
       firstDifficulty,
       signal,
-      recentTexts
+      recentTexts,
+      faecherRef.current?.[0]
     );
     
     if (signal.aborted || !mountedRef.current) {
@@ -624,7 +634,7 @@ export const useQuestionPreloader = ({
           const batch = remainingIndices.slice(batchStart, batchStart + PARALLEL_BATCH_SIZE);
           const batchPromises = batch.map(i => {
             const difficulty = difficulties[i] || 'medium';
-            return generateSingleQuestion(difficulty, signal, recentTexts);
+            return generateSingleQuestion(difficulty, signal, recentTexts, faecherRef.current?.[i]);
           });
           
           const results = await Promise.allSettled(batchPromises);
@@ -652,8 +662,9 @@ export const useQuestionPreloader = ({
             const missingCount = batch.length - successfulQuestions.length;
             for (let replacementIndex = 0; replacementIndex < missingCount; replacementIndex++) {
               if (signal.aborted || !mountedRef.current) break;
-              const difficulty = difficulties[batch[replacementIndex] ?? batch[0]] || 'medium';
-              const replacement = await generateSingleQuestion(difficulty, signal, recentTexts);
+              const ersatzFuer = batch[replacementIndex] ?? batch[0];
+              const difficulty = difficulties[ersatzFuer] || 'medium';
+              const replacement = await generateSingleQuestion(difficulty, signal, recentTexts, faecherRef.current?.[ersatzFuer]);
               if (!replacement) continue;
               const replacementSig = questionSignature(replacement.questionText);
               if (!replacementSig || seenTextsRef.current.has(replacementSig)) continue;

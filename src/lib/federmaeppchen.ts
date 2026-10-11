@@ -14,6 +14,11 @@ export const AVATAR_PREIS: Record<string, number> = {
   pirate: 90, unicorn: 100,
   wizard: 120, superhero: 120,
   crown: 150,
+  // Weihnachten: nur vom 1. Dezember bis 6. Januar freizuschalten
+  rentier: 40, schneemann: 40, elf: 50, weihnachtsmann: 60, tannenbaum: 60,
 };
+
+/** Figuren, die es nur in der Weihnachtszeit gibt (wie avatar_saison()). Wer eine hat, behaelt sie. */
+export const WEIHNACHTS_FIGUREN = ['weihnachtsmann', 'rentier', 'schneemann', 'elf', 'tannenbaum'];
 
 export const avatarPreis = (id: string): number => AVATAR_PREIS[id] ?? 0;

@@ -176,6 +176,33 @@ export type Database = {
         }
         Relationships: []
       }
+      advent_tueren: {
+        Row: {
+          avatar: string | null
+          child_id: string
+          geoeffnet_am: string
+          jahr: number
+          sticker: string
+          tag: number
+        }
+        Insert: {
+          avatar?: string | null
+          child_id: string
+          geoeffnet_am?: string
+          jahr: number
+          sticker: string
+          tag: number
+        }
+        Update: {
+          avatar?: string | null
+          child_id?: string
+          geoeffnet_am?: string
+          jahr?: number
+          sticker?: string
+          tag?: number
+        }
+        Relationships: []
+      }
       admin_testkonten: {
         Row: {
           markiert_am: string
@@ -2865,6 +2892,10 @@ export type Database = {
       set_child_platform: {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined
+      }
+      advent_runde: {
+        Args: { p_gesamt: number; p_richtig: number; p_tag: number }
+        Returns: Json
       }
       mit_tinte_freischalten: { Args: { p_art: string; p_ding: string }; Returns: Json }
       runde_belohnen: { Args: { p_sitzung: string }; Returns: Json }

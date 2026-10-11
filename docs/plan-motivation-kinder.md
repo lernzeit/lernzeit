@@ -109,6 +109,13 @@ Kinder, die nach 14 Tagen noch lernen.
 Alles liegt im Web-Teil plus Datenbank – erreicht die Apps erst mit einem App-Build (Sammelliste
 in `docs/release-2.0.md`). Stufe 1 kann zusammen mit 2.0.2 kommen.
 
+## Nachträge (11.10.2026)
+
+- Faltanleitungen: Jede der 8 Faltfiguren lässt sich Schritt für Schritt nachfalten (Animation).
+- Weihnachtszeit 1.12.–6.1.: Mütze, Schnee, Weihnachts-Sticker und -Figuren, Adventskalender
+  (5 Aufgaben aus allen Fächern, ab 4 richtig ein Sticker, sonst keine Belohnung).
+  Der App-Build mit diesen Teilen muss vor dem 1. Dezember in den Stores sein.
+
 ## Offen (Betreiber)
 
 - Name: „Karl Klecks“ (pme Lernwelten) ist ein ähnliches Maskottchen – Namen vor dem Start prüfen

@@ -11,7 +11,8 @@ function zufall(saat: number) {
 }
 
 const zahlAus = (s: string) => Number(s.replace(/\./g, '').replace(',', '.').replace('−', '-'));
-const antwort = (f: GrundlagenFrage) => (typeof f.correctAnswer === 'string' ? f.correctAnswer : f.correctAnswer.value);
+const antwort = (f: GrundlagenFrage) =>
+  typeof f.correctAnswer === 'number' ? f.options![f.correctAnswer] : f.correctAnswer.value;
 
 function viele(klasse: number, s: Schwierigkeit, n = 400) {
   const r = zufall(klasse * 97 + s.length);
@@ -29,6 +30,7 @@ Deno.test('Grundlagen: jede Klasse 1–7 liefert gueltige Aufgaben', () => {
           assert(/^\d+$/.test(antwort(f)), `Klasse ${k}: Freitext-Antwort keine natuerliche Zahl: ${f.questionText} → ${antwort(f)}`);
         } else {
           assert(f.options && f.options.length >= 2, `zu wenig Optionen: ${f.questionText}`);
+          assert(typeof f.correctAnswer === 'number' && f.correctAnswer >= 0, `kein Index: ${f.questionText}`);
           assert(f.options!.includes(antwort(f)), `richtige Antwort fehlt: ${f.questionText}`);
           assertEquals(new Set(f.options).size, f.options!.length, `doppelte Optionen: ${f.options}`);
         }

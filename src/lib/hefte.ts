@@ -106,7 +106,33 @@ export const STICKER: Record<string, { zeichen: string; name: string }> = {
   kaktus: { zeichen: '🌵', name: 'Kaktus' },
   geschenk: { zeichen: '🎁', name: 'Geschenk' },
   schneemann: { zeichen: '⛄', name: 'Schneemann' },
+  // Weihnachten (11.10.2026): zum Aussuchen nur vom 1. Dezember bis 6. Januar,
+  // dazu einer hinter jedem Tuerchen des Adventskalenders (lib/weihnachten.ts).
+  schneeflocke: { zeichen: '❄️', name: 'Schneeflocke' },
+  plaetzchen: { zeichen: '🍪', name: 'Plätzchen' },
+  kerze: { zeichen: '🕯️', name: 'Kerze' },
+  socke: { zeichen: '🧦', name: 'Nikolaussocke' },
+  glocke: { zeichen: '🔔', name: 'Glocke' },
+  weihnachtsmann: { zeichen: '🎅', name: 'Weihnachtsmann' },
+  rentier: { zeichen: '🦌', name: 'Rentier' },
+  schleife: { zeichen: '🎀', name: 'Schleife' },
+  bonbon: { zeichen: '🍬', name: 'Bonbon' },
+  engel: { zeichen: '👼', name: 'Engel' },
+  schlitten: { zeichen: '🛷', name: 'Schlitten' },
+  weihnachtsbaum: { zeichen: '🎄', name: 'Weihnachtsbaum' },
 };
+
+/** Nur in der Weihnachtszeit zum Aussuchen (sticker_waehlen prueft das auch) */
+export const WEIHNACHTS_STICKER = [
+  'schneeflocke', 'plaetzchen', 'kerze', 'socke', 'glocke', 'weihnachtsmann',
+  'rentier', 'schleife', 'bonbon', 'engel', 'schlitten', 'weihnachtsbaum',
+];
+
+/** Sticker zum Aussuchen nach einer Runde mit allen Aufgaben richtig: in der Weihnachtszeit die weihnachtlichen zuerst */
+export function stickerZurWahl(weihnachtszeit: boolean): string[] {
+  const normal = Object.keys(STICKER).filter((id) => !WEIHNACHTS_STICKER.includes(id));
+  return weihnachtszeit ? [...WEIHNACHTS_STICKER, ...normal] : normal;
+}
 
 /** Hoechstens so viele Sticker passen auf ein Heft (wie in der Datenbank). */
 export const STICKER_PRO_HEFT = 3;

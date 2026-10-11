@@ -29,6 +29,9 @@ const LazyAdminDashboard = React.lazy(() =>
 import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { KlecksiGruss, TintenPille, HeuteFuerDieReise } from '@/components/child/KlecksiStart';
 import { HeftrandReise } from '@/components/child/HeftrandReise';
+import { Adventskalender } from '@/components/child/Adventskalender';
+import { useAdvent } from '@/hooks/useAdvent';
+import { adventFaecher, berlinerTag } from '@/lib/weihnachten';
 import { Federmaeppchen } from '@/components/child/Federmaeppchen';
 import { Urkunden, UrkundenKachel } from '@/components/child/Urkunden';
 import { useTinte } from '@/hooks/useTinte';
@@ -71,9 +74,11 @@ interface UserProfileProps {
   onStartSubject?: (grade: number, subject: FachId, topicHint?: string, planId?: string) => void;
   /** Berichtigung: Aufgaben aus der Fehlerkiste eines Fachs */
   onStartBerichtigung?: (grade: number, subject: string, aufgaben: ReviewItem[]) => void;
+  /** Adventskalender: Tuerchen, 5 Faecher und alle sichtbaren Faecher fuer weitere Versuche */
+  onStartAdvent?: (grade: number, tag: number, faecher: string[], auswahl: string[]) => void;
 }
 
-export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery, onStartSubject, onStartBerichtigung }: UserProfileProps) {
+export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery, onStartSubject, onStartBerichtigung, onStartAdvent }: UserProfileProps) {
   const [profile, setProfile] = useState<any>(null);
   useSeitenanfang();
   const [loading, setLoading] = useState(true);
@@ -133,6 +138,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const reise = useReise(kindId);
   const fehlerkiste = useBerichtigung(kindId, profile?.grade || undefined);
   const wochenTage = useWochenziel(kindId);
+  const advent = useAdvent(kindId);
   const [kindAnsicht, setKindAnsicht] = useState<'start' | 'federmaeppchen' | 'urkunden'>('start');
 
   // Use streak hook for children
@@ -575,6 +581,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
     const fachName = (fach: string) => FAECHER.find((f) => f.id === fach)?.kurz ?? fach;
     const plan = lernplaene[0];
     const schwerpunkt = hefte.hefte.find((h) => h.wichtig);
+    const heuteTag = berlinerTag();
     const klecksiLage = {
       name: profile?.name || undefined,
       felderGemalt: reise.aktuell.felder.length,
@@ -583,6 +590,9 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
       berichtigung: fehlerkiste.faellig,
       lernplanFach: plan ? fachName(plan.subject) : undefined,
       schwerpunktFach: schwerpunkt ? fachName(schwerpunkt.fach) : undefined,
+      weihnachten: advent.zeit
+        ? { monat: heuteTag.monat, tag: heuteTag.tag, tuerenZu: advent.geladen ? advent.tuerenZu : 0 }
+        : undefined,
     };
     const berichtigungStarten = async () => {
       const r = await fehlerkiste.runde();
@@ -656,6 +666,19 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
               onStartSubject ? onStartSubject(klasse, fach, topicHint, planId) : onStartGame(klasse)
             }
           />
+
+          {/* Adventskalender (1. Dezember bis 6. Januar) */}
+          {advent.zeit && advent.geladen && onStartAdvent && (
+            <Adventskalender
+              offen={advent.offen}
+              offenBis={advent.offenBis}
+              heute={heuteTag.monat === 12 && heuteTag.tag <= 24 ? heuteTag.tag : null}
+              onTuer={(tag) => {
+                const auswahl = hefte.hefte.map((h) => h.fach);
+                onStartAdvent(klasse, tag, adventFaecher(auswahl), auswahl);
+              }}
+            />
+          )}
 
           {/* Was heute doppelt zaehlt und was in der Berichtigung wartet */}
           <HeuteFuerDieReise

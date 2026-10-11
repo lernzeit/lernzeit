@@ -10,6 +10,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { GRUSS1, GRUSS2, JUBEL1, JUBEL2, RUHE, RUHE2 } from './formen';
 import { cn } from '@/lib/utils';
+import { istWeihnachtszeit } from '@/lib/weihnachten';
 
 export type KlecksiStimmung = 'froh' | 'jubel' | 'denkt' | 'mut';
 
@@ -21,6 +22,8 @@ export interface KlecksiProps {
   gruessen?: boolean;
   /** Vorlesbarer Name; ohne ist er nur Schmuck */
   label?: string;
+  /** Weihnachtsmuetze; ohne Angabe vom 1. Dezember bis 6. Januar */
+  muetze?: boolean;
   className?: string;
 }
 
@@ -43,6 +46,18 @@ function Wangen({ y = 73 }: { y?: number }) {
       <circle cx="40" cy={y} r="4.6" fill={WANGE} opacity="0.75" />
       <circle cx="80" cy={y} r="4.6" fill={WANGE} opacity="0.75" />
     </>
+  );
+}
+
+/** Weihnachtsmuetze, sitzt auf dem Kopf und atmet mit */
+function Muetze() {
+  return (
+    <g>
+      <path d="M41 31 C45 17 57 8 71 8.5 C82 9 90 15 95 24 C89 20.5 83 20.5 80 23.5 C81 26 81.5 28.5 81.5 31 Z" fill="#d4483b" />
+      <path d="M71 8.5 C82 9 90 15 95 24 C91 21.8 87.5 21 84.5 21.4 C82 15 77 10.5 71 8.5 Z" fill="#b83a2f" />
+      <rect x="37" y="26.5" width="48" height="10" rx="5" fill="#fff" transform="rotate(-5 61 31.5)" />
+      <circle cx="96" cy="25" r="5.6" fill="#fff" />
+    </g>
   );
 }
 
@@ -103,12 +118,13 @@ function Gesicht({ stimmung }: { stimmung: KlecksiStimmung }) {
 }
 
 export const Klecksi = forwardRef<KlecksiHandle, KlecksiProps>(function Klecksi(
-  { groesse = 104, stimmung = 'froh', gruessen = false, label, className },
+  { groesse = 104, stimmung = 'froh', gruessen = false, label, muetze, className },
   ref,
 ) {
   const grussRef = useRef<SVGAnimateElement | null>(null);
   const [sprung, setSprung] = useState(0);
   const [ruhig] = useState(bewegungAus);
+  const mitMuetze = muetze ?? istWeihnachtszeit();
 
   const winken = () => {
     if (ruhig) return;
@@ -176,6 +192,7 @@ export const Klecksi = forwardRef<KlecksiHandle, KlecksiProps>(function Klecksi(
         <ellipse cx="44" cy="44" rx="6" ry="3.4" transform="rotate(-30 44 44)" fill="#fff" opacity="0.4" />
         <circle cx="37" cy="52" r="1.8" fill="#fff" opacity="0.4" />
         <Gesicht stimmung={stimmung} />
+        {mitMuetze && <Muetze />}
       </g>
       {stimmung === 'denkt' && (
         <g className="klecksi-frage">

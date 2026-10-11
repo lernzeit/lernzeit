@@ -25,12 +25,37 @@ export interface KlecksiLage {
   berichtigung: number;
   lernplanFach?: string;
   schwerpunktFach?: string;
+  /** Nur in der Weihnachtszeit (lib/weihnachten.ts) */
+  weihnachten?: {
+    /** Berliner Datum */
+    monat: number;
+    tag: number;
+    /** Tuerchen, die heute aufgehen koennen und noch zu sind */
+    tuerenZu: number;
+  };
+}
+
+/** Ein Satz zur Weihnachtszeit, sonst null */
+export function weihnachtsSatz(w: NonNullable<KlecksiLage['weihnachten']>): string | null {
+  if (w.monat === 12 && w.tag < 23) return `Noch ${24 - w.tag} Tage bis Heiligabend!`;
+  if (w.monat === 12 && w.tag === 23) return 'Morgen ist Heiligabend!';
+  if (w.monat === 12 && w.tag <= 26) return 'Frohe Weihnachten!';
+  if (w.monat === 1) return 'Frohes neues Jahr!';
+  if (w.monat === 12) return 'Schöne Weihnachtsferien!';
+  return null;
 }
 
 export function startSaetze(l: KlecksiLage): string[] {
   const saetze: string[] = [];
   const offen = FELDER_JE_SEITE - l.felderGemalt;
   saetze.push(l.name ? `Hallo ${l.name}! Malen wir weiter?` : 'Hallo! Malen wir weiter?');
+  if (l.weihnachten) {
+    const zu = l.weihnachten.tuerenZu;
+    if (zu === 1) saetze.push('Ein Türchen im Adventskalender wartet auf dich.');
+    else if (zu > 1) saetze.push(`${zu} Türchen im Adventskalender warten auf dich.`);
+    const satz = weihnachtsSatz(l.weihnachten);
+    if (satz) saetze.push(satz);
+  }
   saetze.push(
     offen === 1
       ? `Noch 1 Feld, dann falte ich dir ${FALTUNG_MIT_ARTIKEL[l.faltung]}.`

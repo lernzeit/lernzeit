@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Check, UserPlus, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sticker } from '@/components/child/Hefte';
-import { STICKER, farbeVon, type FachId } from '@/lib/hefte';
+import { STICKER, farbeVon, stickerZurWahl, type FachId } from '@/lib/hefte';
+import { istWeihnachtszeit } from '@/lib/weihnachten';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { Faltung } from '@/components/child/Faltung';
 import { FaltAnleitung } from '@/components/child/FaltAnleitung';
@@ -55,8 +56,10 @@ export function GameCompletionScreen({
 }: GameCompletionScreenProps) {
   const [speichert, setSpeichert] = useState<string | null>(null);
   // Noch fehlende Sticker zuerst; hat das Kind alle, darf es jeden nochmal nehmen
-  const fehlend = Object.keys(STICKER).filter((id) => !stickerWahl?.includes(id));
-  const angebot = fehlend.length ? fehlend : Object.keys(STICKER);
+  // In der Weihnachtszeit die weihnachtlichen zuerst, sonst ohne sie
+  const zurWahl = stickerZurWahl(istWeihnachtszeit());
+  const fehlend = zurWahl.filter((id) => !stickerWahl?.includes(id));
+  const angebot = fehlend.length ? fehlend : zurWahl;
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
   const perfectSessionBonusSeconds = isStreakRecovery ? 0 : perfectSessionBonus * 60;

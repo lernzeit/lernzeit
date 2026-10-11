@@ -44,7 +44,7 @@ const Datenschutz = () => (
       <ul>
         <li>gelöste Aufgaben, Antworten, Lernfortschritt und Statistiken</li>
         <li>verdiente, angefragte und freigegebene Bildschirmzeit, Regeln der Eltern</li>
-        <li>Lerntage (Lernpflanze), Sticker und gestaltete Hefte, Tintentropfen (Spielpunkte ohne Geldwert), Fortschritt der Lernreise und freigeschaltete Figuren</li>
+        <li>Lerntage (Lernpflanze), Sticker und gestaltete Hefte, Tintentropfen (Spielpunkte ohne Geldwert), Fortschritt der Lernreise, freigeschaltete Figuren und geöffnete Türchen im Adventskalender</li>
         <li>falsch beantwortete Aufgaben, damit das Kind sie später berichtigen kann</li>
         <li>Meldungen zu fehlerhaften Aufgaben und Bewertungen von Aufgaben</li>
         <li>Eingaben an den KI-Tutor und für den KI-Lernplan</li>

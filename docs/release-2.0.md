@@ -52,6 +52,10 @@ Seit dem Android-Build 2.0.1 (Stand `9d0987b`) auf `main`, wirkt in den Apps ers
 - Klecksi und die Heftrand-Reise (11.10.2026): Kind-Start mit Klecksi, Tinte, Reise,
   Berichtigung, Federmäppchen, Urkunden, Wochenziel; Eltern-Bonus je Seite
   (`docs/plan-motivation-kinder.md`). Lernplan-Start (`gestartet_am`) wird jetzt wirklich gesetzt.
+- Tintenkiller statt Radiergummi; Faltanleitungen zum Nachfalten (8 Figuren, animiert).
+- Weihnachtszeit (1.12.–6.1.) und Adventskalender: Klecksi mit Mütze, Schnee, Weihnachts-Sticker
+  und -Figuren, 24 Türchen mit je 5 Aufgaben. Muss vor dem 1. Dezember in den Stores sein.
+- Auswahlfragen: Text-Antwort wie „3“ wird nicht mehr als Option Nr. 3 gelesen.
 
 Android zusätzlich: `ndk { debugSymbolLevel 'SYMBOL_TABLE' }`; ProGuard-Regeln eingrenzen
 (Frist Feb. 2027, siehe oben). Vor dem Build: `IOS_MARKETING_VERSION` in `codemagic.yaml` und
