@@ -136,9 +136,9 @@ try {
     const text = await page.locator('body').innerText();
     const frage = Object.keys(ANTWORT).find((f) => text.includes(f));
     if (!frage) throw new Error(`Unbekannte Frage bei Nummer ${n}.\n${text}`);
-    // Erst lesen und rechnen wie ein Kind: unter 3 Sekunden zeigt die App
-    // jedes Mal "Blitzschnell!" mit Konfetti, das wirkt im Video unecht.
-    await page.waitForTimeout(2600);
+    // Kurz lesen und rechnen wie ein Kind (Wunsch des Betreibers 11.10.2026:
+    // 1,5 s, 1 s, 2 s). Unter 3 Sekunden zeigt die App "Blitzschnell!".
+    await page.waitForTimeout([1500, 1000, 2000][n - 1]);
     const ziffern = page.getByRole('group', { name: 'Ziffernfeld' });
     if (await ziffern.count()) {
       for (const z of ANTWORT[frage]) {
