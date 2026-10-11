@@ -13,6 +13,7 @@ import {
   type QuestionCategory,
 } from "../_shared/question-prompt.ts";
 import { cleanHint, hatCodeReste, parseChoiceOptions } from '../_shared/choice-options.ts';
+import { grundlagenAnteil, grundlagenFrage } from '../_shared/grundlagen-mathe.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -335,6 +336,35 @@ serve(async (req) => {
 
     const SUPABASE_URL_EARLY = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SRK_EARLY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    // Grundlagen-Aufgaben (11.10.2026): Ein Teil der Mathe-Fragen kommt ohne KI
+    // als kurze Ein-Schritt-Uebung (Runden, Vorgaenger/Nachfolger, Stellenwerte,
+    // Einmaleins …). Nicht bei Lernplaenen und nicht, wenn ein Fragetyp
+    // verlangt ist, den sie nicht liefern.
+    if (subject === 'math' && !topicHint && !forceFresh
+        && (!questionType || questionType === 'FREETEXT' || questionType === 'MULTIPLE_CHOICE')
+        && Math.random() < grundlagenAnteil(sourceGrade)) {
+      const g = grundlagenFrage(sourceGrade, difficulty, excludeTexts);
+      if (g && (!questionType || g.questionType === questionType)) {
+        console.log(`🧮 Grundlagen (${g.thema}): ${g.questionText}`);
+        return new Response(JSON.stringify({
+          success: true,
+          question: {
+            id: crypto.randomUUID(),
+            grade: sourceGrade,
+            subject,
+            difficulty,
+            questionText: g.questionText,
+            questionType: g.questionType,
+            correctAnswer: g.correctAnswer,
+            options: g.options,
+            hint: g.hint,
+            createdAt: new Date().toISOString(),
+            source: 'grundlagen',
+          },
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' } });
+      }
+    }
 
     // Kategorie einmal pro Anfrage ziehen — sie steuert sowohl die Cache-Auswahl
     // als auch den Prompt, damit das konfigurierte Verhältnis in beiden Pfaden gilt.
