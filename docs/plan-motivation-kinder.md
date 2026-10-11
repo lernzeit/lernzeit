@@ -4,23 +4,28 @@ Anstoß: Rechen-Inseln (Maskottchen, Münzen und Avatare, Fehlerkiste, Reise dur
 Die Seite war aus der Claude-Umgebung nicht erreichbar; der Plan beruht auf der Beschreibung
 des Betreibers.
 
-## Thema (entschieden 11.10.2026): „Klecks und die Tintenkarte“
+## Thema (11.10.2026): „Klecks und das Schulhaus“
 
 Eine Welt aus dem Schulheft statt fremder Inseln. Klecks, ein Tintenklecks, ist aus dem Füller
-entwischt und malt in den Heften des Kindes eine Welt fürs Schuljahr; dafür braucht er Tinte.
+entwischt und begleitet das Kind durchs Schuljahr – Raum für Raum durch sein Schulhaus, vom
+Keller bis aufs Dach, wo das Zeugnis wartet. Für neue Figuren braucht er Tinte.
 
 | Baustein | Name |
 |---|---|
 | Maskottchen | **Klecks** (animiert: atmen, blinzeln, umsehen, winken, Tropfen; Stimmungen freut sich / denkt nach / macht Mut) |
 | Spielgeld | **Tintentropfen** (statt Sterne/Münzen) |
-| Reise durchs Schuljahr | **Tintenkarte**: jedes Thema ein Ort (z. B. Minus-Keller, Prozent-Pizzeria), „ab November“ |
-| Fortschritt je Ort | **3 Stempel** wie vom Lehrer |
+| Reise durchs Schuljahr | **Schulhaus**: jedes Thema ein Raum mit Türschild (z. B. Minus-Keller, Dreisatz-Werkstatt, Prozent-Mensa, Gleichungs-Labor); Stockwerke = Abschnitte zwischen den Ferien (Keller bis Herbstferien … Dach = Zeugnis); Ferien = „Klecks macht Pause“ |
+| Fortschritt je Raum | **3 Stempel** aufs Türschild |
 | Fehlerkiste | **Berichtigung**: Kleckse wegwischen |
-| Sammlung | **Federmäppchen**: Figuren (Avatare) und Abzeichen |
+| Sammlung | **Federmäppchen**: Figuren (Avatare) gegen Tinte |
+| Erfolge | **Urkunden**: die bestehenden Erfolge mit Bonus-Minuten und Langfristzielen, von Klecks überreicht; „Fast geschafft“ und „Große Ziele“ mit Fortschritt |
 
-Nicht übernommen: „Weg zur 1“ (Notenversprechen), zusätzliches Level/XP. Abzeichen
-„Mitternachts-Gelehrter“ und „Nachteule“ entfernen (belohnen Lernen spät nachts).
-Entwurf: Artefakt „Klecks und die Tintenkarte“ (claude.ai).
+Nicht übernommen: „Weg zur 1“ (Notenversprechen), zusätzliches Level/XP, eigene Abzeichen
+(die bestehenden Erfolge bleiben, Wunsch des Betreibers). Erfolge „Mitternachts-Gelehrter“
+(Lernen 0–4 Uhr) und „Nachteule“ (nach 21 bzw. vor 6 Uhr) entfernen: Keine Belohnung für
+Handynutzung spät abends oder früh morgens. „Zeitreisender“ (verschiedene Uhrzeiten) bleibt.
+Entwurf: Artefakt „Klecks und die Tintenkarte“ (claude.ai), Bildschirme Kind-Start, Schulhaus,
+Urkunden, Federmäppchen, Klecks.
 
 ## Ausgangslage
 
@@ -35,7 +40,7 @@ Entwurf: Artefakt „Klecks und die Tintenkarte“ (claude.ai).
 
 1. **Bildschirmzeit bleibt die Belohnung.** 30 Sek. pro richtiger Aufgabe, Eltern genehmigen –
    unverändert.
-2. **Sterne sind Spielgeld, keine Zeit.** Eine zweite Währung nur für die Spielwelt (Avatare,
+2. **Tinte ist Spielgeld, keine Zeit.** Eine zweite Währung nur für die Spielwelt (Avatare,
    Hefte, Rahmen). Nie in Bildschirmzeit tauschbar, nie mit Geld kaufbar, keine Zufallsbelohnungen
    (Kinder-App, Store-Regeln für Kinder, kein Glücksspiel-Muster).
 3. **Kein Druck.** Keine Ranglisten mit anderen Kindern, keine verlierbaren Vorräte, keine
