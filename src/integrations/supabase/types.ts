@@ -597,6 +597,7 @@ export type Database = {
           screen_time_auto_release: boolean
           screen_time_base_minutes: number
           ruhezeit_bis: number | null
+          reise_bonus_minuten: number
           ruhezeit_von: number | null
           screen_time_managed: boolean
           screen_time_unlock_mode: string
@@ -622,6 +623,7 @@ export type Database = {
           screen_time_auto_release?: boolean
           screen_time_base_minutes?: number
           ruhezeit_bis?: number | null
+          reise_bonus_minuten?: number
           ruhezeit_von?: number | null
           screen_time_managed?: boolean
           screen_time_unlock_mode?: string
@@ -647,6 +649,7 @@ export type Database = {
           screen_time_auto_release?: boolean
           screen_time_base_minutes?: number
           ruhezeit_bis?: number | null
+          reise_bonus_minuten?: number
           ruhezeit_von?: number | null
           screen_time_managed?: boolean
           screen_time_unlock_mode?: string
@@ -1102,6 +1105,105 @@ export type Database = {
         }
         Relationships: []
       }
+      kind_freigeschaltet: {
+        Row: {
+          art: string
+          child_id: string
+          created_at: string
+          ding: string
+        }
+        Insert: {
+          art: string
+          child_id: string
+          created_at?: string
+          ding: string
+        }
+        Update: {
+          art?: string
+          child_id?: string
+          created_at?: string
+          ding?: string
+        }
+        Relationships: []
+      }
+      kind_reise_felder: {
+        Row: {
+          child_id: string
+          created_at: string
+          fach: string
+          feld: number
+          quelle: string
+          seite: number
+          sitzung_id: string | null
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          fach: string
+          feld: number
+          quelle: string
+          seite: number
+          sitzung_id?: string | null
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          fach?: string
+          feld?: number
+          quelle?: string
+          seite?: number
+          sitzung_id?: string | null
+        }
+        Relationships: []
+      }
+      kind_reise_seiten: {
+        Row: {
+          bonus_minuten: number
+          bunt: boolean
+          child_id: string
+          faltung: string
+          fertig_am: string
+          seite: number
+        }
+        Insert: {
+          bonus_minuten?: number
+          bunt?: boolean
+          child_id: string
+          faltung: string
+          fertig_am?: string
+          seite: number
+        }
+        Update: {
+          bonus_minuten?: number
+          bunt?: boolean
+          child_id?: string
+          faltung?: string
+          fertig_am?: string
+          seite?: number
+        }
+        Relationships: []
+      }
+      kind_runden_belohnung: {
+        Row: {
+          child_id: string
+          created_at: string
+          ergebnis: Json
+          sitzung_id: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          ergebnis: Json
+          sitzung_id: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          ergebnis?: Json
+          sitzung_id?: string
+        }
+        Relationships: []
+      }
       kind_sticker: {
         Row: {
           child_id: string
@@ -1126,6 +1228,36 @@ export type Database = {
           quelle?: string
           sitzung_id?: string | null
           sticker?: string
+        }
+        Relationships: []
+      }
+      kind_tinte: {
+        Row: {
+          bezug: string | null
+          child_id: string
+          created_at: string
+          grund: string
+          id: string
+          menge: number
+          sitzung_id: string | null
+        }
+        Insert: {
+          bezug?: string | null
+          child_id: string
+          created_at?: string
+          grund: string
+          id?: string
+          menge: number
+          sitzung_id?: string | null
+        }
+        Update: {
+          bezug?: string | null
+          child_id?: string
+          created_at?: string
+          grund?: string
+          id?: string
+          menge?: number
+          sitzung_id?: string | null
         }
         Relationships: []
       }
@@ -2503,6 +2635,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      avatar_preis: { Args: { p_avatar: string }; Returns: number }
       cap_referral_grant: {
         Args: { p_requested: number; p_user_id: string }
         Returns: number
@@ -2733,6 +2866,8 @@ export type Database = {
         Args: { p_child_id: string; p_platform: string }
         Returns: undefined
       }
+      mit_tinte_freischalten: { Args: { p_art: string; p_ding: string }; Returns: Json }
+      runde_belohnen: { Args: { p_sitzung: string }; Returns: Json }
       set_own_platform: { Args: { p_platform: string }; Returns: undefined }
       set_screen_time_managed: {
         Args: { ist_verwaltet: boolean }
@@ -2746,6 +2881,7 @@ export type Database = {
       sticker_sitzung: { Args: never; Returns: string }
       sticker_vergeben: { Args: never; Returns: string }
       sticker_waehlen: { Args: { p_sticker: string }; Returns: string }
+      tinte_stand: { Args: never; Returns: number }
       trigger_grade_upgrade: { Args: never; Returns: Json }
       update_achievement_progress:
         | {

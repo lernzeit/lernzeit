@@ -1,0 +1,65 @@
+/*
+ * Feste, gepruefte Saetze von Klecksi (keine KI-Texte an Kinder). Ein Satz,
+ * nie mehr; Antippen zeigt den naechsten.
+ */
+import { BUNT_AB_FAECHERN, FELDER_JE_SEITE, type Faltung } from './reise';
+import type { KlecksiStimmung } from '@/components/klecksi/Klecksi';
+
+export const FALTUNG_MIT_ARTIKEL: Record<Faltung, string> = {
+  papierflieger: 'einen Papierflieger',
+  frosch: 'einen Frosch',
+  himmel_hoelle: 'ein Himmel & Hölle',
+  papierschiff: 'ein Papierschiff',
+  kranich: 'einen Kranich',
+  fisch: 'einen Fisch',
+  hut: 'einen Papierhut',
+  stern: 'einen Stern',
+  herz: 'ein Herz',
+  becher: 'einen Becher',
+};
+
+export interface KlecksiLage {
+  name?: string;
+  /** Felder auf der aktuellen Seite */
+  felderGemalt: number;
+  faltung: Faltung;
+  faecherAufSeite: number;
+  berichtigung: number;
+  lernplanFach?: string;
+  schwerpunktFach?: string;
+}
+
+export function startSaetze(l: KlecksiLage): string[] {
+  const saetze: string[] = [];
+  const offen = FELDER_JE_SEITE - l.felderGemalt;
+  saetze.push(l.name ? `Hallo ${l.name}! Malen wir weiter?` : 'Hallo! Malen wir weiter?');
+  saetze.push(
+    offen === 1
+      ? `Noch 1 Feld, dann falte ich dir ${FALTUNG_MIT_ARTIKEL[l.faltung]}.`
+      : `Noch ${offen} Felder, dann falte ich dir ${FALTUNG_MIT_ARTIKEL[l.faltung]}.`,
+  );
+  const fehlen = BUNT_AB_FAECHERN - l.faecherAufSeite;
+  if (l.felderGemalt > 0 && fehlen > 0) {
+    saetze.push(fehlen === 1 ? 'Noch ein Fach, dann wird die Seite bunt!' : `Noch ${fehlen} Fächer, dann wird die Seite bunt!`);
+  }
+  if (l.lernplanFach) saetze.push(`Dein Lernplan in ${l.lernplanFach} zählt doppelt.`);
+  else if (l.schwerpunktFach) saetze.push(`${l.schwerpunktFach} zählt bei dir doppelt.`);
+  if (l.berichtigung === 1) saetze.push('Ein kleiner Klecks wartet in der Berichtigung.');
+  else if (l.berichtigung > 1) saetze.push(`${l.berichtigung} kleine Kleckse warten in der Berichtigung.`);
+  return saetze;
+}
+
+export function rundenSatz(o: {
+  richtig: number;
+  gesamt: number;
+  geschafft: boolean;
+  faltung?: Faltung | null;
+  berichtigung?: boolean;
+}): { satz: string; stimmung: KlecksiStimmung } {
+  if (o.faltung) return { satz: `Seite fertig! Ich falte dir ${FALTUNG_MIT_ARTIKEL[o.faltung]}.`, stimmung: 'jubel' };
+  if (o.gesamt > 0 && o.richtig === o.gesamt) {
+    return { satz: o.berichtigung ? 'Alles berichtigt! Saubere Seite!' : `${o.richtig} von ${o.gesamt}! Saubere Seite!`, stimmung: 'jubel' };
+  }
+  if (o.geschafft) return { satz: 'Prima! Ich male dein Feld aus.', stimmung: 'froh' };
+  return { satz: 'Fehler sind nur Kleckse. Die wischen wir in der Berichtigung weg!', stimmung: 'mut' };
+}

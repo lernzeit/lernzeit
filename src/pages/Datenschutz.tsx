@@ -12,7 +12,7 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
  * Kanzlei. Offene Punkte: docs/rechtstexte-pruefung.md.
  */
 const Datenschutz = () => (
-  <RechtsSeite titel="Datenschutzerklärung" stand="6. Oktober 2026">
+  <RechtsSeite titel="Datenschutzerklärung" stand="11. Oktober 2026">
     <Seo
       title="Datenschutz – LernZeit"
       description="Datenschutzerklärung von LernZeit: welche Daten von Eltern und Kindern wir verarbeiten, wozu, auf welcher Rechtsgrundlage und welche Rechte Sie haben."
@@ -44,7 +44,8 @@ const Datenschutz = () => (
       <ul>
         <li>gelöste Aufgaben, Antworten, Lernfortschritt und Statistiken</li>
         <li>verdiente, angefragte und freigegebene Bildschirmzeit, Regeln der Eltern</li>
-        <li>Lerntage (Lernpflanze), Sticker und gestaltete Hefte</li>
+        <li>Lerntage (Lernpflanze), Sticker und gestaltete Hefte, Tintentropfen (Spielpunkte ohne Geldwert), Fortschritt der Lernreise und freigeschaltete Figuren</li>
+        <li>falsch beantwortete Aufgaben, damit das Kind sie später berichtigen kann</li>
         <li>Meldungen zu fehlerhaften Aufgaben und Bewertungen von Aufgaben</li>
         <li>Eingaben an den KI-Tutor und für den KI-Lernplan</li>
         <li>

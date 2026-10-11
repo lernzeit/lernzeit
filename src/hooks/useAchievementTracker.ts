@@ -156,9 +156,6 @@ export function useAchievementTracker(userId?: string) {
 
       const category = mapSubjectToCategory(data.category);
       const isWeekend = [0, 6].includes(new Date().getDay());
-      const currentHour = new Date().getHours();
-      const isNightOwl = currentHour >= 21 || currentHour < 6;
-      const isMidnightScholar = currentHour >= 0 && currentHour < 4;
       const avgSecondsPerQuestion = data.timeSpentSeconds / data.totalQuestions;
       const isFastSession = avgSecondsPerQuestion < 20;
       const isMarathonSession = data.totalQuestions >= 20;
@@ -269,25 +266,8 @@ export function useAchievementTracker(userId?: string) {
         trackedTypes.push('general:accuracy_master');
       }
 
-      // 9. Track night_owl (playing after 21:00 or before 6:00)
-      if (isNightOwl) {
-        console.log('🦉 Tracking night_owl');
-        const nightAchievements = await updateProgress('general', 'night_owl', 1);
-        if (nightAchievements?.length) {
-          allNewAchievements.push(...nightAchievements);
-        }
-        trackedTypes.push('general:night_owl');
-      }
-
-      // 10. Track midnight_scholar (playing between midnight and 4 AM)
-      if (isMidnightScholar) {
-        console.log('🌙 Tracking midnight_scholar');
-        const midnightAchievements = await updateProgress('general', 'midnight_scholar', 1);
-        if (midnightAchievements?.length) {
-          allNewAchievements.push(...midnightAchievements);
-        }
-        trackedTypes.push('general:midnight_scholar');
-      }
+      // 9./10. Nachteule und Mitternachts-Gelehrter entfernt (11.10.2026):
+      // keine Belohnung fuer Handynutzung spaet abends oder frueh morgens.
 
       // 11. Track weekend_warrior (playing on weekends)
       if (isWeekend) {

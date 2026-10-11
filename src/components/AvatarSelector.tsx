@@ -10,9 +10,11 @@ interface AvatarSelectorProps {
   selectedColor?: string;
   onAvatarChange: (avatarId: string, color: string) => void;
   onClose?: () => void;
+  /** Kinder: Preis in Tinte, wenn die Figur noch nicht freigeschaltet ist (Federmaeppchen) */
+  gesperrt?: (avatarId: string) => number | null;
 }
 
-export function AvatarSelector({ selectedAvatarId, selectedColor, onAvatarChange, onClose }: AvatarSelectorProps) {
+export function AvatarSelector({ selectedAvatarId, selectedColor, onAvatarChange, onClose, gesperrt }: AvatarSelectorProps) {
   const [activeCategory, setActiveCategory] = useState('animals');
   const [tempAvatarId, setTempAvatarId] = useState(selectedAvatarId || 'cat');
   const [tempColor, setTempColor] = useState(selectedColor || '#3b82f6');
@@ -57,27 +59,32 @@ export function AvatarSelector({ selectedAvatarId, selectedColor, onAvatarChange
       <Card>
         <CardContent className="p-4">
           <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-            {avatarsInCategory.map((avatar) => (
+            {avatarsInCategory.map((avatar) => {
+              const preis = avatar.id !== selectedAvatarId ? gesperrt?.(avatar.id) ?? null : null;
+              return (
               <button
                 key={avatar.id}
+                disabled={preis !== null}
+                aria-label={preis !== null ? `${avatar.name}, im Federmäppchen für ${preis} Tinte` : avatar.name}
                 onClick={() => {
                   setTempAvatarId(avatar.id);
                   setTempColor(avatar.colors[0]); // Set default color
                 }}
                 className={`
-                  p-3 rounded-lg border-2 transition-all hover:scale-105
+                  p-3 rounded-lg border-2 transition-all hover:scale-105 disabled:hover:scale-100
                   ${tempAvatarId === avatar.id 
                     ? 'border-primary bg-primary/10' 
                     : 'border-border hover:border-primary/50'
                   }
                 `}
               >
-                <div className="text-2xl mb-1">{avatar.emoji}</div>
+                <div className={`text-2xl mb-1 ${preis !== null ? 'opacity-40' : ''}`}>{avatar.emoji}</div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {avatar.name}
+                  {preis !== null ? `${preis} Tinte` : avatar.name}
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

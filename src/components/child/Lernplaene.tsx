@@ -88,7 +88,7 @@ export function LernplanListe({
         <Sparkles className="h-5 w-5 text-primary" />
         {titel}
       </h2>
-      <p className="mb-3 text-sm text-muted-foreground">Von deinen Eltern für eine Klassenarbeit. Tipp drauf und übe den heutigen Schwerpunkt.</p>
+      <p className="mb-3 text-sm text-muted-foreground">Von deinen Eltern für eine Klassenarbeit. Zählt doppelt auf deiner Reise.</p>
       <ul className="space-y-3">
         {plaene.map((plan) => {
           const fach = plan.subject as FachId;
@@ -101,7 +101,9 @@ export function LernplanListe({
                 type="button"
                 onClick={() => {
                   // Erstes Oeffnen = Tag 1 des Plans (einmalig, s. lernplan_starten()).
-                  if (!plan.gestartet_am) void supabase.rpc('lernplan_starten', { p_plan_id: plan.id });
+                  // .then() noetig: ohne Abwarten schickt Supabase die Anfrage nie ab
+                  // (bis 11.10.2026 blieb gestartet_am deshalb leer).
+                  if (!plan.gestartet_am) supabase.rpc('lernplan_starten', { p_plan_id: plan.id }).then(() => undefined);
                   onStart(fach, s.topicHint, plan.id);
                 }}
                 className="flex w-full items-stretch overflow-hidden rounded-[20px] bg-card text-left ring-1 ring-inset ring-karo transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -146,7 +148,8 @@ export function LernplanListe({
                     </span>
                   </span>
                 </span>
-                <span className="grid place-items-center pr-3 text-muted-foreground">
+                <span className="flex flex-col items-end justify-between py-3 pr-3 text-muted-foreground">
+                  <span className="grid h-6 min-w-9 place-items-center rounded-full bg-[#fff4c9] px-1.5 text-xs font-extrabold text-tinte ring-2 ring-inset ring-tinte" aria-label="zählt doppelt">×2</span>
                   <ChevronRight className="h-5 w-5" />
                 </span>
               </button>

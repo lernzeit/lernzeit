@@ -28,7 +28,9 @@ import { InGameAnimation, type AnimationType } from '@/components/game/InGameAni
 import { AntwortKaestchen, KaestchenFortschritt, VerdienteZeit, Ziffernfeld, istZahlAntwort } from '@/components/game/heft/Heft';
 import { StreakAnimation } from '@/components/game/StreakAnimation';
 import { useDailyChallenge } from '@/hooks/useDailyChallenge';
-import { useReviewQueue } from '@/hooks/useReviewQueue';
+import { useReviewQueue, type ReviewItem } from '@/hooks/useReviewQueue';
+import { useBerichtigungsVorlader } from '@/hooks/useBerichtigung';
+import type { RundenBelohnung } from '@/lib/reise';
 import { useStreak } from '@/hooks/useStreak';
 import { useSeitenanfang, useTastaturOffen } from '@/hooks/useTastatur';
 import { berechneStreak, lokalerTag } from '@/lib/streak';
@@ -42,7 +44,9 @@ interface LearningGameProps {
   topicHint?: string;
   /** Lernplan, aus dem die Runde gestartet wurde — zaehlt nur dann als Plan-Fortschritt. */
   learningPlanId?: string;
-  mode?: 'normal' | 'streak_recovery';
+  mode?: 'normal' | 'streak_recovery' | 'berichtigung';
+  /** Aufgaben aus der Fehlerkiste fuer eine Berichtigung (mode 'berichtigung') */
+  berichtigung?: ReviewItem[];
   demoMode?: boolean;
 }
 
@@ -66,6 +70,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   topicHint,
   learningPlanId,
   mode = 'normal',
+  berichtigung,
   demoMode = false
 }) => {
   const { user, loading: isAuthLoading } = useAuth();
@@ -94,17 +99,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   }, [isProfileLoaded, generateDifficultySequence, totalQuestions]);
 
   // Use preloader with adaptive difficulty sequence
-  const { 
-    questions, 
-    isInitialLoading, 
-    loadingProgress, 
-    error: preloadError, 
-    getQuestion,
-    isQuestionReady,
-    updateDifficulty,
-    reload,
-    cancelLoading
-  } = useQuestionPreloader({
+  const istBerichtigung = mode === 'berichtigung';
+  const vorlader = useQuestionPreloader({
     grade,
     subject,
     totalQuestions,
@@ -116,8 +112,21 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     // on slower Chrome/WebView starts it can briefly report no user and would
     // otherwise load the bundled five-question demo set.
     demoMode,
-    enabled: demoMode || Boolean(user) || !isAuthLoading,
+    enabled: !istBerichtigung && (demoMode || Boolean(user) || !isAuthLoading),
   });
+  // Berichtigung: die eigenen Fehler statt neuer Aufgaben (keine KI, kein Cache)
+  const berichtigungsVorlader = useBerichtigungsVorlader(istBerichtigung ? berichtigung : undefined);
+  const {
+    questions,
+    isInitialLoading,
+    loadingProgress,
+    error: preloadError,
+    getQuestion,
+    isQuestionReady,
+    updateDifficulty,
+    reload,
+    cancelLoading
+  } = istBerichtigung ? berichtigungsVorlader : vorlader;
   
   const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
   const [answerRecovered, setAnswerRecovered] = useState(false);
@@ -142,6 +151,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showAchievementPopup, setShowAchievementPopup] = useState(false);
   const [achievementBonusMinutes, setAchievementBonusMinutes] = useState(0);
+  // Ergebnis von runde_belohnen: Tinte, Felder der Reise, fertige Seite
+  const [belohnung, setBelohnung] = useState<RundenBelohnung | null>(null);
   
   // Answer states for different question types
   const [userTextAnswer, setUserTextAnswer] = useState('');
@@ -557,11 +568,19 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       trackFireAndForget('demo_question_answered', { correct });
     }
 
-    // Track performance for adaptive difficulty system
-    updateAdaptivePerformance(correct, answerTimeMs);
+    // Track performance for adaptive difficulty system (Berichtigung zaehlt nicht)
+    if (!istBerichtigung) updateAdaptivePerformance(correct, answerTimeMs);
 
     if (correct) {
       setScore(prev => prev + 1);
+      // Berichtigt: Die Aufgabe verlaesst die Fehlerkiste (Klecks weggewischt)
+      if (istBerichtigung && question && user) {
+        // .then() noetig: Supabase schickt die Anfrage erst beim Abwarten ab
+        supabase.from('review_queue')
+          .update({ is_retired: true, updated_at: new Date().toISOString() })
+          .eq('id', question.id).eq('user_id', user.id)
+          .then(({ error }) => { if (error) console.warn('Berichtigung nicht gespeichert:', error.message); });
+      }
       const newStreak = correctStreak + 1;
       setCorrectStreak(newStreak);
       
@@ -758,9 +777,11 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       const accuracyScore = Math.round((score / totalQuestions) * 100);
 
       // Perform adaptive difficulty adjustment at end of session → persists per subject
-      performAdaptiveAdjustment().catch(err => 
-        console.error('❌ Adaptive adjustment failed:', err)
-      );
+      if (!istBerichtigung) {
+        performAdaptiveAdjustment().catch(err =>
+          console.error('❌ Adaptive adjustment failed:', err)
+        );
+      }
       
       // Save session to database
       if (user && !sessionSaved) {
@@ -771,7 +792,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           totalQuestions,
           timeSpentSeconds,
           earnedSeconds,
-          questionSource: isStreakRecovery ? 'streak-recovery' : 'template-bank',
+          questionSource: isStreakRecovery ? 'streak-recovery' : istBerichtigung ? 'berichtigung' : 'template-bank',
           suppressEarnedMinutes: isStreakRecovery,
           learningPlanId: learningPlanId ?? null
         });
@@ -779,6 +800,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         if (result.success) {
           console.log('✅ Session saved with ID:', result.sessionId);
           setSessionSaved(true);
+
+          // Klecksis Reise: Tinte und Felder vergibt nur der Server (runde_belohnen)
+          if (result.sessionId) {
+            try {
+              const { data: belohnt } = await supabase.rpc('runde_belohnen', { p_sitzung: result.sessionId });
+              if (belohnt) setBelohnung(belohnt as unknown as RundenBelohnung);
+            } catch {
+              /* ohne Tinte weiter: die Runde zaehlt trotzdem fuer die Zeit */
+            }
+          }
 
           // Sticker fuer eine Runde mit allen Aufgaben richtig: Das Kind waehlt
           // ihn selbst aus. Die Datenbank prueft (je Runde einer, hoechstens
@@ -958,6 +989,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           }}
           grade={grade}
             isStreakRecovery={isStreakRecovery}
+          belohnung={belohnung}
+          istBerichtigung={istBerichtigung}
           onContinue={handleCompletionContinue}
           demoMode={demoMode}
           onDemoSignUp={() => {
@@ -1121,7 +1154,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
         {question && (
           <div className="heft-karo relative flex flex-1 flex-col rounded-t-[28px] bg-card px-5 pt-6 shadow-[0_-1px_0_hsl(var(--karo))] sm:px-8">
             <div className="flex items-center justify-between gap-3 text-sm font-semibold text-muted-foreground">
-              <span>{getSubjectName(subject)}{grade > 4 ? `, Klasse ${grade}` : ''}</span>
+              <span>{istBerichtigung ? 'Berichtigung: ' : ''}{getSubjectName(subject)}{grade > 4 ? `, Klasse ${grade}` : ''}</span>
               <span className="flex items-center gap-2">
                 {grade > 4 && (
                   <span className={cn('tabular inline-flex items-center gap-1', !isRunning && 'opacity-60')}>

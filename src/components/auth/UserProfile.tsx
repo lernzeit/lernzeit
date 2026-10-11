@@ -27,7 +27,17 @@ const LazyAdminDashboard = React.lazy(() =>
 );
 // ParentSettingsMenu removed - functionality now integrated into ParentDashboard
 import { AchievementDisplay } from '@/components/AchievementDisplay';
-import { ErfolgeKachel } from '@/components/child/ErfolgeKachel';
+import { KlecksiGruss, TintenPille, HeuteFuerDieReise } from '@/components/child/KlecksiStart';
+import { HeftrandReise } from '@/components/child/HeftrandReise';
+import { Federmaeppchen } from '@/components/child/Federmaeppchen';
+import { Urkunden, UrkundenKachel } from '@/components/child/Urkunden';
+import { useTinte } from '@/hooks/useTinte';
+import { useReise } from '@/hooks/useReise';
+import { useBerichtigung } from '@/hooks/useBerichtigung';
+import { useWochenziel } from '@/hooks/useWochenziel';
+import type { ReviewItem } from '@/hooks/useReviewQueue';
+import { FAECHER, farbeVon } from '@/lib/hefte';
+import { faecherAufSeite, faltungFuer } from '@/lib/reise';
 import { EarnedTimeWidget } from '@/components/EarnedTimeWidget';
 
 import { ProfileEdit } from '@/components/ProfileEdit';
@@ -59,9 +69,11 @@ interface UserProfileProps {
   onStartStreakRecovery?: (grade: number) => void;
   /** Heft antippen: Fach direkt starten */
   onStartSubject?: (grade: number, subject: FachId, topicHint?: string, planId?: string) => void;
+  /** Berichtigung: Aufgaben aus der Fehlerkiste eines Fachs */
+  onStartBerichtigung?: (grade: number, subject: string, aufgaben: ReviewItem[]) => void;
 }
 
-export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery, onStartSubject }: UserProfileProps) {
+export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecovery, onStartSubject, onStartBerichtigung }: UserProfileProps) {
   const [profile, setProfile] = useState<any>(null);
   useSeitenanfang();
   const [loading, setLoading] = useState(true);
@@ -114,6 +126,14 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // Hefte des Kindes (Farbe, Sticker, sichtbare Faecher)
   const hefte = useHefte(profile?.role === 'child' ? user?.id : undefined, profile?.grade || 1);
   const lernplaene = useLernplaene(profile?.role === 'child' ? user?.id : undefined);
+
+  // Klecksi und die Heftrand-Reise (11.10.2026)
+  const kindId = profile?.role === 'child' ? user?.id : undefined;
+  const tinte = useTinte(kindId);
+  const reise = useReise(kindId);
+  const fehlerkiste = useBerichtigung(kindId, profile?.grade || undefined);
+  const wochenTage = useWochenziel(kindId);
+  const [kindAnsicht, setKindAnsicht] = useState<'start' | 'federmaeppchen' | 'urkunden'>('start');
 
   // Use streak hook for children
   const { streak, status: streakStatus, inactiveDays, loading: streakLoading } = useStreak(
@@ -532,9 +552,43 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
 
   // Child Dashboard (App-Redesign "Heft", 04.10.2026): Zeit-Uhr, zwei Knoepfe,
   // Lernpflanze statt Feuer, Faecher als selbst gestaltete Hefte.
+  if (profile?.role === 'child' && kindAnsicht === 'federmaeppchen') {
+    return (
+      <Federmaeppchen
+        kindId={user.id}
+        avatarId={profile?.avatar_id || 'cat'}
+        stand={tinte.stand}
+        onStand={tinte.setStand}
+        onAvatar={(id) => setProfile((p: typeof profile) => ({ ...p, avatar_id: id }))}
+        onZurueck={() => setKindAnsicht('start')}
+      />
+    );
+  }
+  if (profile?.role === 'child' && kindAnsicht === 'urkunden') {
+    return <Urkunden kindId={user.id} onZurueck={() => setKindAnsicht('start')} />;
+  }
+
   if (profile?.role === 'child') {
     const klasse = profile?.grade || 1;
     const avatar = getAvatarById(profile?.avatar_id || 'cat');
+    const heftFarbe = (fach: string) => farbeVon(hefte.hefte.find((h) => h.fach === fach)?.farbe, fach as FachId);
+    const fachName = (fach: string) => FAECHER.find((f) => f.id === fach)?.kurz ?? fach;
+    const plan = lernplaene[0];
+    const schwerpunkt = hefte.hefte.find((h) => h.wichtig);
+    const klecksiLage = {
+      name: profile?.name || undefined,
+      felderGemalt: reise.aktuell.felder.length,
+      faltung: faltungFuer(reise.aktuell.seite),
+      faecherAufSeite: faecherAufSeite(reise.aktuell.felder).length,
+      berichtigung: fehlerkiste.faellig,
+      lernplanFach: plan ? fachName(plan.subject) : undefined,
+      schwerpunktFach: schwerpunkt ? fachName(schwerpunkt.fach) : undefined,
+    };
+    const berichtigungStarten = async () => {
+      const r = await fehlerkiste.runde();
+      if (r && onStartBerichtigung) onStartBerichtigung(klasse, r.fach, r.aufgaben);
+      else void fehlerkiste.laden();
+    };
     return (
       <div className="min-h-[100dvh] bg-background pt-safe-top pb-safe-bottom">
         {showOnboarding && (
@@ -559,10 +613,14 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                 {profile?.username ? `, @${profile.username}` : ''}
               </p>
             </div>
+            <TintenPille stand={tinte.stand} onClick={() => setKindAnsicht('federmaeppchen')} />
             <Button variant="ghost" size="icon" onClick={() => setShowSettingsMenu(true)} aria-label="Einstellungen">
               <Settings className="h-5 w-5" />
             </Button>
           </header>
+
+          {/* Klecksi begruesst (einmal am Tag winkt er), Antippen: naechster Satz */}
+          {reise.geladen && <KlecksiGruss kindId={user.id} lage={klecksiLage} />}
 
           {/* Testphase der Eltern: nur eine ruhige Zeile */}
           {trialJustExpired && (
@@ -599,8 +657,28 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
             }
           />
 
+          {/* Was heute doppelt zaehlt und was in der Berichtigung wartet */}
+          <HeuteFuerDieReise
+            hefte={hefte.hefte}
+            berichtigung={fehlerkiste.faellig}
+            spaeter={fehlerkiste.spaeter}
+            onBerichtigung={() => void berichtigungStarten()}
+            onFach={(fach) => (onStartSubject ? onStartSubject(klasse, fach) : onStartGame(klasse))}
+          />
+
           {/* Freiminuten stehen ueber dem Rest: Wer heute noch welche hat, muss nicht fragen. */}
           {handysperreAn && <BaseTimeCard childId={user.id} />}
+
+          {/* Kleckis Heftrand-Reise: eine Reise fuer alle Faecher */}
+          {reise.geladen && (
+            <HeftrandReise
+              seite={reise.aktuell.seite}
+              felder={reise.aktuell.felder}
+              seiten={reise.seiten}
+              farbe={heftFarbe}
+              fachName={fachName}
+            />
+          )}
 
           <DailyChallenge userId={user.id} />
 
@@ -617,14 +695,9 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
                 loading={streakLoading}
                 reactivationTrigger={streakReactivationTrigger}
                 onStartRecovery={() => onStartStreakRecovery?.(klasse)}
+                wochenTage={wochenTage}
               />
-              <ErfolgeKachel
-                userId={user.id}
-                onClick={() => {
-                  setSettingsInitialSection('achievements');
-                  setShowSettingsMenu(true);
-                }}
-              />
+              <UrkundenKachel kindId={user.id} onClick={() => setKindAnsicht('urkunden')} />
             </div>
           </section>
 

@@ -139,3 +139,12 @@ Erlöse zu? Apple (App Store Connect) auf dieselbe Frage prüfen.
 Die Entfernungswarnung kam vom Zahlungsprofil („Maßnahmen für dein Zahlungskonto erforderlich“,
 10.10.2026); nach Bestätigung der Zahlungsmethode am selben Tag verschwunden. Offen: Steuer-
 informationen für Irland im Zahlungsprofil.
+
+## Datenschutzerklärung, Stand 11.10.2026 (Klecksi und die Heftrand-Reise)
+
+Ergänzt in 2.2: Tintentropfen (Spielpunkte ohne Geldwert), Fortschritt der Lernreise,
+freigeschaltete Figuren, falsch beantwortete Aufgaben zum Berichtigen. Alles aus vorhandenen
+Lerndaten, kein neues Tracking. Tinte ist nie mit Geld kaufbar und nie in Bildschirmzeit
+tauschbar; keine Zufallsbelohnungen. Für die Kanzlei: reicht das als Ergänzung, oder braucht
+das Spielgeld einen eigenen Abschnitt (Kinder-App, Store-Regeln)? Name „Klecksi“ gegen die
+Marke „Karl Klecks“ (pme Lernwelten) prüfen.

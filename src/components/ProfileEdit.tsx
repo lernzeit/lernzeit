@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Palette, User, Save } from 'lucide-react';
 import { AvatarSelector } from './AvatarSelector';
 import { getAvatarById } from '@/data/avatars';
+import { useFreigeschaltet } from '@/hooks/useFreigeschaltet';
 
 interface ProfileEditProps {
   user: any;
@@ -23,6 +24,8 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
   const [saving, setSaving] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const { toast } = useToast();
+  // Kinder: Figuren gegen Tinte (Federmaeppchen); Eltern waehlen frei
+  const { gesperrt } = useFreigeschaltet(profile?.role === 'child' ? user?.id : undefined);
 
   // Get current avatar info from profile
   const currentAvatar = getAvatarById(profile?.avatar_id || 'cat');
@@ -201,6 +204,7 @@ export function ProfileEdit({ user, profile, onBack, onUpdate }: ProfileEditProp
               selectedColor={currentAvatarColor}
               onAvatarChange={handleAvatarChange}
               onClose={() => setShowAvatarSelector(false)}
+              gesperrt={profile?.role === 'child' ? gesperrt : undefined}
             />
           </DialogContent>
         </Dialog>

@@ -1,5 +1,14 @@
 # Plan: LernZeit für Kinder spannender machen (11.10.2026)
 
+**Umgesetzt am 11.10.2026** (Web und Datenbank; in den Apps mit dem nächsten Build 2.0.2):
+Klecksi, Tinte, Heftrand-Reise auf dem Kind-Start, Berichtigung, Federmäppchen (Figuren),
+Urkunden, Wochenziel, Eltern-Bonus je Seite. Datenbank:
+`supabase/migrations/20261011200000_klecksi_reise.sql` (per SQL mit Rollback getestet),
+Regeln: `src/lib/reise.ts`, Test: `npm run test:reise`.
+Noch offen: Heft-Farben, Sticker-Pakete und Rahmen gegen Tinte; Tinte für die Tagesaufgabe;
+Nacht-Erfolge in der Datenbank löschen (`20261011201000_nacht_erfolge_entfernen.sql`, von Hand
+im SQL-Editor; die App vergibt und zeigt sie schon nicht mehr).
+
 Anstoß: Rechen-Inseln (Maskottchen, Münzen und Avatare, Fehlerkiste, Reise durchs Schuljahr).
 Die Seite war aus der Claude-Umgebung nicht erreichbar; der Plan beruht auf der Beschreibung
 des Betreibers.
@@ -104,4 +113,4 @@ in `docs/release-2.0.md`). Stufe 1 kann zusammen mit 2.0.2 kommen.
 
 - Name: „Karl Klecks“ (pme Lernwelten) ist ein ähnliches Maskottchen – Namen vor dem Start prüfen
   (DPMA), „Klecksi“ ist eigenständiger als „Klecks“.
-- Ab wann eine Runde „geschafft“ ist (Vorschlag: 3 von 5).
+- Ab wann eine Runde „geschafft“ ist: umgesetzt mit 60 % (3 von 5). Bei Bedarf in `runde_belohnen` ändern.

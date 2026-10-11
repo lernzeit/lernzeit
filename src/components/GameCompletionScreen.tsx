@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Check, UserPlus, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sticker } from '@/components/child/Hefte';
-import { STICKER } from '@/lib/hefte';
+import { STICKER, farbeVon, type FachId } from '@/lib/hefte';
+import { Klecksi } from '@/components/klecksi/Klecksi';
+import { Faltung } from '@/components/child/Faltung';
+import { TintenTropfen } from '@/components/child/KlecksiStart';
+import { rundenSatz } from '@/lib/klecksi';
+import { FALTUNG_NAME, belohnungsText, istDoppelt, type RundenBelohnung } from '@/lib/reise';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -23,6 +29,9 @@ interface GameCompletionScreenProps {
   /** Alles richtig: Sticker zur Auswahl; Wert = Sticker, die das Kind schon hat */
   stickerWahl?: string[] | null;
   onStickerWaehlen?: (id: string) => Promise<void>;
+  /** Ergebnis von runde_belohnen (Tinte, Felder der Reise); null solange es laedt */
+  belohnung?: RundenBelohnung | null;
+  istBerichtigung?: boolean;
 }
 
 export function GameCompletionScreen({
@@ -40,6 +49,8 @@ export function GameCompletionScreen({
   neuerSticker = null,
   stickerWahl = null,
   onStickerWaehlen,
+  belohnung = null,
+  istBerichtigung = false,
 }: GameCompletionScreenProps) {
   const [speichert, setSpeichert] = useState<string | null>(null);
   // Noch fehlende Sticker zuerst; hat das Kind alle, darf es jeden nochmal nehmen
@@ -126,6 +137,8 @@ export function GameCompletionScreen({
 
   const titel = isStreakRecovery
     ? 'Deine Lernpflanze ist gerettet!'
+    : istBerichtigung
+    ? (score === totalQuestions ? 'Alles berichtigt!' : 'Gut berichtigt!')
     : { excellent: 'Super gemacht!', good: 'Toll gemacht!', okay: 'Gut gemacht!' }[celebrationLevel];
   const bonus = !isStreakRecovery && (achievementBonusMinutes > 0 || perfectSessionBonus > 0);
 
@@ -148,6 +161,9 @@ export function GameCompletionScreen({
           </div>
         )}
       </div>
+
+      {/* Klecksi und die Reise: Tinte, ausgemalte Felder, fertige Seite */}
+      <KlecksiErgebnis score={score} totalQuestions={totalQuestions} belohnung={belohnung} istBerichtigung={istBerichtigung} />
 
       {!neuerSticker && stickerWahl && onStickerWaehlen && (
         <section aria-labelledby="sticker-wahl" className="rounded-[28px] bg-card p-5 ring-1 ring-inset ring-karo">
@@ -217,5 +233,75 @@ export function GameCompletionScreen({
         Weiter
       </Button>
     </div>
+  );
+}
+
+function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: {
+  score: number;
+  totalQuestions: number;
+  belohnung: RundenBelohnung | null;
+  istBerichtigung: boolean;
+}) {
+  const geschafft = belohnung ? belohnung.geschafft : totalQuestions >= 3 && score * 5 >= totalQuestions * 3;
+  // Felder in der Heftfarbe, die das Kind gewaehlt hat (wie auf der Reise)
+  const [heftFarben, setHeftFarben] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!belohnung?.felder.length) return;
+    let aktiv = true;
+    supabase.from('kind_hefte').select('fach, farbe').then(({ data }) => {
+      if (aktiv) setHeftFarben(Object.fromEntries((data ?? []).map((h) => [h.fach, h.farbe])));
+    });
+    return () => { aktiv = false; };
+  }, [belohnung]);
+  const { satz, stimmung } = rundenSatz({
+    richtig: score,
+    gesamt: totalQuestions,
+    geschafft,
+    faltung: belohnung?.seite_fertig?.faltung ?? null,
+    berichtigung: istBerichtigung,
+  });
+  return (
+    <section aria-label="Klecksi und deine Reise" className="rounded-[28px] bg-card p-4 ring-1 ring-inset ring-karo">
+      <div className="flex items-center gap-2">
+        <Klecksi groesse={84} stimmung={stimmung} />
+        <p className="font-hand flex-1 rounded-[18px] rounded-bl-[4px] border-2 border-tinte bg-background px-3 py-2.5 text-[15px] leading-snug text-tinte">
+          {satz}
+        </p>
+      </div>
+      {belohnung && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-dashed border-karo pt-3">
+          {belohnung.tinte > 0 && (
+            <span className="flex items-center gap-1.5 text-lg font-extrabold text-tinte">
+              <TintenTropfen groesse={20} />+{belohnung.tinte} Tinte
+            </span>
+          )}
+          {belohnung.felder.length > 0 && (
+            <span className="flex items-center gap-1.5" aria-label={belohnungsText(belohnung)}>
+              {belohnung.felder.map((f) => (
+                <span key={`${f.seite}-${f.feld}`} className="relative h-5 w-5 rounded-[5px] ring-2 ring-tinte" style={{ backgroundColor: farbeVon(heftFarben[f.fach], f.fach as FachId) }}>
+                  {istDoppelt(f.quelle) && <span className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rotate-45 bg-[#eaa315] ring-1 ring-tinte" />}
+                </span>
+              ))}
+              <span className="text-sm font-bold text-tinte">{belohnungsText(belohnung)}</span>
+            </span>
+          )}
+          {belohnung.felder.length === 0 && (
+            <span className="text-sm font-semibold text-muted-foreground">{belohnungsText(belohnung)}</span>
+          )}
+        </div>
+      )}
+      {belohnung?.seite_fertig && (
+        <div className="mt-3 flex items-center gap-3 rounded-2xl bg-[#fff4c9] px-4 py-3">
+          <span className="heft-sticker-neu"><Faltung art={belohnung.seite_fertig.faltung} bunt={belohnung.seite_fertig.bunt} groesse={48} /></span>
+          <div className="min-w-0">
+            <p className="font-extrabold text-tinte">{FALTUNG_NAME[belohnung.seite_fertig.faltung]} fürs Regal</p>
+            <p className="text-sm text-tinte">
+              +30 Tinte{belohnung.seite_fertig.bunt ? ', bunte Seite +20' : ''}
+              {belohnung.seite_fertig.bonus_minuten > 0 ? `, +${belohnung.seite_fertig.bonus_minuten} Min. von deinen Eltern` : ''}
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

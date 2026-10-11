@@ -11,6 +11,7 @@ import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
 import { Capacitor } from '@capacitor/core';
 import { trackFireAndForget } from '@/lib/analytics';
+import type { ReviewItem } from '@/hooks/useReviewQueue';
 
 // Lazy load heavy components that aren't needed on initial page render
 const GradeSelector = lazy(() => import('@/components/GradeSelector').then((m) => ({ default: m.GradeSelector })));
@@ -46,7 +47,9 @@ const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [learningPlanTopic, setLearningPlanTopic] = useState<string | null>(null);
   const [learningPlanId, setLearningPlanId] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery'>('normal');
+  const [gameMode, setGameMode] = useState<'normal' | 'streak_recovery' | 'berichtigung'>('normal');
+  // Berichtigung: Aufgaben aus der Fehlerkiste (useBerichtigung)
+  const [berichtigung, setBerichtigung] = useState<ReviewItem[] | null>(null);
   // Sessions always use 5 questions
   const [earnedTime, setEarnedTime] = useState<number>(0);
   const [earnedCategory, setEarnedCategory] = useState<string>('');
@@ -121,6 +124,7 @@ const Index = () => {
     }
 
     // Go back to grade/category selection
+    setBerichtigung(null);
     if (user) {
       setSelectedGrade(null);
       setSelectedCategory(null);
@@ -244,6 +248,14 @@ const Index = () => {
             setLearningPlanTopic(topicHint || null);
             setLearningPlanId(planId || null);
             setGameMode('normal');
+          }}
+          onStartBerichtigung={(grade, subject, aufgaben) => {
+            setBerichtigung(aufgaben);
+            setSelectedGrade(grade);
+            setSelectedCategory(subject as Category);
+            setLearningPlanTopic(null);
+            setLearningPlanId(null);
+            setGameMode('berichtigung');
           }} />
 
       </Suspense>);
@@ -254,14 +266,23 @@ const Index = () => {
   // Show learning game if grade and category are selected (always 5 questions)
   if (selectedGrade && selectedCategory) {
     return (
-      <ErrorBoundary onBack={() => setSelectedCategory(null)} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
+      <ErrorBoundary onBack={() => { setSelectedCategory(null); setBerichtigung(null); }} fallbackMessage="Das Spiel konnte nicht geladen werden. Bitte versuche es erneut.">
         <Suspense fallback={<LoadingFallback />}>
           <LearningGame
             grade={selectedGrade}
             subject={selectedCategory}
             onComplete={handleGameComplete}
-            onBack={() => setSelectedCategory(null)}
-            totalQuestions={5}
+            onBack={() => {
+              setSelectedCategory(null);
+              // Berichtigung abgebrochen: zurueck zum Start statt zur Fachauswahl
+              if (gameMode === 'berichtigung') {
+                setBerichtigung(null);
+                setGameMode('normal');
+                if (user) setSelectedGrade(null);
+              }
+            }}
+            totalQuestions={gameMode === 'berichtigung' && berichtigung ? berichtigung.length : 5}
+            berichtigung={gameMode === 'berichtigung' ? berichtigung ?? undefined : undefined}
             topicHint={learningPlanTopic || undefined}
             learningPlanId={learningPlanId || undefined}
             mode={gameMode}

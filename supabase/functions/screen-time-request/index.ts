@@ -268,8 +268,19 @@ async function createScreenTimeRequest(supabase: any, childId: string, body: Rec
     .gte('earned_at', todayStartIso)
     .lt('earned_at', todayEndIso);
 
-  const achievementMinutes = todayAchievements?.reduce((sum: number, ua: any) =>
-    sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0;
+  // Eltern-Bonus fuer fertige Reise-Seiten (Stufe 3, 11.10.2026), zaehlt wie Erfolge
+  const { data: reiseSeiten } = await supabase
+    .from('kind_reise_seiten')
+    .select('bonus_minuten')
+    .eq('child_id', childId)
+    .gt('bonus_minuten', 0)
+    .gte('fertig_am', todayStartIso)
+    .lt('fertig_am', todayEndIso);
+  const reiseBonusMinuten = reiseSeiten?.reduce((sum: number, s: any) =>
+    sum + (Number(s.bonus_minuten) || 0), 0) || 0;
+
+  const achievementMinutes = (todayAchievements?.reduce((sum: number, ua: any) =>
+    sum + (ua.achievements_template?.reward_minutes || 0), 0) || 0) + reiseBonusMinuten;
 
   const rawEarnedMinutes = sessionMinutes + achievementMinutes;
   const cappedEarnedMinutes = Math.min(rawEarnedMinutes, dailyLimit);

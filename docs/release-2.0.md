@@ -49,6 +49,9 @@ Eltern
 Seit dem Android-Build 2.0.1 (Stand `9d0987b`) auf `main`, wirkt in den Apps erst mit neuem Build:
 - Push-Erlaubnis nur einmal, ohne englisches „Open Settings“ von OneSignal (`92993fd`).
 - Startseite beginnt oben, iOS-Ausschnitt nach Tastatur zurückgesetzt (`81c46b0`).
+- Klecksi und die Heftrand-Reise (11.10.2026): Kind-Start mit Klecksi, Tinte, Reise,
+  Berichtigung, Federmäppchen, Urkunden, Wochenziel; Eltern-Bonus je Seite
+  (`docs/plan-motivation-kinder.md`). Lernplan-Start (`gestartet_am`) wird jetzt wirklich gesetzt.
 
 Android zusätzlich: `ndk { debugSymbolLevel 'SYMBOL_TABLE' }`; ProGuard-Regeln eingrenzen
 (Frist Feb. 2027, siehe oben). Vor dem Build: `IOS_MARKETING_VERSION` in `codemagic.yaml` und

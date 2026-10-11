@@ -103,10 +103,13 @@ interface Props {
    * im Bereich "Deine Erfolge" auf dem Kind-Start (seit 05.10.2026).
    */
   variante?: 'abzeichen' | 'kachel';
+  /** Wochenziel (Stufe 3, 11.10.2026): Lerntage dieser Woche (Mo–So) */
+  wochenTage?: number;
+  wochenZiel?: number;
 }
 
 /** Lernpflanze auf dem Kind-Start; antippen zeigt sie gross mit allen Stufen. */
-export function LernPflanze({ streak, status, inactiveDays, loading, reactivationTrigger = 0, onStartRecovery, variante = 'abzeichen' }: Props) {
+export function LernPflanze({ streak, status, inactiveDays, loading, reactivationTrigger = 0, onStartRecovery, variante = 'abzeichen', wochenTage, wochenZiel = 4 }: Props) {
   const [offen, setOffen] = useState(false);
   const [gegossen, setGegossen] = useState(false);
   const rettbar = inactiveDays > 0 && inactiveDays <= 2 && streak > 0;
@@ -157,6 +160,19 @@ export function LernPflanze({ streak, status, inactiveDays, loading, reactivatio
           {naechste && !loading && (
             <span className="text-[11px] text-muted-foreground">
               Noch {naechste.ab - tage} {naechste.ab - tage === 1 ? 'Tag' : 'Tage'} bis {naechste.name}
+            </span>
+          )}
+          {/* Wochenziel: verzeiht Pausentage, anders als die Tage in Folge */}
+          {wochenTage !== undefined && !loading && (
+            <span className="mt-1.5 w-full border-t border-dashed border-karo pt-1.5">
+              <span className="flex justify-center gap-1" aria-hidden="true">
+                {Array.from({ length: wochenZiel }, (_, i) => (
+                  <span key={i} className={cn('h-3 w-3 rounded-[3px] ring-1 ring-inset', i < wochenTage ? 'bg-primary ring-primary' : 'bg-card ring-karo')} />
+                ))}
+              </span>
+              <span className="mt-0.5 block text-[11px] font-bold text-tinte">
+                {wochenTage >= wochenZiel ? 'Wochenziel geschafft!' : `${wochenTage} von ${wochenZiel} Lerntagen diese Woche`}
+              </span>
             </span>
           )}
         </button>

@@ -34,6 +34,7 @@ import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 import { RuhezeitEinstellung } from '@/components/parent/RuhezeitEinstellung';
+import { ReiseEinstellung } from '@/components/parent/ReiseEinstellung';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
   DEFAULT_BASE_MINUTES,
@@ -492,6 +493,10 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             </div>
           );
         })}
+      </Gruppe>
+
+      <Gruppe titel="Kleckis Reise">
+        <ReiseEinstellung childId={childId} parentId={parentId} childName={childName} />
       </Gruppe>
 
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-live="polite">

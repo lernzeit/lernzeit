@@ -25,6 +25,8 @@ export interface NewAchievement {
   color: string;
 }
 
+export const NACHT_ERFOLGE = ['midnight_scholar', 'night_owl'];
+
 export function useAchievements(userId?: string, options?: { suppressToast?: boolean }) {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userAchievements, setUserAchievements] = useState<Achievement[]>([]);
@@ -62,10 +64,13 @@ export function useAchievements(userId?: string, options?: { suppressToast?: boo
 
       if (userError) throw userError;
 
-      setAchievements(templates || []);
+      // Nacht-Erfolge (Mitternachts-Gelehrter, Nachteule) gibt es seit
+      // 11.10.2026 nicht mehr: keine Belohnung fuer spaete Handynutzung.
+      const vorlagen = (templates || []).filter((t) => !NACHT_ERFOLGE.includes(String(t.type)));
+      setAchievements(vorlagen);
       
       // Kombiniere Templates mit User-Progress
-      const combinedAchievements = templates?.map(template => {
+      const combinedAchievements = vorlagen.map(template => {
         const userAch = userAchs?.find(ua => ua.achievement_id === template.id);
         return {
           ...template,
@@ -73,7 +78,7 @@ export function useAchievements(userId?: string, options?: { suppressToast?: boo
           is_completed: userAch?.is_completed || false,
           earned_at: userAch?.earned_at
         };
-      }) || [];
+      });
 
       setUserAchievements(combinedAchievements);
     } catch (error: any) {

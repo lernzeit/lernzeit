@@ -168,3 +168,17 @@ Supabase-Secrets gelöscht werden.
   `ScreenTimeShared.swift`, `freigeben`/`starteNutzung`), sonst nach Uhr. Ruhezeit:
   `child_settings.ruhezeit_von/_bis` (Minuten), Kinder-Handy übernimmt sie (`useRuhezeitAbgleich`).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
+
+## Klecksi und die Heftrand-Reise (Stand 11.10.2026)
+
+- Maskottchen Klecksi (`components/klecksi/`, Umrisse in `formen.ts`): Arme nur für Gesten
+  (grüßen einmal am Tag, jubeln, Mut machen). Feste Sätze in `lib/klecksi.ts`, nie KI-Texte.
+- Eine Reise für alle Fächer auf dem Kind-Start (`child/HeftrandReise.tsx`): 12 Felder je Seite in
+  Heftfarbe, Lernplan/Schwerpunkt doppelt, bunte Seite (3 Fächer) +20 Tinte, Faltung fürs Regal.
+- Vergabe nur serverseitig: `runde_belohnen(p_sitzung)` nach `saveSession` (Tinte, Felder, Seite,
+  Eltern-Bonus `child_settings.reise_bonus_minuten`, zählt in App und `screen-time-request` zur
+  verdienten Zeit). Figuren: `mit_tinte_freischalten`, Trigger `avatar_pruefen`; Preise in
+  `avatar_preis()` und `lib/federmaeppchen.ts` gleich halten (`npm run test:reise` prüft das).
+- Berichtigung: Runde aus `review_queue` (`useBerichtigung`, LearningGame `mode='berichtigung'`),
+  richtig = `is_retired`. Supabase-Anfragen ohne `await`/`.then()` werden nie abgeschickt.
+- DELETE über das Supabase-MCP wartet auf Bestätigung und läuft in eine Zeitüberschreitung.

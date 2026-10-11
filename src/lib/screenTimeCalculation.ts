@@ -78,7 +78,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const startIso = start.toISOString();
   const endIso = end.toISOString();
 
-  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes, childSettingsRes] = await Promise.all([
+  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes, childSettingsRes, reiseRes] = await Promise.all([
     supabase
       .from('game_sessions')
       .select('time_earned')
@@ -113,6 +113,14 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       .select('weekday_max_minutes, weekend_max_minutes')
       .eq('child_id', userId)
       .maybeSingle(),
+    // Eltern-Bonus fuer fertige Reise-Seiten (Stufe 3, 11.10.2026)
+    supabase
+      .from('kind_reise_seiten')
+      .select('seite, bonus_minuten, fertig_am')
+      .eq('child_id', userId)
+      .gt('bonus_minuten', 0)
+      .gte('fertig_am', startIso)
+      .lt('fertig_am', endIso),
   ]);
 
   const queryErrors = [
@@ -138,7 +146,13 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       icon: achievement.achievements_template?.icon || '🏆',
       reward_minutes: achievement.achievements_template?.reward_minutes || 0,
       earned_at: achievement.earned_at,
-    }));
+    }))
+    .concat((reiseRes.error ? [] : reiseRes.data || []).map((s: { seite: number; bonus_minuten: number; fertig_am: string }) => ({
+      name: `Reise-Seite ${s.seite} fertig`,
+      icon: '📄',
+      reward_minutes: Number(s.bonus_minuten) || 0,
+      earned_at: s.fertig_am,
+    })));
 
   const rawAchievementMinutes = rawAchievementDetails.reduce(
     (sum, achievement) => sum + achievement.reward_minutes,
