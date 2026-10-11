@@ -43,3 +43,13 @@ Eltern
   `buildTypes.release` `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` ergänzen (nächster Build).
 - Randlose Anzeige (Android 15): nur Empfehlungen, kommen aus Capacitor/Plugins. Auf einem
   Android-15-Gerät prüfen, ob oben/unten Inhalt verdeckt ist.
+
+## Für den nächsten App-Build (2.0.2) gesammelt
+
+Seit dem Android-Build 2.0.1 (Stand `9d0987b`) auf `main`, wirkt in den Apps erst mit neuem Build:
+- Push-Erlaubnis nur einmal, ohne englisches „Open Settings“ von OneSignal (`92993fd`).
+- Startseite beginnt oben, iOS-Ausschnitt nach Tastatur zurückgesetzt (`81c46b0`).
+
+Android zusätzlich: `ndk { debugSymbolLevel 'SYMBOL_TABLE' }`; ProGuard-Regeln eingrenzen
+(Frist Feb. 2027, siehe oben). Vor dem Build: `IOS_MARKETING_VERSION` in `codemagic.yaml` und
+`versionCode`/`versionName` in `android/app/build.gradle` erhöhen.
