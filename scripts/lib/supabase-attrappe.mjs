@@ -12,7 +12,7 @@
  * (eq, neq, gt, gte, lt, lte, in, is), order, limit, Einzelzeilen
  * (Accept: vnd.pgrst.object) und Zaehlungen (Prefer: count). Edge Functions
  * antworten mit dem, was die Hooks erwarten (check-subscription,
- * screen-time-request).
+ * screen-time-request), Datenbank-Funktionen aus `d.rpc` (z. B. tinte_stand).
  */
 export const KIND = '11111111-1111-4111-8111-111111111111';
 export const ELTERN = '22222222-2222-4222-8222-222222222222';
@@ -39,8 +39,41 @@ const runde = (id, kategorie, hhmm, vorTagen, sekunden) => ({
 /** Beispieldaten. Heute: 3 Runden je 5 Aufgaben, alle richtig (3 x 150 s). Davor 6 Tage je eine Runde. */
 export function beispieldaten() {
   const fruehere = [1, 2, 3, 4, 5, 6].map((t) => runde(`v${t}`, ['math', 'german', 'english'][t % 3], '15:10', t, 150));
+  const mia = { ...profil(KIND, 'Mia', 'child', 3), avatar_id: 'fox', avatar_color: '#fde68a' };
+  const fehler = (i, text, optionen, richtig, fach = 'math') => ({
+    id: `r${i}`, user_id: KIND, question_text: text, correct_answer: richtig, question_type: 'MULTIPLE_CHOICE', options: optionen,
+    subject: fach, grade: 3, hint: null, next_review_at: um('08:00', 1), review_count: 0, max_reviews: 3, is_retired: false,
+    was_reported: false, created_at: um('15:00', 2), updated_at: um('15:00', 2),
+  });
   return {
-    profiles: [profil(KIND, 'Mia', 'child', 3), profil(ELTERN, 'Anna', 'parent', null)],
+    profiles: [mia, profil(ELTERN, 'Anna', 'parent', null)],
+    // Klecksis Heftrand-Reise: Seite 4, sechs Felder; drei Seiten im Regal
+    kind_reise_felder: [
+      ['math', 'runde'], ['german', 'runde'], ['english', 'lernplan'], ['english', 'lernplan'], ['math', 'schwerpunkt'], ['math', 'schwerpunkt'],
+    ].map(([fach, quelle], i) => ({ child_id: KIND, seite: 4, feld: i + 1, fach, quelle, sitzung_id: null, created_at: um('13:00', 1) })),
+    kind_reise_seiten: [
+      { child_id: KIND, seite: 1, faltung: 'papierflieger', bunt: true, bonus_minuten: 0, fertig_am: '2026-09-20T15:00:00Z' },
+      { child_id: KIND, seite: 2, faltung: 'hund', bunt: false, bonus_minuten: 0, fertig_am: '2026-09-27T15:00:00Z' },
+      { child_id: KIND, seite: 3, faltung: 'becher', bunt: true, bonus_minuten: 5, fertig_am: '2026-10-05T15:00:00Z' },
+    ],
+    kind_freigeschaltet: [{ child_id: KIND, art: 'avatar', ding: 'lion', created_at: '2026-10-01T15:00:00Z' }],
+    child_subject_visibility: ['math', 'german', 'english', 'science', 'geography', 'history', 'physics', 'biology', 'chemistry', 'latin'].map((fach) => ({
+      id: `v-${fach}`, parent_id: ELTERN, child_id: KIND, subject: fach,
+      is_visible: ['math', 'german', 'english', 'science'].includes(fach), is_priority: fach === 'math',
+    })),
+    learning_plans: [{
+      id: '66666666-6666-4666-8666-666666666661', parent_id: ELTERN, child_id: KIND, child_name: 'Mia', grade: 3, subject: 'english',
+      topic: 'Farben und Zahlen', test_date: tagIso(-3), status: 'generated', lernstoff: null, gestartet_am: tagIso(1),
+      plan_data: [{ focus: 'Farben' }, { focus: 'Zahlen bis 20' }, { focus: 'Wiederholung' }, { focus: 'Probetest' }],
+      created_at: um('09:00', 2), updated_at: um('09:00', 2),
+    }],
+    review_queue: [
+      fehler(1, 'Was ist 7 · 8?', ['54', '56', '64', '48'], '56'),
+      fehler(2, 'Was ist 36 : 4?', ['8', '9', '7', '6'], '9'),
+      fehler(3, 'Welches Wort ist ein Nomen?', ['laufen', 'Haus', 'schnell', 'und'], 'Haus', 'german'),
+    ],
+    daily_challenges: [],
+    rpc: { tinte_stand: 84 },
     parent_child_relationships: [{ id: '33333333-3333-4333-8333-333333333333', parent_id: ELTERN, child_id: KIND, created_at: '2026-09-02T10:00:00Z' }],
     child_settings: [{
       id: '44444444-4444-4444-8444-444444444444', child_id: KIND, parent_id: ELTERN,
@@ -137,7 +170,7 @@ export function beantworte(route, d) {
     return json({});
   }
 
-  if (u.pathname.startsWith('/rest/v1/rpc/')) return json(null);
+  if (u.pathname.startsWith('/rest/v1/rpc/')) return json(d.rpc?.[u.pathname.split('/').pop()] ?? null);
 
   const tabelle = u.pathname.replace('/rest/v1/', '');
   if (['POST', 'PATCH', 'DELETE'].includes(q.method())) {

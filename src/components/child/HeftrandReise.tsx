@@ -86,6 +86,71 @@ function Kritzel({ form, x, y, zustand, farbe }: {
   return <g transform={`translate(${x} ${y})`}>{inhalt}</g>;
 }
 
+/**
+ * Das Spielbrett der Reise: Pfad mit 12 Feldern, Klecksi auf dem naechsten
+ * Feld, oben die Faltfigur. Auch auf der Startseite (landing/KlecksiReise).
+ */
+export function ReisePfad({ seite, felder, farbe, zielFertig = false, className = '' }: {
+  seite: number;
+  felder: ReiseFeld[];
+  farbe: (fach: string) => string;
+  /** Faltfigur oben schon fertig (Seite voll) statt mit Bleistift */
+  zielFertig?: boolean;
+  className?: string;
+}) {
+  const gemalt = felder.length;
+  const faltung = faltungFuer(seite);
+  const [kx, ky] = FELDER[Math.min(gemalt, FELDER_JE_SEITE - 1)];
+  return (
+    <div className={`heft-karo relative overflow-hidden rounded-2xl ring-1 ring-inset ring-karo ${className}`} style={{ aspectRatio: `${B} / ${H}` }}>
+      <svg viewBox={`0 0 ${B} ${H}`} className="absolute inset-0 h-full w-full" role="img"
+        aria-label={`Seite ${seite}: ${gemalt} von ${FELDER_JE_SEITE} Feldern ausgemalt. Am Seitenende faltet Klecksi ${FALTUNG_MIT_ARTIKEL[faltung]}.`}>
+        {/* roter Heftrand */}
+        <path d={`M296 0 V${H}`} stroke="#d4483b" strokeWidth={1.6} opacity={0.55} />
+        <path d={`M300 0 V${H}`} stroke="#d4483b" strokeWidth={1.6} opacity={0.55} />
+        {FELDER.slice(0, -1).map((p, i) => {
+          const d = weg(p, FELDER[i + 1]);
+          return i < gemalt ? (
+            <g key={i}>
+              <path d={d} fill="none" stroke={BLAU} strokeWidth={6} strokeLinecap="round" />
+              <path className="reise-spur" d={d} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeDasharray="2 14" opacity={0.6} />
+            </g>
+          ) : (
+            <path key={i} d={d} fill="none" stroke={TINTE} strokeWidth={2.6} strokeLinecap="round" strokeDasharray="0.5 9" opacity={0.55} />
+          );
+        })}
+        <path
+          d={`M${FELDER[11][0]} ${FELDER[11][1]} C${FELDER[11][0] - 30} ${FELDER[11][1] - 50} ${ZIEL[0] - 80} ${ZIEL[1] + 6} ${ZIEL[0] - 38} ${ZIEL[1] + 6}`}
+          fill="none" stroke={TINTE} strokeWidth={2.6} strokeLinecap="round" strokeDasharray="0.5 9" opacity={0.55}
+        />
+        {/* Ziel der Seite: mit Bleistift, bis die Seite voll ist */}
+        <g transform={`translate(${ZIEL[0] - 38} ${ZIEL[1] - 30}) scale(2)`}>
+          <Faltung art={faltung} offen={!zielFertig} groesse={38} />
+        </g>
+        {FELDER.map(([x, y], i) => {
+          const f = felder[i];
+          if (f) {
+            return (
+              <g key={i}>
+                <Kritzel form={FORMEN[i]} x={x} y={y} zustand="fertig" farbe={farbe(f.fach)} />
+                {istDoppelt(f.quelle) && (
+                  <polygon transform={`translate(${x + 16} ${y - 16})`} points={sternPunkte(6.5, 2.9)} fill="#eaa315" stroke={TINTE} strokeWidth={1.4} strokeLinejoin="round" />
+                )}
+              </g>
+            );
+          }
+          return <Kritzel key={i} form={FORMEN[i]} x={x} y={y} zustand={i === gemalt ? 'jetzt' : 'offen'} />;
+        })}
+      </svg>
+      {/* Klecksi steht auf dem naechsten Feld */}
+      <div className="reise-klecksi pointer-events-none absolute transition-[left,top] duration-700 ease-out motion-reduce:transition-none"
+        style={{ left: `${((kx - 26) / B) * 100}%`, top: `${((ky - 58) / H) * 100}%`, width: `${(52 / B) * 100}%` }}>
+        <Klecksi groesse="voll" />
+      </div>
+    </div>
+  );
+}
+
 export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
   seite: number;
   /** Felder der aktuellen Seite */
@@ -99,7 +164,6 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
   const faltung = faltungFuer(seite);
   const faecher = faecherAufSeite(felder);
   const fehlen = Math.max(0, BUNT_AB_FAECHERN - faecher.length);
-  const [kx, ky] = FELDER[Math.min(gemalt, FELDER_JE_SEITE - 1)];
   const regal = seiten.slice(-3);
   const [anleitung, setAnleitung] = useState<ReiseSeite['faltung'] | null>(null);
 
@@ -110,52 +174,7 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
         Seite {seite} · {gemalt} von {FELDER_JE_SEITE} Feldern
       </p>
 
-      <div className="heft-karo relative mt-3 overflow-hidden rounded-2xl ring-1 ring-inset ring-karo" style={{ aspectRatio: `${B} / ${H}` }}>
-        <svg viewBox={`0 0 ${B} ${H}`} className="absolute inset-0 h-full w-full" role="img"
-          aria-label={`Seite ${seite}: ${gemalt} von ${FELDER_JE_SEITE} Feldern ausgemalt. Am Seitenende faltet Klecksi ${FALTUNG_MIT_ARTIKEL[faltung]}.`}>
-          {/* roter Heftrand */}
-          <path d={`M296 0 V${H}`} stroke="#d4483b" strokeWidth={1.6} opacity={0.55} />
-          <path d={`M300 0 V${H}`} stroke="#d4483b" strokeWidth={1.6} opacity={0.55} />
-          {FELDER.slice(0, -1).map((p, i) => {
-            const d = weg(p, FELDER[i + 1]);
-            return i < gemalt ? (
-              <g key={i}>
-                <path d={d} fill="none" stroke={BLAU} strokeWidth={6} strokeLinecap="round" />
-                <path className="reise-spur" d={d} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeDasharray="2 14" opacity={0.6} />
-              </g>
-            ) : (
-              <path key={i} d={d} fill="none" stroke={TINTE} strokeWidth={2.6} strokeLinecap="round" strokeDasharray="0.5 9" opacity={0.55} />
-            );
-          })}
-          <path
-            d={`M${FELDER[11][0]} ${FELDER[11][1]} C${FELDER[11][0] - 30} ${FELDER[11][1] - 50} ${ZIEL[0] - 80} ${ZIEL[1] + 6} ${ZIEL[0] - 38} ${ZIEL[1] + 6}`}
-            fill="none" stroke={TINTE} strokeWidth={2.6} strokeLinecap="round" strokeDasharray="0.5 9" opacity={0.55}
-          />
-          {/* Ziel der Seite, noch mit Bleistift */}
-          <g transform={`translate(${ZIEL[0] - 38} ${ZIEL[1] - 30}) scale(2)`}>
-            <Faltung art={faltung} offen groesse={38} />
-          </g>
-          {FELDER.map(([x, y], i) => {
-            const f = felder[i];
-            if (f) {
-              return (
-                <g key={i}>
-                  <Kritzel form={FORMEN[i]} x={x} y={y} zustand="fertig" farbe={farbe(f.fach)} />
-                  {istDoppelt(f.quelle) && (
-                    <polygon transform={`translate(${x + 16} ${y - 16})`} points={sternPunkte(6.5, 2.9)} fill="#eaa315" stroke={TINTE} strokeWidth={1.4} strokeLinejoin="round" />
-                  )}
-                </g>
-              );
-            }
-            return <Kritzel key={i} form={FORMEN[i]} x={x} y={y} zustand={i === gemalt ? 'jetzt' : 'offen'} />;
-          })}
-        </svg>
-        {/* Klecksi steht auf dem naechsten Feld */}
-        <div className="reise-klecksi pointer-events-none absolute"
-          style={{ left: `${((kx - 26) / B) * 100}%`, top: `${((ky - 58) / H) * 100}%`, width: `${(52 / B) * 100}%` }}>
-          <Klecksi groesse="voll" />
-        </div>
-      </div>
+      <ReisePfad seite={seite} felder={felder} farbe={farbe} className="mt-3" />
       <p className="font-hand mt-2 text-center text-sm text-muted-foreground">
         Oben faltet Klecksi {FALTUNG_MIT_ARTIKEL[faltung]} für dich.
       </p>

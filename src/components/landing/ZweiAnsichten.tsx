@@ -40,10 +40,11 @@ const KAPITEL: Kapitel[] = [
   },
   {
     ansicht: 'kind',
-    titel: 'Lernpflanze und eigene Hefte',
-    text: 'Jeder Lerntag lässt die Lernpflanze wachsen, vom Samen bis zum Baum. Für eine Runde ohne Fehler gibt es Sticker, die Kinder auf ihre selbst gestalteten Hefte kleben.',
+    titel: 'Startseite mit Klecksi',
+    text: 'Klecksi begrüßt dein Kind und zeigt, was heute zählt: deinen Lernplan, das Schwerpunkt-Fach und die Berichtigung. Jede geschaffte Runde bringt ihn auf seiner Reise weiter.',
     bild: '/landing/kind-start.webp',
-    notiz: { text: '7 Tage in Folge gelernt', hoehe: 4 },
+    video: '/landing/kind-start',
+    notiz: { text: 'Klecksi begrüßt dein Kind', hoehe: 10 },
   },
   {
     ansicht: 'kind',
@@ -177,7 +178,7 @@ const ZweiAnsichten = () => {
           {/* Kapitel: Handy = Karten, die ueber die Buehne laufen; breit = Text links */}
           <ol className="relative z-10 -mt-[calc(100svh_-_var(--lp-nav))] lg:order-1 lg:col-span-4 lg:mt-0">
             {KAPITEL.map((k, i) => (
-              <li key={k.titel} className="pointer-events-none flex h-[calc(100svh_-_var(--lp-nav))] items-end pb-5 lg:h-auto lg:min-h-[78vh] lg:items-center lg:pb-0">
+              <li key={k.titel} className="pointer-events-none flex h-[calc(100svh_-_var(--lp-nav))] items-end pb-[calc(1.25rem_+_var(--lp-leiste,0px))] transition-[padding] duration-300 motion-reduce:transition-none lg:h-auto lg:min-h-[78vh] lg:items-center lg:pb-0">
                 <div
                   ref={(el) => { karten.current[i] = el; }}
                   className={`pointer-events-auto w-full rounded-[22px] bg-white/95 p-6 shadow-[0_18px_40px_-18px_rgba(26,43,109,0.35)] ring-1 ring-[var(--lp-karo)] backdrop-blur transition-opacity duration-500 lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 lg:backdrop-blur-none ${

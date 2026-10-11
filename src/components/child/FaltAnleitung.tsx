@@ -39,7 +39,7 @@ const sortiert = (f: Flaeche[], vorsilbe: string): Teil[] =>
   [...f].sort((a, b) => a.z - b.z).map((x, i) => ({ pts: x.pts, farbig: x.farbig, key: `${vorsilbe}${i}` }));
 
 /** Bild eines Schritts beim Fortschritt t (0…1) */
-function Bild({ modell, schritt, t }: { modell: Modell; schritt: number; t: number }) {
+export function FaltBild({ modell, schritt, t }: { modell: Modell; schritt: number; t: number }) {
   const vorher = useMemo(() => zustandNach(modell, schritt), [modell, schritt]);
   const s = modell.schritte[schritt];
   const nachher = useMemo(() => (s ? schrittAnwenden(vorher, s) : vorher), [vorher, s]);
@@ -113,6 +113,60 @@ function Bild({ modell, schritt, t }: { modell: Modell; schritt: number; t: numb
   );
 }
 
+/** Dauer eines Schritts in ms (wie in der Anleitung) */
+const schrittDauer = (m: Modell, i: number) => {
+  const s = m.schritte[i];
+  if (!s || s.art === 'fertig') return 0;
+  return s.art === 'falten' ? DAUER_FALTE * s.falten.length : s.art === 'knick' ? 1800 : 1100;
+};
+
+/**
+ * Faltet eine Figur einmal ganz vor, Schritt fuer Schritt, und faengt nach
+ * einer Pause wieder an (Startseite). Laeuft nur, solange `spielen` gilt;
+ * bei „Bewegung reduzieren“ steht die fertige Figur da.
+ */
+export function FaltFilm({ art, spielen = true, className = '' }: { art: FaltungArt; spielen?: boolean; className?: string }) {
+  const modell = MODELLE[art];
+  const ende = modell.schritte.length;
+  const [stand, setStand] = useState({ schritt: 0, t: 0 });
+
+  useEffect(() => {
+    const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (ruhig) { setStand({ schritt: ende, t: 1 }); return; }
+    if (!spielen) return;
+    const PAUSE = 380;
+    const SCHLUSS = 2200;
+    let rahmen = 0;
+    let beginn = 0;
+    const plan: { schritt: number; von: number; bis: number }[] = [];
+    let zeit = 300;
+    for (let i = 0; i < ende; i++) {
+      const d = schrittDauer(modell, i);
+      if (d === 0) continue;
+      plan.push({ schritt: i, von: zeit, bis: zeit + d });
+      zeit += d + PAUSE;
+    }
+    const gesamt = zeit + SCHLUSS;
+    const lauf = (jetzt: number) => {
+      if (!beginn) beginn = jetzt;
+      const z = (jetzt - beginn) % gesamt;
+      const aktiv = plan.find((p) => z < p.bis) ?? null;
+      if (!aktiv) setStand({ schritt: ende, t: 1 });
+      else if (z < aktiv.von) setStand({ schritt: aktiv.schritt, t: 0 });
+      else setStand({ schritt: aktiv.schritt, t: (z - aktiv.von) / (aktiv.bis - aktiv.von) });
+      rahmen = requestAnimationFrame(lauf);
+    };
+    rahmen = requestAnimationFrame(lauf);
+    return () => cancelAnimationFrame(rahmen);
+  }, [modell, ende, spielen]);
+
+  return (
+    <div className={className}>
+      <FaltBild modell={modell} schritt={Math.min(stand.schritt, ende)} t={stand.t} />
+    </div>
+  );
+}
+
 export function FaltAnleitung({ art, offen, onOpenChange }: {
   art: FaltungArt | null;
   offen: boolean;
@@ -164,7 +218,7 @@ export function FaltAnleitung({ art, offen, onOpenChange }: {
           <DialogDescription>Du brauchst {modell.papier}.</DialogDescription>
         </DialogHeader>
         <div className="heft-karo aspect-square w-full overflow-hidden rounded-2xl bg-background ring-1 ring-inset ring-karo">
-          <Bild modell={modell} schritt={schritt} t={t} />
+          <FaltBild modell={modell} schritt={schritt} t={t} />
         </div>
         <p className="text-xs font-bold text-muted-foreground">Schritt {schritt + 1} von {anzahl}</p>
         <p aria-live="polite" className="font-hand min-h-[3.5rem] text-[17px] leading-snug text-tinte">{s.text}</p>

@@ -101,10 +101,11 @@ export function GameCompletionScreen({
     return (
       <div className="mx-auto w-full max-w-xl space-y-4 px-4 pb-safe-bottom pt-6">
         <div className="heft-karo rounded-[28px] bg-card p-6 text-center ring-1 ring-inset ring-karo sm:p-8">
+          <Klecksi groesse={96} stimmung={score * 5 >= totalQuestions * 3 ? 'jubel' : 'mut'} className="mx-auto mb-3" />
           {kaestchen}
           <h1 className="mt-5 text-[1.75rem] font-extrabold">{score} von {totalQuestions} richtig</h1>
           <p className="mt-2 text-muted-foreground">
-            Das war die Demo. In der echten App wird daraus Bildschirmzeit für dein Kind.
+            Das war die Demo. In der echten App wird daraus Bildschirmzeit für dein Kind, und Klecksi malt ein Feld auf seiner Reise.
           </p>
         </div>
 

@@ -5,7 +5,8 @@
  *   npm run build && FFMPEG=/pfad/zu/ffmpeg npm run werbung:app-bilder
  *
  * Ergebnis in public/landing/ (je 600 px breit, WebP):
- *   kind-start      Startbildschirm des Kindes (Streak, Challenge)
+ *   kind-start      Startbildschirm des Kindes (Klecksi, Zeit, Lernplan)
+ *   kind-start.mp4 / .webm  Klecksi winkt, huepft, die Reise am Heftrand
  *   kind-verdient   "Heute verdient" mit dem Knopf "Bildschirmzeit anfragen"
  *   anfragen        Dialog "Bildschirmzeit anfragen" mit Nachricht
  *   eltern-anfrage  Anfrage von Mia mit Genehmigen / Ablehnen
@@ -21,7 +22,7 @@
  * Handy-Layout 390 × 844 (iPhone 14) mit doppelter Pixeldichte.
  */
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
@@ -37,8 +38,12 @@ await mkdir(ZIEL, { recursive: true });
 const vorschau = spawn('npx', ['vite', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'], { stdio: 'ignore' });
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 
-/** Meldet die Rolle mit Beispieldaten an und oeffnet das Dashboard. */
-async function anmelden(rolle, anpassen) {
+/**
+ * Meldet die Rolle mit Beispieldaten an und oeffnet das Dashboard. `film`:
+ * Handy-Layout mit zoom 2 auf 780 × 1688 (der Screencast liefert CSS-Pixel,
+ * wie in nimm-landing-auf.mjs).
+ */
+async function anmelden(rolle, anpassen, film = false) {
   const id = rolle === 'child' ? KIND : ELTERN;
   const d = beispieldaten();
   anpassen?.(d);
@@ -48,7 +53,14 @@ async function anmelden(rolle, anpassen) {
     email_confirmed_at: '2026-09-01T10:00:00Z', app_metadata: { provider: 'email' }, user_metadata: { role: rolle }, created_at: '2026-09-01T10:00:00Z',
   };
   const sitzung = { access_token: 'aufnahme', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 36000, refresh_token: 'aufnahme', user: d.nutzer };
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+  const ctx = await browser.newContext(film
+    ? { viewport: { width: 780, height: 1688 }, isMobile: true, hasTouch: true, locale: 'de-DE', timezoneId: 'Europe/Berlin' }
+    : { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'de-DE', timezoneId: 'Europe/Berlin' });
+  if (film) {
+    await ctx.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => { document.documentElement.style.zoom = '2'; });
+    });
+  }
   await ctx.addInitScript(([s, nutzerId]) => {
     localStorage.setItem('sb-fsmgynpdfxkaiiuguqyr-auth-token', JSON.stringify(s));
     // Einmalige Hinweise ueberspringen, die ein neues Konto zuerst sieht
@@ -76,6 +88,55 @@ async function oben(page, text, abstand = 12) {
 }
 const bild = (page, name) => page.screenshot({ path: join(arbeit, `${name}.png`) });
 
+/** Weich scrollen (wie ein Daumen), damit es im Video ruhig aussieht */
+const gleiten = (page, ziel, ms) => page.evaluate(([y, dauer]) => new Promise((fertig) => {
+  const start = window.scrollY;
+  const t0 = performance.now();
+  const schritt = (jetzt) => {
+    const t = Math.min(1, (jetzt - t0) / dauer);
+    const w = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+    window.scrollTo(0, start + (y - start) * w);
+    if (t < 1) requestAnimationFrame(schritt); else fertig();
+  };
+  requestAnimationFrame(schritt);
+}), [ziel, ms]);
+
+/** Nimmt waehrend `ablauf` ein Video der Seite auf und schreibt name.mp4/.webm/.webp nach ZIEL. */
+async function film(ctx, page, name, ablauf) {
+  const bilder = [];
+  const cdp = await ctx.newCDPSession(page);
+  cdp.on('Page.screencastFrame', async (f) => {
+    bilder.push({ t: f.metadata.timestamp, daten: f.data });
+    try { await cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }); } catch { /* zu */ }
+  });
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: 780, maxHeight: 1688 });
+  await page.waitForTimeout(300);
+  const anfang = Date.now() / 1000;
+  await ablauf();
+  const ende = Date.now() / 1000;
+  await cdp.send('Page.stopScreencast');
+  const ab = Math.max(0, bilder.findLastIndex((b) => b.t <= anfang));
+  const auswahl = bilder.slice(ab).filter((b) => b.t <= ende);
+  if (auswahl.length < 10) throw new Error(`${name}: nur ${auswahl.length} Bilder aufgenommen.`);
+  auswahl[0] = { ...auswahl[0], t: anfang };
+  const liste = [];
+  for (let i = 0; i < auswahl.length; i++) {
+    const datei = join(arbeit, `${name}-${String(i).padStart(5, '0')}.jpg`);
+    await writeFile(datei, Buffer.from(auswahl[i].daten, 'base64'));
+    const bis = i + 1 < auswahl.length ? auswahl[i + 1].t : ende;
+    liste.push(`file '${datei}'`, `duration ${Math.max(0.001, bis - auswahl[i].t).toFixed(3)}`);
+  }
+  liste.push(liste.at(-2));
+  await writeFile(join(arbeit, `${name}.txt`), liste.join('\n') + '\n');
+  const ff = (args) => execFileSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'inherit' });
+  const vf = 'fps=30,scale=600:-2:flags=lanczos,format=yuv420p';
+  ff(['-f', 'concat', '-safe', '0', '-i', join(arbeit, `${name}.txt`), '-vf', vf, '-an',
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-profile:v', 'main', '-movflags', '+faststart', join(ZIEL, `${name}.mp4`)]);
+  ff(['-f', 'concat', '-safe', '0', '-i', join(arbeit, `${name}.txt`), '-vf', vf, '-an',
+    '-c:v', 'libvpx-vp9', '-crf', '34', '-b:v', '0', '-row-mt', '1', join(ZIEL, `${name}.webm`)]);
+  console.log(`${name}: Video ${(ende - anfang).toFixed(1)} s aus ${auswahl.length} Bildern`);
+}
+
 /**
  * Bildschirm, der mit `text` oben beginnt — auch wenn die Seite dafuer zu
  * kurz ist: ganze Seite aufnehmen, ab dort 390 × 844 ausschneiden, unten mit
@@ -101,9 +162,29 @@ try {
     await new Promise((r) => setTimeout(r, 500));
   }
 
+  // Kind: Video vom Start mit Klecksi (winkt beim ersten Start des Tages,
+  // huepft beim Antippen, dann die Reise am Heftrand)
+  {
+    const { page, ctx } = await anmelden('child', undefined, true);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await film(ctx, page, 'kind-start', async () => {
+      await page.waitForTimeout(3200);
+      await page.getByRole('button', { name: 'Klecksi antippen' }).click();
+      await page.waitForTimeout(2200);
+      const reise = await page.getByRole('heading', { name: /Heftrand-Reise/ }).evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+      await gleiten(page, reise - 30, 1400);
+      await page.waitForTimeout(3200);
+      await gleiten(page, 0, 1200);
+      await page.waitForTimeout(800);
+    });
+    await ctx.close();
+  }
+
   // Kind: Startbildschirm, verdiente Zeit mit Knopf, Anfrage-Dialog
   {
     const { page, ctx } = await anmelden('child');
+    // Klecksi winkt beim Laden; danach steht er still
+    await page.waitForTimeout(2500);
     await bild(page, 'kind-start');
     await ausschnitt(page, 'kind-verdient', page.getByRole('region', { name: 'Deine Bildschirmzeit heute' }), 20);
     await page.getByRole('button', { name: /Min\. anfragen/ }).click();
@@ -113,11 +194,11 @@ try {
     await ctx.close();
   }
 
-  // Eltern: Dashboard, Anfrage, Regeln, Lernanalyse (Handysperre eingerichtet)
+  // Eltern: Dashboard, Anfrage, Regeln, Lernanalyse. Ohne LernZeit-Handysperre:
+  // Die gibt es vorerst nur fuer freigeschaltete Testkinder (CLAUDE.md).
   {
     const { page, ctx } = await anmelden('parent', (d) => {
       d.screen_time_requests = [offeneAnfrage(8, NACHRICHT)];
-      d.child_settings[0].screen_time_managed = true;
     });
     // Seit dem App-Redesign: "Heute" mit der Anfrage oben, Kind-Details in Bereichen
     await bild(page, 'eltern-anfrage');

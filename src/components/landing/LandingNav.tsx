@@ -17,9 +17,15 @@ const LandingNav = () => {
   const aufStart = pathname === '/start' || pathname === '/';
   const imRatgeber = pathname.startsWith('/ratgeber');
   const [gescrollt, setGescrollt] = useState(false);
+  // Tintenstrich unter der Leiste: so weit, wie die Seite gelesen ist
+  const [gelesen, setGelesen] = useState(0);
 
   useEffect(() => {
-    const pruefen = () => setGescrollt(window.scrollY > 8);
+    const pruefen = () => {
+      setGescrollt(window.scrollY > 8);
+      const rest = document.documentElement.scrollHeight - window.innerHeight;
+      setGelesen(rest > 0 ? Math.min(1, Math.max(0, window.scrollY / rest)) : 0);
+    };
     pruefen();
     window.addEventListener('scroll', pruefen, { passive: true });
     return () => window.removeEventListener('scroll', pruefen);
@@ -101,6 +107,15 @@ const LandingNav = () => {
           </button>
         </div>
       </nav>
+      {aufStart && gescrollt && (
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px]">
+          <div className="h-full origin-left rounded-r-full bg-[var(--lp-blau)]" style={{ transform: `scaleX(${gelesen})` }} />
+          <span
+            className="absolute -top-[3px] h-[9px] w-[7px] -translate-x-1/2 rounded-[50%_50%_50%_50%/60%_60%_40%_40%] bg-[var(--lp-blau)]"
+            style={{ left: `${gelesen * 100}%` }}
+          />
+        </div>
+      )}
     </header>
   );
 };

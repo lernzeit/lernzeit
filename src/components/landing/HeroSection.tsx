@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { trackFireAndForget } from '@/lib/analytics';
 import Handy from './Handy';
 import Randnotiz from './Randnotiz';
+import KlecksiWinkt from './KlecksiWinkt';
 
 const verzug = (ms: number) => ({ '--lp-verzug': `${ms}ms` }) as React.CSSProperties;
 
@@ -116,15 +117,25 @@ const HeroSection = () => {
             <div className="lp-auftritt-handy" style={verzug(250)}>
               <Handy bild="/landing/demo-aufgaben.webp" video="/landing/demo-aufgaben" alt="Kind-Ansicht: Mia löst Mathe-Aufgaben der 3. Klasse" className="text-[2.35px]" />
             </div>
+            {/* Klecksi sitzt neben dem Handy und winkt */}
+            <div className="lp-auftritt absolute -left-14 bottom-6 z-10 sm:-left-24" style={verzug(700)}>
+              <KlecksiWinkt groesse={92} />
+              <span className="lp-notiz lp-auftritt absolute -top-7 left-1 text-[1.125rem] text-[var(--lp-blau)]" style={{ ...verzug(1300), rotate: '-6deg' }}>Hallo!</span>
+            </div>
           </div>
 
           {/* Ab 1024 px: Kind vorne, Eltern dahinter, Notizen darueber */}
-          <div className="relative ml-auto hidden h-[600px] w-[400px] lg:block xl:h-[680px] xl:w-[480px]">
+          <div className="relative ml-auto hidden h-[660px] w-[400px] lg:block xl:h-[750px] xl:w-[480px]">
             <div className="lp-auftritt-handy absolute left-0 top-[84px] z-10" style={verzug(250)}>
               <Handy bild="/landing/demo-aufgaben.webp" video="/landing/demo-aufgaben" alt="Kind-Ansicht: Mia löst Mathe-Aufgaben der 3. Klasse" className="text-[2.1px] xl:text-[2.45px]" />
             </div>
             <div className="lp-auftritt-handy absolute right-0 top-[150px] xl:top-[170px]" style={verzug(450)}>
               <Handy bild="/landing/eltern-anfrage.webp" alt="Eltern-Ansicht: Anfrage von Mia über 8 Minuten mit Genehmigen und Ablehnen" className="text-[1.8px] xl:text-[2.1px]" />
+            </div>
+            {/* Klecksi sitzt unter den Handys und winkt */}
+            <div className="lp-auftritt absolute bottom-0 left-[30%] z-20 xl:left-[32%]" style={verzug(900)}>
+              <KlecksiWinkt groesse={104} />
+              <span className="lp-notiz lp-auftritt absolute left-full top-6 ml-1 w-max text-[1.25rem] text-[var(--lp-blau)]" style={{ ...verzug(1500), rotate: '-5deg' }}>Hallo, ich bin Klecksi!</span>
             </div>
             <Randnotiz farbe="gruen" pfeil="unten" drehung={-4} verzug={1000} className="absolute left-0 top-0 z-20 w-[11rem] text-[1.1875rem] xl:text-[1.3125rem]">
               +30 Sek. für jede richtige Aufgabe

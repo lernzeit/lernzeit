@@ -71,8 +71,12 @@ Supabase-Secrets gelöscht werden.
   per `addInitScript` auf `false` setzen und den Host prüfen.
 - Daten vor dem 04.10.2026 enthalten Builds, Vorschau-Aufrufe und Meta-Prüf-Crawler; die
   Besucherzahl ist dort um ein Vielfaches zu hoch (Lovable zählte 223 statt ~1.000 in 4 Wochen).
-- Abschnitte der Startseite tragen `data-abschnitt` (hero, so_funktionierts, ansichten, preise,
-  faq, fusszeile); Store-Links werden zentral im `AnalyticsTracker` gezählt.
+- Abschnitte der Startseite tragen `data-abschnitt` (hero, so_funktionierts, klecksi, ansichten, preise,
+  faq, fusszeile; `klecksi` fehlt noch im Trichter-Bericht); Store-Links werden zentral im
+  `AnalyticsTracker` gezählt. CTA-Positionen u. a. hero, klecksi, leiste (feste Leiste auf dem Handy), footer.
+- Klecksi auf der Startseite (11.10.2026): Hero, Abschnitt `landing/KlecksiReise.tsx` (Reise malt sich
+  beim Scrollen aus, Papierflieger faltet sich, gleiche Bausteine wie die App), Seitenende,
+  Tintenstrich unter der Leiste, `landing/CtaLeiste.tsx`.
 - Bilder der Startseite sind echte App-Bildschirme: `npm run werbung:landing` (Demo, Video) und
   `npm run werbung:app-bilder` (eingeloggt, Beispieldaten aus `scripts/lib/supabase-attrappe.mjs`;
   jeder Supabase-Aufruf wird lokal beantwortet, kein Zugriff auf die Datenbank).
@@ -95,7 +99,9 @@ Supabase-Secrets gelöscht werden.
 - Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Regeln speichern sofort mit
   leisem Hinweis „Wird gespeichert …“ (kein Speichern-Knopf, keine Toasts).
 - Website-Bilder nach App-Änderungen neu aufnehmen: `npm run build`, dann
-  `npm run werbung:app-bilder` und `npm run werbung:landing` (FFMPEG/CHROMIUM setzen).
+  `npm run werbung:app-bilder` (auch Video `kind-start`) und `npm run werbung:landing`
+  (FFMPEG/CHROMIUM setzen; ffmpeg mit x264/VP9/WebP z. B. aus dem PyPI-Paket `imageio-ffmpeg`,
+  Chromium unter `/opt/pw-browsers/chromium`).
 
 ## Rechtstexte (Stand 04.10.2026)
 

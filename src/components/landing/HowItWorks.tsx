@@ -13,7 +13,7 @@ const steps = [
     title: 'Aufgaben lösen',
     description: 'Altersgerechte Fragen beantworten – bei Fehlern hilft der KI-Tutor mit Erklärungen.',
     bild: '/landing/aufgabe.webp',
-    alt: 'Aufgabe „Wie viel ist 300 − 145?“, Antwort 155 in Rechenkästchen, darunter das Ziffernfeld',
+    alt: 'Mathe-Aufgabe der 3. Klasse, Antwort in Rechenkästchen, darunter das Ziffernfeld',
   },
   {
     title: 'Zeit verdienen',

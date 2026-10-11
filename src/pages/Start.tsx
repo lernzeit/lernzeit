@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import HeroSection from '@/components/landing/HeroSection';
 import HowItWorks from '@/components/landing/HowItWorks';
+import KlecksiReise from '@/components/landing/KlecksiReise';
+import KlecksiWinkt from '@/components/landing/KlecksiWinkt';
+import CtaLeiste from '@/components/landing/CtaLeiste';
 import ZweiAnsichten from '@/components/landing/ZweiAnsichten';
 import SetupSteps from '@/components/landing/SetupSteps';
 import PricingComparison from '@/components/landing/PricingComparison';
@@ -57,6 +60,7 @@ const Start = () => {
       <LandingNav />
       <HeroSection />
       <HowItWorks />
+      <KlecksiReise />
       <ZweiAnsichten />
       <SetupSteps />
       <PricingComparison />
@@ -65,8 +69,11 @@ const Start = () => {
       {/* Footer CTA und rechtliche Links: Abschnitt "fusszeile" */}
       <div data-abschnitt="fusszeile">
         <section className="px-3 sm:px-5">
-          <div className="lp-band lp-karo rounded-[28px] py-20 sm:rounded-[36px] lg:py-28">
-            <div className="lp-container">
+          <div className="lp-band lp-karo relative overflow-hidden rounded-[28px] py-20 sm:rounded-[36px] lg:py-28">
+            {/* Klecksi winkt zum Schluss */}
+            <KlecksiWinkt groesse={132} leuchten className="absolute right-6 top-8 hidden sm:block lg:right-[12%] lg:top-1/2 lg:-translate-y-1/2 lg:scale-150" />
+            <div className="lp-container relative">
+              <KlecksiWinkt groesse={88} leuchten className="mb-4 sm:hidden" />
               <h2 className="text-[2.5rem] font-extrabold sm:text-6xl">Jetzt starten</h2>
               <p className="mt-5 max-w-md text-lg leading-relaxed">
                 Melde dich an und teste alle Funktionen – die ersten 4 Wochen sind kostenlos.
@@ -90,6 +97,7 @@ const Start = () => {
 
         <LegalFooter className="pb-8 pt-6" />
       </div>
+      <CtaLeiste />
     </main>
   );
 };
