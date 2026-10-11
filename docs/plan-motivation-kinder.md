@@ -14,7 +14,7 @@ Lernpläne und Schwerpunkte der Eltern.
 
 | Baustein | Name |
 |---|---|
-| Maskottchen | **Klecks** (animiert: atmen, blinzeln, umsehen, winken, Tropfen; Stimmungen freut sich / denkt nach / macht Mut) |
+| Maskottchen | **Klecksi** (Version „Tropfen“, entschieden 11.10.2026): runder Klecks in Königsblau mit weichen Ausbuchtungen und Spritzern; atmet, blinzelt, wackelt. Arme wachsen nur für Gesten heraus: einmal grüßen (erstes Öffnen am Tag, Antippen), jubeln (5/5, Feld, Seite, Urkunde), Mut machen (nach Fehlern). Dazu „denkt nach“. |
 | Spielgeld | **Tintentropfen** |
 | Reise | **Kleckis Heftrand-Reise** (entschieden 11.10.2026): Seiten mit je 12 Feldern. Jede geschaffte Runde in einem beliebigen Fach malt ein Feld in der Heftfarbe dieses Fachs aus. |
 | Doppelt weit | Runden im **Lernplan** oder in einem **Schwerpunkt-Fach** der Eltern (`is_priority`) zählen zwei Felder (Stern am Feld). |
@@ -102,6 +102,6 @@ in `docs/release-2.0.md`). Stufe 1 kann zusammen mit 2.0.2 kommen.
 
 ## Offen (Betreiber)
 
-- Aussehen von Klecks: drei Versionen im Entwurf (Spritzer, Tropfen, mit Füßchen). „Karl Klecks“
-  (pme Lernwelten) ist ein ähnliches Maskottchen – Name und Aussehen vor dem Start prüfen.
+- Name: „Karl Klecks“ (pme Lernwelten) ist ein ähnliches Maskottchen – Namen vor dem Start prüfen
+  (DPMA), „Klecksi“ ist eigenständiger als „Klecks“.
 - Ab wann eine Runde „geschafft“ ist (Vorschlag: 3 von 5).
