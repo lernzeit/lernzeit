@@ -4,6 +4,24 @@ Anstoß: Rechen-Inseln (Maskottchen, Münzen und Avatare, Fehlerkiste, Reise dur
 Die Seite war aus der Claude-Umgebung nicht erreichbar; der Plan beruht auf der Beschreibung
 des Betreibers.
 
+## Thema (entschieden 11.10.2026): „Klecks und die Tintenkarte“
+
+Eine Welt aus dem Schulheft statt fremder Inseln. Klecks, ein Tintenklecks, ist aus dem Füller
+entwischt und malt in den Heften des Kindes eine Welt fürs Schuljahr; dafür braucht er Tinte.
+
+| Baustein | Name |
+|---|---|
+| Maskottchen | **Klecks** (animiert: atmen, blinzeln, umsehen, winken, Tropfen; Stimmungen freut sich / denkt nach / macht Mut) |
+| Spielgeld | **Tintentropfen** (statt Sterne/Münzen) |
+| Reise durchs Schuljahr | **Tintenkarte**: jedes Thema ein Ort (z. B. Minus-Keller, Prozent-Pizzeria), „ab November“ |
+| Fortschritt je Ort | **3 Stempel** wie vom Lehrer |
+| Fehlerkiste | **Berichtigung**: Kleckse wegwischen |
+| Sammlung | **Federmäppchen**: Figuren (Avatare) und Abzeichen |
+
+Nicht übernommen: „Weg zur 1“ (Notenversprechen), zusätzliches Level/XP. Abzeichen
+„Mitternachts-Gelehrter“ und „Nachteule“ entfernen (belohnen Lernen spät nachts).
+Entwurf: Artefakt „Klecks und die Tintenkarte“ (claude.ai).
+
 ## Ausgangslage
 
 - 75 Kinderkonten (ohne Testkonten), davon **4 in den letzten 14 Tagen aktiv**, im Schnitt an
@@ -32,8 +50,8 @@ des Betreibers.
 | # | Baustein | Was das Kind sieht | Technik |
 |---|---|---|---|
 | 1 | **Berichtigung** (Fehlerkiste) | Kachel auf dem Kind-Start: „3 Aufgaben zum Berichtigen“. Eigene kurze Runde; geschafft → Rotstift wird grüner Haken, Aufgabe verlässt die Kiste. | `review_queue` gibt es; neue Runde „Berichtigung“, Zähler, Animation. Bildschirmzeit wie bei normalen Aufgaben. |
-| 2 | **Sterne** | Nach jeder Runde „+5 ⭐“; Stand oben neben dem Namen. Extra für 5/5, Berichtigung, Tagesaufgabe. | Tabelle `kind_sterne` (Buchungen). Vergabe nur serverseitig beim Rundenabschluss (RPC prüft `game_sessions`), Kind kann nicht selbst schreiben. |
-| 3 | **Freischalten** | Avatare, Heft-Farben, Sticker-Pakete, Rahmen für die Zeit-Uhr gegen Sterne. Vorschau mit Schloss und Preis. | 8 Avatare frei, Rest mit Preis; bereits gewählte Avatare bleiben. Tabelle `kind_freigeschaltet`, RPC `mit_sternen_freischalten`. |
+| 2 | **Tintentropfen** | Nach jeder Runde „+5 Tinte“; Stand oben neben dem Namen. Extra für 5/5, Berichtigung, Tagesaufgabe. | Tabelle `kind_tinte` (Buchungen). Vergabe nur serverseitig beim Rundenabschluss (RPC prüft `game_sessions`), Kind kann nicht selbst schreiben. |
+| 3 | **Freischalten** | Avatare, Heft-Farben, Sticker-Pakete, Rahmen für die Zeit-Uhr gegen Tinte. Vorschau mit Schloss und Preis. | 8 Avatare frei, Rest mit Preis; bereits gewählte Avatare bleiben. Tabelle `kind_freigeschaltet`, RPC `mit_tinte_freischalten`. |
 
 ## Stufe 2 – Spielwelt
 
