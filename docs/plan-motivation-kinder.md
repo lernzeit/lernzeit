@@ -4,28 +4,42 @@ Anstoß: Rechen-Inseln (Maskottchen, Münzen und Avatare, Fehlerkiste, Reise dur
 Die Seite war aus der Claude-Umgebung nicht erreichbar; der Plan beruht auf der Beschreibung
 des Betreibers.
 
-## Thema (11.10.2026): „Klecks und das Schulhaus“
+## Thema (11.10.2026): Klecks und eine Reise für alle Fächer
 
-Eine Welt aus dem Schulheft statt fremder Inseln. Klecks, ein Tintenklecks, ist aus dem Füller
-entwischt und begleitet das Kind durchs Schuljahr – Raum für Raum durch sein Schulhaus, vom
-Keller bis aufs Dach, wo das Zeugnis wartet. Für neue Figuren braucht er Tinte.
+Klecks, ein Tintenklecks (Königsblau, echte Klecks-Form mit Spritzern und Tropfen), begleitet
+das Kind. Es gibt **eine** Reise für alle Fächer, direkt auf dem Kind-Start – keine Reise je Fach
+und Klasse. Grund: Themenlisten für jedes Fach und jede Klasse müssten gegen 16 Lehrpläne geprüft
+werden, und das Kind stünde in jedem Fach an einer anderen Stelle. Die Inhalte steuern weiter
+Lernpläne und Schwerpunkte der Eltern.
 
 | Baustein | Name |
 |---|---|
 | Maskottchen | **Klecks** (animiert: atmen, blinzeln, umsehen, winken, Tropfen; Stimmungen freut sich / denkt nach / macht Mut) |
-| Spielgeld | **Tintentropfen** (statt Sterne/Münzen) |
-| Reise durchs Schuljahr | **Schulhaus**: jedes Thema ein Raum mit Türschild (z. B. Minus-Keller, Dreisatz-Werkstatt, Prozent-Mensa, Gleichungs-Labor); Stockwerke = Abschnitte zwischen den Ferien (Keller bis Herbstferien … Dach = Zeugnis); Ferien = „Klecks macht Pause“ |
-| Fortschritt je Raum | **3 Stempel** aufs Türschild |
-| Fehlerkiste | **Berichtigung**: Kleckse wegwischen |
+| Spielgeld | **Tintentropfen** |
+| Reise | Seiten mit je 12 Feldern (Stil noch offen, siehe unten). Jede geschaffte Runde in einem beliebigen Fach malt ein Feld in der Heftfarbe dieses Fachs aus. |
+| Doppelt weit | Runden im **Lernplan** oder in einem **Schwerpunkt-Fach** der Eltern (`is_priority`) zählen zwei Felder (Stern am Feld). |
+| Alle Fächer | **Bunte Seite**: 3 verschiedene Fächer auf einer Seite (oder alle sichtbaren, wenn es weniger sind) → +20 Tinte am Seitenende. Hinweis statt Pflicht. |
+| Seitenende | +30 Tinte und ein Sammelstück; Eltern können Extra-Minuten festlegen (Stufe 3). |
+| Fehlerkiste | **Berichtigung**: Kleckse wegwischen, zählt ein Feld |
 | Sammlung | **Federmäppchen**: Figuren (Avatare) gegen Tinte |
-| Erfolge | **Urkunden**: die bestehenden Erfolge mit Bonus-Minuten und Langfristzielen, von Klecks überreicht; „Fast geschafft“ und „Große Ziele“ mit Fortschritt |
+| Erfolge | **Urkunden**: die bestehenden Erfolge mit Bonus-Minuten und Langfristzielen |
+
+Zwei Stile zur Wahl (Entwurf: Artefakt „Klecks – eine Reise für alle Fächer, zwei Stile“):
+- **A: Kleckis Heftrand-Reise** – Felder sind Heftrand-Kritzel (Kästchen, Würfel, Stern …) auf
+  einem Pfad von unten nach oben; Klecks steht auf dem nächsten Feld, hinter ihm eine
+  Tintenspur. Am Seitenende faltet Klecks etwas aus Papier (Flieger, Frosch, Himmel & Hölle,
+  Schiff …) für das Regal.
+- **B: Der magische Comic** – jede Seite ist eine Folge; jede Runde ist ein Strich, das Bild
+  wird von Bleistift über Tinte zu Farbe. Das Kind (mit seiner Figur) ist der Held, Klecks
+  zeichnet. Das Boot wächst alle drei Folgen; am Schuljahresende entsteht ein Buch.
+
+„Geschafft“ heißt: Runde beendet mit mindestens 3 von 5 richtig (Vorschlag). Nichts geht verloren,
+Pausen kosten nichts.
 
 Nicht übernommen: „Weg zur 1“ (Notenversprechen), zusätzliches Level/XP, eigene Abzeichen
 (die bestehenden Erfolge bleiben, Wunsch des Betreibers). Erfolge „Mitternachts-Gelehrter“
 (Lernen 0–4 Uhr) und „Nachteule“ (nach 21 bzw. vor 6 Uhr) entfernen: Keine Belohnung für
 Handynutzung spät abends oder früh morgens. „Zeitreisender“ (verschiedene Uhrzeiten) bleibt.
-Entwurf: Artefakt „Klecks und die Tintenkarte“ (claude.ai), Bildschirme Kind-Start, Schulhaus,
-Urkunden, Federmäppchen, Klecks.
 
 ## Ausgangslage
 
@@ -63,7 +77,7 @@ Urkunden, Federmäppchen, Klecks.
 | # | Baustein | Was das Kind sieht | Technik |
 |---|---|---|---|
 | 4 | **Maskottchen** | Eine Figur (Vorschlag: „Klecks“, ein Tintenklecks mit Füller) begrüßt, lobt, macht bei 3 Fehlern Mut, erinnert an Berichtigung oder den Test im Lernplan. Ein Satz, nie mehr. | SVG im Heft-Stil, wenige Posen (freut sich, denkt nach, winkt). Feste, geprüfte Sätze – keine KI-Texte an Kinder. |
-| 5 | **Reise durchs Schuljahr** | Pro Fach eine Heftseite mit Stationen = Themen des Schuljahres in Lehrplan-Reihenfolge. Station geschafft nach z. B. 10 richtigen Aufgaben im Thema; Stern-Bonus und Sticker. | Themenlisten je Fach und Klasse (Start: Mathe Kl. 1–7), geprüft gegen Lehrpläne mit Quellen wie beim Ratgeber. `ai-question-generator` bekommt das Thema (gibt es schon für Lernpläne). Größter Aufwand. |
+| 5 | **Reise auf dem Kind-Start** | Eine Reise für alle Fächer (siehe Thema). Felder in Heftfarben, Lernplan und Schwerpunkt doppelt, bunte Seite als Bonus. | Tabelle `kind_reise` (Felder mit Fach, Quelle, Runde). Vergabe serverseitig beim Rundenabschluss wie die Tinte. Keine Themenlisten nötig. |
 
 ## Stufe 3 – Eltern einbinden
 
@@ -90,6 +104,5 @@ in `docs/release-2.0.md`). Stufe 1 kann zusammen mit 2.0.2 kommen.
 
 ## Offen (Betreiber)
 
-- Name und Aussehen des Maskottchens.
-- „Sterne“ oder „Münzen“ (Vorschlag: Sterne – passt zu Schulheft und den Sticker-Sternen).
-- Welches Fach zuerst für die Reise (Vorschlag: Mathe, weil Aufgaben dort am verlässlichsten sind).
+- Stil der Reise: Heftrand (A) oder Comic (B).
+- Ab wann eine Runde „geschafft“ ist (Vorschlag: 3 von 5).
