@@ -73,7 +73,11 @@ export function beispieldaten() {
       fehler(3, 'Welches Wort ist ein Nomen?', ['laufen', 'Haus', 'schnell', 'und'], 'Haus', 'german'),
     ],
     daily_challenges: [],
-    rpc: { tinte_stand: 84 },
+    rpc: {
+      tinte_stand: 84,
+      runde_belohnen: { tinte: 10, stand: 94, geschafft: true, quelle: 'schwerpunkt',
+        felder: [{ seite: 4, feld: 7, fach: 'math', quelle: 'schwerpunkt' }, { seite: 4, feld: 8, fach: 'math', quelle: 'schwerpunkt' }], seite_fertig: null },
+    },
     parent_child_relationships: [{ id: '33333333-3333-4333-8333-333333333333', parent_id: ELTERN, child_id: KIND, created_at: '2026-09-02T10:00:00Z' }],
     child_settings: [{
       id: '44444444-4444-4444-8444-444444444444', child_id: KIND, parent_id: ELTERN,
@@ -105,6 +109,15 @@ export function beispieldaten() {
     }],
   };
 }
+
+/** Fuenf Aufgaben fuer eine Runde (Bildschirm am Rundenende). */
+export const RUNDE = [
+  { text: 'Wie viel ist 7 · 8?', optionen: ['54', '56', '64', '48'], richtig: '56' },
+  { text: 'Runde 347 auf Zehner.', optionen: ['340', '350', '300', '400'], richtig: '350' },
+  { text: 'Wie viel ist 125 + 78?', optionen: ['193', '203', '213', '201'], richtig: '203' },
+  { text: 'Welche Zahl kommt nach 699?', optionen: ['698', '700', '710', '609'], richtig: '700' },
+  { text: 'Wie viel ist 36 : 4?', optionen: ['8', '9', '7', '6'], richtig: '9' },
+];
 
 /** Offene Anfrage von Mia an Anna, gestellt vor 3 Minuten. */
 export const offeneAnfrage = (minuten = 8, nachricht = null) => ({
@@ -154,6 +167,14 @@ export function beantworte(route, d) {
   if (u.pathname.startsWith('/functions/v1/')) {
     const fn = u.pathname.split('/').pop();
     let k = {}; try { k = JSON.parse(q.postData() || '{}'); } catch { /* leer */ }
+    // Aufgaben fuer eine Runde (Klasse 3, Mathe), der Reihe nach; Antwort = Index
+    if (fn === 'ai-question-generator') {
+      const f = RUNDE[(d.frageNr = (d.frageNr ?? -1) + 1) % RUNDE.length];
+      return json({ success: true, question: {
+        id: `f${d.frageNr}`, grade: 3, subject: 'math', difficulty: 'easy', questionType: 'MULTIPLE_CHOICE',
+        questionText: f.text, options: f.optionen, correctAnswer: f.optionen.indexOf(f.richtig), hint: '', createdAt: new Date().toISOString(),
+      } });
+    }
     if (fn === 'check-subscription') return json({ subscribed: true, plan: 'premium', status: 'active', subscription_end: new Date(Date.now() + 300 * 864e5).toISOString() });
     if (fn === 'screen-time-request') {
       if (k.action === 'get_requests') return json({ requests: d.screen_time_requests });
@@ -176,7 +197,9 @@ export function beantworte(route, d) {
   if (['POST', 'PATCH', 'DELETE'].includes(q.method())) {
     let koerper = null; try { koerper = JSON.parse(q.postData() || 'null'); } catch { /* leer */ }
     const eintrag = Array.isArray(koerper) ? koerper[0] : koerper;
-    return accept.includes('vnd.pgrst.object') ? json(eintrag ?? {}, 201) : json(eintrag ? [eintrag] : [], 201);
+    // Neue Zeilen bekommen eine Kennung (z. B. game_sessions → runde_belohnen)
+    const neu = eintrag && q.method() === 'POST' ? { id: crypto.randomUUID(), ...eintrag } : eintrag;
+    return accept.includes('vnd.pgrst.object') ? json(neu ?? {}, 201) : json(neu ? [neu] : [], 201);
   }
 
   let treffer = (d[tabelle] || []).filter((z) => [...u.searchParams.entries()].every(([k, w]) => passt(z, k, w)));

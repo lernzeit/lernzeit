@@ -47,6 +47,14 @@ const KAPITEL: Kapitel[] = [
     notiz: { text: 'Klecksi begrüßt dein Kind', hoehe: 10 },
   },
   {
+    // Unser Kern (Wunsch des Betreibers 11.10.2026): Zeit verdienen und anfragen
+    ansicht: 'kind',
+    titel: 'Bildschirmzeit als Belohnung',
+    text: 'Pro richtige Antwort gibt es Bildschirmzeit. Möchte dein Kind Zeit einlösen, schickt es dir eine Anfrage.',
+    bild: '/landing/anfragen.webp',
+    notiz: { text: 'Anfrage mit Nachricht an die Eltern', hoehe: 54 },
+  },
+  {
     ansicht: 'eltern',
     titel: 'Alles auf einen Blick',
     text: 'Auf „Heute“ siehst du offene Anfragen und was dein Kind gelernt hat. Die verdiente Zeit wird nie automatisch freigegeben – du entscheidest.',

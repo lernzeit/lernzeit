@@ -13,20 +13,20 @@ const steps = [
   {
     title: 'Zeit verdienen',
     description: 'Pro richtige Antwort gibt es Bildschirmzeit – wie viele Sekunden pro Fach, legst du fest.',
+    bild: '/landing/rundenende.webp',
+    alt: 'Ende einer Runde: 5 von 5 richtig, +3,2 Minuten Bildschirmzeit verdient',
+  },
+  {
+    title: 'Zeit anfragen',
+    description: 'Möchte dein Kind die Zeit nutzen, tippt es auf „Anfragen“ und schickt dir eine Anfrage, gern mit einer kurzen Nachricht.',
     bild: '/landing/kind-verdient.webp',
     alt: 'Kinder-Ansicht: Zeit-Uhr mit 8 von 60 Minuten, Knöpfe „Lernen starten“ und „8 Min. anfragen“',
   },
   {
-    title: 'Zeit anfragen',
-    description: 'Möchte dein Kind die Zeit nutzen, schickt es dir eine Anfrage, gern mit einer kurzen Nachricht.',
-    bild: '/landing/anfragen.webp',
-    alt: 'Kinder-Ansicht: Dialog „Bildschirmzeit anfragen“ über 8 Minuten mit Nachricht an die Eltern',
-  },
-  {
     title: 'Du gibst frei',
     description: 'Die Anfrage kommt auf dein Handy. Du genehmigst sie und gibst die Zeit in der Bildschirmzeit deines Kindes frei: auf dem iPhone in den Einstellungen, auf Android in Family Link.',
-    bild: '/landing/eltern-anfrage.webp',
-    alt: 'Eltern-Ansicht: Anfrage von Mia über 8 Minuten mit Genehmigen und Ablehnen',
+    bild: '/landing/eltern-freigabe.webp',
+    alt: 'Eltern-Ansicht: Anfrage von Mia über 8 Minuten mit Nachricht, Knöpfe „Ablehnen“ und „Genehmigen“',
   },
 ];
 
@@ -50,7 +50,7 @@ const HowItWorks = () => (
                 <p className="mt-2 text-[0.9375rem] leading-relaxed text-[#b9c4ea]">{s.description}</p>
               </div>
               {/* Handy ragt unten aus der Karte */}
-              <div className="relative mt-auto flex h-[300px] justify-center overflow-hidden pt-8">
+              <div className="relative mt-auto flex h-[340px] justify-center overflow-hidden pt-8">
                 <Handy bild={s.bild} alt={s.alt} className="text-[2.45px] lg:text-[2.2px]" />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[var(--lp-tinte)] to-transparent opacity-70" />
               </div>

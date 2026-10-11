@@ -8,6 +8,8 @@
  *   kind-start      Startbildschirm des Kindes (Klecksi, Zeit, Lernplan)
  *   kind-start.mp4 / .webm  Klecksi winkt, huepft, die Reise am Heftrand
  *   kind-verdient   "Heute verdient" mit dem Knopf "Bildschirmzeit anfragen"
+ *   rundenende      Ende einer Runde: verdiente Zeit, Tinte, Felder der Reise
+ *   eltern-freigabe Ausschnitt ab "Anfragen": Anfrage mit Ablehnen / Genehmigen
  *   anfragen        Dialog "Bildschirmzeit anfragen" mit Nachricht
  *   eltern-anfrage  Anfrage von Mia mit Genehmigen / Ablehnen
  *   eltern-regeln   Zeitlimits und Sekunden pro Fach
@@ -26,7 +28,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
-import { KIND, ELTERN, beispieldaten, offeneAnfrage, beantworte } from './lib/supabase-attrappe.mjs';
+import { KIND, ELTERN, RUNDE, beispieldaten, offeneAnfrage, beantworte } from './lib/supabase-attrappe.mjs';
 
 const ZIEL = 'public/landing';
 const ADRESSE = 'http://127.0.0.1:4173';
@@ -194,6 +196,29 @@ try {
     await ctx.close();
   }
 
+  // Kind: eine Runde mit fuenf richtigen Antworten, dann das Rundenende
+  {
+    const { page, ctx } = await anmelden('child');
+    await page.getByRole('button', { name: 'Lernen starten' }).click();
+    await page.getByText('Mathe', { exact: true }).first().click();
+    for (let i = 0; i < RUNDE.length; i++) {
+      const text = await page.locator('h1.frage-text').innerText({ timeout: 15000 });
+      const f = RUNDE.find((x) => x.text === text.trim());
+      if (!f) throw new Error(`Unbekannte Aufgabe: ${text}`);
+      await page.waitForTimeout(3200); // nicht "Blitzschnell"
+      await page.getByRole('button', { name: f.richtig, exact: true }).first().click();
+      await page.getByRole('button', { name: 'Prüfen' }).click();
+      await page.waitForTimeout(900);
+      await page.getByRole('button', { name: /Weiter|Fertig/ }).last().click();
+      await page.waitForTimeout(700);
+    }
+    // Konfetti (5 von 5) abklingen lassen
+    await page.waitForTimeout(4500);
+    // Ab den Kaestchen, damit die verdiente Zeit auch im kleinen Ausschnitt oben steht
+    await ausschnitt(page, 'rundenende', page.locator('ol[aria-label$="richtig"]').first(), 40);
+    await ctx.close();
+  }
+
   // Eltern: Dashboard, Anfrage, Regeln, Lernanalyse. Ohne LernZeit-Handysperre:
   // Die gibt es vorerst nur fuer freigeschaltete Testkinder (CLAUDE.md).
   {
@@ -202,6 +227,8 @@ try {
     });
     // Seit dem App-Redesign: "Heute" mit der Anfrage oben, Kind-Details in Bereichen
     await bild(page, 'eltern-anfrage');
+    // Fuer kleine Bildausschnitte (So funktioniert's): die Anfrage oben, Knoepfe sichtbar
+    await ausschnitt(page, 'eltern-freigabe', page.locator('#anfragen-titel'), 16);
     await page.getByRole('tab', { name: 'Kinder' }).click();
     await page.waitForTimeout(1000);
     await page.getByText('Mia', { exact: true }).first().click();
@@ -217,7 +244,7 @@ try {
     await ctx.close();
   }
 
-  for (const name of ['kind-start', 'kind-verdient', 'anfragen', 'eltern-anfrage', 'eltern-regeln', 'eltern-analyse']) {
+  for (const name of ['kind-start', 'kind-verdient', 'rundenende', 'anfragen', 'eltern-anfrage', 'eltern-freigabe', 'eltern-regeln', 'eltern-analyse']) {
     execFileSync(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', '-i', join(arbeit, `${name}.png`),
       '-vf', 'scale=600:-2:flags=lanczos', '-quality', '86', join(ZIEL, `${name}.webp`)], { stdio: 'inherit' });
   }
