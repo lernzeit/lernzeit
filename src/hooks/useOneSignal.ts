@@ -16,13 +16,26 @@ interface UseOneSignalOptions {
 let oneSignalRef: any = null;
 
 /**
+ * Nur fragen, solange iOS/Android noch nie gefragt hat – und ohne OneSignals
+ * Ersatzdialog. `requestPermission(true)` zeigte bei abgelehnten Mitteilungen
+ * zusätzlich ein englisches „Open Settings“-Fenster, direkt nach dem deutschen
+ * Systemdialog (Rückmeldung 11.10.2026, Klaras iPhone).
+ */
+async function fragenWennOffen(os: any): Promise<void> {
+  const n = os?.Notifications;
+  if (!n?.requestPermission) return;
+  const offen = n.canRequestPermission ? await n.canRequestPermission() : true;
+  if (offen) await n.requestPermission(false);
+}
+
+/**
  * Fragt die Push-Erlaubnis zum passenden Zeitpunkt ab (z. B. beim Teilen des
  * Einladungslinks). No-op auf Web bzw. wenn OneSignal nicht initialisiert ist.
  */
 export async function requestPushPermissionNow(): Promise<void> {
   try {
     if (!Capacitor.isNativePlatform()) return;
-    await oneSignalRef?.Notifications?.requestPermission?.(true);
+    await fragenWennOffen(oneSignalRef);
   } catch (e) {
     console.warn("requestPushPermissionNow failed", e);
   }
@@ -78,7 +91,7 @@ export function useOneSignal({ userId, enabled = true, appId, autoPrompt = true 
 
         // Push-Erlaubnis nur abfragen, wenn der Nutzen bereits erkennbar ist.
         if (autoPrompt) {
-          OneSignal.Notifications.requestPermission(true);
+          void fragenWennOffen(OneSignal);
         }
 
         // Login user → external_id
