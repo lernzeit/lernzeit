@@ -21,7 +21,7 @@ export function AvatarSelector({ selectedAvatarId, selectedColor, onAvatarChange
   const [tempColor, setTempColor] = useState(selectedColor || '#3b82f6');
 
   const selectedAvatar: AvatarType | undefined = getAvatarById(tempAvatarId);
-  // Weihnachts-Figuren nur vom 1. Dezember bis 6. Januar, ausser man hat sie schon
+  // Weihnachts-Figuren nur vom 1. bis 26. Dezember, ausser man hat sie schon
   const weihnachten = istWeihnachtszeit();
   const sichtbar = (a: AvatarType) =>
     a.category !== 'weihnachten' || weihnachten || a.id === selectedAvatarId || (!!gesperrt && gesperrt(a.id) === null);

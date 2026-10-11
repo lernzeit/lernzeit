@@ -22,7 +22,7 @@ export interface KlecksiProps {
   gruessen?: boolean;
   /** Vorlesbarer Name; ohne ist er nur Schmuck */
   label?: string;
-  /** Weihnachtsmuetze; ohne Angabe vom 1. Dezember bis 6. Januar */
+  /** Weihnachtsmuetze; ohne Angabe vom 1. bis 26. Dezember */
   muetze?: boolean;
   className?: string;
 }

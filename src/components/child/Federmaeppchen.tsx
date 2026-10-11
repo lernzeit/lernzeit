@@ -135,7 +135,7 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
           </p>
           {weihnachten && (
             <p className="mt-1 text-[13px] text-muted-foreground">
-              Weihnachts-Figuren gibt es bis 6. Januar. Hinter Türchen 6 und 24 im Adventskalender steckt je eine.
+              Weihnachts-Figuren gibt es bis 26. Dezember. Hinter Türchen 6 und 24 im Adventskalender steckt je eine.
             </p>
           )}
         </section>

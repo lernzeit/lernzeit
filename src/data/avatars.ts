@@ -42,7 +42,7 @@ export const AVATAR_LIBRARY: Avatar[] = [
   { id: 'flower', emoji: '🌸', name: 'Blume', category: 'nature', colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b', '#06b6d4', '#ec4899'] },
   { id: 'tree', emoji: '🌳', name: 'Baum', category: 'nature', colors: ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#64748b', '#06b6d4', '#10b981'] },
 
-  // Weihnachten (nur 1. Dezember bis 6. Januar freizuschalten, lib/federmaeppchen.ts)
+  // Weihnachten (nur 1. bis 26. Dezember freizuschalten, lib/federmaeppchen.ts)
   { id: 'weihnachtsmann', emoji: '🎅', name: 'Weihnachtsmann', category: 'weihnachten', colors: ['#d4483b', '#15a05a', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b', '#06b6d4', '#ec4899'] },
   { id: 'rentier', emoji: '🦌', name: 'Rentier', category: 'weihnachten', colors: ['#15a05a', '#d4483b', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b', '#06b6d4', '#ec4899'] },
   { id: 'schneemann', emoji: '⛄', name: 'Schneemann', category: 'weihnachten', colors: ['#3b82f6', '#06b6d4', '#8b5cf6', '#15a05a', '#d4483b', '#64748b', '#f59e0b', '#ec4899'] },

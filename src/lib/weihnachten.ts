@@ -1,10 +1,11 @@
 /*
  * Weihnachtszeit und Adventskalender (11.10.2026).
  *
- * Weihnachtszeit: jedes Jahr 1. Dezember bis 6. Januar (Berliner Zeit).
- * Dann tragen Klecksi und die Begruessung Weihnachtliches, die
- * Weihnachts-Sticker und -Figuren sind zu haben, und auf dem Kind-Start
- * haengt der Adventskalender. Was ein Kind sich geholt hat, bleibt.
+ * Weihnachtszeit: jedes Jahr 1. bis 26. Dezember (Berliner Zeit). Dann tragen
+ * Klecksi und die Begruessung Weihnachtliches, die Weihnachts-Sticker und
+ * -Figuren sind zu haben, und auf dem Kind-Start haengt der Adventskalender
+ * (verpasste Tuerchen bis 26.12. nachholen). Ab 27.12. ist alles wieder weg;
+ * was ein Kind sich geholt hat, bleibt.
  *
  * Adventskalender: je Tuerchen 5 Aufgaben aus zufaelligen Faechern, ab 4
  * richtigen geht es auf (Weihnachts-Sticker, Tuerchen 6 und 24 auch eine
@@ -28,18 +29,16 @@ export function berlinerTag(jetzt: Date = new Date()): { jahr: number; monat: nu
 
 export function istWeihnachtszeit(jetzt: Date = new Date()): boolean {
   const { monat, tag } = berlinerTag(jetzt);
-  return monat === 12 || (monat === 1 && tag <= 6);
+  return monat === 12 && tag <= 26;
 }
 
 /** Hoechstes Tuerchen, das heute offen sein darf (0 = kein Kalender). Wie advent_offen_bis(). */
 export function adventOffenBis(jetzt: Date = new Date()): number {
   const { monat, tag } = berlinerTag(jetzt);
-  if (monat === 12) return Math.min(tag, 24);
-  if (monat === 1 && tag <= 6) return 24;
-  return 0;
+  return monat === 12 && tag <= 26 ? Math.min(tag, 24) : 0;
 }
 
-/** Jahr des Kalenders: im Januar der vom Dezember davor. Wie advent_jahr(). */
+/** Jahr des Kalenders. Wie advent_jahr(). */
 export function adventJahr(jetzt: Date = new Date()): number {
   const { jahr, monat } = berlinerTag(jetzt);
   return monat === 1 ? jahr - 1 : jahr;

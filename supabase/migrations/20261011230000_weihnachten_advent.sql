@@ -1,6 +1,6 @@
 -- Weihnachtszeit und Adventskalender (11.10.2026)
 --
--- Weihnachtszeit: jedes Jahr 1. Dezember bis 6. Januar (Berliner Zeit).
+-- Weihnachtszeit: jedes Jahr 1. bis 26. Dezember (Berliner Zeit).
 -- Nur dann lassen sich die Weihnachts-Figuren mit Tinte freischalten und die
 -- Weihnachts-Sticker nach einer Runde mit allen Aufgaben richtig aussuchen.
 -- Was ein Kind schon hat, bleibt.
@@ -11,7 +11,8 @@
 -- Aufgaben nichts: keine Zeit, keine Tinte, keine Reise, keine Erfolge, keinen
 -- Streak. Deshalb steht eine Kalender-Runde nicht in game_sessions, sondern
 -- nur das geoeffnete Tuerchen in advent_tueren. Tuerchen bis zum heutigen
--- Datum; verpasste lassen sich bis 6. Januar nachholen.
+-- Datum; verpasste lassen sich bis 26. Dezember nachholen. Ab 27.12. ist alles
+-- Weihnachtliche weg; was ein Kind sich geholt hat, bleibt.
 -- Regeln auch in src/lib/weihnachten.ts (npm run test:reise prueft beide).
 
 -- 1. Kalender
@@ -30,8 +31,7 @@ language sql
 immutable
 set search_path = public
 as $$
-  select extract(month from p_tag) = 12
-      or (extract(month from p_tag) = 1 and extract(day from p_tag) <= 6);
+  select extract(month from p_tag) = 12 and extract(day from p_tag) <= 26;
 $$;
 
 -- Hoechstes Tuerchen, das an diesem Tag offen sein darf (0 = kein Kalender)
@@ -42,8 +42,8 @@ immutable
 set search_path = public
 as $$
   select case
-    when extract(month from p_tag) = 12 then least(extract(day from p_tag)::integer, 24)
-    when extract(month from p_tag) = 1 and extract(day from p_tag) <= 6 then 24
+    when extract(month from p_tag) = 12 and extract(day from p_tag) <= 26
+      then least(extract(day from p_tag)::integer, 24)
     else 0
   end;
 $$;

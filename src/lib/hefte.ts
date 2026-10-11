@@ -106,7 +106,7 @@ export const STICKER: Record<string, { zeichen: string; name: string }> = {
   kaktus: { zeichen: '🌵', name: 'Kaktus' },
   geschenk: { zeichen: '🎁', name: 'Geschenk' },
   schneemann: { zeichen: '⛄', name: 'Schneemann' },
-  // Weihnachten (11.10.2026): zum Aussuchen nur vom 1. Dezember bis 6. Januar,
+  // Weihnachten (11.10.2026): zum Aussuchen nur vom 1. bis 26. Dezember,
   // dazu einer hinter jedem Tuerchen des Adventskalenders (lib/weihnachten.ts).
   schneeflocke: { zeichen: '❄️', name: 'Schneeflocke' },
   plaetzchen: { zeichen: '🍪', name: 'Plätzchen' },

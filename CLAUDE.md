@@ -187,10 +187,10 @@ Supabase-Secrets gelöscht werden.
 
 ## Weihnachtszeit und Adventskalender (Stand 11.10.2026)
 
-- Jährlich 1.12.–6.1. (Berliner Zeit, `lib/weihnachten.ts` = SQL `ist_weihnachtszeit`): Klecksi mit
+- Jährlich 1.–26.12. (Berliner Zeit; ab 27.12. alles aus, Besitz bleibt, `lib/weihnachten.ts` = SQL `ist_weihnachtszeit`): Klecksi mit
   Mütze, Schnee auf der Begrüßung, Weihnachtssätze, 12 Weihnachts-Sticker (`sticker_waehlen` nur dann)
   und 5 Figuren (`mit_tinte_freischalten` nur dann; Besitz bleibt).
-- Adventskalender: Türchen bis heute, nachholen bis 6.1.; 5 Aufgaben aus zufälligen Fächern
+- Adventskalender: Türchen bis heute, nachholen bis 26.12.; 5 Aufgaben aus zufälligen Fächern
   (`faecher` im Vorlader), ab 4 richtigen `advent_runde` → `advent_tueren` (Sticker, Tür 6/24 Figur).
   Keine `game_sessions`-Zeile, also keine Zeit, Tinte, Reise, Erfolge, kein Streak, keine Berichtigung.
 - Testen: Playwright-Uhr auf Dezember (`clock.setFixedTime`, Sitzung `expires_at` passend);

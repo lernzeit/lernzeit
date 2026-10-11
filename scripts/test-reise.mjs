@@ -80,13 +80,13 @@ for (const [id, m] of Object.entries(falten.MODELLE)) {
 
 // Weihnachtszeit und Adventskalender (gleiche Regeln wie in der Datenbank)
 const tag = (t) => new Date(`${t}T12:00:00+01:00`);
-pruefe('Weihnachtszeit 30.11. nein, 1.12. ja, 6.1. ja, 7.1. nein',
-  ['2026-11-30', '2026-12-01', '2027-01-06', '2027-01-07'].map((t) => weihnachten.istWeihnachtszeit(tag(t))), [false, true, true, false]);
+pruefe('Weihnachtszeit 30.11. nein, 1.12. ja, 26.12. ja, 27.12. nein, 3.1. nein',
+  ['2026-11-30', '2026-12-01', '2026-12-26', '2026-12-27', '2027-01-03'].map((t) => weihnachten.istWeihnachtszeit(tag(t))), [false, true, true, false, false]);
 pruefe('Berliner Datum: 30.11. 23:30 UTC ist schon der 1.12.', weihnachten.istWeihnachtszeit(new Date('2026-11-30T23:30:00Z')), true);
-pruefe('Tuerchen offen bis: 3.12. → 3, 28.12. → 24, 5.1. → 24, Oktober → 0',
-  ['2026-12-03', '2026-12-28', '2027-01-05', '2026-10-11'].map((t) => weihnachten.adventOffenBis(tag(t))), [3, 24, 24, 0]);
-pruefe('Kalenderjahr im Januar: Dezember davor', weihnachten.adventJahr(tag('2027-01-03')), 2026);
+pruefe('Tuerchen offen bis: 3.12. → 3, 26.12. → 24, 27.12. → 0, Januar → 0, Oktober → 0',
+  ['2026-12-03', '2026-12-26', '2026-12-27', '2027-01-05', '2026-10-11'].map((t) => weihnachten.adventOffenBis(tag(t))), [3, 24, 0, 0, 0]);
 const sqlAdventSticker = [...sqlAdvent.match(/function public\.advent_sticker[\s\S]*?array\[([^\]]+)\]/)[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+pruefe('Weihnachtszeit in der Datenbank bis 26.12.', /month from p_tag\) = 12 and extract\(day from p_tag\) <= 26/.test(sqlAdvent), true);
 pruefe('Tuerchen-Sticker wie in der Datenbank', [...weihnachten.ADVENT_STICKER], sqlAdventSticker);
 pruefe('Tuerchen 13 wie Tuerchen 1', weihnachten.adventSticker(13), weihnachten.adventSticker(1));
 pruefe('Figuren hinter Tuerchen 6 und 24', [6, 24, 7].map(weihnachten.adventAvatar), ['weihnachtsmann', 'tannenbaum', null]);
@@ -105,7 +105,7 @@ const w = (monat, t, tuerenZu = 0) => klecksi.startSaetze({ ...lage, weihnachten
 pruefe('Satz: Tage bis Heiligabend', w(12, 3).includes('Noch 21 Tage bis Heiligabend!'), true);
 pruefe('Satz: Morgen ist Heiligabend', w(12, 23).includes('Morgen ist Heiligabend!'), true);
 pruefe('Satz: Tuerchen warten', w(12, 5, 2).includes('2 Türchen im Adventskalender warten auf dich.'), true);
-pruefe('Satz: Neujahr', w(1, 2).includes('Frohes neues Jahr!'), true);
+pruefe('Satz: Frohe Weihnachten am 25.12.', w(12, 25).includes('Frohe Weihnachten!'), true);
 pruefe('Ohne Weihnachtszeit kein Weihnachtssatz', klecksi.startSaetze(lage).some((x) => /Weihnacht|Türchen|Heiligabend/.test(x)), false);
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }

@@ -1,5 +1,5 @@
 /*
- * Adventskalender auf dem Kind-Start (1. Dezember bis 6. Januar, lib/weihnachten.ts).
+ * Adventskalender auf dem Kind-Start (1. bis 26. Dezember, lib/weihnachten.ts).
  * 24 Tuerchen; offen sind alle bis zum heutigen Datum, verpasste lassen sich
  * nachholen. Hinter jedem: 5 Aufgaben aus zufaelligen Faechern, ab 4 richtigen
  * ein Weihnachts-Sticker (Tuerchen 6 und 24 auch eine Figur). Sonst gibt es

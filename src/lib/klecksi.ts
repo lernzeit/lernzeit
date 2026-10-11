@@ -40,8 +40,6 @@ export function weihnachtsSatz(w: NonNullable<KlecksiLage['weihnachten']>): stri
   if (w.monat === 12 && w.tag < 23) return `Noch ${24 - w.tag} Tage bis Heiligabend!`;
   if (w.monat === 12 && w.tag === 23) return 'Morgen ist Heiligabend!';
   if (w.monat === 12 && w.tag <= 26) return 'Frohe Weihnachten!';
-  if (w.monat === 1) return 'Frohes neues Jahr!';
-  if (w.monat === 12) return 'Schöne Weihnachtsferien!';
   return null;
 }
 

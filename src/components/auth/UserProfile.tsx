@@ -667,7 +667,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
             }
           />
 
-          {/* Adventskalender (1. Dezember bis 6. Januar) */}
+          {/* Adventskalender (1. bis 26. Dezember) */}
           {advent.zeit && advent.geladen && onStartAdvent && (
             <Adventskalender
               offen={advent.offen}
