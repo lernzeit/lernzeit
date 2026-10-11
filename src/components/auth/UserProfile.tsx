@@ -31,6 +31,7 @@ import { KlecksiGruss, TintenPille, HeuteFuerDieReise } from '@/components/child
 import { HeftrandReise } from '@/components/child/HeftrandReise';
 import { Adventskalender } from '@/components/child/Adventskalender';
 import { useAdvent } from '@/hooks/useAdvent';
+import { useKlecksiWahl } from '@/hooks/useKlecksi';
 import { adventFaecher, berlinerTag } from '@/lib/weihnachten';
 import { Federmaeppchen } from '@/components/child/Federmaeppchen';
 import { Urkunden, UrkundenKachel } from '@/components/child/Urkunden';
@@ -139,6 +140,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const fehlerkiste = useBerichtigung(kindId, profile?.grade || undefined);
   const wochenTage = useWochenziel(kindId);
   const advent = useAdvent(kindId);
+  // Klecksi an oder aus (ab Klasse 7 zuerst aus, das Kind entscheidet selbst)
+  const klecksiModus = useKlecksiWahl(kindId, profile?.grade ?? null);
   const [kindAnsicht, setKindAnsicht] = useState<'start' | 'federmaeppchen' | 'urkunden'>('start');
 
   // Use streak hook for children
@@ -630,7 +633,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           </header>
 
           {/* Klecksi begruesst (einmal am Tag winkt er), Antippen: naechster Satz */}
-          {reise.geladen && <KlecksiGruss kindId={user.id} lage={klecksiLage} />}
+          {reise.geladen && klecksiModus.an && <KlecksiGruss kindId={user.id} lage={klecksiLage} />}
 
           {/* Testphase der Eltern: nur eine ruhige Zeile */}
           {trialJustExpired && (
@@ -692,7 +695,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           {/* Freiminuten stehen ueber dem Rest: Wer heute noch welche hat, muss nicht fragen. */}
           {handysperreAn && <BaseTimeCard childId={user.id} />}
 
-          {/* Kleckis Heftrand-Reise: eine Reise fuer alle Faecher */}
+          {/* Klecksis Heftrand-Reise: eine Reise fuer alle Faecher */}
           {reise.geladen && (
             <HeftrandReise
               seite={reise.aktuell.seite}

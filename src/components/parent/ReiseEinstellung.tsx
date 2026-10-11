@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 const STUFEN = [0, 5, 10, 15];
 
 /**
- * Kleckis Reise fuer Eltern (Stufe 3, 11.10.2026): Stand der Reise und
+ * Klecksis Reise fuer Eltern (Stufe 3, 11.10.2026): Stand der Reise und
  * Extra-Minuten fuer jede fertige Seite. Die Eltern entscheiden; 0 = aus.
  * Vergeben wird beim Seitenende auf dem Server (runde_belohnen), die Minuten
  * zaehlen am selben Tag zur verdienten Zeit.

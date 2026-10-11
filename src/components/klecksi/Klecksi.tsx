@@ -5,7 +5,8 @@
  * Arme wachsen nur fuer Gesten aus ihm heraus (Formwechsel per SVG
  * <animate d>): einmal gruessen, jubeln, Mut machen. Bei „Bewegung
  * reduzieren“ steht er still. Texte spricht er nie selbst, sie kommen aus
- * lib/klecksi.ts (feste Saetze, keine KI-Texte an Kinder).
+ * lib/klecksi.ts (feste Saetze). Als Erklaerer und KI-Tutor bringt er
+ * KI-Texte; dort steht immer „KI“ dabei (LearningGame, KITutorDialog).
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { GRUSS1, GRUSS2, JUBEL1, JUBEL2, RUHE, RUHE2 } from './formen';

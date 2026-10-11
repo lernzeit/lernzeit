@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useAchievements, type Achievement } from '@/hooks/useAchievements';
 import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 
 const anteil = (a: Achievement) =>
   a.requirement_value > 0 ? Math.min(1, (a.current_progress || 0) / a.requirement_value) : 0;
@@ -49,6 +50,7 @@ function Fortschritt({ a }: { a: Achievement }) {
 
 export function Urkunden({ kindId, onZurueck }: { kindId: string; onZurueck: () => void }) {
   const { userAchievements, loading } = useAchievements(kindId, { suppressToast: true });
+  const mitKlecksi = useKlecksiAn();
   const erreicht = userAchievements
     .filter((a) => a.is_completed)
     .sort((a, b) => (b.earned_at ?? '').localeCompare(a.earned_at ?? ''));
@@ -75,13 +77,13 @@ export function Urkunden({ kindId, onZurueck }: { kindId: string; onZurueck: () 
         </header>
 
         <div className="flex items-center gap-3 rounded-[22px] bg-card p-3.5 ring-1 ring-inset ring-karo">
-          <Klecksi groesse={58} stimmung={erreicht.length > 0 ? 'jubel' : 'froh'} />
+          {mitKlecksi && <Klecksi groesse={58} stimmung={erreicht.length > 0 ? 'jubel' : 'froh'} />}
           <div className="min-w-0">
             <p className="text-lg font-extrabold leading-tight text-tinte">
               {loading ? '…' : `${erreicht.length} ${erreicht.length === 1 ? 'Urkunde' : 'Urkunden'}`}
             </p>
             <p className="text-sm text-muted-foreground">
-              {minuten > 0 ? `${minuten} Extra-Minuten verdient` : 'Klecksi überreicht dir jede Urkunde.'}
+              {minuten > 0 ? `${minuten} Extra-Minuten verdient` : mitKlecksi ? 'Klecksi überreicht dir jede Urkunde.' : 'Für jedes erreichte Ziel gibt es eine Urkunde.'}
             </p>
           </div>
         </div>

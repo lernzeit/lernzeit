@@ -4,6 +4,7 @@
  * gleich nochmal mit neuen Aufgaben. Keine Zeit, keine Tinte, keine Reise.
  */
 import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { Sticker } from '@/components/child/Hefte';
 import { Button } from '@/components/ui/button';
 import { getAvatarById } from '@/data/avatars';
@@ -20,12 +21,13 @@ export function AdventAbschluss({ tag, richtig, gesamt, ergebnis, fehler, onErne
   onFertig: () => void;
 }) {
   const figur = ergebnis?.avatar ? getAvatarById(ergebnis.avatar) : undefined;
+  const mitKlecksi = useKlecksiAn();
 
   let inhalt: React.ReactNode;
   if (fehler || (ergebnis && !ergebnis.ok)) {
     inhalt = (
       <>
-        <Klecksi groesse={120} stimmung="denkt" />
+        {mitKlecksi && <Klecksi groesse={120} stimmung="denkt" />}
         <h1 className="text-2xl font-extrabold text-tinte">
           {ergebnis?.grund === 'noch_zu' ? `Türchen ${tag} ist noch zu.` : 'Das hat gerade nicht geklappt.'}
         </h1>
@@ -38,14 +40,14 @@ export function AdventAbschluss({ tag, richtig, gesamt, ergebnis, fehler, onErne
   } else if (!ergebnis) {
     inhalt = (
       <>
-        <Klecksi groesse={120} stimmung="denkt" />
-        <p className="font-hand text-xl text-tinte">Klecksi schaut nach …</p>
+        {mitKlecksi && <Klecksi groesse={120} stimmung="denkt" />}
+        <p className="font-hand text-xl text-tinte">{mitKlecksi ? 'Klecksi schaut nach …' : 'Einen Moment …'}</p>
       </>
     );
   } else if (ergebnis.offen) {
     inhalt = (
       <>
-        <Klecksi groesse={120} stimmung="jubel" label="Klecksi jubelt" />
+        {mitKlecksi && <Klecksi groesse={120} stimmung="jubel" label="Klecksi jubelt" />}
         <h1 className="text-2xl font-extrabold text-tinte">
           {ergebnis.schon ? `Türchen ${tag} war schon offen.` : `Türchen ${tag} ist offen!`}
         </h1>
@@ -69,7 +71,7 @@ export function AdventAbschluss({ tag, richtig, gesamt, ergebnis, fehler, onErne
   } else {
     inhalt = (
       <>
-        <Klecksi groesse={120} stimmung="mut" />
+        {mitKlecksi && <Klecksi groesse={120} stimmung="mut" />}
         <h1 className="text-2xl font-extrabold text-tinte">{richtig} von {gesamt} richtig</h1>
         <p className="font-hand text-lg leading-snug text-tinte">
           Fast! Ab {ADVENT_RICHTIG} richtigen geht Türchen {tag} auf. Probier es gleich nochmal.

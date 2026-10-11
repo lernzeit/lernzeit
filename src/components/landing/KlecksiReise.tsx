@@ -36,11 +36,11 @@ interface Kapitel {
   extra?: 'tintenkiller' | 'falten' | 'tinte';
 }
 
-// Saetze wie in lib/klecksi.ts (feste Saetze, keine KI-Texte)
+// Saetze wie in lib/klecksi.ts (feste Saetze)
 const KAPITEL: Kapitel[] = [
   {
     titel: 'Klecksi lernt mit',
-    text: 'Klecksi begrüßt dein Kind, macht Mut, wenn etwas danebengeht, und jubelt bei fünf von fünf. Er sagt nur feste, geprüfte Sätze – keine KI-Texte.',
+    text: 'Klecksi begrüßt dein Kind, macht Mut, wenn etwas danebengeht, und erklärt Fehler. Seine Sprüche sind fest und geprüft; Erklärungen schreibt eine KI, und das steht immer dabei.',
     felder: 1,
     satz: 'Hallo Mia! Malen wir weiter?',
     stimmung: 'froh',
@@ -136,6 +136,7 @@ const KlecksiReise = () => {
         </h2>
         <p className="mt-5 max-w-xl text-lg leading-relaxed">
           Damit dein Kind gern dranbleibt: Jede geschaffte Runde bringt Klecksi auf seiner Reise am Heftrand ein Stück weiter.
+          Ab Klasse 7 ist er zuerst aus – Reise und Tinte bleiben, nur schlichter. Jedes Kind kann ihn selbst an- oder ausschalten.
         </p>
 
         <div className="relative mt-10 lg:mt-14 lg:grid lg:grid-cols-12 lg:gap-10">

@@ -178,7 +178,12 @@ Supabase-Secrets gelöscht werden.
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)
 
 - Maskottchen Klecksi (`components/klecksi/`, Umrisse in `formen.ts`): Arme nur für Gesten
-  (grüßen einmal am Tag, jubeln, Mut machen). Feste Sätze in `lib/klecksi.ts`, nie KI-Texte.
+  (grüßen einmal am Tag, jubeln, Mut machen). Eigene Sprüche: feste Sätze in `lib/klecksi.ts`.
+  Er erklärt Fehler (`ai-explain`) und ist der KI-Tutor (`ai-tutor`, `persona: 'klecksi'`); KI-Texte
+  tragen immer den Hinweis „KI“ bzw. „KI-Tutor“ (Transparenzpflicht).
+- Klecksi an/aus: `profiles.klecksi` ('an'/'aus', null = automatisch: bis Klasse 6 an, ab 7 aus),
+  Schalter in den Kinder-Einstellungen, `hooks/useKlecksi.ts`, Regel `lib/klecksiModus.ts`. Ohne
+  Klecksi: kein Gruß, „Deine Lernreise“ mit Tropfen, sachliche Sätze (`rundenSatz(o, false)`).
 - Eine Reise für alle Fächer auf dem Kind-Start (`child/HeftrandReise.tsx`): 12 Felder je Seite in
   Heftfarbe, Lernplan/Schwerpunkt doppelt, bunte Seite (3 Fächer) +20 Tinte, Faltung fürs Regal.
 - Vergabe nur serverseitig: `runde_belohnen(p_sitzung)` nach `saveSession` (Tinte, Felder, Seite,

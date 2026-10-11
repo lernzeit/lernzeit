@@ -1,8 +1,9 @@
 /*
- * Feste, gepruefte Saetze von Klecksi (keine KI-Texte an Kinder). Ein Satz,
+ * Feste, gepruefte Saetze von Klecksi (seine eigenen Sprueche sind nie KI-Texte;
+ * als Erklaerer und KI-Tutor bringt er KI-Texte, immer mit „KI“ gekennzeichnet). Ein Satz,
  * nie mehr; Antippen zeigt den naechsten.
  */
-import { BUNT_AB_FAECHERN, FELDER_JE_SEITE, type Faltung } from './reise';
+import { BUNT_AB_FAECHERN, FALTUNG_NAME, FELDER_JE_SEITE, type Faltung } from './reise';
 import type { KlecksiStimmung } from '@/components/klecksi/Klecksi';
 
 export const FALTUNG_MIT_ARTIKEL: Record<Faltung, string> = {
@@ -76,7 +77,16 @@ export function rundenSatz(o: {
   geschafft: boolean;
   faltung?: Faltung | null;
   berichtigung?: boolean;
-}): { satz: string; stimmung: KlecksiStimmung } {
+}, mitKlecksi = true): { satz: string; stimmung: KlecksiStimmung } {
+  // Ohne Klecksi (aeltere Kinder): sachlich, ohne „ich“
+  if (!mitKlecksi) {
+    if (o.faltung) return { satz: `Seite fertig! Neu im Regal: ${FALTUNG_NAME[o.faltung]}.`, stimmung: 'jubel' };
+    if (o.gesamt > 0 && o.richtig === o.gesamt) {
+      return { satz: o.berichtigung ? 'Alles berichtigt.' : `${o.richtig} von ${o.gesamt} – alles richtig.`, stimmung: 'jubel' };
+    }
+    if (o.geschafft) return { satz: 'Geschafft: ein Feld weiter.', stimmung: 'froh' };
+    return { satz: 'Fehler landen in der Berichtigung. Dort übst du sie noch mal.', stimmung: 'mut' };
+  }
   if (o.faltung) return { satz: `Seite fertig! Ich falte dir ${FALTUNG_MIT_ARTIKEL[o.faltung]}.`, stimmung: 'jubel' };
   if (o.gesamt > 0 && o.richtig === o.gesamt) {
     return { satz: o.berichtigung ? 'Alles berichtigt! Saubere Seite!' : `${o.richtig} von ${o.gesamt}! Saubere Seite!`, stimmung: 'jubel' };

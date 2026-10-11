@@ -1,5 +1,5 @@
 /*
- * Kleckis Heftrand-Reise auf dem Kind-Start (11.10.2026, Entwurf im Artefakt
+ * Klecksis Heftrand-Reise auf dem Kind-Start (11.10.2026, Entwurf im Artefakt
  * „Klecksi und die Heftrand-Reise“). Eine Seite mit 12 Heftrand-Kritzeln auf
  * einem Pfad von unten nach oben; ausgemalt in der Heftfarbe des Fachs, Stern
  * = Lernplan oder Schwerpunkt (doppelt weit). Klecksi steht auf dem naechsten
@@ -7,6 +7,7 @@
  */
 import { useState } from 'react';
 import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { Faltung } from '@/components/child/Faltung';
 import { FaltAnleitung } from '@/components/child/FaltAnleitung';
 import {
@@ -101,6 +102,7 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, className 
   const gemalt = felder.length;
   const faltung = faltungFuer(seite);
   const [kx, ky] = FELDER[Math.min(gemalt, FELDER_JE_SEITE - 1)];
+  const mitKlecksi = useKlecksiAn();
   return (
     <div className={`heft-karo relative overflow-hidden rounded-2xl ring-1 ring-inset ring-karo ${className}`} style={{ aspectRatio: `${B} / ${H}` }}>
       <svg viewBox={`0 0 ${B} ${H}`} className="absolute inset-0 h-full w-full" role="img"
@@ -141,12 +143,16 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, className 
           }
           return <Kritzel key={i} form={FORMEN[i]} x={x} y={y} zustand={i === gemalt ? 'jetzt' : 'offen'} />;
         })}
+        {/* Ohne Klecksi: ein Tintentropfen ueber dem naechsten Feld */}
+        {!mitKlecksi && gemalt < FELDER_JE_SEITE && (
+          <path transform={`translate(${kx} ${ky - 30})`} d="M0 -11 C5 -4 8 0 8 4 A8 8 0 0 1 -8 4 C-8 0 -5 -4 0 -11 Z" fill={BLAU} stroke={TINTE} strokeWidth={1.5} />
+        )}
       </svg>
       {/* Klecksi steht auf dem naechsten Feld */}
-      <div className="reise-klecksi pointer-events-none absolute transition-[left,top] duration-700 ease-out motion-reduce:transition-none"
+      {mitKlecksi && <div className="reise-klecksi pointer-events-none absolute transition-[left,top] duration-700 ease-out motion-reduce:transition-none"
         style={{ left: `${((kx - 26) / B) * 100}%`, top: `${((ky - 58) / H) * 100}%`, width: `${(52 / B) * 100}%` }}>
         <Klecksi groesse="voll" />
-      </div>
+      </div>}
     </div>
   );
 }
@@ -166,17 +172,18 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
   const fehlen = Math.max(0, BUNT_AB_FAECHERN - faecher.length);
   const regal = seiten.slice(-3);
   const [anleitung, setAnleitung] = useState<ReiseSeite['faltung'] | null>(null);
+  const mitKlecksi = useKlecksiAn();
 
   return (
     <section aria-labelledby="reise-titel" className="rounded-[28px] bg-card p-4 ring-1 ring-inset ring-karo">
-      <h2 id="reise-titel" className="text-xl font-extrabold leading-tight">Kleckis Heftrand-Reise</h2>
+      <h2 id="reise-titel" className="text-xl font-extrabold leading-tight">{mitKlecksi ? 'Klecksis Heftrand-Reise' : 'Deine Lernreise'}</h2>
       <p className="text-sm font-semibold text-muted-foreground">
         Seite {seite} · {gemalt} von {FELDER_JE_SEITE} Feldern
       </p>
 
       <ReisePfad seite={seite} felder={felder} farbe={farbe} className="mt-3" />
       <p className="font-hand mt-2 text-center text-sm text-muted-foreground">
-        Oben faltet Klecksi {FALTUNG_MIT_ARTIKEL[faltung]} für dich.
+        {mitKlecksi ? <>Oben faltet Klecksi {FALTUNG_MIT_ARTIKEL[faltung]} für dich.</> : <>Am Seitenende: {FALTUNG_NAME[faltung]} zum Nachfalten.</>}
       </p>
 
       {/* Faecher dieser Seite */}
@@ -227,7 +234,7 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
           </figure>
           {regal.length < 3 && <span className="flex-1" />}
         </div>
-        {regal.length > 0 && <p className="mt-1.5 text-xs text-muted-foreground">Tipp drauf: Klecksi zeigt dir, wie du es nachfaltest.</p>}
+        {regal.length > 0 && <p className="mt-1.5 text-xs text-muted-foreground">{mitKlecksi ? 'Tipp drauf: Klecksi zeigt dir, wie du es nachfaltest.' : 'Tipp drauf: So faltest du es nach.'}</p>}
       </div>
       <FaltAnleitung art={anleitung} offen={anleitung !== null} onOpenChange={(o) => !o && setAnleitung(null)} />
     </section>

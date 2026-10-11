@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Klecksi, type KlecksiHandle } from '@/components/klecksi/Klecksi';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { startSaetze, type KlecksiLage } from '@/lib/klecksi';
 import { FAECHER, farbeVon, type FachId } from '@/lib/hefte';
 import type { Heft } from '@/hooks/useHefte';
@@ -160,6 +161,7 @@ export function HeuteFuerDieReise({ hefte, berichtigung, spaeter, onBerichtigung
   onFach: (fach: FachId) => void;
 }) {
   const schwerpunkte = hefte.filter((h) => h.wichtig);
+  const mitKlecksi = useKlecksiAn();
   if (schwerpunkte.length === 0 && berichtigung === 0 && spaeter === 0) return null;
   return (
     <section aria-labelledby="heute-reise-titel" className="space-y-2.5">
@@ -185,14 +187,18 @@ export function HeuteFuerDieReise({ hefte, berichtigung, spaeter, onBerichtigung
           onClick={onBerichtigung}
           icon={<Tintenkiller />}
           titel="Berichtigung"
-          text={berichtigung === 1 ? '1 Klecks wegwischen' : `${berichtigung} Kleckse wegwischen`}
+          text={mitKlecksi
+            ? (berichtigung === 1 ? '1 Klecks wegwischen' : `${berichtigung} Kleckse wegwischen`)
+            : (berichtigung === 1 ? '1 Aufgabe berichtigen' : `${berichtigung} Aufgaben berichtigen`)}
           abzeichen="+1"
         />
       ) : spaeter > 0 ? (
         <Zeile
           icon={<Tintenkiller blass />}
           titel="Berichtigung"
-          text={spaeter === 1 ? 'Bald wartet 1 Klecks auf dich' : `Bald warten ${spaeter} Kleckse auf dich`}
+          text={mitKlecksi
+            ? (spaeter === 1 ? 'Bald wartet 1 Klecks auf dich' : `Bald warten ${spaeter} Kleckse auf dich`)
+            : (spaeter === 1 ? 'Bald wartet 1 Aufgabe' : `Bald warten ${spaeter} Aufgaben`)}
         />
       ) : null}
     </section>

@@ -36,6 +36,8 @@ import { useSeitenanfang, useTastaturOffen } from '@/hooks/useTastatur';
 import { berechneStreak, lokalerTag } from '@/lib/streak';
 import { ADVENT_SCHWIERIGKEIT, type AdventErgebnis } from '@/lib/weihnachten';
 import { AdventAbschluss } from '@/components/child/AdventAbschluss';
+import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiWahl } from '@/hooks/useKlecksi';
 
 interface LearningGameProps {
   grade: number;
@@ -140,7 +142,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     cancelLoading
   } = istBerichtigung ? berichtigungsVorlader : vorlader;
   
-  const { explanation, isLoading: isLoadingExplanation, fetchExplanation, clearExplanation } = useAIExplanation();
+  const { explanation, isLoading: isLoadingExplanation, isFallback: erklaerungOhneKI, fetchExplanation, clearExplanation } = useAIExplanation();
+  // Klecksi erklaert Fehler und ist der KI-Tutor (ab Klasse 7 zuerst aus, lib/klecksiModus.ts)
+  const { an: mitKlecksi } = useKlecksiWahl(demoMode ? undefined : user?.id, grade);
   const [answerRecovered, setAnswerRecovered] = useState(false);
   
   // Active timer - only counts time spent answering questions
@@ -1388,8 +1392,14 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                 <div ref={erklaerungRef} className="scroll-mt-4 rounded-2xl bg-muted p-4 ring-1 ring-inset ring-karo">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Lightbulb className="w-5 h-5 text-primary" />
-                      <span className="font-bold text-tinte">Erklärung</span>
+                      {mitKlecksi
+                        ? <Klecksi groesse={40} stimmung={isLoadingExplanation ? 'denkt' : 'froh'} className="-my-2" />
+                        : <Lightbulb className="w-5 h-5 text-primary" />}
+                      <span className="font-bold text-tinte">{mitKlecksi ? 'Klecksi erklärt' : 'Erklärung'}</span>
+                      {/* Kennzeichnung: Der Text kommt von einer KI, auch wenn Klecksi ihn bringt */}
+                      {!erklaerungOhneKI && (
+                        <span className="rounded-md bg-background px-1.5 py-0.5 text-[11px] font-bold text-muted-foreground ring-1 ring-inset ring-karo" title="Erklärt von einer KI">KI</span>
+                      )}
                     </div>
                     {explanation && !isLoadingExplanation && (
                       <Button
@@ -1409,7 +1419,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                   {isLoadingExplanation ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Erklärung wird erstellt...</span>
+                      <span>{mitKlecksi ? 'Klecksi denkt nach …' : 'Erklärung wird erstellt …'}</span>
                     </div>
                   ) : (
                     <p className="frage-text text-sm">{explanation?.replace(/\*\*/g, '').replace(/^#{1,3}\s/gm, '')}</p>
@@ -1441,13 +1451,15 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                           onClick={() => setShowTutorDialog(true)}
                           className="w-full text-primary hover:bg-primary/10"
                         >
-                          <MessageCircleQuestion className="w-4 h-4 mr-2" />
-                          KI-Tutor fragen
+                          {mitKlecksi
+                            ? <Klecksi groesse={22} className="mr-2" />
+                            : <MessageCircleQuestion className="w-4 h-4 mr-2" />}
+                          {mitKlecksi ? 'Klecksi fragen (KI-Tutor)' : 'KI-Tutor fragen'}
                         </Button>
                       ) : (
                         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-1">
                           <MessageCircleQuestion className="w-4 h-4 text-warning" />
-                          <span>KI-Tutor erklärt dir den Lösungsweg</span>
+                          <span>{mitKlecksi ? 'Klecksi erklärt dir den Lösungsweg im Chat' : 'KI-Tutor erklärt dir den Lösungsweg'}</span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                             <Crown className="h-3 w-3" />
                             Premium
@@ -1524,7 +1536,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                         disabled={isLoadingExplanation}
                         className="shrink-0"
                       >
-                        <Lightbulb className="h-4 w-4" />
+                        {mitKlecksi ? <Klecksi groesse={22} muetze={false} /> : <Lightbulb className="h-4 w-4" />}
                         Erklärung
                       </Button>
                     )}

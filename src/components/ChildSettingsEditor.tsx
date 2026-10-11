@@ -495,7 +495,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
         })}
       </Gruppe>
 
-      <Gruppe titel="Kleckis Reise">
+      <Gruppe titel="Klecksis Reise">
         <ReiseEinstellung childId={childId} parentId={parentId} childName={childName} />
       </Gruppe>
 

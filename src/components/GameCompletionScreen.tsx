@@ -7,6 +7,7 @@ import { Sticker } from '@/components/child/Hefte';
 import { STICKER, farbeVon, stickerZurWahl, type FachId } from '@/lib/hefte';
 import { istWeihnachtszeit } from '@/lib/weihnachten';
 import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { Faltung } from '@/components/child/Faltung';
 import { FaltAnleitung } from '@/components/child/FaltAnleitung';
 import { TintenTropfen } from '@/components/child/KlecksiStart';
@@ -249,6 +250,7 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
 }) {
   const geschafft = belohnung ? belohnung.geschafft : totalQuestions >= 3 && score * 5 >= totalQuestions * 3;
   const [anleitungOffen, setAnleitungOffen] = useState(false);
+  const mitKlecksi = useKlecksiAn();
   // Felder in der Heftfarbe, die das Kind gewaehlt hat (wie auf der Reise)
   const [heftFarben, setHeftFarben] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -265,15 +267,19 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
     geschafft,
     faltung: belohnung?.seite_fertig?.faltung ?? null,
     berichtigung: istBerichtigung,
-  });
+  }, mitKlecksi);
   return (
-    <section aria-label="Klecksi und deine Reise" className="rounded-[28px] bg-card p-4 ring-1 ring-inset ring-karo">
-      <div className="flex items-center gap-2">
-        <Klecksi groesse={84} stimmung={stimmung} />
-        <p className="font-hand flex-1 rounded-[18px] rounded-bl-[4px] border-2 border-tinte bg-background px-3 py-2.5 text-[15px] leading-snug text-tinte">
-          {satz}
-        </p>
-      </div>
+    <section aria-label={mitKlecksi ? 'Klecksi und deine Reise' : 'Deine Lernreise'} className="rounded-[28px] bg-card p-4 ring-1 ring-inset ring-karo">
+      {mitKlecksi ? (
+        <div className="flex items-center gap-2">
+          <Klecksi groesse={84} stimmung={stimmung} />
+          <p className="font-hand flex-1 rounded-[18px] rounded-bl-[4px] border-2 border-tinte bg-background px-3 py-2.5 text-[15px] leading-snug text-tinte">
+            {satz}
+          </p>
+        </div>
+      ) : (
+        <p className="text-center text-base font-bold text-tinte">{satz}</p>
+      )}
       {belohnung && (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-dashed border-karo pt-3">
           {belohnung.tinte > 0 && (
@@ -309,7 +315,7 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
           </div>
         </div>
         <Button variant="outline" className="mt-2 w-full" onClick={() => setAnleitungOffen(true)}>
-          Zeig mir, wie ich das nachfalte
+          {mitKlecksi ? 'Zeig mir, wie ich das nachfalte' : 'Faltanleitung ansehen'}
         </Button>
         <FaltAnleitung art={belohnung.seite_fertig.faltung} offen={anleitungOffen} onOpenChange={setAnleitungOffen} />
         </>

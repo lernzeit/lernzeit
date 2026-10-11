@@ -14,6 +14,8 @@ interface TutorRequest {
   userAnswer?: string;
   grade: number;
   subject: string;
+  /** 'klecksi': Der Tutor tritt in der App als Klecksi auf (Kind hat ihn an) */
+  persona?: string;
 }
 
 serve(async (req) => {
@@ -42,7 +44,7 @@ serve(async (req) => {
       }
     }
 
-    const { messages, question, correctAnswer, userAnswer, grade, subject }: TutorRequest = await req.json();
+    const { messages, question, correctAnswer, userAnswer, grade, subject, persona }: TutorRequest = await req.json();
 
     // Input validation: cap lengths to prevent abuse / prompt injection cost amplification
     const clip = (s: unknown, n: number) => (typeof s === 'string' ? s.slice(0, n) : '');
@@ -58,7 +60,7 @@ serve(async (req) => {
         }))
       : [];
 
-    const systemPrompt = buildSystemPrompt(safeGrade, safeSubject, safeQuestion, safeCorrect, safeUser);
+    const systemPrompt = (persona === 'klecksi' ? KLECKSI : '') + buildSystemPrompt(safeGrade, safeSubject, safeQuestion, safeCorrect, safeUser);
 
     // Client disconnect → abort the upstream AI request instead of burning tokens.
     req.signal?.addEventListener('abort', () => {
@@ -98,6 +100,14 @@ serve(async (req) => {
     });
   }
 });
+
+// In der App tritt der Tutor als Klecksi auf (Maskottchen, 11.10.2026). Er bleibt
+// als KI erkennbar: Die App zeigt „KI-Tutor“, und auf Nachfrage sagt er es selbst.
+const KLECKSI = `Du heißt Klecksi. In der App bist du ein kleiner blauer Tintenklecks, der Kindern beim Lernen hilft.
+Du bist eine KI. Fragt das Kind, wer oder was du bist, sag ehrlich, dass Klecksi eine Lernhilfe mit künstlicher Intelligenz ist.
+Stell dich nicht in jeder Nachricht vor.
+
+`;
 
 function buildSystemPrompt(grade: number, subject: string, question: string, correctAnswer: string, userAnswer?: string): string {
   const ageMap: Record<number, string> = {

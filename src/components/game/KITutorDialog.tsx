@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 import {
   Sheet,
   SheetContent,
@@ -51,6 +53,8 @@ export function KITutorDialog({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
+  // Klecksi ist der Tutor (11.10.2026); als KI gekennzeichnet. Ohne Klecksi: „KI-Tutor“.
+  const mitKlecksi = useKlecksiAn();
 
   // Auto-start explanation when dialog opens
   useEffect(() => {
@@ -110,6 +114,7 @@ export function KITutorDialog({
             userAnswer,
             grade,
             subject,
+            persona: mitKlecksi ? 'klecksi' : undefined,
           }),
         }
       );
@@ -155,7 +160,7 @@ export function KITutorDialog({
     } finally {
       setIsLoading(false);
     }
-  }, [questionText, correctAnswer, userAnswer, grade, subject]);
+  }, [questionText, correctAnswer, userAnswer, grade, subject, mitKlecksi]);
 
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
@@ -242,8 +247,18 @@ export function KITutorDialog({
         <SheetHeader className="px-4 pt-4 pb-2 border-b shrink-0">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="w-5 h-5 text-primary" />
-              KI-Tutor
+              {mitKlecksi ? (
+                <>
+                  <Klecksi groesse={34} stimmung={isLoading ? 'denkt' : 'froh'} className="-my-1" />
+                  Klecksi
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-bold text-muted-foreground">KI-Tutor</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  KI-Tutor
+                </>
+              )}
             </SheetTitle>
             <div className="flex items-center gap-1">
               {isSpeaking && (
@@ -262,7 +277,10 @@ export function KITutorDialog({
         <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef}>
           <div className="space-y-3">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} className={`flex items-end gap-1.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {mitKlecksi && msg.role === 'assistant' && (
+                  <span className="shrink-0" aria-hidden="true"><Klecksi groesse={28} muetze={false} /></span>
+                )}
                 <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   msg.role === 'user'
                     ? 'bg-primary text-primary-foreground rounded-br-md'
@@ -283,7 +301,8 @@ export function KITutorDialog({
               </div>
             ))}
             {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-              <div className="flex justify-start">
+              <div className="flex items-end justify-start gap-1.5">
+                {mitKlecksi && <span className="shrink-0" aria-hidden="true"><Klecksi groesse={28} stimmung="denkt" muetze={false} /></span>}
                 <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
                   <div className="flex gap-1">
                     <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -323,7 +342,7 @@ export function KITutorDialog({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={grade <= 2 ? 'Frag mich etwas...' : 'Stelle eine Frage...'}
+              placeholder={mitKlecksi ? 'Frag Klecksi etwas …' : grade <= 2 ? 'Frag mich etwas …' : 'Stelle eine Frage …'}
               disabled={isLoading}
               className="flex-1 rounded-full"
             />

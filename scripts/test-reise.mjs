@@ -1,5 +1,5 @@
 /**
- * Prueft die Anzeige-Regeln von Kleckis Heftrand-Reise (src/lib/reise.ts,
+ * Prueft die Anzeige-Regeln von Klecksis Heftrand-Reise (src/lib/reise.ts,
  * src/lib/klecksi.ts, 11.10.2026) und dass Faltungen und Figurenpreise zu
  * den Datenbank-Funktionen passen (runde_belohnen, avatar_preis). Die
  * Vergabe selbst prueft die Datenbank; getestet per SQL mit Rollback.
@@ -27,6 +27,7 @@ const feder = await laden('src/lib/federmaeppchen.ts');
 const falten = await laden('src/lib/falten.ts');
 const weihnachten = await laden('src/lib/weihnachten.ts');
 const hefte = await laden('src/lib/hefte.ts');
+const modus = await laden('src/lib/klecksiModus.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -107,5 +108,16 @@ pruefe('Satz: Morgen ist Heiligabend', w(12, 23).includes('Morgen ist Heiligaben
 pruefe('Satz: Tuerchen warten', w(12, 5, 2).includes('2 Türchen im Adventskalender warten auf dich.'), true);
 pruefe('Satz: Frohe Weihnachten am 25.12.', w(12, 25).includes('Frohe Weihnachten!'), true);
 pruefe('Ohne Weihnachtszeit kein Weihnachtssatz', klecksi.startSaetze(lage).some((x) => /Weihnacht|Türchen|Heiligabend/.test(x)), false);
+
+// Klecksi an oder aus (aeltere Kinder)
+pruefe('Klecksi automatisch: Klasse 6 an, Klasse 7 aus', [modus.klecksiAn(null, 6), modus.klecksiAn(null, 7)], [true, false]);
+pruefe('Klecksi: Wahl des Kindes gilt', [modus.klecksiAn('an', 9), modus.klecksiAn('aus', 2)], [true, false]);
+pruefe('Klecksi ohne Klasse (Startseite, Demo): an', modus.klecksiAn(null, null), true);
+const ohne = (o) => klecksi.rundenSatz(o, false).satz;
+pruefe('Ohne Klecksi: kein „ich“ und kein Klecksi in den Saetzen',
+  [ohne({ richtig: 2, gesamt: 5, geschafft: false }), ohne({ richtig: 5, gesamt: 5, geschafft: true }),
+   ohne({ richtig: 3, gesamt: 5, geschafft: true }), ohne({ richtig: 3, gesamt: 5, geschafft: true, faltung: 'katze' })]
+    .some((x) => /\b(ich|Ich|mir|Klecksi)\b/.test(x)), false);
+pruefe('Ohne Klecksi: Faltung im Satz', ohne({ richtig: 3, gesamt: 5, geschafft: true, faltung: 'katze' }), 'Seite fertig! Neu im Regal: Katze.');
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }

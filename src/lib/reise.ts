@@ -1,5 +1,5 @@
 /*
- * Kleckis Heftrand-Reise (11.10.2026): eine Reise fuer alle Faecher.
+ * Klecksis Heftrand-Reise (11.10.2026): eine Reise fuer alle Faecher.
  *
  * Vergeben wird nur auf dem Server (runde_belohnen in
  * supabase/migrations/20261011200000_klecksi_reise.sql). Hier steht, was die

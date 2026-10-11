@@ -25,7 +25,7 @@ Lernpläne und Schwerpunkte der Eltern.
 |---|---|
 | Maskottchen | **Klecksi** (Version „Tropfen“, entschieden 11.10.2026): runder Klecks in Königsblau mit weichen Ausbuchtungen und Spritzern; atmet, blinzelt, wackelt. Arme wachsen nur für Gesten heraus: einmal grüßen (erstes Öffnen am Tag, Antippen), jubeln (5/5, Feld, Seite, Urkunde), Mut machen (nach Fehlern). Dazu „denkt nach“. |
 | Spielgeld | **Tintentropfen** |
-| Reise | **Kleckis Heftrand-Reise** (entschieden 11.10.2026): Seiten mit je 12 Feldern. Jede geschaffte Runde in einem beliebigen Fach malt ein Feld in der Heftfarbe dieses Fachs aus. |
+| Reise | **Klecksis Heftrand-Reise** (entschieden 11.10.2026): Seiten mit je 12 Feldern. Jede geschaffte Runde in einem beliebigen Fach malt ein Feld in der Heftfarbe dieses Fachs aus. |
 | Doppelt weit | Runden im **Lernplan** oder in einem **Schwerpunkt-Fach** der Eltern (`is_priority`) zählen zwei Felder (Stern am Feld). |
 | Alle Fächer | **Bunte Seite**: 3 verschiedene Fächer auf einer Seite (oder alle sichtbaren, wenn es weniger sind) → +20 Tinte am Seitenende. Hinweis statt Pflicht. |
 | Seitenende | +30 Tinte und ein Sammelstück; Eltern können Extra-Minuten festlegen (Stufe 3). |
@@ -115,6 +115,13 @@ in `docs/release-2.0.md`). Stufe 1 kann zusammen mit 2.0.2 kommen.
 - Weihnachtszeit 1.–26.12.: Mütze, Schnee, Weihnachts-Sticker und -Figuren, Adventskalender
   (5 Aufgaben aus allen Fächern, ab 4 richtig ein Sticker, sonst keine Belohnung).
   Der App-Build mit diesen Teilen muss vor dem 1. Dezember in den Stores sein.
+
+## Nachträge (11.10.2026, Abend)
+
+- Klecksi erklärt Fehler und ist der KI-Tutor (Wunsch des Betreibers). Seine eigenen Sprüche bleiben
+  feste Sätze; KI-Texte tragen immer „KI“.
+- Ältere Kinder: Klecksi ab Klasse 7 zuerst aus, jedes Kind schaltet selbst (Einstellungen). Reise,
+  Tinte und Erklärungen bleiben, nur ohne Figur.
 
 ## Offen (Betreiber)
 

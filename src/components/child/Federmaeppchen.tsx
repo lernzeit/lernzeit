@@ -11,6 +11,7 @@ import { AVATAR_LIBRARY } from '@/data/avatars';
 import { WEIHNACHTS_FIGUREN } from '@/lib/federmaeppchen';
 import { istWeihnachtszeit } from '@/lib/weihnachten';
 import { useFreigeschaltet } from '@/hooks/useFreigeschaltet';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { TintenTropfen } from '@/components/child/KlecksiStart';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
   onZurueck: () => void;
 }) {
   const { gesperrt, laden } = useFreigeschaltet(kindId);
+  const mitKlecksi = useKlecksiAn();
   // Weihnachts-Figuren: in der Weihnachtszeit vorne, sonst nur, wer sie schon hat
   const weihnachten = istWeihnachtszeit();
   const figuren = [
@@ -89,12 +91,16 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
           </span>
         </header>
 
-        <div className="flex items-center gap-2">
-          <Klecksi groesse={64} />
-          <p className="font-hand flex-1 rounded-[18px] rounded-bl-[4px] bg-card px-3 py-2.5 text-[15px] leading-snug text-tinte ring-2 ring-inset ring-karo">
-            Für Tinte male ich dir neue Figuren. Such dir eine aus!
-          </p>
-        </div>
+        {mitKlecksi ? (
+          <div className="flex items-center gap-2">
+            <Klecksi groesse={64} />
+            <p className="font-hand flex-1 rounded-[18px] rounded-bl-[4px] bg-card px-3 py-2.5 text-[15px] leading-snug text-tinte ring-2 ring-inset ring-karo">
+              Für Tinte male ich dir neue Figuren. Such dir eine aus!
+            </p>
+          </div>
+        ) : (
+          <p className="text-[15px] text-muted-foreground">Mit Tinte schaltest du neue Figuren frei.</p>
+        )}
 
         {hinweis && (
           <p role="status" className="rounded-2xl bg-rotstift/10 px-4 py-3 text-sm font-semibold text-tinte">{hinweis}</p>

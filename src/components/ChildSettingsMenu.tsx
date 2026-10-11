@@ -33,6 +33,10 @@ import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { unregisterPushDevice } from '@/hooks/useOneSignal';
 import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
+import { Switch } from '@/components/ui/switch';
+import { Klecksi } from '@/components/klecksi/Klecksi';
+import { useKlecksiWahl } from '@/hooks/useKlecksi';
+import { KLECKSI_AUS_AB_KLASSE } from '@/lib/klecksiModus';
 
 interface ChildSettingsMenuProps {
   user: any;
@@ -444,6 +448,8 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
           <h1 className="text-2xl font-extrabold">Einstellungen</h1>
         </div>
 
+        <KlecksiSchalter kindId={user?.id} klasse={profile?.grade ?? null} />
+
         <ul className="divide-y divide-karo rounded-[20px] bg-card ring-1 ring-inset ring-karo">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
@@ -478,6 +484,45 @@ export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSec
           Abmelden
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Klecksi an oder aus (11.10.2026): Ab Klasse 7 ist er zuerst aus, weil
+ * aeltere Kinder ihn kindlich finden. Reise, Tinte und Erklaerungen bleiben,
+ * nur ohne Figur. Speichert sofort.
+ */
+function KlecksiSchalter({ kindId, klasse }: { kindId?: string; klasse: number | null }) {
+  const { an, setzen } = useKlecksiWahl(kindId, klasse);
+  const [speichert, setSpeichert] = useState(false);
+  const [fehler, setFehler] = useState(false);
+  return (
+    <div className="flex items-center gap-3 rounded-[20px] bg-card px-4 py-3 ring-1 ring-inset ring-karo">
+      <span className={`shrink-0 transition-opacity ${an ? '' : 'opacity-40 grayscale'}`} aria-hidden="true">
+        <Klecksi groesse={44} muetze={false} />
+      </span>
+      <label htmlFor="klecksi-schalter" className="min-w-0 flex-1">
+        <span className="block font-bold text-tinte">Klecksi anzeigen</span>
+        <span className="block text-sm text-muted-foreground">
+          {fehler
+            ? 'Das hat nicht geklappt. Versuch es gleich noch einmal.'
+            : an
+              ? 'Klecksi begleitet dich und erklärt dir Fehler.'
+              : `Alles bleibt, nur schlichter.${(klasse ?? 0) >= KLECKSI_AUS_AB_KLASSE ? ` Ab Klasse ${KLECKSI_AUS_AB_KLASSE} ist er zuerst aus.` : ''}`}
+        </span>
+      </label>
+      <Switch
+        id="klecksi-schalter"
+        checked={an}
+        disabled={speichert || !kindId}
+        onCheckedChange={async (wert) => {
+          setSpeichert(true);
+          const ok = await setzen(wert ? 'an' : 'aus');
+          setFehler(!ok);
+          setSpeichert(false);
+        }}
+      />
     </div>
   );
 }

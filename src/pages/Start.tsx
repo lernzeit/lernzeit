@@ -60,8 +60,8 @@ const Start = () => {
       <LandingNav />
       <HeroSection />
       <HowItWorks />
-      <KlecksiReise />
       <ZweiAnsichten />
+      <KlecksiReise />
       <SetupSteps />
       <PricingComparison />
       <FaqSection />

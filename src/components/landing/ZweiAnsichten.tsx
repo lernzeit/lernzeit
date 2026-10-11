@@ -47,18 +47,11 @@ const KAPITEL: Kapitel[] = [
     notiz: { text: 'Klecksi begrüßt dein Kind', hoehe: 10 },
   },
   {
-    ansicht: 'kind',
-    titel: 'Bildschirmzeit als Belohnung',
-    text: 'Pro richtige Antwort gibt es Bildschirmzeit. Möchte dein Kind Zeit einlösen, schickt es dir eine Anfrage.',
-    bild: '/landing/anfragen.webp',
-    notiz: { text: 'Anfrage mit Nachricht an die Eltern', hoehe: 54 },
-  },
-  {
     ansicht: 'eltern',
-    titel: 'Du entscheidest',
-    text: 'Die verdiente Zeit wird nicht automatisch freigegeben. Du siehst, wie viel dein Kind verdient hat, und entscheidest, ob es die Zeit bekommt.',
+    titel: 'Alles auf einen Blick',
+    text: 'Auf „Heute“ siehst du offene Anfragen und was dein Kind gelernt hat. Die verdiente Zeit wird nie automatisch freigegeben – du entscheidest.',
     bild: '/landing/eltern-anfrage.webp',
-    notiz: { text: 'Genehmigen oder ablehnen', hoehe: 40 },
+    notiz: { text: 'Heute gelernt: 15 Aufgaben', hoehe: 72 },
   },
   {
     ansicht: 'eltern',

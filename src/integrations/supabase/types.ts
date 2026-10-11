@@ -1598,6 +1598,7 @@ export type Database = {
           founding_family_at: string | null
           grade: number | null
           id: string
+          klecksi: string | null
           is_founding_family: boolean
           last_platform: string | null
           last_platform_at: string | null
@@ -1620,6 +1621,7 @@ export type Database = {
           founding_family_at?: string | null
           grade?: number | null
           id: string
+          klecksi?: string | null
           is_founding_family?: boolean
           last_platform?: string | null
           last_platform_at?: string | null
@@ -1642,6 +1644,7 @@ export type Database = {
           founding_family_at?: string | null
           grade?: number | null
           id?: string
+          klecksi?: string | null
           is_founding_family?: boolean
           last_platform?: string | null
           last_platform_at?: string | null
