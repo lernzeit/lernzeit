@@ -44,7 +44,7 @@ Eltern
 - Randlose Anzeige (Android 15): nur Empfehlungen, kommen aus Capacitor/Plugins. Auf einem
   Android-15-Gerät prüfen, ob oben/unten Inhalt verdeckt ist.
 
-## Für den nächsten App-Build (2.0.2) gesammelt
+## Für den nächsten App-Build (2.1.0) gesammelt
 
 Seit dem Android-Build 2.0.1 (Stand `9d0987b`) auf `main`, wirkt in den Apps erst mit neuem Build:
 - Push-Erlaubnis nur einmal, ohne englisches „Open Settings“ von OneSignal (`92993fd`).
@@ -59,4 +59,5 @@ Seit dem Android-Build 2.0.1 (Stand `9d0987b`) auf `main`, wirkt in den Apps ers
 
 Android zusätzlich: `ndk { debugSymbolLevel 'SYMBOL_TABLE' }`; ProGuard-Regeln eingrenzen
 (Frist Feb. 2027, siehe oben). Vor dem Build: `IOS_MARKETING_VERSION` in `codemagic.yaml` und
-`versionCode`/`versionName` in `android/app/build.gradle` erhöhen.
+`versionCode`/`versionName` in `android/app/build.gradle` erhöhen. Für 2.1.0 gesetzt: iOS `2.1.0` (codemagic.yaml); Android
+`versionCode 19`, `versionName "2.1.0"` in Android Studio eintragen. Store-Texte: `docs/store-texte-2.1.0.md`.
