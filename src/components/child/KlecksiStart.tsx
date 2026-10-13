@@ -8,6 +8,7 @@ import { ChevronRight } from 'lucide-react';
 import { Klecksi, type KlecksiHandle } from '@/components/klecksi/Klecksi';
 import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { startSaetze, type KlecksiLage } from '@/lib/klecksi';
+import { istPassiv, type LernStand } from '@/lib/klecksiLernstand';
 import { FAECHER, farbeVon, type FachId } from '@/lib/hefte';
 import type { Heft } from '@/hooks/useHefte';
 
@@ -87,11 +88,14 @@ function Schnee() {
   );
 }
 
-export function KlecksiGruss({ kindId, lage }: { kindId: string; lage: KlecksiLage }) {
+export function KlecksiGruss({ kindId, lage, stand }: { kindId: string; lage: KlecksiLage; stand?: LernStand }) {
   const saetze = useMemo(() => startSaetze(lage), [lage]);
   const [i, setI] = useState(0);
   const klecksi = useRef<KlecksiHandle>(null);
   const [gruessen] = useState(() => !heuteSchonGegruesst(kindId));
+  // Trocknet er aus oder ist er trocken, ist er oben nicht aktiv: er steht still,
+  // gruesst nicht und spricht nicht (wie ein eingetrockneter Klecks).
+  const passiv = !!stand && istPassiv(stand);
 
   useEffect(() => {
     setI(0);
@@ -100,23 +104,40 @@ export function KlecksiGruss({ kindId, lage }: { kindId: string; lage: KlecksiLa
   return (
     <div className="relative flex items-center gap-2 overflow-hidden rounded-[28px] bg-card py-3 pl-3 pr-4 ring-1 ring-inset ring-karo">
       {lage.weihnachten && <Schnee />}
-      <button
-        type="button"
-        aria-label="Klecksi antippen"
-        className="relative shrink-0 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        onClick={() => {
-          klecksi.current?.huepfen();
-          klecksi.current?.gruessen();
-          setI((n) => n + 1);
-        }}
-      >
-        <Klecksi ref={klecksi} groesse={88} gruessen={gruessen} />
-      </button>
+      {passiv ? (
+        <span className="relative flex h-[97px] w-[88px] shrink-0 items-end justify-center">
+          <Klecksi groesse={88} stand={stand} />
+        </span>
+      ) : (
+        <button
+          type="button"
+          aria-label="Klecksi antippen"
+          className="relative flex h-[97px] shrink-0 items-end rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          onClick={() => {
+            klecksi.current?.huepfen();
+            klecksi.current?.gruessen();
+            setI((n) => n + 1);
+          }}
+        >
+          <Klecksi ref={klecksi} groesse={88} gruessen={gruessen} stand={stand} />
+        </button>
+      )}
       <div className="relative min-w-0 flex-1">
-        <p aria-live="polite" className="font-hand rounded-[18px] rounded-bl-[4px] border-2 border-tinte bg-background px-3 py-2.5 text-[15px] leading-snug text-tinte">
-          {saetze[i % saetze.length]}
-        </p>
-        <p className="mt-1 text-xs font-medium text-muted-foreground">Tipp Klecksi an</p>
+        {passiv ? (
+          <>
+            <p className="text-[15px] font-extrabold leading-tight text-tinte">
+              {stand?.frische === 'trocknet' ? 'Klecksi trocknet' : 'Klecksi ruht'}
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">Eine Runde Tinte, dann ist er wieder da.</p>
+          </>
+        ) : (
+          <>
+            <p aria-live="polite" className="font-hand rounded-[18px] rounded-bl-[4px] border-2 border-tinte bg-background px-3 py-2.5 text-[15px] leading-snug text-tinte">
+              {saetze[i % saetze.length]}
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted-foreground">Tipp Klecksi an</p>
+          </>
+        )}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { Trophy } from 'lucide-react';
 import { useAchievements } from '@/hooks/useAchievements';
 
 /**
- * Erfolge als Kachel neben der Lernpflanze auf dem Kind-Start (05.10.2026,
+ * Erfolge als Kachel neben den Lerntagen (Klecksi) auf dem Kind-Start (05.10.2026,
  * ersetzt dort die Hefte). Zeigt, wie viele Erfolge erreicht sind, und den
  * naechsten, der am weitesten ist – das motiviert mehr als eine Liste.
  * Antippen oeffnet alle Erfolge.

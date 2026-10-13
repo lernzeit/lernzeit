@@ -22,6 +22,7 @@ Der kleine blaue Tintenklecks begleitet dein Kind beim Lernen:
 • Tinte für neue Figuren: Für richtige Antworten gibt es Tinte, mit der dein Kind neue Figuren freischaltet. Tinte ist Spielgeld, keine Bildschirmzeit.
 • Berichtigung: Falsche Aufgaben übt dein Kind später noch einmal, mit dem Tintenkiller.
 • Klecksi erklärt Fehler und ist der KI-Tutor (Premium, ab Klasse 5). Erklärungen von der KI sind gekennzeichnet.
+• Klecksi wächst mit jedem Lerntag in Folge: nach 3, 7, 14 und 30 Tagen wird er größer und glänzender. Wer pausiert, sieht ihn blasser werden und austrocknen. Eine Runde, und er ist wieder da.
 • Urkunden und ein Wochenziel für mehr Lust aufs Dranbleiben.
 • Ältere Kinder können Klecksi ausschalten: Ab Klasse 7 ist er zuerst aus, in den Einstellungen lässt er sich jederzeit ein- oder ausschalten.
 
@@ -35,7 +36,7 @@ Außerdem: mehr kurze Aufgaben zum Üben (Runden, Vorgänger und Nachfolger, Ste
 ## Google Play – „Neuerungen“ (Deutsch, unter 500 Zeichen)
 
 ```
-Klecksi ist da! Der kleine Tintenklecks begleitet dein Kind: Jede geschaffte Runde malt ein Feld auf seiner Heftrand-Reise, am Seitenende faltet er eine Papierfigur (mit Anleitung). Für richtige Antworten gibt es Tinte für neue Figuren. Klecksi erklärt Fehler und ist der KI-Tutor (Premium, ab Klasse 5). Ab Klasse 7 ist er zuerst aus, in den Einstellungen änderbar. Im Dezember: Adventskalender mit 24 Türchen. Dazu mehr kurze Übungsaufgaben und Verbesserungen.
+Klecksi ist da! Der kleine Tintenklecks begleitet dein Kind: Jede Runde malt ein Feld auf der Heftrand-Reise, am Seitenende faltet er eine Papierfigur. Mit jedem Lerntag wächst und glänzt er, ohne Lernen trocknet er aus. Tinte gibt es für neue Figuren. Klecksi erklärt Fehler und ist KI-Tutor (Premium, ab Klasse 5). Ab Klasse 7 zuerst aus, änderbar. Im Dezember: Adventskalender. Dazu mehr Übungsaufgaben.
 ```
 
 (Zeichenzahl: unter 500.)

@@ -89,11 +89,12 @@ Supabase-Secrets gelöscht werden.
 - Gleiche Bildwelt wie die Website: Plus Jakarta Sans, Tokens `tinte`, `primary` (Blau),
   `gruen-hell`/`gruen-text`, `rotstift`, `karo` (tailwind), `.heft-karo`, `font-hand`.
   Keine Verläufe, Emoji nur bei Avatar und Stickern.
-- Kind: Zeit-Uhr, Lernpflanze statt Lernfeuer (Stufen in `child/LernPflanze.tsx`, auch in
-  den Push-Texten von `send-push`), Fächer als Hefte mit eigener Farbe und Stickern
+- Kind: Zeit-Uhr, Lerntage in Folge als Klecksi (seit 13.10.2026, vorher Lernpflanze; Stufen in
+  `lib/klecksiLernstand.ts`, Kachel `child/LerntageKachel.tsx`; die Push-Texte von `send-push`
+  sprechen noch von der Pflanze, siehe „Klecksi und die Heftrand-Reise“), Fächer als Hefte mit eigener Farbe und Stickern
   (Tabellen `kind_hefte`, `kind_sticker`). Sticker bei 5/5: Kind wählt selbst aus 56 (`sticker_darf_waehlen()`, `sticker_waehlen()`, Katalog = `STICKER` in `lib/hefte.ts`, nur Emoji bis Version 5), `sticker_vergeben()` (zufällig, nur die ersten 24) für alte App-Versionen. Konfetti bei 5/5 genau einmal (`triggerAllesRichtig`).
   Kind-Start (seit 05.10.2026): Uhr mit „Lernen starten“, Lernpläne, Tagesaufgabe,
-  „Deine Erfolge“ (Pflanze + `child/ErfolgeKachel.tsx`). Hefte nur auf der Fächer-Seite,
+  „Deine Erfolge“ (Lerntage-Kachel + `child/ErfolgeKachel.tsx`). Hefte nur auf der Fächer-Seite,
   dort auch „Gestalten“.
 - Spiel: Kästchen-Fortschritt, eigenes Ziffernfeld für Zahlenaufgaben, Haken/Rotstift.
 - Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Regeln speichern sofort mit
@@ -190,6 +191,14 @@ Supabase-Secrets gelöscht werden.
   Eltern-Bonus `child_settings.reise_bonus_minuten`, zählt in App und `screen-time-request` zur
   verdienten Zeit). Figuren: `mit_tinte_freischalten`, Trigger `avatar_pruefen`; Preise in
   `avatar_preis()` und `lib/federmaeppchen.ts` gleich halten (`npm run test:reise` prüft das).
+- Lerntage als Klecksi (13.10.2026, ersetzt die Lernpflanze): Größe und Glanz nach 3/7/14/30 Tagen
+  (`KLECKS_STUFEN`), Rechnung unverändert aus `useStreak`. 1 Tag Pause = blass, 2 = trocknet (Kette
+  noch zu retten, Rettungsrunde ohne Minuten), ab 3 = trocken und klein (Kette 0). Er leidet nie:
+  trocken heißt matt, Risse, Augen zu, kleines Lächeln. Trocknet/trocken ist er oben passiv (steht
+  still, grüßt nicht). Eine Runde, und er ist wieder farbig (Stufe 0, wächst neu). `Klecksi`-Prop
+  `stand`, Kachel mit Tropfen-Variante für Kinder ohne Klecksi. Regeln mit Tests in
+  `npm run test:reise`. Noch offen: Push-Texte `send-push` (Pflanze/Durst/welkt) erst mit dem
+  App-Build anpassen, sonst lesen alte App-Versionen neue Wörter.
 - Berichtigung: Runde aus `review_queue` (`useBerichtigung`, LearningGame `mode='berichtigung'`),
   richtig = `is_retired`. Supabase-Anfragen ohne `await`/`.then()` werden nie abgeschickt.
 - DELETE über das Supabase-MCP wartet auf Bestätigung und läuft in eine Zeitüberschreitung.

@@ -812,7 +812,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                     <ul className="divide-y divide-karo rounded-[20px] bg-card px-4 ring-1 ring-inset ring-karo text-sm">
                       <li className="flex justify-between py-3"><span>Heute verdient</span><b className="tabular text-tinte">{z?.minutesEarned ?? 0} Min.</b></li>
                       <li className="flex justify-between py-3"><span>Aufgaben heute</span><b className="tabular text-tinte">{z?.questionsToday ?? 0}, davon {z?.correctToday ?? 0} richtig</b></li>
-                      <li className="flex justify-between py-3"><span>Lernpflanze</span><b className="tabular text-tinte">{z?.streak ?? 0} {(z?.streak ?? 0) === 1 ? 'Tag' : 'Tage'} in Folge</b></li>
+                      <li className="flex justify-between py-3"><span>Lerntage in Folge</span><b className="tabular text-tinte">{z?.streak ?? 0} {(z?.streak ?? 0) === 1 ? 'Tag' : 'Tage'}</b></li>
                     </ul>
                     <ChildLearningAnalysis childId={child.id} childName={child.name || 'Kind'} childGrade={child.grade} />
                   </div>

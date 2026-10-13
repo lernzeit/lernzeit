@@ -52,7 +52,7 @@ Handynutzung spät abends oder früh morgens. „Zeitreisender“ (verschiedene 
 
 - 75 Kinderkonten (ohne Testkonten), davon **4 in den letzten 14 Tagen aktiv**, im Schnitt an
   2,8 Tagen. Das Problem ist das Dranbleiben, nicht der Einstieg.
-- Vorhanden: Zeit-Uhr, Lernpflanze (Serie), Hefte mit Farben und Stickern, Sticker-Wahl bei 5/5,
+- Vorhanden: Zeit-Uhr, Lerntage in Folge als Klecksi (wächst und glänzt, trocknet bei Pause aus; vorher Lernpflanze), Hefte mit Farben und Stickern, Sticker-Wahl bei 5/5,
   Erfolge (889 vergeben), Tagesaufgabe, Lernpläne, 32 Avatare (alle frei).
 - Eine Fehlerkiste gibt es technisch schon (`review_queue`, 217 Einträge, Wiederholung nach
   1/3/7 Tagen) – aber unsichtbar: Die Aufgaben werden still in normale Runden gemischt.
@@ -90,7 +90,7 @@ Handynutzung spät abends oder früh morgens. „Zeitreisender“ (verschiedene 
 
 | # | Baustein | Was passiert |
 |---|---|---|
-| 6 | **Wochenziel** | „4 Lerntage diese Woche“ neben der Pflanze. Verzeiht einzelne Pausentage. |
+| 6 | **Wochenziel** | „4 Lerntage diese Woche“ neben Klecksi (Lerntage). Verzeiht einzelne Pausentage. |
 | 7 | **Eltern-Bonus für Stationen** | Eltern sehen die Reise und legen fest, ob eine geschaffte Station Extra-Minuten bringt (z. B. 10). Verbindet Spielwelt und Bildschirmzeit – die Eltern entscheiden. |
 
 ## Bewusst nicht

@@ -142,7 +142,7 @@ export function GameCompletionScreen({
   }
 
   const titel = isStreakRecovery
-    ? 'Deine Lernpflanze ist gerettet!'
+    ? 'Deine Tage in Folge sind gerettet!'
     : istBerichtigung
     ? (score === totalQuestions ? 'Alles berichtigt!' : 'Gut berichtigt!')
     : { excellent: 'Super gemacht!', good: 'Toll gemacht!', okay: 'Gut gemacht!' }[celebrationLevel];

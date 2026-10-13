@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { PflanzenBild, STUFEN, stufeFuer } from '@/components/child/LernPflanze';
+import { LerntageBild } from '@/components/child/LerntageKachel';
+import { useKlecksiAn } from '@/hooks/useKlecksi';
+import { KLECKS_STUFEN, stufeFuer, stufeName } from '@/lib/klecksiLernstand';
 
 interface StreakAnimationProps {
   newStreak: number;
@@ -7,12 +9,13 @@ interface StreakAnimationProps {
 }
 
 /**
- * Die Lernpflanze waechst (App-Redesign, statt Feuer-Animation): erscheint am
- * Rundenende, wenn heute der erste Lerntag in Folge dazukam. Bei einer neuen
- * Stufe zeigt sie den Namen der Stufe.
+ * Klecksi bekommt Tinte (statt Feuer-Animation): erscheint am Rundenende, wenn
+ * heute der erste Lerntag in Folge dazukam. Er ist wieder farbig; bei 3, 7, 14
+ * und 30 Tagen waechst er in die naechste Stufe und zeigt ihren Namen.
  */
 export function StreakAnimation({ newStreak, onClose }: StreakAnimationProps) {
   const [phase, setPhase] = useState<'enter' | 'zeigen' | 'exit'>('enter');
+  const mitKlecksi = useKlecksiAn();
 
   useEffect(() => {
     const a = setTimeout(() => setPhase('zeigen'), 60);
@@ -22,7 +25,8 @@ export function StreakAnimation({ newStreak, onClose }: StreakAnimationProps) {
   }, [newStreak, onClose]);
 
   const stufe = stufeFuer(newStreak);
-  const neueStufe = STUFEN.some((s) => s.ab === newStreak && s.ab > 0);
+  const neueStufe = KLECKS_STUFEN.some((s) => s.ab === newStreak && s.ab > 0);
+  const er = mitKlecksi ? 'Klecksi' : 'Der Tropfen';
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[110] flex items-center justify-center p-6" role="status" aria-live="polite">
@@ -32,12 +36,14 @@ export function StreakAnimation({ newStreak, onClose }: StreakAnimationProps) {
           phase === 'zeigen' ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
         }`}
       >
-        <PflanzenBild stufe={stufe.id} className="h-32 w-32" />
-        <p className="tabular text-3xl font-extrabold text-tinte">
+        <span className="flex h-36 items-end justify-center">
+          <LerntageBild stand={{ stufe, frische: 'frisch' }} mitKlecksi={mitKlecksi} groesse={124} />
+        </span>
+        <p className="tabular mt-2 text-3xl font-extrabold text-tinte">
           {newStreak} {newStreak === 1 ? 'Tag' : 'Tage'}
         </p>
         <p className="mt-1 font-hand text-lg text-gruen-text">
-          {neueStufe ? `Deine Pflanze ist jetzt: ${stufe.name}!` : 'Deine Lernpflanze wächst.'}
+          {neueStufe ? `${er} ist gewachsen: ${stufeName(stufe, mitKlecksi)}!` : `${er} hat Tinte bekommen.`}
         </p>
       </div>
     </div>

@@ -28,6 +28,7 @@ const falten = await laden('src/lib/falten.ts');
 const weihnachten = await laden('src/lib/weihnachten.ts');
 const hefte = await laden('src/lib/hefte.ts');
 const modus = await laden('src/lib/klecksiModus.ts');
+const stand = await laden('src/lib/klecksiLernstand.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -119,5 +120,40 @@ pruefe('Ohne Klecksi: kein „ich“ und kein Klecksi in den Saetzen',
    ohne({ richtig: 3, gesamt: 5, geschafft: true }), ohne({ richtig: 3, gesamt: 5, geschafft: true, faltung: 'katze' })]
     .some((x) => /\b(ich|Ich|mir|Klecksi)\b/.test(x)), false);
 pruefe('Ohne Klecksi: Faltung im Satz', ohne({ richtig: 3, gesamt: 5, geschafft: true, faltung: 'katze' }), 'Seite fertig! Neu im Regal: Katze.');
+
+// Klecksi als Lerntage (ersetzt die Lernpflanze): Groesse und Glanz nach 3, 7, 14, 30 Tagen,
+// blass, trocknet, trocken bei Pausen, wieder farbig nach einer Runde
+pruefe('Stufen nach Tagen: 0,2 | 3,6 | 7,13 | 14,29 | 30,99',
+  [0, 2, 3, 6, 7, 13, 14, 29, 30, 99].map(stand.stufeFuer), [0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
+pruefe('Heute gelernt: frisch, Stufe nach Tagen', [stand.lernStand(0, 0), stand.lernStand(5, 0), stand.lernStand(31, 0)],
+  [{ stufe: 0, frische: 'frisch' }, { stufe: 1, frische: 'frisch' }, { stufe: 4, frische: 'frisch' }]);
+pruefe('1 Tag Pause: blass, Stufe bleibt', stand.lernStand(8, 1), { stufe: 2, frische: 'blass' });
+pruefe('2 Tage Pause: trocknet, Stufe bleibt', stand.lernStand(15, 2), { stufe: 3, frische: 'trocknet' });
+pruefe('Ab 3 Tagen Pause: trocken und klein (Kette bei 0)', [stand.lernStand(0, 3), stand.lernStand(20, 3), stand.lernStand(0, 40)],
+  [{ stufe: 0, frische: 'trocken' }, { stufe: 0, frische: 'trocken' }, { stufe: 0, frische: 'trocken' }]);
+pruefe('Noch nie gelernt: frisch, nicht trocken', stand.lernStand(0, 0, false), { stufe: 0, frische: 'frisch' });
+pruefe('Eine Runde nach langer Pause: wieder farbig, Stufe 0', stand.lernStand(1, 0), { stufe: 0, frische: 'frisch' });
+pruefe('Passiv nur bei trocknet und trocken',
+  ['frisch', 'blass', 'trocknet', 'trocken'].map((f) => stand.istPassiv({ stufe: 2, frische: f })), [false, false, true, true]);
+pruefe('Rettbar bei 1–2 Tagen Pause mit Kette', [stand.istRettbar(4, 0), stand.istRettbar(4, 1), stand.istRettbar(4, 2), stand.istRettbar(0, 3), stand.istRettbar(0, 1)],
+  [false, true, true, false, false]);
+pruefe('Massstab waechst mit der Stufe und schrumpft mit der Frische',
+  [0, 1, 2, 3, 4].map((st) => stand.massstab({ stufe: st, frische: 'frisch' })).every((m, i, a) => i === 0 || m > a[i - 1]), true);
+pruefe('Trockener Klecksi ist kleiner als jeder frische',
+  stand.massstab({ stufe: 0, frische: 'trocken' }) < stand.massstab({ stufe: 0, frische: 'frisch' }), true);
+pruefe('Kein Stufenname ist doppelt', new Set(stand.KLECKS_STUFEN.map((x) => x.name)).size, 5);
+pruefe('Naechste Stufe: bei 5 Tagen die ab 7, bei 30 keine', [stand.naechsteStufe(5)?.ab, stand.naechsteStufe(30)], [7, undefined]);
+const alleTexte = [];
+for (const f of ['frisch', 'blass', 'trocknet', 'trocken']) for (const tage of [0, 4]) for (const mk of [true, false]) {
+  const z = { stufe: 1, frische: f };
+  alleTexte.push(stand.stufenTitel(z, tage, mk), stand.stufenSatz(z, tage, mk), stand.stufenErklaerung(z, tage, mk));
+}
+pruefe('Texte ohne Leid und Druck (kein tot, krank, traurig, verloren, Strafe)',
+  alleTexte.some((t) => /\b(tot|stirbt|krank|traurig|verloren|weint|leidet|Strafe|schade)\b/i.test(t)), false);
+pruefe('Ohne Klecksi kommt der Name nicht vor',
+  alleTexte.filter((t, i) => i % 6 >= 3).some((t) => /Klecksi/.test(t)), false);
+pruefe('Titel: blass, trocknet, trocken',
+  ['blass', 'trocknet', 'trocken'].map((f) => stand.stufenTitel({ stufe: 2, frische: f }, 9)),
+  ['Klecksi wird blass', 'Klecksi trocknet', 'Klecksi ist eingetrocknet']);
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }

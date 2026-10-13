@@ -55,7 +55,8 @@ import { useOneSignal, unregisterPushDevice } from '@/hooks/useOneSignal';
 import { OnboardingTutorial } from '@/components/OnboardingTutorial';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { GoogleRoleSelection } from '@/components/auth/GoogleRoleSelection';
-import { LernPflanze } from '@/components/child/LernPflanze';
+import { LerntageKachel } from '@/components/child/LerntageKachel';
+import { lernStand } from '@/lib/klecksiLernstand';
 import { ZeitUhr } from '@/components/child/ZeitUhr';
 import { useHefte } from '@/hooks/useHefte';
 import type { FachId } from '@/lib/hefte';
@@ -145,7 +146,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   const [kindAnsicht, setKindAnsicht] = useState<'start' | 'federmaeppchen' | 'urkunden'>('start');
 
   // Use streak hook for children
-  const { streak, status: streakStatus, inactiveDays, loading: streakLoading } = useStreak(
+  const { streak, status: streakStatus, inactiveDays, lastActivityDate, loading: streakLoading } = useStreak(
     profile?.role === 'child' ? user?.id : undefined
   );
 
@@ -585,6 +586,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
     const plan = lernplaene[0];
     const schwerpunkt = hefte.hefte.find((h) => h.wichtig);
     const heuteTag = berlinerTag();
+    const klecksiStand = streakLoading ? undefined : lernStand(streak, inactiveDays, lastActivityDate != null);
     const klecksiLage = {
       name: profile?.name || undefined,
       felderGemalt: reise.aktuell.felder.length,
@@ -633,7 +635,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           </header>
 
           {/* Klecksi begruesst (einmal am Tag winkt er), Antippen: naechster Satz */}
-          {reise.geladen && klecksiModus.an && <KlecksiGruss kindId={user.id} lage={klecksiLage} />}
+          {reise.geladen && klecksiModus.an && <KlecksiGruss kindId={user.id} lage={klecksiLage} stand={klecksiStand} />}
 
           {/* Testphase der Eltern: nur eine ruhige Zeile */}
           {trialJustExpired && (
@@ -703,24 +705,25 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
               seiten={reise.seiten}
               farbe={heftFarbe}
               fachName={fachName}
+              stand={klecksiStand}
             />
           )}
 
           <DailyChallenge userId={user.id} />
 
-          {/* Pflanze und Erfolge statt der Hefte (05.10.2026): Gelernt wird ueber
+          {/* Lerntage (Klecksi) und Erfolge statt der Hefte (05.10.2026): Gelernt wird ueber
               "Lernen starten", die Faecher-Hefte stehen auf der Faecher-Seite. */}
           <section aria-labelledby="erfolge-titel">
             <h2 id="erfolge-titel" className="mb-3 text-lg font-extrabold leading-tight">Deine Erfolge</h2>
             <div className="grid grid-cols-2 gap-3">
-              <LernPflanze
-                variante="kachel"
+              <LerntageKachel
                 streak={streak}
-                status={streakStatus}
                 inactiveDays={inactiveDays}
+                hatGelernt={lastActivityDate != null}
                 loading={streakLoading}
                 reactivationTrigger={streakReactivationTrigger}
                 onStartRecovery={() => onStartStreakRecovery?.(klasse)}
+                mitKlecksi={klecksiModus.an}
                 wochenTage={wochenTage}
               />
               <UrkundenKachel kindId={user.id} onClick={() => setKindAnsicht('urkunden')} />

@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { useKlecksiAn } from '@/hooks/useKlecksi';
+import type { LernStand } from '@/lib/klecksiLernstand';
 import { Faltung } from '@/components/child/Faltung';
 import { FaltAnleitung } from '@/components/child/FaltAnleitung';
 import {
@@ -91,10 +92,12 @@ function Kritzel({ form, x, y, zustand, farbe }: {
  * Das Spielbrett der Reise: Pfad mit 12 Feldern, Klecksi auf dem naechsten
  * Feld, oben die Faltfigur. Auch auf der Startseite (landing/KlecksiReise).
  */
-export function ReisePfad({ seite, felder, farbe, zielFertig = false, className = '' }: {
+export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, className = '' }: {
   seite: number;
   felder: ReiseFeld[];
   farbe: (fach: string) => string;
+  /** Lernstand: blass oder ausgetrocknet steht Klecksi still und ist blass (Groesse bleibt) */
+  stand?: LernStand;
   /** Faltfigur oben schon fertig (Seite voll) statt mit Bleistift */
   zielFertig?: boolean;
   className?: string;
@@ -151,14 +154,15 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, className 
       {/* Klecksi steht auf dem naechsten Feld */}
       {mitKlecksi && <div className="reise-klecksi pointer-events-none absolute transition-[left,top] duration-700 ease-out motion-reduce:transition-none"
         style={{ left: `${((kx - 26) / B) * 100}%`, top: `${((ky - 58) / H) * 100}%`, width: `${(52 / B) * 100}%` }}>
-        <Klecksi groesse="voll" />
+        <Klecksi groesse="voll" stand={stand} festeGroesse />
       </div>}
     </div>
   );
 }
 
-export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
+export function HeftrandReise({ seite, felder, seiten, farbe, fachName, stand }: {
   seite: number;
+  stand?: LernStand;
   /** Felder der aktuellen Seite */
   felder: ReiseFeld[];
   /** Fertige Seiten (Regal) */
@@ -181,7 +185,7 @@ export function HeftrandReise({ seite, felder, seiten, farbe, fachName }: {
         Seite {seite} · {gemalt} von {FELDER_JE_SEITE} Feldern
       </p>
 
-      <ReisePfad seite={seite} felder={felder} farbe={farbe} className="mt-3" />
+      <ReisePfad seite={seite} felder={felder} farbe={farbe} stand={stand} className="mt-3" />
       <p className="font-hand mt-2 text-center text-sm text-muted-foreground">
         {mitKlecksi ? <>Oben faltet Klecksi {FALTUNG_MIT_ARTIKEL[faltung]} für dich.</> : <>Am Seitenende: {FALTUNG_NAME[faltung]} zum Nachfalten.</>}
       </p>

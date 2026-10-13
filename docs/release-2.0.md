@@ -11,8 +11,8 @@
 ## Auf dem Gerät prüfen (je iPhone und Android)
 
 Kind
-- [ ] Start: Uhr, „Lernen starten“, Lernpläne, Tagesaufgabe, „Deine Erfolge“ (Pflanze, Erfolge). Keine Hefte mehr auf dem Start.
-- [ ] Pflanze antippen → Stufen-Dialog. Erfolge antippen → Erfolge-Liste.
+- [ ] Start: Uhr, „Lernen starten“, Lernpläne, Tagesaufgabe, „Deine Erfolge“ (Lerntage mit Klecksi, Erfolge). Keine Hefte mehr auf dem Start.
+- [ ] Lerntage-Kachel antippen → Stufen-Dialog (Klecksi in 5 Größen, bei Pause blass/trocken, Rettungsknopf bei 1–2 Tagen). Erfolge antippen → Erfolge-Liste.
 - [ ] „Lernen starten“ → Fächer-Seite mit Heften, „Gestalten“ öffnet Farben/Sticker.
 - [ ] Lernplan antippen → Fragen nur zum Planthema; Plan startet am ersten Öffnen (Tag 1).
 - [ ] Runde mit Ziffernfeld, Auswahl, Sortieren, Zuordnen; Tastatur verdeckt „Prüfen“ nicht.
