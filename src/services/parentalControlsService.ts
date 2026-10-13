@@ -4,6 +4,7 @@ import { openScreenTimeSettings } from './parentalControls/ios';
 import { openFamilyLinkIos } from './parentalControls/familyLinkIos';
 import { getWebInstructions } from './parentalControls/web';
 import type { OpenParentalControlsResult, Platform } from './parentalControls/types';
+import { freigabeAnleitung } from '@/lib/geraeteAnleitung';
 
 export type { Platform, OpenParentalControlsResult };
 
@@ -119,7 +120,7 @@ class ParentalControlsService {
         kind: 'unsupported',
         appName: 'Bildschirmzeit',
         buttonLabel: '',
-        hint: `Die Zeit für ${childName} gibst du in Apples Bildschirmzeit frei. Das geht nur an einem iPhone oder iPad – Apple bietet dafür keine Android-App. Du kannst die Anfrage hier genehmigen und die Zeit anschließend an einem Apple-Gerät freigeben.`,
+        hint: freigabeAnleitung('ios', childName),
         canOpen: false,
       };
     }
@@ -139,7 +140,7 @@ class ParentalControlsService {
       kind: 'family_link',
       appName: 'Family Link',
       buttonLabel: '',
-      hint: `Die Zeit für ${childName} gibst du in der Family-Link-App frei: ${childName} → Gerätezeit → Heute mehr Zeit.`,
+      hint: freigabeAnleitung('android', childName),
       canOpen: false,
     };
   }

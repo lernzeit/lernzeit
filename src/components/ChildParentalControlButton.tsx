@@ -32,10 +32,10 @@ export function ChildParentalControlButton({
   const handleOpen = async () => {
     const result = await parentalControlsService.openForChild(platform, minutes);
     if (!result.success) {
+      // Keine Fehlermeldung, sondern der naechste Schritt (steht in result.message)
       toast({
-        title: `${target.appName} konnte nicht geöffnet werden`,
+        title: `So geht es in ${target.appName} weiter`,
         description: result.message,
-        variant: 'destructive',
       });
     }
   };

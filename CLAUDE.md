@@ -174,6 +174,11 @@ Supabase-Secrets gelöscht werden.
 - Freie Zeit zählt nach Nutzung, sobald „Was zählt als Handyzeit?“ gewählt ist (Swift:
   `ScreenTimeShared.swift`, `freigeben`/`starteNutzung`), sonst nach Uhr. Ruhezeit:
   `child_settings.ruhezeit_von/_bis` (Minuten), Kinder-Handy übernimmt sie (`useRuhezeitAbgleich`).
+- Hinweise zu Sperre und Freigabe (13.10.2026): Ein Elternteil richtet sie auf dem Gerät des Kindes
+  ein. Die Meldungen nennen die Lösung statt des Fehlers und hängen vom Endgerät ab (iPhone/iPad,
+  Android, Browser, Computer): `lib/geraeteAnleitung.ts` (Tests in `npm run test:reise`), genutzt
+  in `ScreenTimeWidget` (Kinder-Gerät), `ScreenTimeSetup` (Handy sperren, Apple-Gründe) und bei der
+  Genehmigung auf dem Eltern-Gerät (`parentalControlsService`, Absprung-Meldungen).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

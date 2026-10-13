@@ -90,7 +90,7 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
           opened: false,
           platform: 'android',
           appName: 'Family Link',
-          message: `Family Link ist nicht installiert. Play Store wurde geöffnet. ${minutesMsg}`.trim(),
+          message: `Installiere Family Link im Play Store (er ist geöffnet), dann gib die Zeit dort frei. ${minutesMsg}`.trim(),
           fallbackUrl: PLAY_STORE_WEB,
           notInstalled: true,
         };
@@ -107,7 +107,7 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
         opened: false,
         platform: 'android',
         appName: 'Family Link',
-        message: `Family Link ist nicht installiert. Bitte aus dem Play Store installieren. ${minutesMsg}`.trim(),
+        message: `Installiere Family Link aus dem Play Store, dann gib die Zeit dort frei. ${minutesMsg}`.trim(),
         fallbackUrl: PLAY_STORE_WEB,
         notInstalled: true,
       };
@@ -140,7 +140,7 @@ export async function openFamilyLink(minutes?: number): Promise<OpenParentalCont
     opened: false,
     platform: 'android',
     appName: 'Family Link',
-    message: 'Family Link konnte nicht geöffnet werden. Bitte manuell öffnen oder aus dem Play Store installieren.',
+    message: 'Öffne Family Link selbst und gib die Zeit dort frei. Ist die App nicht da: im Play Store installieren.',
     fallbackUrl: PLAY_STORE_WEB,
     notInstalled: true,
   };

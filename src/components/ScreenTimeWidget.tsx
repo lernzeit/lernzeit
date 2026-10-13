@@ -1,72 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, ExternalLink, Smartphone, Info, Download } from 'lucide-react';
+import { Shield, ExternalLink, Info } from 'lucide-react';
 import { parentalControlsService } from '@/services/parentalControlsService';
-import { useToast } from '@/hooks/use-toast';
+import { endgeraetVon, kindGeraetAnleitung } from '@/lib/geraeteAnleitung';
 
+/**
+ * „Sperre und Freigabe“ in den Einstellungen des KINDES.
+ *
+ * Die Karte steht auf dem Gerät des Kindes, die Einrichtung macht aber ein
+ * Elternteil: Sperre und Freigabe der Bildschirmzeit gehören in Apples
+ * Bildschirmzeit bzw. Google Family Link auf genau diesem Gerät. Deshalb steht
+ * hier keine Fehlermeldung („Family Link nicht installiert“), sondern was das
+ * Elternteil tun muss, passend zum Gerät (iPhone/iPad, Android, Browser,
+ * Computer; lib/geraeteAnleitung.ts). Frueher stand auf dem Kinder-Handy ein
+ * Knopf, der die Eltern-App Family Link installieren wollte.
+ */
 export function ScreenTimeWidget() {
-  const { toast } = useToast();
   const [opening, setOpening] = useState(false);
-  const [notInstalled, setNotInstalled] = useState(false);
-  const [checking, setChecking] = useState(true);
-  
-  const isNative = parentalControlsService.isNativePlatform();
-  const platform = parentalControlsService.getPlatform();
-  const appName = parentalControlsService.getParentalControlAppName();
+  const [manuell, setManuell] = useState(false);
 
-  // Check on mount whether Family Link is installed (Android only)
-  useEffect(() => {
-    let cancelled = false;
-    async function check() {
-      if (!isNative || platform !== 'android') {
-        setChecking(false);
-        return;
-      }
-      try {
-        const installed = await parentalControlsService.isParentalControlAppInstalled();
-        if (!cancelled) setNotInstalled(!installed);
-      } catch {
-        if (!cancelled) setNotInstalled(false);
-      } finally {
-        if (!cancelled) setChecking(false);
-      }
-    }
-    check();
-    return () => { cancelled = true; };
-  }, [isNative, platform]);
+  const geraet = endgeraetVon(
+    parentalControlsService.getPlatform(),
+    typeof navigator === 'undefined' ? '' : navigator.userAgent || '',
+    typeof navigator === 'undefined' ? 0 : navigator.maxTouchPoints || 0,
+  );
+  const anleitung = kindGeraetAnleitung(geraet);
+  // Nur auf dem iPhone/iPad in der App lassen sich die Einstellungen öffnen
+  const kannOeffnen = geraet.nativ && geraet.system === 'ios';
 
-  const handleOpenControls = async () => {
+  const oeffnen = async () => {
     setOpening(true);
+    setManuell(false);
     try {
       const result = await parentalControlsService.openParentalControlApp();
-      setNotInstalled(!!result.notInstalled);
-      if (!result.success) {
-        toast({
-          title: 'Hinweis',
-          description: result.message,
-        });
-      }
+      if (!result.success) setManuell(true);
     } catch {
-      toast({
-        title: 'Fehler',
-        description: 'Kindersicherung konnte nicht geöffnet werden.',
-        variant: 'destructive',
-      });
+      setManuell(true);
     } finally {
       setOpening(false);
-    }
-  };
-
-  const handleInstallFamilyLink = async () => {
-    try {
-      await parentalControlsService.openInstallParentalControlApp();
-    } catch {
-      toast({
-        title: 'Fehler',
-        description: 'Play Store konnte nicht geöffnet werden.',
-        variant: 'destructive',
-      });
     }
   };
 
@@ -75,79 +47,55 @@ export function ScreenTimeWidget() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Shield className="h-5 w-5 text-primary" />
-          Kindersicherung
+          Sperre und Freigabe
         </CardTitle>
-        <CardDescription>
-          Bildschirmzeit über {platform === 'android' ? 'Family Link' : platform === 'ios' ? 'Bildschirmzeit' : 'Family Link / Bildschirmzeit'} verwalten
-        </CardDescription>
+        <CardDescription>Das richtet ein Elternteil ein.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isNative && platform === 'android' && notInstalled ? (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2 shrink-0">
-                <Download className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <p className="text-sm font-semibold text-foreground">
-                  Google Family Link installieren
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Für die Steuerung der Bildschirmzeit deines Kindes auf dem Smartphone benötigst du die kostenlose Google Family Link App. Damit kannst du Tageslimits setzen, Apps freigeben und die genehmigten Bonusminuten aus Lernzeit aktivieren.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={handleInstallFamilyLink}
-              className="w-full"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Im Play Store installieren
+        <p className="text-sm text-tinte">{anleitung.text}</p>
+
+        <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+          {anleitung.schritte.map((schritt) => (
+            <li key={schritt}>{schritt}</li>
+          ))}
+        </ol>
+
+        {kannOeffnen && (
+          <div className="space-y-2">
+            <Button onClick={oeffnen} disabled={opening} className="w-full">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Einstellungen öffnen
             </Button>
-          </div>
-        ) : isNative ? (
-          <Button onClick={handleOpenControls} disabled={opening || checking} className="w-full">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            {appName} öffnen
-          </Button>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Richte die Kindersicherung direkt auf dem Gerät deines Kindes ein:
-            </p>
-            <div className="grid gap-2">
-              <a
-                href="https://play.google.com/store/apps/details?id=com.google.android.apps.kids.familylink"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Smartphone className="h-4 w-4" />
-                Google Family Link (Android)
-              </a>
-              <p className="text-xs text-muted-foreground ml-6">
-                Einstellungen → Digitales Wohlbefinden → Kindersicherung
+            {manuell && (
+              <p className="text-sm text-tinte">
+                Öffne die Einstellungen selbst und tippe auf <strong>Bildschirmzeit</strong>.
               </p>
-              <a
-                href="https://support.apple.com/de-de/HT208982"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Smartphone className="h-4 w-4" />
-                Bildschirmzeit (iPhone/iPad)
-              </a>
-              <p className="text-xs text-muted-foreground ml-6">
-                Einstellungen → Bildschirmzeit → Beschränkungen
-              </p>
-            </div>
+            )}
           </div>
         )}
 
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-          <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+        {anleitung.links.length > 0 && (
+          <ul className="space-y-1.5">
+            {anleitung.links.map((link) => (
+              <li key={link.url}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  {link.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <p className="text-xs text-muted-foreground">
-            Bildschirmzeit-Anfragen deiner Kinder findest du im Tab <strong>„Anfragen"</strong> weiter unten.
+            Hast du Zeit verdient, fragst du sie weiter unten an. Dein Elternteil gibt sie dann frei.
           </p>
         </div>
       </CardContent>

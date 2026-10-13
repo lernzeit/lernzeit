@@ -135,8 +135,8 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
       }
     } catch (error: any) {
       toast({
-        title: "Fehler",
-        description: error.message || "Anfrage konnte nicht genehmigt werden.",
+        title: "Das hat nicht geklappt",
+        description: 'Prüfe die Internetverbindung und tippe noch einmal auf „Genehmigen“.',
         variant: "destructive",
       });
     } finally {
@@ -161,8 +161,8 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
       }
     } catch (error: any) {
       toast({
-        title: "Fehler",
-        description: error.message || "Antwort konnte nicht gesendet werden.",
+        title: "Das hat nicht geklappt",
+        description: 'Prüfe die Internetverbindung und versuche es noch einmal.',
         variant: "destructive",
       });
     } finally {

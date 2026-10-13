@@ -54,6 +54,6 @@ export async function openScreenTimeSettings(minutes?: number): Promise<OpenPare
     opened: false,
     platform: 'ios',
     appName: 'Bildschirmzeit',
-    message: `Bitte manuell öffnen: Einstellungen → Familie → [Kind] → Bildschirmzeit. ${minutesMsg}`.trim(),
+    message: `Öffne die Einstellungen selbst: Einstellungen → Familie → [Kind] → Bildschirmzeit. ${minutesMsg}`.trim(),
   };
 }

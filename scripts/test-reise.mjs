@@ -30,6 +30,7 @@ const hefte = await laden('src/lib/hefte.ts');
 const modus = await laden('src/lib/klecksiModus.ts');
 const stand = await laden('src/lib/klecksiLernstand.ts');
 const appHinweis = await laden('src/lib/appEmpfehlung.ts');
+const geraete = await laden('src/lib/geraeteAnleitung.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -171,5 +172,32 @@ pruefe('Google-Play-Link traegt die Quelle des Hinweises, App-Store-Link bleibt 
 pruefe('Banner bleibt weg, sobald der Hinweis gezeigt wurde',
   (() => { const v = appHinweis.hinweisWurdeGezeigt(); let n = 0; const ab = appHinweis.beiHinweisGezeigt(() => n++); appHinweis.merkeHinweisGezeigt(); appHinweis.merkeHinweisGezeigt(); ab(); return [v, appHinweis.hinweisWurdeGezeigt(), n]; })(),
   [false, true, 1]);
+
+// Sperre und Freigabe: Loesung statt Fehler, abhaengig vom Endgeraet
+const e = (plattform, ua = '', touch = 0) => geraete.endgeraetVon(plattform, ua, touch);
+pruefe('Endgeraet: App iOS/Android, Browser iPhone/Android/Computer',
+  [e('ios'), e('android'), e('web', UA_IPHONE, 5), e('web', UA_ANDROID, 5), e('web', UA_MAC, 0)],
+  [{ system: 'ios', nativ: true }, { system: 'android', nativ: true }, { system: 'ios', nativ: false }, { system: 'android', nativ: false }, { system: 'andere', nativ: false }]);
+const karten = [e('ios'), e('android'), e('web', UA_IPHONE, 5), e('web', UA_ANDROID, 5), e('web', UA_MAC, 0)].map(geraete.kindGeraetAnleitung);
+pruefe('Kindersicherung: iPhone Apple Bildschirmzeit, Android Family Link, Computer beides',
+  [karten[0].schritte.join(' ').includes('Bildschirmzeit'), karten[0].schritte.join(' ').includes('Family Link'),
+   karten[1].schritte.join(' ').includes('Family Link'), karten[1].schritte.join(' ').includes('Einstellungen → Bildschirmzeit'),
+   karten[4].schritte.length === 2],
+  [true, false, true, false, true]);
+pruefe('Immer ein Elternteil und die Schritte, nie nur ein „geht nicht“',
+  karten.every((k) => /Elternteil/.test(k.text) && k.schritte.length >= 2), true);
+const sperre = (g, ger) => geraete.sperreNichtMoeglich(g, ger);
+pruefe('Sperre nicht moeglich: Browser/Computer verweist auf die App, alte iOS auf das Update, alte App auf das Update',
+  [sperre('platform', e('web', UA_MAC, 0)).schritte[0].includes('App Store'), sperre('os-version', e('ios')).schritte[0].includes('Softwareupdate'),
+   sperre('plugin-missing', e('ios')).schritte[0].includes('aktualisieren'), sperre('platform', e('android')).text.includes('Family Link')],
+  [true, true, true, true]);
+pruefe('Apple-Ablehnung: jede Meldung nennt einen naechsten Schritt (kein nackter Fehler)',
+  ['invalidAccountType', 'authorizationCanceled', 'authorizationConflict', 'restricted', 'authenticationMethodUnavailable', 'networkError', 'unavailable', 'irgendwas']
+    .map(geraete.appleAblehnung).every((t) => /(Das Elternteil|Tippe|Richte|Verbinde|Aktualisiere|Versuche)/.test(t)), true);
+pruefe('Freigabe am Eltern-Geraet: iOS-Kind nennt Einstellungen und Code, Android-Kind Family Link; Name steht drin',
+  [geraete.freigabeAnleitung('ios', 'Mia').includes('Einstellungen → Familie → Mia → Bildschirmzeit'), geraete.freigabeAnleitung('ios', 'Mia').includes('Code'),
+   geraete.freigabeAnleitung('android', 'Mia').includes('Mia → Gerätezeit')], [true, true, true]);
+pruefe('Nach einem Fehler steht der Schritt vorn und der Rohtext hinten',
+  [geraete.nachFehler('Boom').startsWith('Versuche es noch einmal'), geraete.nachFehler('Boom').endsWith('(Boom)')], [true, true]);
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }

@@ -9,6 +9,8 @@ import { ScreenTime, screenTimeAvailability } from '@/services/screenTime/plugin
 import { EMPTY_STATUS, type ScreenTimeAvailability, type ShieldStatus } from '@/services/screenTime/types';
 import { ParentGate, type GeraetFreigabeZweck } from '@/components/screenTime/ParentGate';
 import { istOffen, offenText } from '@/services/screenTime/release';
+import { Capacitor } from '@capacitor/core';
+import { appleAblehnung, endgeraetVon, nachFehler, sperreNichtMoeglich, type SperreGrund } from '@/lib/geraeteAnleitung';
 
 /**
  * Dauer des Probelaufs bei der ersten Aktivierung.
@@ -92,7 +94,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
       await fn();
       await laden();
     } catch (e) {
-      toast.error(`${name} hat nicht geklappt`, { description: String(e) });
+      toast.error(`${name} hat nicht geklappt`, { description: nachFehler(e) });
     } finally {
       setBusy(null);
     }
@@ -125,7 +127,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
       }
       await ScreenTime.applyShield({ shieldAll: true, trialMinutes: PROBELAUF_MINUTEN });
     } catch (e) {
-      toast.error('Einrichten hat nicht geklappt', { description: String(e) });
+      toast.error('Einrichten hat nicht geklappt', { description: nachFehler(e) });
     } finally {
       setBusy(null);
       await laden();
@@ -150,16 +152,13 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
     );
   }
 
-  // Ehrliche Meldung statt eines Schalters, der nichts bewirkt.
+  // Statt eines Schalters, der nichts bewirkt: was das Elternteil tun muss, damit
+  // es geht. Der Text haengt vom Geraet ab (lib/geraeteAnleitung.ts).
   if (!availability.available) {
-    const grund =
-      availability.reason === 'os-version'
-        ? 'Dafür wird mindestens iOS 16 gebraucht.'
-        : availability.reason === 'entitlement-missing'
-          ? 'Diese App-Fassung hat die nötige Apple-Berechtigung nicht.'
-          : availability.reason === 'plugin-missing'
-            ? 'In dieser App-Fassung fehlt der Baustein für die Sperre. Bitte LernZeit aktualisieren.'
-          : 'Das geht nur auf einem iPhone oder iPad, nicht im Browser und nicht auf Android.';
+    const anleitung = sperreNichtMoeglich(
+      availability.reason as SperreGrund | undefined,
+      endgeraetVon(Capacitor.getPlatform(), navigator.userAgent || '', navigator.maxTouchPoints || 0),
+    );
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -167,8 +166,13 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
             <Smartphone className="h-4 w-4" />
             Handy sperren
           </CardTitle>
-          <CardDescription>{grund}</CardDescription>
+          <CardDescription>{anleitung.text}</CardDescription>
         </CardHeader>
+        <CardContent>
+          <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+            {anleitung.schritte.map((schritt) => <li key={schritt}>{schritt}</li>)}
+          </ol>
+        </CardContent>
       </Card>
     );
   }
@@ -257,16 +261,16 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                 Sperre einrichten
               </Button>
               {ablehnung ? (
-                <div className="text-sm text-destructive leading-relaxed space-y-1">
-                  <p>{erklaereAblehnung(ablehnung)}</p>
+                <div className="text-sm leading-relaxed space-y-1">
+                  <p className="text-tinte">{appleAblehnung(ablehnung)}</p>
                   {/* Der Rohtext bleibt sichtbar: Er ist das, was bei einer
                       Rueckfrage weiterhilft. */}
                   <p className="text-xs text-muted-foreground break-all">Apple: {ablehnung}</p>
                 </div>
               ) : status.authorization === 'denied' && (
-                <p className="text-sm text-destructive leading-relaxed">
-                  Die Berechtigung wurde abgelehnt oder später entzogen. Sie lässt sich
-                  in den iOS-Einstellungen unter „Bildschirmzeit“ wieder erteilen.
+                <p className="text-sm text-tinte leading-relaxed">
+                  Erteile die Berechtigung wieder: Einstellungen → Bildschirmzeit.
+                  Danach hier noch einmal „Sperre einrichten“ antippen.
                 </p>
               )}
             </>
@@ -368,36 +372,6 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
       />
     </>
   );
-}
-
-/**
- * Übersetzt Apples Fehler bei der Zustimmung in einen Satz für Eltern.
- *
- * Die Namen sind die Fälle von `FamilyControlsError`. Unbekanntes wird nicht
- * geraten, sondern als solches benannt — der Rohtext steht ohnehin darunter.
- */
-function erklaereAblehnung(grund: string): string {
-  if (grund.includes('invalidAccountType')) {
-    return 'Dieses iPhone ist nicht als Gerät eines Kindes in der Apple-Familienfreigabe angemeldet. '
-      + 'Apple erlaubt die Sperre nur dort: Die Apple-ID auf dem iPhone muss die eines Kindes '
-      + '(unter 18) in der Familienfreigabe eines Elternteils sein.';
-  }
-  if (grund.includes('authorizationCanceled')) return 'Die Zustimmung wurde abgebrochen.';
-  if (grund.includes('authorizationConflict')) {
-    return 'Eine andere App verwaltet die Bildschirmzeit auf diesem Gerät bereits.';
-  }
-  if (grund.includes('restricted')) {
-    return 'Bildschirmzeit ist auf diesem Gerät eingeschränkt, zum Beispiel durch ein Verwaltungsprofil.';
-  }
-  if (grund.includes('authenticationMethodUnavailable')) {
-    return 'Apple kann die Zustimmung auf diesem Gerät nicht abfragen. Ist ein Gerätecode eingerichtet?';
-  }
-  if (grund.includes('networkError')) return 'Keine Verbindung zu Apple. Bitte mit Internet erneut versuchen.';
-  if (grund.includes('unavailable')) {
-    return 'Apple meldet die Funktion auf diesem Gerät als nicht verfügbar. '
-      + 'Häufigste Ursache: Diese App-Fassung hat Apples Berechtigung „Family Controls“ nicht.';
-  }
-  return 'Apple hat die Zustimmung abgelehnt, aus einem Grund, den LernZeit nicht kennt.';
 }
 
 /**

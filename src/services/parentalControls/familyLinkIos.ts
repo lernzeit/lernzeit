@@ -41,7 +41,7 @@ export async function openFamilyLinkIos(minutes?: number): Promise<OpenParentalC
         opened: false,
         platform: 'ios',
         appName: 'Family Link',
-        message: `Family Link ist nicht installiert. Der App Store wurde geöffnet. ${minutesMsg}`.trim(),
+        message: `Lade Family Link im App Store (er ist geöffnet), dann gib die Zeit dort frei. ${minutesMsg}`.trim(),
         fallbackUrl: APP_STORE_URL,
         notInstalled: true,
       };
@@ -59,7 +59,7 @@ export async function openFamilyLinkIos(minutes?: number): Promise<OpenParentalC
         opened: false,
         platform: 'ios',
         appName: 'Family Link',
-        message: `Family Link ist nicht installiert. Bitte aus dem App Store laden. ${minutesMsg}`.trim(),
+        message: `Lade Family Link aus dem App Store, dann gib die Zeit dort frei. ${minutesMsg}`.trim(),
         fallbackUrl: APP_STORE_URL,
         notInstalled: true,
       };
@@ -73,7 +73,7 @@ export async function openFamilyLinkIos(minutes?: number): Promise<OpenParentalC
     opened: false,
     platform: 'ios',
     appName: 'Family Link',
-    message: 'Family Link konnte nicht geöffnet werden. Bitte die App manuell öffnen oder aus dem App Store laden.',
+    message: 'Öffne Family Link selbst und gib die Zeit dort frei. Ist die App nicht da: im App Store laden.',
     fallbackUrl: APP_STORE_URL,
     notInstalled: true,
   };
