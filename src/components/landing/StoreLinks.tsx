@@ -2,17 +2,11 @@ import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Smartphone } from 'lucide-react';
 
-export const APP_STORE_URL = 'https://apps.apple.com/de/app/lernzeit-lernen-f%C3%BCr-handyzeit/id6789603688';
-export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=de.lernzeit.app&utm_source=website';
+import { APP_STORE_URL, PLAY_STORE_URL, erkenneGeraet as erkenne, type Geraet } from '@/lib/appEmpfehlung';
 
-type Geraet = 'ios' | 'android' | 'andere';
+export { APP_STORE_URL, PLAY_STORE_URL };
 
-function erkenneGeraet(): Geraet {
-  const ua = navigator.userAgent || '';
-  if (/Android/i.test(ua)) return 'android';
-  if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1)) return 'ios';
-  return 'andere';
-}
+const erkenneGeraet = (): Geraet => erkenne(navigator.userAgent || '', navigator.maxTouchPoints || 0);
 
 /**
  * Links zu den Apps auf der Startseite (10.10.2026: vorher nur das Banner oben,

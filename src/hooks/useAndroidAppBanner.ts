@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { beiHinweisGezeigt, hinweisWurdeGezeigt } from '@/lib/appEmpfehlung';
 
 const STORAGE_KEY = 'lernzeit_app_banner_dismissed';
 const DISMISS_DAYS = 30;
@@ -48,9 +49,18 @@ export function useAppStoreBanner() {
         if (Number.isFinite(until) && until > Date.now()) return;
       }
 
+      // Der Hinweis in der Seite (Anmeldung, Spiel) ersetzt das Banner
+      if (hinweisWurdeGezeigt()) return;
+
       // Delay slightly so it doesn't fight LCP
-      const t = window.setTimeout(() => setPlatform(detected), 600);
-      return () => window.clearTimeout(t);
+      const t = window.setTimeout(() => {
+        if (!hinweisWurdeGezeigt()) setPlatform(detected);
+      }, 600);
+      const ab = beiHinweisGezeigt(() => setPlatform(null));
+      return () => {
+        window.clearTimeout(t);
+        ab();
+      };
     } catch {
       /* noop */
     }

@@ -222,3 +222,15 @@ Supabase-Secrets gelöscht werden.
   `_shared/grundlagen-mathe.ts` (Klasse ≤4: 50 %, ≤6: 35 %, 7: 25 %): Runden, Vorgänger, Stellenwerte,
   Einmaleins, negative Zahlen, Brüche … Auswahlfragen tragen den Index der richtigen Option (wie der
   Cache); ein Text wie „3“ würde in älteren Apps als Option Nr. 3 gelesen.
+
+## Hinweis auf die App im Browser (Stand 13.10.2026)
+
+- Im Browser (nie in den Apps, nicht im installierten PWA) steht „LernZeit ist für die App
+  optimiert“: bei der Anmeldung als Karte mit Klecksi (`AuthForm`, Links zählt der
+  `AnalyticsTracker` mit `data-stelle="anmeldung"`), im Spiel als schmale Leiste unter dem Kopf
+  (schließbar bis der Tab zu ist) und am Rundenende als Karte. Nicht in der Demo auf der Website.
+- Im Spiel sind es Knöpfe statt Links, damit keine Klicks von Kindern gemessen werden
+  (`components/AppEmpfehlung.tsx`, `lib/appEmpfehlung.ts`, Test in `npm run test:reise`).
+- Ohne Klecksi (ältere Kinder) steht ein Handy-Symbol statt der Figur. Sobald der Hinweis in der
+  Seite steht, bleibt das Banner oben (`useAndroidAppBanner`) weg: es stand doppelt da und deckte
+  im Spiel den Kopf mit dem Beenden-Knopf ab.

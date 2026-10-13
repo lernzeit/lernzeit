@@ -29,6 +29,7 @@ const weihnachten = await laden('src/lib/weihnachten.ts');
 const hefte = await laden('src/lib/hefte.ts');
 const modus = await laden('src/lib/klecksiModus.ts');
 const stand = await laden('src/lib/klecksiLernstand.ts');
+const appHinweis = await laden('src/lib/appEmpfehlung.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -155,5 +156,20 @@ pruefe('Ohne Klecksi kommt der Name nicht vor',
 pruefe('Titel: blass, trocknet, trocken',
   ['blass', 'trocknet', 'trocken'].map((f) => stand.stufenTitel({ stufe: 2, frische: f }, 9)),
   ['Klecksi wird blass', 'Klecksi trocknet', 'Klecksi ist eingetrocknet']);
+
+// Hinweis auf die App im Browser: Geraet erkennen, passende Store-Links
+const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36';
+const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1';
+const UA_MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15';
+pruefe('Geraet: Android, iPhone, iPad als Mac (Touch), Mac ohne Touch',
+  [appHinweis.erkenneGeraet(UA_ANDROID, 5), appHinweis.erkenneGeraet(UA_IPHONE, 5), appHinweis.erkenneGeraet(UA_MAC, 5), appHinweis.erkenneGeraet(UA_MAC, 0)],
+  ['android', 'ios', 'ios', 'andere']);
+pruefe('Store-Links: iPhone nur App Store, Android nur Google Play, Computer beide',
+  ['ios', 'android', 'andere'].map((g) => appHinweis.storeLinksFuer(g).map((l) => l.id).join('+')), ['ios', 'android', 'ios+android']);
+pruefe('Google-Play-Link traegt die Quelle des Hinweises, App-Store-Link bleibt wie auf der Startseite',
+  [appHinweis.storeLinksFuer('android', 'web_spiel')[0].url.endsWith('utm_source=web_spiel'), appHinweis.storeLinksFuer('ios')[0].url === appHinweis.APP_STORE_URL], [true, true]);
+pruefe('Banner bleibt weg, sobald der Hinweis gezeigt wurde',
+  (() => { const v = appHinweis.hinweisWurdeGezeigt(); let n = 0; const ab = appHinweis.beiHinweisGezeigt(() => n++); appHinweis.merkeHinweisGezeigt(); appHinweis.merkeHinweisGezeigt(); ab(); return [v, appHinweis.hinweisWurdeGezeigt(), n]; })(),
+  [false, true, 1]);
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }

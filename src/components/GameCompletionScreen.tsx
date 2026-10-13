@@ -7,6 +7,7 @@ import { Sticker } from '@/components/child/Hefte';
 import { STICKER, farbeVon, stickerZurWahl, type FachId } from '@/lib/hefte';
 import { istWeihnachtszeit } from '@/lib/weihnachten';
 import { Klecksi } from '@/components/klecksi/Klecksi';
+import { AppEmpfehlung } from '@/components/AppEmpfehlung';
 import { useKlecksiAn } from '@/hooks/useKlecksi';
 import { Faltung } from '@/components/child/Faltung';
 import { FaltAnleitung } from '@/components/child/FaltAnleitung';
@@ -234,6 +235,9 @@ export function GameCompletionScreen({
           {achievementBonusMinutes > 0 ? `+${achievementBonusMinutes} Min. für Erfolge` : ''}
         </p>
       )}
+
+      {/* Im Browser: App empfehlen (nur, wenn die Leiste im Spiel nicht geschlossen wurde) */}
+      <AppEmpfehlung variante="karte" nachSchliessenAus />
 
       <Button onClick={onContinue} size="lg" className="w-full">
         Weiter

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
+import { AppEmpfehlung } from '@/components/AppEmpfehlung';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1306,6 +1307,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Im Browser: App empfehlen (Klicks zaehlt der AnalyticsTracker, Stelle „anmeldung“) */}
+        <AppEmpfehlung variante="karte" stelle="anmeldung" className="mt-4" />
 
         <p className="mt-6 flex items-center justify-center gap-2 text-center text-sm text-[var(--lp-leise)]">
           <Lock className="h-3.5 w-3.5 shrink-0" />

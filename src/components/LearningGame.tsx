@@ -37,6 +37,7 @@ import { berechneStreak, lokalerTag } from '@/lib/streak';
 import { ADVENT_SCHWIERIGKEIT, type AdventErgebnis } from '@/lib/weihnachten';
 import { AdventAbschluss } from '@/components/child/AdventAbschluss';
 import { Klecksi } from '@/components/klecksi/Klecksi';
+import { AppEmpfehlung } from '@/components/AppEmpfehlung';
 import { useKlecksiWahl } from '@/hooks/useKlecksi';
 
 interface LearningGameProps {
@@ -1215,6 +1216,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             <span className="w-10" />
           )}
         </div>
+
+        {/* Im Browser: App empfehlen (nicht in der Demo auf der Website) */}
+        {!demoMode && <AppEmpfehlung variante="leiste" />}
 
         {/* Das Blatt mit der Aufgabe */}
         {question && (
