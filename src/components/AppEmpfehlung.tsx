@@ -79,7 +79,7 @@ export function AppEmpfehlung({ variante, stelle, nachSchliessenAus = false, cla
           <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
         )}
         <p className="min-w-0 flex-1 text-xs font-medium leading-tight text-tinte">
-          LernZeit ist für die App optimiert. Wir empfehlen sie.
+          LernZeit ist für die App optimiert.
         </p>
         <Knoepfe geraet={geraet} klein />
         <button
@@ -109,8 +109,8 @@ export function AppEmpfehlung({ variante, stelle, nachSchliessenAus = false, cla
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-extrabold leading-tight text-tinte">Besser mit der App</p>
         <p className="mt-1 text-sm leading-snug text-muted-foreground">
-          LernZeit ist für die App optimiert. Wir empfehlen sie: Dort kommen Mitteilungen auch bei
-          geschlossener App an, zum Beispiel wenn Eltern Zeit freigeben.
+          LernZeit ist für die App optimiert. Mitteilungen kommen auch bei geschlossener App an,
+          zum Beispiel wenn Eltern Zeit freigeben.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Knoepfe geraet={geraet} stelle={stelle} />
