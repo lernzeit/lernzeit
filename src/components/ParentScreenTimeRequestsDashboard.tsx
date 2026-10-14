@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 import { ShieldAttemptsNotice } from '@/components/ShieldAttemptsNotice';
 import { ShieldSetupNotice } from '@/components/screenTime/ShieldSetupNotice';
 import { GeraetFreigabenKarte } from '@/components/screenTime/GeraetFreigabenKarte';
+import { SoGehtEs } from '@/components/SoGehtEs';
 
 interface ParentScreenTimeRequestsDashboardProps {
   userId: string;
@@ -353,10 +354,6 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
                 </div>
               ) : target.canOpen ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Möchtest du {target.appName} öffnen, um die Bildschirmzeit direkt freizugeben?
-                  </p>
-                  
                   <div className="flex flex-col gap-2">
                     <Button
                       onClick={() => handleApproveAndOpen(true)}
@@ -365,7 +362,6 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
                       <ExternalLink className="w-4 h-4" />
                       Genehmigen & {target.appName} öffnen
                     </Button>
-                    
                     <Button
                       onClick={() => handleApproveAndOpen(false)}
                       disabled={respondingId === pendingApprovalRequest?.id}
@@ -374,15 +370,10 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
                       Nur genehmigen (später freigeben)
                     </Button>
                   </div>
-                  
-                  <p className="text-xs text-muted-foreground">{target.hint}</p>
+                  <SoGehtEs titel="So gibst du die Zeit frei" schritte={target.schritte} />
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="rounded-2xl bg-muted p-3 text-sm text-tinte">
-                    {target.hint}
-                  </div>
-                  
                   <Button
                     onClick={() => handleApproveAndOpen(false)}
                     disabled={respondingId === pendingApprovalRequest?.id}
@@ -391,6 +382,8 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
                     <CheckCircle className="w-4 h-4" />
                     Genehmigen
                   </Button>
+                  <p className="text-sm text-muted-foreground">{target.hint}</p>
+                  <SoGehtEs titel="So gibst du die Zeit frei" schritte={target.schritte} />
                 </div>
               )}
               

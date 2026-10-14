@@ -26,7 +26,7 @@ const SCREEN_TIME_URLS = [
 
 export async function openScreenTimeSettings(minutes?: number): Promise<OpenParentalControlsResult> {
   const minutesMsg = minutes
-    ? `Bitte ${minutes} Minuten zusätzliche Zeit für dein Kind freigeben.`
+    ? `Gib ${minutes} Minuten frei.`
     : '';
 
   const launcher = await getAppLauncher();
@@ -40,7 +40,7 @@ export async function openScreenTimeSettings(minutes?: number): Promise<OpenPare
             opened: true,
             platform: 'ios',
             appName: 'Bildschirmzeit',
-            message: `Einstellungen geöffnet. Zum Kind: Einstellungen → Familie → [Kind] → Bildschirmzeit. ${minutesMsg}`.trim(),
+            message: `Die Einstellungen sind offen: Bildschirmzeit → Name deines Kindes. ${minutesMsg}`.trim(),
           };
         }
       } catch (e) {
@@ -54,6 +54,6 @@ export async function openScreenTimeSettings(minutes?: number): Promise<OpenPare
     opened: false,
     platform: 'ios',
     appName: 'Bildschirmzeit',
-    message: `Öffne die Einstellungen selbst: Einstellungen → Familie → [Kind] → Bildschirmzeit. ${minutesMsg}`.trim(),
+    message: `Öffne die Einstellungen selbst: Bildschirmzeit → Name deines Kindes. ${minutesMsg}`.trim(),
   };
 }

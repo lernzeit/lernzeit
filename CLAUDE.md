@@ -178,7 +178,8 @@ Supabase-Secrets gelöscht werden.
   ein. Die Meldungen nennen die Lösung statt des Fehlers und hängen vom Endgerät ab (iPhone/iPad,
   Android, Browser, Computer): `lib/geraeteAnleitung.ts` (Tests in `npm run test:reise`), genutzt
   in `ScreenTimeWidget` (Kinder-Gerät), `ScreenTimeSetup` (Handy sperren, Apple-Gründe) und bei der
-  Genehmigung auf dem Eltern-Gerät (`parentalControlsService`, Absprung-Meldungen).
+  Genehmigung auf dem Eltern-Gerät (`parentalControlsService`, Absprung-Meldungen). Seit 14.10.2026:
+  vorne nur Knöpfe und ein Satz, die Schritte zum Aufklappen („So geht's“, `components/SoGehtEs.tsx`).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

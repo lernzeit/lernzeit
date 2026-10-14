@@ -5,6 +5,9 @@
  * ist nicht installiert“, Apples Fehlercodes in Rot). Jetzt steht dort die
  * Loesung, und sie haengt vom Endgeraet ab, auf dem die Meldung steht:
  * iPhone/iPad (App oder Browser), Android (App oder Browser) oder Computer.
+ * Seit 14.10.2026 vorne nur ein Satz; die Schritte stehen zum Aufklappen
+ * dahinter (components/SoGehtEs.tsx), weil sie nur braucht, wer es noch nicht
+ * oder nicht mehr weiss.
  *
  * Reine Funktionen ohne React, damit sie sich testen lassen.
  */
@@ -32,15 +35,15 @@ export interface Anleitung {
 }
 
 const SCHRITTE_APPLE = [
-  'Einstellungen → Bildschirmzeit öffnen und einen Bildschirmzeit-Code festlegen, den nur das Elternteil kennt.',
-  'Dort Limits und Auszeiten einstellen.',
-  'Verdiente Zeit gibt das Elternteil frei: Bei „Mehr Zeit“ den Code eingeben.',
+  'Einstellungen → Bildschirmzeit öffnen und als Gerät des Kindes einrichten.',
+  'Auszeit und App-Limits wählen, dann einen Bildschirmzeit-Code festlegen, den nur das Elternteil kennt.',
+  'Verdiente Zeit geben: bei „Mehr Zeit anfragen“ den Code eingeben und die Zeit wählen.',
 ];
 
 const SCHRITTE_FAMILY_LINK = [
-  'Family Link auf dem Handy des Elternteils installieren (Play Store) und dieses Gerät hinzufügen.',
-  'Dort Limits und Sperre einstellen.',
-  'Verdiente Zeit gibt es dort frei: Family Link → dein Name → Gerätezeit → Heute mehr Zeit.',
+  'Family Link auf dem Handy des Elternteils installieren und dieses Gerät verbinden.',
+  'Dort Tageslimit und Schlafenszeit einstellen.',
+  'Verdiente Zeit geben: in Family Link „Bonuszeit“ für heute.',
 ];
 
 /**
@@ -50,23 +53,23 @@ const SCHRITTE_FAMILY_LINK = [
 export function kindGeraetAnleitung(e: Endgeraet): Anleitung {
   if (e.system === 'ios') {
     return {
-      text: `Sperre und Freigabe richtet ein Elternteil auf diesem Gerät ein, mit Apples Bildschirmzeit.`,
+      text: 'Das richtet ein Elternteil auf diesem Gerät ein, in Apples Bildschirmzeit.',
       schritte: SCHRITTE_APPLE,
       links: [{ text: 'Anleitung von Apple', url: APPLE_BILDSCHIRMZEIT_URL }],
     };
   }
   if (e.system === 'android') {
     return {
-      text: `Sperre und Freigabe richtet ein Elternteil mit Google Family Link ein.`,
+      text: 'Das richtet ein Elternteil mit Google Family Link ein.',
       schritte: SCHRITTE_FAMILY_LINK,
       links: [{ text: 'Family Link im Play Store', url: FAMILY_LINK_PLAY_URL }],
     };
   }
   return {
-    text: 'Sperre und Freigabe gelten für das Handy oder Tablet. Ein Elternteil richtet sie auf dem Gerät des Kindes ein.',
+    text: 'Das richtet ein Elternteil auf dem Handy oder Tablet des Kindes ein.',
     schritte: [
-      'iPhone oder iPad: Einstellungen → Bildschirmzeit, Code festlegen, Limits setzen.',
-      'Android: Google Family Link auf dem Handy des Elternteils, dort das Gerät hinzufügen.',
+      'iPhone oder iPad: Einstellungen → Bildschirmzeit, Limits wählen, Code festlegen.',
+      'Android: Google Family Link auf dem Handy des Elternteils, dort das Gerät verbinden.',
     ],
     links: [
       { text: 'Anleitung von Apple', url: APPLE_BILDSCHIRMZEIT_URL },
@@ -144,14 +147,28 @@ export function appleAblehnung(grund: string): string {
 }
 
 /**
- * Eltern-Geraet, Genehmigung einer Anfrage: wo die Zeit danach freigegeben
- * wird, wenn LernZeit nicht direkt dorthin springen kann.
+ * Eltern-Geraet: Wo wird die genehmigte Zeit freigegeben? `kurz` steht
+ * sichtbar, `schritte` zum Aufklappen (fuer alle, die es nicht mehr wissen).
  */
-export function freigabeAnleitung(kind: 'ios' | 'android', name: string): string {
+export function freigabeWeg(kind: 'ios' | 'android', name: string): { kurz: string; schritte: string[] } {
   if (kind === 'ios') {
-    return `Genehmige hier, dann gibst du die Zeit frei: an einem iPhone oder iPad unter Einstellungen → Familie → ${name} → Bildschirmzeit, oder direkt am Gerät von ${name} mit dem Bildschirmzeit-Code („Mehr Zeit“).`;
+    return {
+      kurz: 'Die Zeit gibst du in Apples Bildschirmzeit frei.',
+      schritte: [
+        `Am Gerät von ${name}: bei „Mehr Zeit anfragen“ deinen Bildschirmzeit-Code eingeben und die Zeit wählen.`,
+        `Oder ${name} tippt dort auf „Anfrage senden“, und du bestätigst die Mitteilung auf deinem iPhone.`,
+        `Limits ändern: Einstellungen → Bildschirmzeit → ${name}.`,
+      ],
+    };
   }
-  return `Genehmige hier, dann gibst du die Zeit in Family Link frei: ${name} → Gerätezeit → Heute mehr Zeit. Family Link gibt es als App für Android und iPhone.`;
+  return {
+    kurz: 'Die Zeit gibst du in Google Family Link frei.',
+    schritte: [
+      `Family Link öffnen und ${name} wählen.`,
+      '„Bonuszeit“ antippen und die Minuten für heute eintragen.',
+      'Family Link gibt es als App für Android und iPhone.',
+    ],
+  };
 }
 
 /** Fuer Meldungen nach einem Fehler: erst der naechste Schritt, der Rohtext zuletzt (hilft dem Support). */

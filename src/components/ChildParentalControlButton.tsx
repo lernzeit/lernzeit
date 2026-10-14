@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Apple, ExternalLink, Info, Smartphone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
+import { SoGehtEs } from '@/components/SoGehtEs';
 import { parentalControlsService, type ChildPlatform } from '@/services/parentalControlsService';
 
 interface Props {
@@ -58,15 +59,19 @@ export function ChildParentalControlButton({
     );
   }
 
-  // Kein technischer Weg (Kind iOS, Elternteil Android) oder Web → nur Hinweis
+  // Kein technischer Weg (Kind iOS, Elternteil Android) oder Web → ein Satz,
+  // die Schritte zum Aufklappen
   if (!target.canOpen) {
     return (
-      <p className={`text-xs text-muted-foreground ${className ?? ''}`}>{target.hint}</p>
+      <div className={`space-y-2 ${className ?? ''}`}>
+        <p className="text-sm text-muted-foreground">{target.hint}</p>
+        <SoGehtEs titel="So gibst du Zeit frei" schritte={target.schritte} />
+      </div>
     );
   }
 
   return (
-    <div className={className}>
+    <div className={`space-y-2 ${className ?? ''}`}>
       <Button variant="outline" size="sm" onClick={handleOpen}>
         {target.kind === 'screen_time' ? (
           <Apple className="h-4 w-4 mr-2" />
@@ -76,7 +81,7 @@ export function ChildParentalControlButton({
         {target.buttonLabel}
         <ExternalLink className="h-3 w-3 ml-2 opacity-60" />
       </Button>
-      <p className="text-xs text-muted-foreground mt-1">{target.hint}</p>
+      <SoGehtEs titel="So gibst du Zeit frei" schritte={target.schritte} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, ExternalLink, Info } from 'lucide-react';
+import { SoGehtEs } from '@/components/SoGehtEs';
 import { parentalControlsService } from '@/services/parentalControlsService';
 import { endgeraetVon, kindGeraetAnleitung } from '@/lib/geraeteAnleitung';
 
@@ -49,17 +50,9 @@ export function ScreenTimeWidget() {
           <Shield className="h-5 w-5 text-primary" />
           Sperre und Freigabe
         </CardTitle>
-        <CardDescription>Das richtet ein Elternteil ein.</CardDescription>
+        <CardDescription>{anleitung.text}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-tinte">{anleitung.text}</p>
-
-        <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-          {anleitung.schritte.map((schritt) => (
-            <li key={schritt}>{schritt}</li>
-          ))}
-        </ol>
-
         {kannOeffnen && (
           <div className="space-y-2">
             <Button onClick={oeffnen} disabled={opening} className="w-full">
@@ -74,23 +67,7 @@ export function ScreenTimeWidget() {
           </div>
         )}
 
-        {anleitung.links.length > 0 && (
-          <ul className="space-y-1.5">
-            {anleitung.links.map((link) => (
-              <li key={link.url}>
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                  {link.text}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+        <SoGehtEs titel="So richtet ihr es ein" schritte={anleitung.schritte} links={anleitung.links} />
 
         <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />

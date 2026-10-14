@@ -28,7 +28,7 @@ import { track, trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Sprout, ChevronDown, ChevronLeft, ChevronRight, LogOut, Download, Apple, Gift, Share2
+  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Droplet, ChevronDown, ChevronLeft, ChevronRight, LogOut, Download, Apple, Gift, Share2
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
@@ -751,7 +751,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                         )}
                         {z && z.streak > 0 && (
                           <span className="tabular inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-gruen-text" aria-label={`${z.streak} Tage in Folge`}>
-                            <Sprout className="h-3.5 w-3.5" />{z.streak}
+                            <Droplet className="h-3.5 w-3.5" />{z.streak}
                           </span>
                         )}
                         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

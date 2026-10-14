@@ -194,9 +194,16 @@ pruefe('Sperre nicht moeglich: Browser/Computer verweist auf die App, alte iOS a
 pruefe('Apple-Ablehnung: jede Meldung nennt einen naechsten Schritt (kein nackter Fehler)',
   ['invalidAccountType', 'authorizationCanceled', 'authorizationConflict', 'restricted', 'authenticationMethodUnavailable', 'networkError', 'unavailable', 'irgendwas']
     .map(geraete.appleAblehnung).every((t) => /(Das Elternteil|Tippe|Richte|Verbinde|Aktualisiere|Versuche)/.test(t)), true);
-pruefe('Freigabe am Eltern-Geraet: iOS-Kind nennt Einstellungen und Code, Android-Kind Family Link; Name steht drin',
-  [geraete.freigabeAnleitung('ios', 'Mia').includes('Einstellungen → Familie → Mia → Bildschirmzeit'), geraete.freigabeAnleitung('ios', 'Mia').includes('Code'),
-   geraete.freigabeAnleitung('android', 'Mia').includes('Mia → Gerätezeit')], [true, true, true]);
+const wegIos = geraete.freigabeWeg('ios', 'Mia');
+const wegAndroid = geraete.freigabeWeg('android', 'Mia');
+pruefe('Freigabe am Eltern-Geraet: ein kurzer Satz sichtbar, Schritte mit Namen zum Aufklappen',
+  [wegIos.kurz.length < 70, wegAndroid.kurz.length < 70, wegIos.schritte.some((t) => t.includes('Mia') && t.includes('Code')),
+   wegAndroid.schritte.some((t) => t.includes('Mia')), wegIos.kurz.includes('Bildschirmzeit'), wegAndroid.kurz.includes('Family Link')],
+  [true, true, true, true, true, true]);
+pruefe('Keine Platzhalter wie [Kind] in den Texten',
+  [...karten.flatMap((k) => [k.text, ...k.schritte]), ...wegIos.schritte, ...wegAndroid.schritte].some((t) => /\[|\]/.test(t)), false);
+pruefe('Kindersicherung: vorne hoechstens ein kurzer Satz',
+  karten.every((k) => k.text.length <= 80 && !k.text.includes('. ')), true);
 pruefe('Nach einem Fehler steht der Schritt vorn und der Rohtext hinten',
   [geraete.nachFehler('Boom').startsWith('Versuche es noch einmal'), geraete.nachFehler('Boom').endsWith('(Boom)')], [true, true]);
 

@@ -4,7 +4,7 @@ import { openScreenTimeSettings } from './parentalControls/ios';
 import { openFamilyLinkIos } from './parentalControls/familyLinkIos';
 import { getWebInstructions } from './parentalControls/web';
 import type { OpenParentalControlsResult, Platform } from './parentalControls/types';
-import { freigabeAnleitung } from '@/lib/geraeteAnleitung';
+import { freigabeWeg } from '@/lib/geraeteAnleitung';
 
 export type { Platform, OpenParentalControlsResult };
 
@@ -19,8 +19,10 @@ export interface ParentalControlTarget {
   appName: string;
   /** Beschriftung für den Absprung-Button (nur wenn canOpen === true). */
   buttonLabel: string;
-  /** Kurzer Hinweistext unter dem Button. */
+  /** Ein kurzer Satz (sichtbar). */
   hint: string;
+  /** Schritte zum Aufklappen („So gibst du die Zeit frei“). */
+  schritte: string[];
   /** Ob ein Absprung technisch möglich ist. */
   canOpen: boolean;
 }
@@ -77,14 +79,6 @@ class ParentalControlsService {
     }
   }
 
-  getInstructions(minutes?: number): { android: string; ios: string } {
-    const minutesText = minutes ? `${minutes} Minuten` : 'zusätzliche Zeit';
-    return {
-      android: `Family Link App öffnen → [Kind auswählen] → Tageslimit → ${minutesText} hinzufügen`,
-      ios: `Einstellungen → Familie → [Kind auswählen] → Bildschirmzeit → ${minutesText} gewähren`,
-    };
-  }
-
   /* ---------------- kindzentrierte Logik ---------------- */
 
   /**
@@ -101,9 +95,13 @@ class ParentalControlsService {
         appName: 'Kindersicherung',
         buttonLabel: 'Gerät des Kindes angeben',
         hint: `Wir wissen noch nicht, welches Gerät ${childName} nutzt.`,
+        schritte: [],
         canOpen: false,
       };
     }
+
+    // Kurzer Satz sichtbar, die Schritte zum Aufklappen (lib/geraeteAnleitung.ts)
+    const weg = freigabeWeg(childPlatform, childName);
 
     if (childPlatform === 'ios') {
       // Absprung über einen nicht dokumentierten Link — siehe parentalControls/ios.ts.
@@ -112,7 +110,8 @@ class ParentalControlsService {
           kind: 'screen_time',
           appName: 'Bildschirmzeit',
           buttonLabel: 'Bildschirmzeit öffnen',
-          hint: `In den Einstellungen: Familie → ${childName} → Bildschirmzeit → Zeit gewähren`,
+          hint: weg.kurz,
+          schritte: weg.schritte,
           canOpen: true,
         };
       }
@@ -120,28 +119,20 @@ class ParentalControlsService {
         kind: 'unsupported',
         appName: 'Bildschirmzeit',
         buttonLabel: '',
-        hint: freigabeAnleitung('ios', childName),
+        hint: weg.kurz,
+        schritte: weg.schritte,
         canOpen: false,
       };
     }
 
     // Kind Android → Family Link (Elternapp gibt es für Android und iOS)
-    if (native && (parent === 'android' || parent === 'ios')) {
-      return {
-        kind: 'family_link',
-        appName: 'Family Link',
-        buttonLabel: 'Family Link öffnen',
-        hint: `In Family Link: ${childName} → Gerätezeit → Heute mehr Zeit`,
-        canOpen: true,
-      };
-    }
-
     return {
       kind: 'family_link',
       appName: 'Family Link',
-      buttonLabel: '',
-      hint: freigabeAnleitung('android', childName),
-      canOpen: false,
+      buttonLabel: native ? 'Family Link öffnen' : '',
+      hint: weg.kurz,
+      schritte: weg.schritte,
+      canOpen: native && (parent === 'android' || parent === 'ios'),
     };
   }
 

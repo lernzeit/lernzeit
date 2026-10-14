@@ -10,6 +10,7 @@ import { EMPTY_STATUS, type ScreenTimeAvailability, type ShieldStatus } from '@/
 import { ParentGate, type GeraetFreigabeZweck } from '@/components/screenTime/ParentGate';
 import { istOffen, offenText } from '@/services/screenTime/release';
 import { Capacitor } from '@capacitor/core';
+import { SoGehtEs } from '@/components/SoGehtEs';
 import { appleAblehnung, endgeraetVon, nachFehler, sperreNichtMoeglich, type SperreGrund } from '@/lib/geraeteAnleitung';
 
 /**
@@ -169,9 +170,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
           <CardDescription>{anleitung.text}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-            {anleitung.schritte.map((schritt) => <li key={schritt}>{schritt}</li>)}
-          </ol>
+          <SoGehtEs schritte={anleitung.schritte} links={anleitung.links} />
         </CardContent>
       </Card>
     );

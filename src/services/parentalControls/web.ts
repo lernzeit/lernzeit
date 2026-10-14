@@ -7,6 +7,6 @@ export function getWebInstructions(minutes?: number): OpenParentalControlsResult
     opened: false,
     platform: 'web',
     appName: 'Kindersicherung',
-    message: `Um${minutesText} Bildschirmzeit freizugeben:\n• Android: Family Link App → [Kind] → Tageslimit\n• iPhone/iPad: Einstellungen → Bildschirmzeit → [Kind] → App-Limits`,
+    message: `So gibst du${minutesText} frei:\n• iPhone/iPad: am Gerät des Kindes bei „Mehr Zeit anfragen“ den Bildschirmzeit-Code eingeben\n• Android: Family Link → Kind → Bonuszeit`,
   };
 }

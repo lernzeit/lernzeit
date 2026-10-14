@@ -11,7 +11,7 @@ const APP_STORE_URL = 'https://apps.apple.com/de/app/google-family-link/id115008
  */
 export async function openFamilyLinkIos(minutes?: number): Promise<OpenParentalControlsResult> {
   const minutesMsg = minutes
-    ? `Bitte ${minutes} Minuten zusätzliche Bildschirmzeit für dein Kind freigeben.`
+    ? `Gib dort ${minutes} Minuten frei (Bonuszeit).`
     : '';
 
   const launcher = await getAppLauncher();

@@ -55,7 +55,7 @@ export async function openFamilyLinkInstall(): Promise<void> {
  */
 export async function openFamilyLink(minutes?: number): Promise<OpenParentalControlsResult> {
   const minutesMsg = minutes
-    ? `Bitte ${minutes} Minuten zusätzliche Bildschirmzeit für Ihr Kind freigeben.`
+    ? `Gib dort ${minutes} Minuten frei (Bonuszeit).`
     : '';
 
   const launcher = await getAppLauncher();
