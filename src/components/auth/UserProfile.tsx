@@ -124,7 +124,7 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   );
   
   // Use screen time limit hook for children
-  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, todayAchievementMinutes, todayAchievementDetails, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
+  const { isAtLimit, remainingMinutes, getDailyLimit, todayMinutesUsed, todayApprovedMinutes, todayAchievementMinutes, todayAchievementDetails, refreshUsage, loading: usageLoading } = useScreenTimeLimit(
     profile?.role === 'child' ? user?.id || '' : ''
   );
   
@@ -649,6 +649,13 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
           <section aria-label="Deine Bildschirmzeit heute" className="heft-karo rounded-[28px] bg-card px-5 pb-5 pt-3 ring-1 ring-inset ring-karo">
             <ZeitUhr verdient={todayMinutesUsed} limit={getDailyLimit()} />
             <p className="text-center text-sm text-muted-foreground">
+              {/* Die Uhr zeigt alles, was heute verdient wurde, auch schon Freigegebenes
+                  (Rueckfrage 15.10.2026: „12 verdient, aber nur 6 anfragen?“) */}
+              {todayApprovedMinutes > 0 && (
+                <span className="block">
+                  Schon freigegeben: <b className="tabular text-tinte">{todayApprovedMinutes} Min.</b>
+                </span>
+              )}
               {isAtLimit ? (
                 <>Tageslimit erreicht. Du kannst trotzdem weiter üben.</>
               ) : (

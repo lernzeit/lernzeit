@@ -13,6 +13,7 @@ export function useScreenTimeLimit(userId: string) {
   const [todayAchievementMinutes, setTodayAchievementMinutes] = useState(0);
   const [todayAchievementDetails, setTodayAchievementDetails] = useState<TodayAchievementDetail[]>([]);
   const [remainingMinutes, setRemainingMinutes] = useState(0);
+  const [todayApprovedMinutes, setTodayApprovedMinutes] = useState(0);
   const [isAtLimit, setIsAtLimit] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -33,6 +34,7 @@ export function useScreenTimeLimit(userId: string) {
       setTodayMinutesEarned(breakdown.totalEarnedToday);
       setTodayAchievementMinutes(breakdown.todayAchievementMinutes);
       setTodayAchievementDetails(breakdown.achievementDetails);
+      setTodayApprovedMinutes(breakdown.todayApprovedMinutes);
 
       const dailyLimit = isUtcWeekend()
         ? settings.weekend_max_minutes
@@ -72,6 +74,8 @@ export function useScreenTimeLimit(userId: string) {
     todayMinutesUsed: todayMinutesEarned,
     todayAchievementMinutes,
     todayAchievementDetails,
+    /** Heute schon von den Eltern freigegeben (steckt in todayMinutesUsed mit drin) */
+    todayApprovedMinutes,
     remainingMinutes,
     isAtLimit,
     loading,

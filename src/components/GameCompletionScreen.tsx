@@ -62,6 +62,16 @@ export function GameCompletionScreen({
   const zurWahl = stickerZurWahl(istWeihnachtszeit());
   const fehlend = zurWahl.filter((id) => !stickerWahl?.includes(id));
   const angebot = fehlend.length ? fehlend : zurWahl;
+  // Ein verdienter Sticker geht nie verloren: Wer auf „Weiter“ tippt, ohne
+  // einen auszusuchen, bekommt den ersten aus dem Angebot und sieht ihn hier.
+  const weiter = async () => {
+    if (!neuerSticker && stickerWahl && onStickerWaehlen && angebot[0]) {
+      setSpeichert(angebot[0]);
+      try { await onStickerWaehlen(angebot[0]); } catch { /* dann eben weiter */ } finally { setSpeichert(null); }
+      return;
+    }
+    onContinue();
+  };
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
   const perfectSessionBonusSeconds = isStreakRecovery ? 0 : perfectSessionBonus * 60;
@@ -169,9 +179,8 @@ export function GameCompletionScreen({
         )}
       </div>
 
-      {/* Klecksi und die Reise: Tinte, ausgemalte Felder, fertige Seite */}
-      <KlecksiErgebnis score={score} totalQuestions={totalQuestions} belohnung={belohnung} istBerichtigung={istBerichtigung} />
-
+      {/* Sticker gleich unter dem Ergebnis (15.10.2026): weiter unten wurde die
+          Auswahl uebersehen, und ohne Antippen gab es keinen Sticker. */}
       {!neuerSticker && stickerWahl && onStickerWaehlen && (
         <section aria-labelledby="sticker-wahl" className="rounded-[28px] bg-card p-5 ring-1 ring-inset ring-karo">
           <h2 id="sticker-wahl" className="text-lg font-extrabold text-tinte">Such dir einen Sticker aus!</h2>
@@ -211,6 +220,9 @@ export function GameCompletionScreen({
         </div>
       )}
 
+      {/* Klecksi und die Reise: Tinte, ausgemalte Felder, fertige Seite */}
+      <KlecksiErgebnis score={score} totalQuestions={totalQuestions} belohnung={belohnung} istBerichtigung={istBerichtigung} />
+
       {/* Ab Klasse 5: wie sich die Zeit zusammensetzt */}
       {!isYoung && !isStreakRecovery && (
         <div className="rounded-[28px] bg-card px-6 py-2 ring-1 ring-inset ring-karo">
@@ -239,7 +251,7 @@ export function GameCompletionScreen({
       {/* Im Browser: App empfehlen (nur, wenn die Leiste im Spiel nicht geschlossen wurde) */}
       <AppEmpfehlung variante="karte" nachSchliessenAus />
 
-      <Button onClick={onContinue} size="lg" className="w-full">
+      <Button onClick={() => void weiter()} disabled={speichert !== null} size="lg" className="w-full">
         Weiter
       </Button>
     </div>
