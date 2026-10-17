@@ -34,6 +34,7 @@ import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
 import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 import { RuhezeitEinstellung } from '@/components/parent/RuhezeitEinstellung';
+import { HandysperreHeute } from '@/components/parent/HandysperreHeute';
 import { ReiseEinstellung } from '@/components/parent/ReiseEinstellung';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
@@ -62,6 +63,8 @@ interface ChildSettings {
    * haben.
    */
   screen_time_base_minutes: number;
+  /** Freiminuten Sa/So; null = wie werktags (17.10.2026). */
+  freiminuten_wochenende: number | null;
   weekday_max_minutes: number;
   weekend_max_minutes: number;
   math_seconds_per_task: number;
@@ -106,6 +109,7 @@ const SUBJECTS = [
 
 const DEFAULT_SETTINGS: ChildSettings = {
   screen_time_base_minutes: DEFAULT_BASE_MINUTES,
+  freiminuten_wochenende: null,
   weekday_max_minutes: DEFAULT_WEEKDAY_MAX_MINUTES,
   weekend_max_minutes: DEFAULT_WEEKEND_MAX_MINUTES,
   math_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
@@ -171,6 +175,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           screen_time_base_minutes:
             (settingsData as { screen_time_base_minutes?: number }).screen_time_base_minutes
             ?? DEFAULT_BASE_MINUTES,
+          freiminuten_wochenende: settingsData.freiminuten_wochenende ?? null,
           weekday_max_minutes: settingsData.weekday_max_minutes,
           weekend_max_minutes: settingsData.weekend_max_minutes,
           math_seconds_per_task: settingsData.math_seconds_per_task,
@@ -443,15 +448,21 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             <Stepper label="Am Wochenende" wert={settings.weekend_max_minutes} min={5} max={180} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('weekend_max_minutes', v)} />
           </Zeile>
           {handysperreAn && (
-          <Zeile titel="Freiminuten" hinweis="ohne Lernen, nur mit Handysperre">
-            <Stepper label="Freiminuten" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
+          <>
+          <Zeile titel="Freiminuten werktags" hinweis="Handyzeit ohne Lernen">
+            <Stepper label="Freiminuten werktags" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
           </Zeile>
+          <Zeile titel="Freiminuten am Wochenende" hinweis="Sa und So">
+            <Stepper label="Freiminuten am Wochenende" wert={settings.freiminuten_wochenende ?? settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('freiminuten_wochenende', v)} />
+          </Zeile>
+          </>
           )}
         </Gruppe>
       </PremiumFeature>
 
       {handysperreAn && (
         <Gruppe titel="Handysperre">
+          <HandysperreHeute childId={childId} childName={childName} />
           <RuhezeitEinstellung childId={childId} />
         </Gruppe>
       )}
@@ -487,7 +498,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               {sichtbar && (
                 <div className="flex items-center justify-between gap-3 pl-[3.25rem]">
                   <span className="text-xs text-muted-foreground">pro Aufgabe</span>
-                  <Stepper label={`${subject.name}, Zeit pro Aufgabe`} wert={settings[settingKey]} min={5} max={300} schritt={5} einheit="Sek." disabled={!hasPremiumAccess} onChange={(v) => updateSetting(settingKey, v)} />
+                  <Stepper label={`${subject.name}, Zeit pro Aufgabe`} wert={settings[settingKey] as number} min={5} max={300} schritt={5} einheit="Sek." disabled={!hasPremiumAccess} onChange={(v) => updateSetting(settingKey, v)} />
                 </div>
               )}
             </div>

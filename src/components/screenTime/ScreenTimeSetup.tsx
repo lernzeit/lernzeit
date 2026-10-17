@@ -2,13 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Hourglass, Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone, TimerReset } from 'lucide-react';
+import { Hourglass, KeyRound, Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone, TimerReset } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { ScreenTime, screenTimeAvailability } from '@/services/screenTime/plugin';
+import { ScreenTime, kannTagesbudget, screenTimeAvailability } from '@/services/screenTime/plugin';
 import { EMPTY_STATUS, type ScreenTimeAvailability, type ShieldStatus } from '@/services/screenTime/types';
 import { ParentGate, type GeraetFreigabeZweck } from '@/components/screenTime/ParentGate';
-import { istOffen, offenText } from '@/services/screenTime/release';
+import { gleicheTagesbudgetAb, istOffen, offenText } from '@/services/screenTime/release';
+import { hatNotfallSchluessel, notfallSchluesselHolen } from '@/services/screenTime/notfall';
+import { standText } from '@/lib/handyzeit';
 import { Capacitor } from '@capacitor/core';
 import { SoGehtEs } from '@/components/SoGehtEs';
 import { appleAblehnung, endgeraetVon, nachFehler, sperreNichtMoeglich, type SperreGrund } from '@/lib/geraeteAnleitung';
@@ -73,6 +75,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
   // Apples Begruendung, falls die Zustimmung scheitert. Bleibt stehen, bis
   // es neu versucht wird — damit man sie abfotografieren kann.
   const [ablehnung, setAblehnung] = useState<string | null>(null);
+  const [hatCode, setHatCode] = useState<boolean | null>(null);
 
   const laden = useCallback(async () => {
     const verfuegbar = await screenTimeAvailability();
@@ -81,6 +84,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
     try {
       const neuerStand = await ScreenTime.getStatus();
       setStatus(neuerStand);
+      setHatCode(await hatNotfallSchluessel());
       await meldeStand(neuerStand.managing);
     } catch {
       /* Zustand nicht lesbar — die Ansicht bleibt beim leeren Stand. */
@@ -126,7 +130,24 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
         await laden();
         return;
       }
-      await ScreenTime.applyShield({ shieldAll: true, trialMinutes: PROBELAUF_MINUTEN });
+      const stand = await ScreenTime.getStatus();
+      if (!kannTagesbudget(stand)) {
+        // Älterer nativer Teil: Probelauf wie bisher.
+        await ScreenTime.applyShield({ shieldAll: true, trialMinutes: PROBELAUF_MINUTEN });
+        return;
+      }
+      // Tagesbudget (17.10.2026): Ohne „Was zählt als Handyzeit?“ kann
+      // nichts gezählt werden — deshalb Pflichtschritt direkt danach. Kein
+      // Probelauf mehr: Auf Klaras Handy (10.10.2026) blieb LernZeit unter
+      // der Sperre offen, und die Freiminuten des Tages sind sofort da.
+      const auswahl = await ScreenTime.pickCountedApps();
+      if (auswahl.cancelled || auswahl.count === 0) {
+        toast.message('Noch ein Schritt', { description: '„Was zählt als Handyzeit?“ wählen, sonst kann LernZeit nichts zählen.' });
+        return;
+      }
+      await ScreenTime.applyShield({ shieldAll: true });
+      await gleicheTagesbudgetAb(childId);
+      await notfallSchluesselHolen().catch(() => false);
     } catch (e) {
       toast.error('Einrichten hat nicht geklappt', { description: nachFehler(e) });
     } finally {
@@ -178,6 +199,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
 
   const zugestimmt = status.authorization === 'approved';
   const freigabeLaeuft = istOffen(status);
+  const budgetModus = kannTagesbudget(status);
   // Neuer Build (10.10.2026): kennt „Was zählt als Handyzeit?“ und Ruhezeit
   const kannNutzung = 'zaehltNutzung' in status;
   const probeLaeuft = Boolean(status.trialUntil && new Date(status.trialUntil) > new Date());
@@ -242,7 +264,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
             </span>
             {status.managing && (
               <Badge variant="secondary" className="font-normal">
-                {status.ruhezeit ? 'Ruhezeit' : freigabeLaeuft ? 'frei' : 'aktiv'}
+                {status.ruhezeit ? 'Ruhezeit' : freigabeLaeuft ? 'frei' : budgetModus ? (status.aufgebraucht ? 'zu' : 'offen') : 'aktiv'}
               </Badge>
             )}
           </CardTitle>
@@ -252,7 +274,9 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
         <CardContent className="space-y-4">
           {!zugestimmt ? (
             <>
-              <p className="text-sm text-muted-foreground">iOS fragt gleich nach der Bildschirmzeit-Kennung.</p>
+              <p className="text-sm text-muted-foreground">
+                iOS fragt gleich nach der Bildschirmzeit-Kennung. Danach „Was zählt als Handyzeit?“: „Alle Apps &amp; Kategorien“ wählen, LernZeit abwählen.
+              </p>
               <Button className="w-full" disabled={busy !== null} onClick={() => void einrichten()}>
                 {busy === 'Einrichten'
                   ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -284,7 +308,16 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                     <dd>{offenText(status)}</dd>
                   </>
                 )}
-                {kannNutzung && (
+                {budgetModus ? (
+                  <>
+                    <dt className="text-muted-foreground">Heute</dt>
+                    <dd>{status.tagesbudget != null
+                      ? standText({ budget: status.tagesbudget, genutzt: status.genutzt ?? 0, aufgebraucht: Boolean(status.aufgebraucht) })
+                      : <span className="text-destructive">zählt nicht – „Was zählt als Handyzeit?“ wählen</span>}</dd>
+                    <dt className="text-muted-foreground">Notfallcode</dt>
+                    <dd>{hatCode ? 'bereit' : 'fehlt noch'}</dd>
+                  </>
+                ) : kannNutzung && (
                   <>
                     <dt className="text-muted-foreground">Zeit zählt</dt>
                     <dd>{status.zaehltNutzung ? 'nur bei Nutzung' : 'nach Uhr'}</dd>
@@ -296,7 +329,10 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                 {!status.managing && (
                   <Button
                     disabled={busy !== null}
-                    onClick={() => void fuehreAus('Sperre aktivieren', () => ScreenTime.applyShield({ shieldAll: true }))}
+                    onClick={() => void fuehreAus('Sperre aktivieren', async () => {
+                      await ScreenTime.applyShield({ shieldAll: true });
+                      if (budgetModus) await gleicheTagesbudgetAb(childId);
+                    })}
                   >
                     {busy === 'Sperre aktivieren'
                       ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -327,11 +363,31 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                         onClick={() =>
                           mitElternfreigabe(
                             'zaehlen',
-                            () => void fuehreAus('Handyzeit wählen', () => ScreenTime.pickCountedApps()),
+                            () => void fuehreAus('Handyzeit wählen', async () => {
+                              await ScreenTime.pickCountedApps();
+                              if (budgetModus) await gleicheTagesbudgetAb(childId);
+                            }),
                           )}
                       >
                         <Hourglass className="h-4 w-4 mr-2" />
                         Was zählt als Handyzeit?
+                      </Button>
+                    )}
+
+                    {budgetModus && hatCode === false && (
+                      <Button
+                        variant="outline"
+                        disabled={busy !== null}
+                        onClick={() =>
+                          mitElternfreigabe(
+                            'zaehlen',
+                            () => void fuehreAus('Notfallcode', async () => {
+                              if (!(await notfallSchluesselHolen())) throw new Error('Bitte noch einmal auf dem Eltern-Handy erlauben.');
+                            }),
+                          )}
+                      >
+                        <KeyRound className="h-4 w-4 mr-2" />
+                        Notfallcode einrichten
                       </Button>
                     )}
 
@@ -355,6 +411,11 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
               {kannNutzung && !status.zaehltNutzung && (
                 <p className="text-xs text-muted-foreground">
                   Tipp „Handyzeit“: „Alle Apps &amp; Kategorien“ wählen, LernZeit abwählen.
+                </p>
+              )}
+              {budgetModus && (
+                <p className="text-xs text-muted-foreground">
+                  Freiminuten, Ruhezeit und Extra-Zeit stellst du auf deinem Handy ein: Kinder → Regeln.
                 </p>
               )}
             </>

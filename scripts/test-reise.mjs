@@ -31,6 +31,8 @@ const modus = await laden('src/lib/klecksiModus.ts');
 const stand = await laden('src/lib/klecksiLernstand.ts');
 const appHinweis = await laden('src/lib/appEmpfehlung.ts');
 const geraete = await laden('src/lib/geraeteAnleitung.ts');
+const notfall = await laden('src/lib/notfallcode.ts');
+const handyzeit = await laden('src/lib/handyzeit.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -206,5 +208,42 @@ pruefe('Kindersicherung: vorne hoechstens ein kurzer Satz',
   karten.every((k) => k.text.length <= 80 && !k.text.includes('. ')), true);
 pruefe('Nach einem Fehler steht der Schritt vorn und der Rohtext hinten',
   [geraete.nachFehler('Boom').startsWith('Versuche es noch einmal'), geraete.nachFehler('Boom').endsWith('(Boom)')], [true, true]);
+
+// ── Handysperre: Notfallcode und Tagesbudget (17.10.2026) ──
+{
+  const { createHmac, createHash, randomBytes } = await import('node:crypto');
+  const zufall = randomBytes(77);
+  pruefe('SHA-256 wie Node', Buffer.from(notfall.sha256(new Uint8Array(zufall))).toString('hex'), createHash('sha256').update(zufall).digest('hex'));
+  pruefe('SHA-256 leer', Buffer.from(notfall.sha256(new Uint8Array(0))).toString('hex'), createHash('sha256').update(Buffer.alloc(0)).digest('hex'));
+  const k = randomBytes(20); const n = randomBytes(130);
+  pruefe('HMAC-SHA-256 wie Node', Buffer.from(notfall.hmacSha256(new Uint8Array(k), new Uint8Array(n))).toString('hex'), createHmac('sha256', k).update(n).digest('hex'));
+  // Feste Werte aus notfallcode_berechnen() in der Datenbank (17.10.2026)
+  const sqlSchluessel = notfall.hexZuBytes('3132333435363738393031323334353637383930');
+  pruefe('Codes wie in der Datenbank',
+    [0, 1, 59, 1111111109, 987654321, 29112233].map((z) => notfall.codeFuerZaehler(sqlSchluessel, z)),
+    ['875740', '247374', '465435', '394941', '167984', '192273']);
+  const hex = '3132333435363738393031323334353637383930';
+  const t = 29112233 * 1800 * 1000 + 600_000; // 10 Min. in Schritt 29112233
+  pruefe('Code gilt im eigenen, im naechsten und im vorigen Schritt (mind. 30 Min.)',
+    [notfall.codePasst(hex, '192273', t), notfall.codePasst(hex, '192 273', t + 1800_000), notfall.codePasst(hex, '192273', t - 1800_000),
+     notfall.codePasst(hex, '192273', t + 2 * 1800_000), notfall.codePasst(hex, '192274', t), notfall.codePasst(hex, '19227', t)],
+    [true, true, true, false, false, false]);
+  let fv = { anzahl: 0, gesperrtBis: 0 };
+  for (let i = 0; i < 5; i++) fv = notfall.nachFehlversuch(fv, 1000);
+  pruefe('Nach 5 falschen Codes 15 Min. Pause', [notfall.istGesperrt(fv, 1000 + 14 * 60_000), notfall.istGesperrt(fv, 1000 + 15 * 60_000 + 1)], [true, false]);
+
+  const sa = new Date(2026, 9, 17, 10, 0); const mo = new Date(2026, 9, 19, 0, 5);
+  pruefe('Tag in Ortszeit', [handyzeit.tagSchluessel(sa), handyzeit.tagSchluessel(mo)], ['2026-10-17', '2026-10-19']);
+  pruefe('Freiminuten Wochenende eigener Wert, sonst wie werktags',
+    [handyzeit.freiminutenHeute(30, 60, sa), handyzeit.freiminutenHeute(30, null, sa), handyzeit.freiminutenHeute(30, 60, mo)], [60, 30, 30]);
+  pruefe('Zusatz zaehlt erst ab 0 Uhr Ortszeit',
+    handyzeit.zusatzHeute([{ minuten: 15, zeit: new Date(2026, 9, 18, 23, 59).toISOString() }, { minuten: 30, zeit: new Date(2026, 9, 19, 0, 1).toISOString() }], mo), 30);
+  pruefe('Stand-Texte',
+    [handyzeit.standText({ budget: 60, genutzt: 35, aufgebraucht: false }), handyzeit.standText({ budget: 60, genutzt: 55, aufgebraucht: true }),
+     handyzeit.standText({ budget: 1500, genutzt: 10, aufgebraucht: false })],
+    ['noch 25 Min. (35 von 60 genutzt)', 'Für heute aufgebraucht', 'Heute ohne Limit']);
+  const swift = await readFile('native/screen-time/ios/Sources/ScreenTimePlugin/ScreenTimeShared.swift', 'utf8');
+  pruefe('Swift: „ohne Limit“ ab derselben Grenze', swift.includes(`ohneLimitMinuten = ${handyzeit.OHNE_LIMIT_MINUTEN}`), true);
+}
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }

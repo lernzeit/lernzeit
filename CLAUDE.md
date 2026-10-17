@@ -162,7 +162,7 @@ Supabase-Secrets gelöscht werden.
   in Google Cloud/Supabase: `docs/google-anmeldung.md`. Kein eigenes Budget für eine Supabase-Domain.
 - Im Facebook-/Instagram-Browser sperrt Google jede Anmeldung; dort steht ein Hinweis statt des Knopfs.
 
-## LernZeit-Handysperre (Stand 10.10.2026)
+## LernZeit-Handysperre (Stand 17.10.2026)
 
 - Vorerst nur für Kinder in `handysperre_freigaben` (Klara, Testgerät mit Store-App; Eltern/Kind lesen,
   eintragen nur per Dashboard/Service-Rolle). Alle anderen: keine Einrichtung, keine Freiminuten,
@@ -170,9 +170,9 @@ Supabase-Secrets gelöscht werden.
   (`hooks/useHandysperre.ts`). Kinder ohne Freischaltung, auf deren iPhone LernZeit noch sperrt,
   bekommen die Sperre beim ersten Start der neuen Version aufgehoben (`stopManaging`).
 - Änderungen an der Sperre auf dem Kinder-Handy erlaubt ein Elternteil auf dem eigenen Handy
-  (`geraet_freigaben`, Push `geraet_freigabe_neu`, Karte auf „Heute“); Passwort nur Notweg.
-- Freie Zeit zählt nach Nutzung, sobald „Was zählt als Handyzeit?“ gewählt ist (Swift:
-  `ScreenTimeShared.swift`, `freigeben`/`starteNutzung`), sonst nach Uhr. Ruhezeit:
+  (`geraet_freigaben`, Push `geraet_freigabe_neu`, Karte auf „Heute“); Notweg ist der Eltern-Code.
+- Freie Zeit zählt nur nach Nutzung (Swift: `ScreenTimeShared.swift`, seit 17.10.2026 Tagesbudget,
+  siehe unten; `freigeben`/`starteNutzung` nur noch für alte Wege). Ruhezeit:
   `child_settings.ruhezeit_von/_bis` (Minuten), Kinder-Handy übernimmt sie (`useRuhezeitAbgleich`).
 - Hinweise zu Sperre und Freigabe (13.10.2026): Ein Elternteil richtet sie auf dem Gerät des Kindes
   ein. Die Meldungen nennen die Lösung statt des Fehlers und hängen vom Endgerät ab (iPhone/iPad,
@@ -180,6 +180,15 @@ Supabase-Secrets gelöscht werden.
   in `ScreenTimeWidget` (Kinder-Gerät), `ScreenTimeSetup` (Handy sperren, Apple-Gründe) und bei der
   Genehmigung auf dem Eltern-Gerät (`parentalControlsService`, Absprung-Meldungen). Seit 14.10.2026:
   vorne nur Knöpfe und ein Satz, die Schritte zum Aufklappen („So geht's“, `components/SoGehtEs.tsx`).
+- Tagesbudget wie Apple (17.10.2026): offen bis die Minuten des Tages GENUTZT sind (Freiminuten
+  Werktag/`freiminuten_wochenende` + heute genehmigt + `handyzeit_extra`), kein „Freiminuten starten“,
+  nie nach Uhr. Swift `lernzeit.tag` (täglich, `includesPastActivity`), App übergibt bei jedem Öffnen
+  absolute Werte (`setTagesbudget`, `gleicheTagesbudgetAb` in `services/screenTime/release.ts`), meldet
+  `handyzeit_stand`. „Was zählt als Handyzeit?“ ist Pflicht bei der Einrichtung. Eltern: Kinder → Regeln →
+  Handysperre (`parent/HandysperreHeute.tsx`: Stand, +15/+30, „Heute ohne Limit“, Notfallcode).
+- Eltern-Notfallcode statt Passwort: 6 Ziffern, Schritt 30 Min., HOTP/SHA-256 in SQL
+  (`notfallcode_berechnen`) und TS (`lib/notfallcode.ts`, Test mit festen SQL-Werten in `npm run test:reise`),
+  Prüfung ohne Internet, Nutzung → `notfall_entsperrungen` + Push `notfall_genutzt`.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

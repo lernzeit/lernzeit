@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { SUPABASE_ANON_KEY, SUPABASE_PROJECT_URL } from '@/integrations/supabase/client';
-
+import { notfallMelden, notfallSchluesselHolen } from '@/services/screenTime/notfall';
+import { CODE_ORT, NotfallCodeFeld } from '@/components/screenTime/NotfallCode';
 /** Was erlaubt werden soll — steht so in der Tabelle `geraet_freigaben`. */
 export type GeraetFreigabeZweck = 'ausnahmen' | 'aufheben' | 'zaehlen';
 
 interface ParentGateProps {
   open: boolean;
   onOpenChange: (offen: boolean) => void;
-  /** Das Kind, dessen Sperre verändert werden soll. */
+  /** Das Kind, dessen Sperre verändert werden soll (die Anfrage nimmt auth.uid()). */
   childId: string;
   /** Wird nur aufgerufen, wenn ein verknüpftes Elternteil zugestimmt hat. */
   onVerified: () => void;
@@ -29,7 +26,7 @@ const ZWECK_TEXT: Record<GeraetFreigabeZweck, string> = {
   zaehlen: 'Handysperre einrichten.',
 };
 
-type Schritt = 'fragen' | 'warten' | 'abgelehnt' | 'passwort';
+type Schritt = 'fragen' | 'warten' | 'abgelehnt' | 'code';
 
 /**
  * Hürde vor allem, was die Sperre LOCKERT (Apple fragt die Bildschirmzeit-
@@ -38,22 +35,22 @@ type Schritt = 'fragen' | 'warten' | 'abgelehnt' | 'passwort';
  *
  * Seit 10.10.2026: Das Kinder-Handy fragt an, das Elternteil tippt auf
  * SEINEM Handy auf „Erlauben“ (Push + Karte auf „Heute“, Tabelle
- * `geraet_freigaben`). Vorher wurden hier E-Mail und Passwort verlangt — das
- * scheiterte bei Google-/Apple-Konten ohne Passwort und an Verwechslungen mit
- * dem Apple-ID-Passwort. Das Passwort bleibt als Notweg.
+ * `geraet_freigaben`).
+ *
+ * Seit 17.10.2026 ist der Notweg der Eltern-Code (6 Ziffern, wechselt alle
+ * 30 Minuten, geprüft ohne Internet). Das LernZeit-Passwort entfiel: Konten
+ * mit Apple/Google haben keins, und bei „E-Mail verbergen“ kennen Eltern
+ * nicht einmal ihre LernZeit-E-Mail.
  */
-export function ParentGate({ open, onOpenChange, childId, onVerified, zweck }: ParentGateProps) {
+export function ParentGate({ open, onOpenChange, onVerified, zweck }: ParentGateProps) {
   const [schritt, setSchritt] = useState<Schritt>('fragen');
   const [anfrageId, setAnfrageId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
-  const [passwort, setPasswort] = useState('');
   const erledigt = useRef(false);
 
   const schliessen = () => {
     setSchritt('fragen'); setAnfrageId(null); setFehler(null);
-    setEmail(''); setPasswort('');
     onOpenChange(false);
   };
 
@@ -78,7 +75,12 @@ export function ParentGate({ open, onOpenChange, childId, onVerified, zweck }: P
         .eq('id', anfrageId)
         .maybeSingle();
       if (!aktiv || !data) return;
-      if (data.status === 'erlaubt') erlaubt();
+      if (data.status === 'erlaubt') {
+        // Nach „Erlauben“ gibt der Server den Notfall-Schlüssel heraus, falls
+        // er diesem Handy fehlt (z. B. nach Neuinstallation).
+        void notfallSchluesselHolen().catch(() => false);
+        erlaubt();
+      }
       else if (data.status === 'abgelehnt' || data.status === 'verfallen') setSchritt('abgelehnt');
     };
     const takt = window.setInterval(() => void nachsehen(), 2000);
@@ -101,40 +103,9 @@ export function ParentGate({ open, onOpenChange, childId, onVerified, zweck }: P
     setSchritt('warten');
   };
 
-  const mitPasswort = async () => {
-    setFehler(null);
-    if (!email.trim() || !passwort) { setFehler('Bitte E-Mail und Passwort eingeben.'); return; }
-    setBusy(true);
-    try {
-      // Eigener Client ohne Speicher, damit die Anmeldung des Kindes bleibt.
-      const pruefClient = createClient(SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-      });
-      const { data, error } = await pruefClient.auth.signInWithPassword({ email: email.trim(), password: passwort });
-      if (error || !data.user) {
-        const text = `${error?.code ?? ''} ${error?.message ?? ''}`.toLowerCase();
-        setFehler(text.includes('rate') || text.includes('too many')
-          ? 'Zu viele Versuche. Bitte später noch mal – oder auf deinem Handy erlauben.'
-          : 'Passt nicht. Gemeint ist dein LernZeit-Passwort, nicht das Apple-Passwort. Wer sich mit Google oder Apple anmeldet, erlaubt auf dem eigenen Handy.');
-        return;
-      }
-      // Nur DIESE Sitzung beenden. Das frühere signOut() (global) hat das
-      // Elternteil auf allen Geräten abgemeldet.
-      await pruefClient.auth.signOut({ scope: 'local' });
-
-      const { data: verknuepfung } = await supabase
-        .from('parent_child_relationships')
-        .select('id')
-        .eq('parent_id', data.user.id)
-        .eq('child_id', childId)
-        .maybeSingle();
-      if (!verknuepfung) { setFehler('Dieses Konto ist nicht mit diesem Kind verknüpft.'); return; }
-      erlaubt();
-    } catch {
-      setFehler('Prüfung fehlgeschlagen. Besteht eine Internetverbindung?');
-    } finally {
-      setBusy(false);
-    }
+  const mitCode = () => {
+    void notfallMelden(zweck, null).catch(() => undefined);
+    erlaubt();
   };
 
   return (
@@ -163,19 +134,10 @@ export function ParentGate({ open, onOpenChange, childId, onVerified, zweck }: P
           <p className="text-sm">Nicht erlaubt.</p>
         )}
 
-        {schritt === 'passwort' && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="parent-gate-email">E-Mail (Elternkonto)</Label>
-              <Input id="parent-gate-email" type="email" autoComplete="username" inputMode="email"
-                value={email} onChange={(e) => setEmail(e.target.value)} disabled={busy} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="parent-gate-passwort">LernZeit-Passwort</Label>
-              <Input id="parent-gate-passwort" type="password" autoComplete="current-password"
-                value={passwort} onChange={(e) => setPasswort(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') void mitPasswort(); }} disabled={busy} />
-            </div>
+        {schritt === 'code' && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">{CODE_ORT}</p>
+            <NotfallCodeFeld onOk={mitCode} />
           </div>
         )}
 
@@ -188,15 +150,9 @@ export function ParentGate({ open, onOpenChange, childId, onVerified, zweck }: P
               {schritt === 'abgelehnt' ? 'Noch mal fragen' : 'Eltern-Handy fragen'}
             </Button>
           )}
-          {schritt === 'passwort' && (
-            <Button onClick={() => void mitPasswort()} disabled={busy}>
-              {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Weiter
-            </Button>
-          )}
-          {schritt !== 'passwort' ? (
-            <Button variant="ghost" size="sm" onClick={() => { setFehler(null); setSchritt('passwort'); }} disabled={busy}>
-              Stattdessen mit Passwort
+          {schritt !== 'code' ? (
+            <Button variant="ghost" size="sm" onClick={() => { setFehler(null); setSchritt('code'); }} disabled={busy}>
+              Stattdessen mit Eltern-Code
             </Button>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => { setFehler(null); setSchritt(anfrageId ? 'warten' : 'fragen'); }} disabled={busy}>

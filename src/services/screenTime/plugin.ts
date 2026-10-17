@@ -37,6 +37,8 @@ const nichtVerfuegbar: ScreenTimePlugin = {
   pendingShieldRequests: async () => ({ requestedAt: [] }),
   pickCountedApps: async () => ({ count: 0, cancelled: true }),
   setRuhezeit: async () => EMPTY_STATUS,
+  setTagesbudget: async () => EMPTY_STATUS,
+  pause: async () => EMPTY_STATUS,
 };
 
 const ScreenTime = registerPlugin<ScreenTimePlugin>('ScreenTime', {
@@ -98,6 +100,11 @@ export async function screenTimePendingRequests(): Promise<{ requestedAt: string
   } catch {
     return { requestedAt: [] };
   }
+}
+
+/** Kennt dieser Build das Tagesbudget (17.10.2026)? */
+export function kannTagesbudget(status: ShieldStatus | null): boolean {
+  return Boolean(status && 'budgetEingestellt' in status);
 }
 
 export type { ReleaseResult, ShieldStatus };

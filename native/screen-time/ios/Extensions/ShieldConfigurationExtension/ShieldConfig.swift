@@ -21,17 +21,30 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     /// LernZeits Akzentfarbe, dieselbe wie in index.html (#22d3ee).
     private static let akzent = UIColor(red: 0.13, green: 0.83, blue: 0.93, alpha: 1.0)
 
+    /// Titel und Satz je nach Grund (17.10.2026): Ruhezeit, Tagesbudget
+    /// aufgebraucht oder (alte Einrichtung ohne Budget) noch keine Zeit.
+    private func texte() -> (titel: String, satz: String) {
+        if LernzeitScreenTime.ruheAktiv {
+            return ("Ruhezeit", "Jetzt ist Pause vom Handy. Telefon und LernZeit gehen weiter.")
+        }
+        if LernzeitScreenTime.budgetAktiv {
+            return ("Handyzeit für heute vorbei", "In LernZeit kannst du Zeit dazuverdienen.")
+        }
+        return ("Erst Zeit verdienen", "Loese in LernZeit ein paar Aufgaben — pro richtiger Antwort bekommst du Bildschirmzeit.")
+    }
+
     private func lernzeitSchild() -> ShieldConfiguration {
-        ShieldConfiguration(
+        let (titel, satz) = texte()
+        return ShieldConfiguration(
             backgroundBlurStyle: .systemMaterialDark,
             backgroundColor: UIColor(red: 0.07, green: 0.09, blue: 0.11, alpha: 1.0),
             icon: UIImage(systemName: "hourglass"),
             title: ShieldConfiguration.Label(
-                text: "Erst Zeit verdienen",
+                text: titel,
                 color: .white
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "Loese in LernZeit ein paar Aufgaben — pro richtiger Antwort bekommst du Bildschirmzeit.",
+                text: satz,
                 color: UIColor(white: 0.75, alpha: 1.0)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(

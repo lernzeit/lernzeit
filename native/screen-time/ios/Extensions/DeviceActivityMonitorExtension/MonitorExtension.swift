@@ -17,6 +17,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+        // Tagesbudget: Das Ende um 23:59:59 braucht nichts, der neue Tag
+        // beginnt in intervalDidStart.
+        if activity == LernzeitScreenTime.tagName { return }
         // Freie Zeit nach Nutzung: Fenster (knapp 24 h) vorbei, Rest verfällt.
         if activity == LernzeitScreenTime.nutzungName {
             LernzeitScreenTime.nutzungFensterBeendet()
@@ -48,19 +51,27 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
     }
 
-    /// Beginn eines Fensters. Nur die Ruhezeit braucht hier etwas: sperren.
-    /// Freigaben hat die App beim Start bereits erteilt.
+    /// Beginn eines Fensters: Ruhezeit sperrt, das Tagesbudget stellt auf
+    /// den neuen Tag um. Freigaben hat die App beim Start bereits erteilt.
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
+        if activity == LernzeitScreenTime.tagName {
+            LernzeitScreenTime.tagBeginnt()
+            return
+        }
         if activity == LernzeitScreenTime.ruheNameA || activity == LernzeitScreenTime.ruheNameB {
             LernzeitScreenTime.ruheFenster(activity, beginnt: true)
         }
     }
 
-    /// Freie Zeit nach Nutzung: Schwelle (oder 5-Minuten-Zwischenstand)
-    /// erreicht. Am Ende sperrt das wieder — wie Apples App-Limits.
+    /// Tagesbudget oder freie Zeit nach Nutzung: Schwelle (oder
+    /// Zwischenstand) erreicht. Am Ende sperrt das wieder — wie Apples App-Limits.
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
+        if activity == LernzeitScreenTime.tagName {
+            LernzeitScreenTime.tagSchwelleErreicht(event)
+            return
+        }
         guard activity == LernzeitScreenTime.nutzungName else { return }
         LernzeitScreenTime.nutzungSchwelleErreicht(event)
     }

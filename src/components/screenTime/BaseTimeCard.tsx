@@ -1,127 +1,102 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Smartphone } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { ScreenTime, screenTimeSupportedPlatform } from '@/services/screenTime/plugin';
-import { istOffen, offenText, starteGrundzeit } from '@/services/screenTime/release';
+import { KeyRound, Moon, Smartphone } from 'lucide-react';
+import { ScreenTime, kannTagesbudget, screenTimeSupportedPlatform } from '@/services/screenTime/plugin';
+import { HANDYZEIT_GEAENDERT } from '@/services/screenTime/release';
+import { anteilGenutzt, ohneLimit, standText } from '@/lib/handyzeit';
 import type { ShieldStatus } from '@/services/screenTime/types';
+import { NotfallPauseDialog } from '@/components/screenTime/NotfallCode';
 
 interface BaseTimeCardProps {
   childId: string;
 }
 
+const uhr = (iso: string) => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+const alsZeit = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
 /**
- * Die tägliche Grundzeit — Handyzeit, die dem Kind ohne Lernen zusteht.
+ * „Deine Handyzeit heute“ auf dem Kinder-Handy (17.10.2026).
  *
- * ── Warum es sie gibt ────────────────────────────────────────────────────
+ * Wie Apples Bildschirmzeit: Das Handy ist offen, bis die Minuten des Tages
+ * genutzt sind — ohne Knopf. Vorher musste das Kind „Freiminuten starten“
+ * tippen, und ohne „Was zählt als Handyzeit?“ lief die Zeit nach Uhr ab.
+ * Gezählt wird jetzt immer nur, während das Handy benutzt wird.
  *
- * Apples Bildschirmzeit geht von einem Tagesbudget aus: Das Handy
- * funktioniert erst einmal, und die Sperre greift, wenn das Budget
- * aufgebraucht ist. Bei LernZeit war das Budget null — ohne verdiente und
- * genehmigte Zeit war das Telefon rund um die Uhr zu. Strenger als alles,
- * was Apple anbietet, und der Punkt, an dem Eltern zu Recht zögern: Ein Kind
- * ohne Karten-App auf dem Heimweg ist kein Erziehungserfolg.
- *
- * ── Warum ein Knopf und kein Automatismus ────────────────────────────────
- *
- * Ohne „Was zählt als Handyzeit?“ laufen die Minuten ab dem Start; mit
- * dieser Auswahl (seit 10.10.2026) nur während der Nutzung
- * (DeviceActivityEvent, siehe ScreenTimeShared.swift).
- *
- * Deshalb entscheidet das Kind, WANN die Uhr läuft. Ein automatischer Start
- * beim Öffnen hätte an einem Tag, an dem das Telefon nur kurz in der Hand
- * liegt, das ganze Kontingent verbrannt.
+ * Ist es zu (aufgebraucht oder Ruhezeit), öffnet ein Eltern-Code das Handy
+ * für eine kurze Zeit (NotfallCode.tsx).
  */
 export function BaseTimeCard({ childId }: BaseTimeCardProps) {
-  const [minuten, setMinuten] = useState<number | null>(null);
-  const [heuteBenutzt, setHeuteBenutzt] = useState(false);
   const [stand, setStand] = useState<ShieldStatus | null>(null);
-  const [sperreLaeuft, setSperreLaeuft] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [codeOffen, setCodeOffen] = useState(false);
 
   const laden = useCallback(async () => {
     if (!childId || !screenTimeSupportedPlatform()) return;
-
     try {
-      const status = await ScreenTime.getStatus();
-      setSperreLaeuft(status.managing);
-      setStand(status);
-      // Wird gar nicht gesperrt, hat ein Freikontingent keinen Sinn — das
-      // Telefon ist ohnehin offen.
-      if (!status.managing) return;
+      setStand(await ScreenTime.getStatus());
     } catch {
-      return;
+      /* Zustand nicht lesbar: Karte bleibt weg. */
     }
-
-    const { data: einstellungen } = await supabase
-      .from('child_settings')
-      .select('screen_time_base_minutes')
-      .eq('child_id', childId)
-      .maybeSingle();
-    setMinuten(einstellungen?.screen_time_base_minutes ?? null);
-
-    // Der Tag beginnt um Mitternacht UTC — dieselbe Grenze wie in
-    // claim_base_time(). Eine andere Rechnung hier würde dem Kind einen
-    // Knopf zeigen, den die Datenbank ablehnt.
-    const tagesbeginn = new Date();
-    tagesbeginn.setUTCHours(0, 0, 0, 0);
-    const { data: freigaben } = await supabase
-      .from('screen_time_unlocks')
-      .select('id')
-      .eq('child_id', childId)
-      .eq('source', 'auto')
-      .gte('starts_at', tagesbeginn.toISOString())
-      .limit(1);
-    setHeuteBenutzt((freigaben ?? []).length > 0);
   }, [childId]);
 
-  useEffect(() => { void laden(); }, [laden]);
+  useEffect(() => {
+    void laden();
+    const neu = () => void laden();
+    window.addEventListener(HANDYZEIT_GEAENDERT, neu);
+    const sichtbar = () => { if (document.visibilityState === 'visible') void laden(); };
+    document.addEventListener('visibilitychange', sichtbar);
+    return () => {
+      window.removeEventListener(HANDYZEIT_GEAENDERT, neu);
+      document.removeEventListener('visibilitychange', sichtbar);
+    };
+  }, [laden]);
 
-  const starten = async () => {
-    setBusy(true);
-    try {
-      await starteGrundzeit();
-    } finally {
-      setBusy(false);
-      await laden();
-    }
-  };
+  if (!stand?.managing || !kannTagesbudget(stand)) return null;
 
-  if (!sperreLaeuft || minuten === null || minuten < 1) return null;
-
-  const laeuftGerade = istOffen(stand);
+  const notfall = stand.notfallBis && new Date(stand.notfallBis) > new Date() ? stand.notfallBis : null;
+  const budget = stand.tagesbudget ?? null;
+  const tagesStand = { budget, genutzt: stand.genutzt ?? 0, aufgebraucht: Boolean(stand.aufgebraucht) };
+  const zu = !notfall && (Boolean(stand.ruhezeit) || tagesStand.aufgebraucht);
 
   return (
     <Card className="rounded-2xl">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center gap-2 font-bold text-tinte">
-          <Smartphone className="h-4 w-4 text-primary" />
-          Deine Freiminuten
+          {stand.ruhezeit && !notfall ? <Moon className="h-4 w-4 text-primary" /> : <Smartphone className="h-4 w-4 text-primary" />}
+          Deine Handyzeit heute
         </div>
 
-        {laeuftGerade ? (
+        {notfall ? (
+          <p className="text-sm text-muted-foreground">Mit Eltern-Code offen bis <strong>{uhr(notfall)} Uhr</strong>.</p>
+        ) : stand.ruhezeit ? (
           <p className="text-sm text-muted-foreground">
-            Dein Handy ist offen: <strong>{offenText(stand)}</strong>
+            Ruhezeit{stand.ruheBis != null ? <> bis <strong>{alsZeit(stand.ruheBis)} Uhr</strong></> : null}. Telefon und LernZeit gehen.
           </p>
-        ) : heuteBenutzt ? (
-          <p className="text-sm text-muted-foreground">
-            Heute schon genutzt. Mehr Zeit gibt es fürs Lernen.
-          </p>
+        ) : budget == null ? (
+          <p className="text-sm text-muted-foreground">Ein Elternteil wählt noch „Was zählt als Handyzeit?“ (Einstellungen → Handy sperren).</p>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">
-              {stand?.zaehltNutzung
-                ? 'Zählen nur, wenn du das Handy nutzt.'
-                : 'Ab dem Start läuft die Uhr.'}
+            <p className="text-sm text-tinte"><strong>{standText(tagesStand)}</strong></p>
+            {!ohneLimit(budget) && (
+              <div className="h-2 overflow-hidden rounded-full bg-karo" aria-hidden>
+                <div className={`h-full rounded-full ${tagesStand.aufgebraucht ? 'bg-rotstift' : 'bg-primary'}`}
+                  style={{ width: `${Math.round(anteilGenutzt(tagesStand) * 100)}%` }} />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {tagesStand.aufgebraucht ? 'Mehr Zeit gibt es fürs Lernen.' : 'Zählt nur, wenn du das Handy benutzt.'}
             </p>
-            <Button className="w-full" disabled={busy} onClick={() => void starten()}>
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              {minuten} Freiminuten starten
-            </Button>
           </>
         )}
+
+        {zu && (
+          <Button variant="ghost" size="sm" className="w-full" onClick={() => setCodeOffen(true)}>
+            <KeyRound className="h-4 w-4 mr-2" />
+            Notfall: Eltern-Code
+          </Button>
+        )}
       </CardContent>
+      <NotfallPauseDialog open={codeOffen} onOpenChange={(o) => { setCodeOffen(o); if (!o) void laden(); }} />
     </Card>
   );
 }

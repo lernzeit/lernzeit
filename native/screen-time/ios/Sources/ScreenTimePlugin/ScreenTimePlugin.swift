@@ -49,7 +49,9 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pendingShieldRequests", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pickCountedApps", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setRuhezeit", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setRuhezeit", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTagesbudget", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pause", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Zustand
@@ -94,6 +96,11 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     @available(iOS 16.0, *)
     private func statusPayload() -> [String: Any] {
         reshieldIfExpired()
+        // Tageswechsel nachziehen, falls die Erweiterung um Mitternacht nicht lief.
+        if LernzeitScreenTime.budgetAktiv,
+           LernzeitScreenTime.budgetTag != LernzeitScreenTime.heuteText() {
+            LernzeitScreenTime.starteTagesbudget()
+        }
         // Ruhezeit nach der Uhr nachziehen, falls die Erweiterung nicht lief.
         if LernzeitScreenTime.ruheVon != nil,
            LernzeitScreenTime.ruheAktiv != LernzeitScreenTime.ruheNachUhr() {
@@ -122,8 +129,18 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "ruhezeit": LernzeitScreenTime.ruheAktiv,
             "ruheVon": LernzeitScreenTime.ruheVon.map { $0 as Any } ?? NSNull(),
             "ruheBis": LernzeitScreenTime.ruheBis.map { $0 as Any } ?? NSNull(),
-            "freiMinuten": LernzeitScreenTime.nutzungRest.map { $0 as Any } ?? NSNull()
+            "freiMinuten": LernzeitScreenTime.nutzungRest.map { $0 as Any } ?? NSNull(),
+            // Tagesbudget (17.10.2026); null = keins (nicht eingestellt oder nichts zu zählen)
+            "budgetEingestellt": LernzeitScreenTime.budgetAktiv,
+            "tagesbudget": (LernzeitScreenTime.budgetLaeuft ? LernzeitScreenTime.budgetHeute() : nil).map { $0 as Any } ?? NSNull(),
+            "genutzt": (LernzeitScreenTime.budgetLaeuft ? LernzeitScreenTime.budgetGenutzt() : nil).map { $0 as Any } ?? NSNull(),
+            "aufgebraucht": LernzeitScreenTime.budgetLaeuft && LernzeitScreenTime.budgetAufgebraucht()
         ]
+        if let notfall = LernzeitScreenTime.notfallBis, notfall > Date() {
+            payload["notfallBis"] = ISO8601DateFormatter().string(from: notfall)
+        } else {
+            payload["notfallBis"] = NSNull()
+        }
         if let probeEnde = LernzeitScreenTime.trialUntil, probeEnde > Date() {
             payload["trialUntil"] = ISO8601DateFormatter().string(from: probeEnde)
         } else {
@@ -152,7 +169,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
             "ruhezeit": false,
             "ruheVon": NSNull(),
             "ruheBis": NSNull(),
-            "freiMinuten": NSNull()
+            "freiMinuten": NSNull(),
+            "budgetEingestellt": false,
+            "tagesbudget": NSNull(),
+            "genutzt": NSNull(),
+            "aufgebraucht": false,
+            "notfallBis": NSNull()
         ])
     }
 
@@ -248,6 +270,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         managing = true
         releasedUntil = nil
+        LernzeitScreenTime.notfallBis = nil
         LernzeitScreenTime.beendeNutzung(sperren: false)
 
         if let probeMinuten = call.getInt("trialMinutes"), probeMinuten > 0 {
@@ -303,6 +326,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func restoreShield(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         releasedUntil = nil
+        LernzeitScreenTime.notfallBis = nil
         LernzeitScreenTime.beendeNutzung(sperren: false)
         LernzeitScreenTime.stopMonitoring()
         shieldNow()
@@ -319,6 +343,7 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         LernzeitScreenTime.stopMonitoring()
         LernzeitScreenTime.beendeNutzung(sperren: false)
         LernzeitScreenTime.zaehlAuswahl = nil
+        LernzeitScreenTime.beendeTagesbudget()
         LernzeitScreenTime.setzeRuhezeit(von: nil, bis: nil)
         unshieldNow()
         call.resolve(statusPayload())
@@ -370,6 +395,10 @@ extension ScreenTimePlugin {
                         return call.resolve(["count": 0, "cancelled": true])
                     }
                     LernzeitScreenTime.zaehlAuswahl = result
+                    // Andere Auswahl: Zählfenster neu anmelden.
+                    if LernzeitScreenTime.budgetAktiv {
+                        LernzeitScreenTime.starteTagesbudget(erzwingen: true)
+                    }
                     let count = result.applicationTokens.count + result.categoryTokens.count
                         + result.webDomainTokens.count
                     call.resolve(["count": count, "cancelled": false])
@@ -386,6 +415,32 @@ extension ScreenTimePlugin {
     @objc func setRuhezeit(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
         LernzeitScreenTime.setzeRuhezeit(von: call.getInt("von"), bis: call.getInt("bis"))
+        call.resolve(statusPayload())
+    }
+
+    /// Tagesbudget (17.10.2026): Freiminuten werktags/am Wochenende und die
+    /// heute dazugekommenen Minuten (absolut, nicht obendrauf — so schadet
+    /// ein doppelter Aufruf nicht). `tag` = 'yyyy-MM-dd' Ortszeit, für den
+    /// `zusatz` gilt.
+    @objc func setTagesbudget(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        let werktag = call.getInt("werktag") ?? 0
+        LernzeitScreenTime.setzeTagesbudget(
+            werktag: werktag,
+            wochenende: call.getInt("wochenende") ?? werktag,
+            zusatz: call.getInt("zusatz") ?? 0,
+            tag: call.getString("tag") ?? LernzeitScreenTime.heuteText()
+        )
+        call.resolve(statusPayload())
+    }
+
+    /// Notentsperrung nach gültigem Eltern-Code (geprüft in der App):
+    /// `minuten` lang offen, auch in der Ruhezeit.
+    @objc func pause(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }
+        let minuten = call.getInt("minuten") ?? 0
+        guard minuten > 0, minuten <= 240 else { return call.reject("minuten 1–240") }
+        LernzeitScreenTime.pausieren(minuten: minuten)
         call.resolve(statusPayload())
     }
 }

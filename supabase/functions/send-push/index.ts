@@ -161,6 +161,42 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         data: { type: "geraet_freigabe_neu", freigabe_id: body.freigabe_id },
       });
     }
+    case "notfall_genutzt": {
+      // Eltern-Notfallcode auf dem Kinder-Handy genutzt (Tabelle
+      // notfall_entsperrungen, 17.10.2026). Geht an alle verknüpften Eltern.
+      const childId = body.child_id as string;
+      const childName = await getChildName(childId);
+      const { data: eltern } = await supabase
+        .from("parent_child_relationships")
+        .select("parent_id")
+        .eq("child_id", childId);
+      const minuten = body.minuten as number | null;
+      const was: Record<string, string> = {
+        pause: minuten ? `${childName}s Handy ist ${minuten} Minuten offen.` : `${childName}s Handy ist offen.`,
+        ausnahmen: `Auf ${childName}s Handy wurde „Immer erlaubt“ geändert.`,
+        aufheben: `Auf ${childName}s Handy wurde die Handysperre aufgehoben.`,
+        zaehlen: `Auf ${childName}s Handy wurde die Handysperre geändert.`,
+      };
+      return sendOneSignalPush({
+        userIds: (eltern ?? []).map((e) => e.parent_id as string),
+        title: "🔑 Notfallcode genutzt",
+        message: was[body.zweck as string] ?? `Auf ${childName}s Handy wurde der Notfallcode genutzt.`,
+        data: { type: "notfall_genutzt", eintrag_id: body.eintrag_id },
+      });
+    }
+    case "extrazeit": {
+      // Extra-Zeit vom Elternteil (handyzeit_extra). Das Kind öffnet LernZeit,
+      // dann übernimmt das Handy die Minuten.
+      const minuten = Number(body.minuten) || 0;
+      return sendOneSignalPush({
+        userIds: [body.child_id as string],
+        title: "🎁 Mehr Handyzeit",
+        message: minuten >= 1440
+          ? "Heute ohne Limit! Öffne kurz LernZeit, dann gilt es."
+          : `Du hast heute ${minuten} Minuten extra. Öffne kurz LernZeit, dann gilt es.`,
+        data: { type: "extrazeit", eintrag_id: body.eintrag_id },
+      });
+    }
     case "screen_time_approved": {
       const minutes = body.requested_minutes;
       const variants = [

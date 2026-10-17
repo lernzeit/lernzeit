@@ -130,6 +130,21 @@ export interface ShieldStatus {
   ruhezeit?: boolean;
   ruheVon?: number | null;
   ruheBis?: number | null;
+  /**
+   * Seit 17.10.2026 (Tagesbudget wie Apples App-Limits; ältere Builds
+   * liefern die Felder nicht):
+   * `budgetEingestellt` — die App hat das Tagesbudget übergeben.
+   * `tagesbudget` — Minuten heute (Freiminuten + Zusatz), null = es wird
+   * nichts gezählt (dann fehlt „Was zählt als Handyzeit?“).
+   * `genutzt` — heute genutzt (in Schritten von 5 Min. und mehr).
+   * `aufgebraucht` — heute aufgebraucht, Sperre zu.
+   * `notfallBis` — mit Eltern-Code offen bis (ISO-8601).
+   */
+  budgetEingestellt?: boolean;
+  tagesbudget?: number | null;
+  genutzt?: number | null;
+  aufgebraucht?: boolean;
+  notfallBis?: string | null;
 }
 
 export interface ReleaseResult extends ShieldStatus {
@@ -265,6 +280,16 @@ export interface ScreenTimePlugin {
 
   /** Ruhezeit in Minuten nach Mitternacht; ohne Werte = keine. Ab Build 10.10.2026. */
   setRuhezeit(options: { von?: number; bis?: number }): Promise<ShieldStatus>;
+
+  /**
+   * Tagesbudget (ab Build 17.10.2026): Freiminuten werktags/am Wochenende und
+   * die HEUTE dazugekommenen Minuten (absolut). `tag` = 'YYYY-MM-DD' Ortszeit.
+   * Offen bis zum Verbrauch, gezählt nur bei Nutzung.
+   */
+  setTagesbudget(options: { werktag: number; wochenende: number; zusatz: number; tag: string }): Promise<ShieldStatus>;
+
+  /** Notentsperrung nach gültigem Eltern-Code: `minuten` lang offen, auch in der Ruhezeit. */
+  pause(options: { minuten: number }): Promise<ShieldStatus>;
 }
 
 /**

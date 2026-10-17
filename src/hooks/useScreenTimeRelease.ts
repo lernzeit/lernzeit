@@ -23,7 +23,7 @@ import { gleicheFreigabenAb } from '@/services/screenTime/release';
  * ── Wann geholt wird ─────────────────────────────────────────────────────
  *
  *   beim Start          das Kind öffnet die App, nachdem genehmigt wurde
- *   bei Realtime        die Genehmigung kommt, während die App offen ist
+ *   bei Realtime        die Genehmigung oder Extra-Zeit kommt, während die App offen ist
  *   beim Zurückkehren   die App lag im Hintergrund, als genehmigt wurde
  *
  * Der letzte Fall ist der häufigste: Das Kind fragt, legt das Telefon weg,
@@ -67,6 +67,17 @@ export function useScreenTimeRelease(childId: string | undefined, enabled: boole
           event: 'UPDATE',
           schema: 'public',
           table: 'screen_time_requests',
+          filter: `child_id=eq.${childId}`,
+        },
+        () => { void abgleichen(); },
+      )
+      // Extra-Zeit vom Elternteil (17.10.2026)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'handyzeit_extra',
           filter: `child_id=eq.${childId}`,
         },
         () => { void abgleichen(); },

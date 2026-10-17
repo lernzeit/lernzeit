@@ -39,6 +39,16 @@ public enum LernzeitScreenTime {
     public static let ruheNameA = DeviceActivityName("lernzeit.ruhe.a")
     public static let ruheNameB = DeviceActivityName("lernzeit.ruhe.b")
 
+    /// Tagesbudget (17.10.2026), wie Apples App-Limits: täglich 0:00–23:59:59
+    /// Ortszeit, gezählt wird die Nutzung seit Tagesbeginn. Die Schwelle steht
+    /// im Namen des Ereignisses, damit ein verspätetes Ereignis einer alten
+    /// Schwelle nichts mehr sperrt.
+    public static let tagName = DeviceActivityName("lernzeit.tag")
+    static let tagEndePrefix = "lernzeit.tag.ende."
+    static let tagSchrittPrefix = "lernzeit.tag.min."
+    /// Ab so vielen Minuten gilt der Tag als „ohne Limit“ (wie OHNE_LIMIT_MINUTEN in src/lib/handyzeit.ts).
+    public static let ohneLimitMinuten = 1440
+
     public enum Keys {
         public static let selection = "lernzeit.screentime.selection"
         public static let managing = "lernzeit.screentime.managing"
@@ -61,6 +71,18 @@ public enum LernzeitScreenTime {
         public static let ruheVon = "lernzeit.screentime.ruheVon"
         public static let ruheBis = "lernzeit.screentime.ruheBis"
         public static let ruheAktiv = "lernzeit.screentime.ruheAktiv"
+        /// Tagesbudget (17.10.2026)
+        public static let budgetAktiv = "lernzeit.screentime.budgetAktiv"
+        public static let budgetWerktag = "lernzeit.screentime.budgetWerktag"
+        public static let budgetWochenende = "lernzeit.screentime.budgetWochenende"
+        public static let budgetZusatz = "lernzeit.screentime.budgetZusatz"
+        public static let budgetZusatzTag = "lernzeit.screentime.budgetZusatzTag"
+        public static let budgetTag = "lernzeit.screentime.budgetTag"
+        public static let budgetErschoepft = "lernzeit.screentime.budgetErschoepft"
+        public static let budgetVerbraucht = "lernzeit.screentime.budgetVerbraucht"
+        public static let budgetSchwelle = "lernzeit.screentime.budgetSchwelle"
+        /// Notentsperrung mit dem Eltern-Code: offen bis hier, auch in der Ruhezeit.
+        public static let notfallBis = "lernzeit.screentime.notfallBis"
     }
 
     /// Faellt auf UserDefaults.standard zurueck, falls die App Group fehlt —
@@ -162,16 +184,14 @@ public enum LernzeitScreenTime {
 
     // MARK: - Sperre
 
-    /// Stellt die Sperre passend zum Zustand ein: aus, wenn nicht verwaltet
-    /// oder gerade freigegeben (und keine Ruhezeit ist); sonst an.
+    /// Stellt die Sperre passend zum Zustand ein (`sollSperren`).
     ///
     /// Seit 10.10.2026 entscheidet diese eine Stelle auch über Freigabe und
-    /// Ruhezeit. Vorher sperrte sie immer, und z. B. das Wählen von Ausnahmen
-    /// während einer Freigabe schloss das Handy vorzeitig.
+    /// Ruhezeit, seit 17.10.2026 auch über Tagesbudget und Notfallcode.
     @available(iOS 16.0, *)
     public static func applyShield() {
         let store = ManagedSettingsStore()
-        guard managing, ruheAktiv || !istFreigegeben() else {
+        guard managing, sollSperren() else {
             store.shield.applications = nil
             store.shield.applicationCategories = nil
             return
@@ -197,6 +217,18 @@ public enum LernzeitScreenTime {
             ? nil : auswahl.applicationTokens
         store.shield.applicationCategories = auswahl.categoryTokens.isEmpty
             ? nil : .specific(auswahl.categoryTokens)
+    }
+
+    /// Reihenfolge: Notfallcode öffnet immer (auch in der Ruhezeit), Ruhezeit
+    /// sperrt, eine laufende Freigabe öffnet. Mit Tagesbudget ist das Handy
+    /// offen, bis es heute aufgebraucht ist; ohne (alte Einrichtung) zu.
+    @available(iOS 16.0, *)
+    public static func sollSperren(now: Date = Date()) -> Bool {
+        if let bis = notfallBis, bis > now { return false }
+        if ruheAktiv { return true }
+        if istFreigegeben(now: now) { return false }
+        if budgetLaeuft { return budgetAufgebraucht(now: now) }
+        return true
     }
 
     /// Läuft gerade freie Zeit — nach Uhr oder nach Nutzung?
@@ -241,6 +273,7 @@ public enum LernzeitScreenTime {
         guard let until = releasedUntil else { return false }
         guard until <= now else { return false }
         releasedUntil = nil
+        if let bis = notfallBis, bis <= now { notfallBis = nil }
         applyShield()
         return true
     }
@@ -600,5 +633,260 @@ public enum LernzeitScreenTime {
             ruheAktiv = false
         }
         applyShield()
+    }
+
+    // MARK: - Tagesbudget (17.10.2026)
+    //
+    // Wie Apples App-Limits: Das Handy ist offen, bis die Minuten des Tages
+    // (Freiminuten Werktag/Wochenende + heute genehmigte oder extra gegebene
+    // Zeit) GENUTZT sind. Apple zählt die Vordergrund-Nutzung der
+    // `zaehlAuswahl` seit 0 Uhr (`includesPastActivity`, ab iOS 17.4). Kein
+    // Knopf, kein Zählen nach Uhr. Die App übergibt die Zahlen bei jedem
+    // Öffnen (`setzeTagesbudget`), die Erweiterung stellt um Mitternacht auf
+    // den neuen Tag um (`tagBeginnt`).
+
+    public static var budgetAktiv: Bool {
+        get { defaults.bool(forKey: Keys.budgetAktiv) }
+        set { defaults.set(newValue, forKey: Keys.budgetAktiv) }
+    }
+    public static var budgetWerktag: Int {
+        get { defaults.integer(forKey: Keys.budgetWerktag) }
+        set { defaults.set(newValue, forKey: Keys.budgetWerktag) }
+    }
+    public static var budgetWochenende: Int {
+        get { defaults.integer(forKey: Keys.budgetWochenende) }
+        set { defaults.set(newValue, forKey: Keys.budgetWochenende) }
+    }
+    /// Zusätzliche Minuten für den Tag `budgetZusatzTag` (genehmigt + extra).
+    public static var budgetZusatz: Int {
+        get { defaults.integer(forKey: Keys.budgetZusatz) }
+        set { defaults.set(newValue, forKey: Keys.budgetZusatz) }
+    }
+    public static var budgetZusatzTag: String? {
+        get { defaults.string(forKey: Keys.budgetZusatzTag) }
+        set { defaults.set(newValue, forKey: Keys.budgetZusatzTag) }
+    }
+    /// Tag, für den `budgetErschoepft`/`budgetVerbraucht` gelten.
+    public static var budgetTag: String? {
+        get { defaults.string(forKey: Keys.budgetTag) }
+        set { defaults.set(newValue, forKey: Keys.budgetTag) }
+    }
+    public static var budgetErschoepft: Bool {
+        get { defaults.bool(forKey: Keys.budgetErschoepft) }
+        set { defaults.set(newValue, forKey: Keys.budgetErschoepft) }
+    }
+    /// Genutzte Minuten heute, in Schritten (Anzeige).
+    public static var budgetVerbraucht: Int {
+        get { defaults.integer(forKey: Keys.budgetVerbraucht) }
+        set { defaults.set(newValue, forKey: Keys.budgetVerbraucht) }
+    }
+    /// Die zuletzt bei Apple angemeldete Schwelle.
+    public static var budgetSchwelle: Int {
+        get { defaults.integer(forKey: Keys.budgetSchwelle) }
+        set { defaults.set(newValue, forKey: Keys.budgetSchwelle) }
+    }
+    public static var notfallBis: Date? {
+        get { defaults.object(forKey: Keys.notfallBis) as? Date }
+        set {
+            if let newValue { defaults.set(newValue, forKey: Keys.notfallBis) }
+            else { defaults.removeObject(forKey: Keys.notfallBis) }
+        }
+    }
+
+    /// 'yyyy-MM-dd' in Ortszeit, wie `tagSchluessel` in src/lib/handyzeit.ts.
+    public static func heuteText(_ d: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone.current
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: d)
+    }
+
+    /// Samstag oder Sonntag (fest, nicht nach Region — wie in der App).
+    static func istWochenende(_ d: Date) -> Bool {
+        let tag = Calendar(identifier: .gregorian).component(.weekday, from: d)
+        return tag == 1 || tag == 7
+    }
+
+    public static func budgetHeute(now: Date = Date()) -> Int {
+        let basis = istWochenende(now) ? budgetWochenende : budgetWerktag
+        let zusatz = budgetZusatzTag == heuteText(now) ? budgetZusatz : 0
+        return max(0, basis) + max(0, zusatz)
+    }
+
+    /// Tagesbudget eingestellt UND es gibt etwas zu zählen.
+    @available(iOS 16.0, *)
+    public static var budgetLaeuft: Bool { budgetAktiv && zaehltNutzung }
+
+    public static func budgetAufgebraucht(now: Date = Date()) -> Bool {
+        budgetErschoepft && budgetTag == heuteText(now)
+    }
+
+    public static func budgetGenutzt(now: Date = Date()) -> Int {
+        guard budgetTag == heuteText(now) else { return 0 }
+        return budgetErschoepft ? max(budgetVerbraucht, budgetSchwelle) : budgetVerbraucht
+    }
+
+    @available(iOS 16.0, *)
+    static func tagEreignis(_ auswahl: FamilyActivitySelection, minuten: Int) -> DeviceActivityEvent {
+        let schwelle = DateComponents(hour: minuten / 60, minute: minuten % 60)
+        if #available(iOS 17.4, *) {
+            // Nutzung SEIT TAGESBEGINN: Neue Minuten heben nur die Schwelle.
+            return DeviceActivityEvent(
+                applications: auswahl.applicationTokens,
+                categories: auswahl.categoryTokens,
+                webDomains: auswahl.webDomainTokens,
+                threshold: schwelle,
+                includesPastActivity: true
+            )
+        }
+        return DeviceActivityEvent(
+            applications: auswahl.applicationTokens,
+            categories: auswahl.categoryTokens,
+            webDomains: auswahl.webDomainTokens,
+            threshold: schwelle
+        )
+    }
+
+    /// Von der App bei jedem Öffnen: Freiminuten und heutiger Zusatz.
+    @available(iOS 16.0, *)
+    public static func setzeTagesbudget(werktag: Int, wochenende: Int, zusatz: Int, tag: String) {
+        budgetWerktag = max(0, werktag)
+        budgetWochenende = max(0, wochenende)
+        budgetZusatz = max(0, zusatz)
+        budgetZusatzTag = tag
+        budgetAktiv = true
+        starteTagesbudget()
+    }
+
+    /// Meldet das Zählfenster bei Apple an — nur, wenn sich etwas geändert
+    /// hat (neuer Tag, andere Schwelle, nicht angemeldet) oder `erzwingen`.
+    @available(iOS 16.0, *)
+    public static func starteTagesbudget(erzwingen: Bool = false, now: Date = Date()) {
+        let center = DeviceActivityCenter()
+        let heute = heuteText(now)
+        var neu = erzwingen
+        if budgetTag != heute {
+            budgetTag = heute
+            budgetErschoepft = false
+            budgetVerbraucht = 0
+            budgetSchwelle = 0
+            neu = true
+        }
+        guard budgetLaeuft, let auswahl = zaehlAuswahl else {
+            center.stopMonitoring([tagName])
+            applyShield()
+            return
+        }
+        let schwelle = budgetHeute(now: now)
+        if !neu && schwelle == budgetSchwelle && center.activities.contains(tagName) {
+            applyShield()
+            return
+        }
+        // Mehr Minuten: wieder offen, bis Apple die neue Schwelle meldet
+        // (ab iOS 17.4 sofort, falls schon darüber). Weniger: bleibt zu.
+        if schwelle > budgetSchwelle { budgetErschoepft = false }
+        budgetSchwelle = schwelle
+
+        // Vor iOS 17.4 zählt ein neues Fenster ab jetzt: Schwellen um das
+        // schon Genutzte kürzen.
+        var basis = budgetVerbraucht
+        if #available(iOS 17.4, *) { basis = 0 }
+
+        let ohneLimit = schwelle >= ohneLimitMinuten
+        var ereignisse: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
+        if schwelle <= 0 {
+            budgetErschoepft = true
+        } else if !ohneLimit {
+            if schwelle - basis <= 0 {
+                budgetErschoepft = true
+            } else {
+                ereignisse[DeviceActivityEvent.Name(tagEndePrefix + String(schwelle))] =
+                    tagEreignis(auswahl, minuten: schwelle - basis)
+            }
+        }
+        // Zwischenstände für die Anzeige, höchstens etwa 40.
+        let obergrenze = min(ohneLimit ? 720 : schwelle, 720)
+        let schritt = max(5, ((obergrenze + 39) / 40 + 4) / 5 * 5)
+        if obergrenze > schritt {
+            for m in stride(from: schritt, to: obergrenze, by: schritt) where m > basis {
+                ereignisse[DeviceActivityEvent.Name(tagSchrittPrefix + String(m))] =
+                    tagEreignis(auswahl, minuten: m - basis)
+            }
+        }
+
+        // Auch ohne Ereignisse (0 Minuten) anmelden: Der Tageswechsel um
+        // Mitternacht kommt über intervalDidStart.
+        let zeitplan = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0, second: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59, second: 59),
+            repeats: true
+        )
+        center.stopMonitoring([tagName])
+        do {
+            try center.startMonitoring(tagName, during: zeitplan, events: ereignisse)
+        } catch {
+            // Die App versucht es beim nächsten Öffnen erneut.
+        }
+        applyShield()
+    }
+
+    /// Aus der Erweiterung: neuer Tag (oder Anmeldung mitten am Tag).
+    /// `starteTagesbudget` setzt `budgetTag` VOR dem Anmelden — ruft iOS
+    /// dabei erneut intervalDidStart, wird nur noch die Sperre gestellt.
+    @available(iOS 16.0, *)
+    public static func tagBeginnt(now: Date = Date()) {
+        if budgetAktiv && budgetTag != heuteText(now) {
+            starteTagesbudget(now: now)
+        } else {
+            applyShield()
+        }
+    }
+
+    /// Aus der Erweiterung: Schwelle oder Zwischenstand erreicht.
+    @available(iOS 16.0, *)
+    public static func tagSchwelleErreicht(_ name: DeviceActivityEvent.Name, now: Date = Date()) {
+        let heute = heuteText(now)
+        if budgetTag != heute {
+            budgetTag = heute
+            budgetErschoepft = false
+            budgetVerbraucht = 0
+        }
+        let roh = name.rawValue
+        if roh.hasPrefix(tagEndePrefix), let schwelle = Int(roh.dropFirst(tagEndePrefix.count)) {
+            guard schwelle == budgetSchwelle else { return }
+            budgetErschoepft = true
+            budgetVerbraucht = max(budgetVerbraucht, schwelle)
+            applyShield()
+            return
+        }
+        if roh.hasPrefix(tagSchrittPrefix), let m = Int(roh.dropFirst(tagSchrittPrefix.count)) {
+            budgetVerbraucht = max(budgetVerbraucht, m)
+        }
+    }
+
+    /// Notentsperrung mit dem Eltern-Code: `minuten` lang offen, nach Uhr,
+    /// auch in der Ruhezeit. Danach sperrt die Erweiterung wieder
+    /// (`startMonitoring(until:)` → `reshieldIfExpired`).
+    @available(iOS 16.0, *)
+    public static func pausieren(minuten: Int, now: Date = Date()) {
+        guard minuten > 0 else { return }
+        let bis = now.addingTimeInterval(TimeInterval(minuten * 60))
+        notfallBis = max(notfallBis ?? now, bis)
+        let ablauf = max(releasedUntil ?? now, bis)
+        releasedUntil = ablauf
+        startMonitoring(until: ablauf)
+        applyShield()
+    }
+
+    @available(iOS 16.0, *)
+    public static func beendeTagesbudget() {
+        budgetAktiv = false
+        budgetErschoepft = false
+        budgetVerbraucht = 0
+        budgetSchwelle = 0
+        notfallBis = nil
+        DeviceActivityCenter().stopMonitoring([tagName])
     }
 }

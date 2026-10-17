@@ -624,6 +624,7 @@ export type Database = {
           screen_time_auto_release: boolean
           screen_time_base_minutes: number
           ruhezeit_bis: number | null
+          freiminuten_wochenende: number | null
           reise_bonus_minuten: number
           ruhezeit_von: number | null
           screen_time_managed: boolean
@@ -650,6 +651,7 @@ export type Database = {
           screen_time_auto_release?: boolean
           screen_time_base_minutes?: number
           ruhezeit_bis?: number | null
+          freiminuten_wochenende?: number | null
           reise_bonus_minuten?: number
           ruhezeit_von?: number | null
           screen_time_managed?: boolean
@@ -676,6 +678,7 @@ export type Database = {
           screen_time_auto_release?: boolean
           screen_time_base_minutes?: number
           ruhezeit_bis?: number | null
+          freiminuten_wochenende?: number | null
           reise_bonus_minuten?: number
           ruhezeit_von?: number | null
           screen_time_managed?: boolean
@@ -1086,6 +1089,84 @@ export type Database = {
           created_at?: string
           id?: string
           status?: string
+          zweck?: string
+        }
+        Relationships: []
+      }
+      handyzeit_extra: {
+        Row: {
+          child_id: string
+          created_at: string
+          gegeben_von: string | null
+          id: string
+          minuten: number
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          gegeben_von?: string | null
+          id?: string
+          minuten: number
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          gegeben_von?: string | null
+          id?: string
+          minuten?: number
+        }
+        Relationships: []
+      }
+      handyzeit_stand: {
+        Row: {
+          aktualisiert: string
+          aufgebraucht: boolean
+          budget: number | null
+          child_id: string
+          genutzt: number
+          tag: string
+        }
+        Insert: {
+          aktualisiert?: string
+          aufgebraucht?: boolean
+          budget?: number | null
+          child_id: string
+          genutzt?: number
+          tag: string
+        }
+        Update: {
+          aktualisiert?: string
+          aufgebraucht?: boolean
+          budget?: number | null
+          child_id?: string
+          genutzt?: number
+          tag?: string
+        }
+        Relationships: []
+      }
+      notfall_entsperrungen: {
+        Row: {
+          child_id: string
+          created_at: string
+          genutzt_am: string
+          id: string
+          minuten: number | null
+          zweck: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          genutzt_am?: string
+          id?: string
+          minuten?: number | null
+          zweck: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          genutzt_am?: string
+          id?: string
+          minuten?: number | null
           zweck?: string
         }
         Relationships: []
@@ -2788,6 +2869,26 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      extrazeit_geben: {
+        Args: { p_child: string; p_minuten: number }
+        Returns: string
+      }
+      handyzeit_stand_melden: {
+        Args: { p_aufgebraucht: boolean; p_budget: number; p_genutzt: number; p_tag: string }
+        Returns: undefined
+      }
+      notfall_melden: {
+        Args: { p_genutzt_am: string; p_minuten: number; p_zweck: string }
+        Returns: undefined
+      }
+      notfall_schluessel_holen: {
+        Args: never
+        Returns: string
+      }
+      notfallcode_anzeigen: {
+        Args: { p_child: string }
+        Returns: { code: string; gueltig_bis: string }[]
       }
       inhalt_melden: {
         Args: {

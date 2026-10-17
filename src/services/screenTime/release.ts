@@ -1,7 +1,13 @@
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { ScreenTime } from '@/services/screenTime/plugin';
+import { ScreenTime, kannTagesbudget } from '@/services/screenTime/plugin';
 import type { ShieldStatus } from '@/services/screenTime/types';
+import { DEFAULT_BASE_MINUTES } from '@/config/childSettings';
+import { tagSchluessel, tagesbeginn, zusatzHeute } from '@/lib/handyzeit';
+import { notfallMeldungenSenden } from '@/services/screenTime/notfall';
+
+/** Ereignis an die Kind-Karte: Stand auf dem Gerät hat sich geändert. */
+export const HANDYZEIT_GEAENDERT = 'lernzeit:handyzeit';
 
 /**
  * Das Einlösen von Bildschirmzeit auf dem Gerät des Kindes — ohne React,
@@ -175,6 +181,17 @@ export async function gleicheFreigabenAb(childId: string): Promise<void> {
     (freigaben ?? []) as Freigabe[],
   );
 
+  // Tagesbudget (Build ab 17.10.2026): Genehmigungen nur in der Datenbank
+  // buchen, dann die Summe von heute ans Gerät — absolut, nie obendrauf.
+  if (kannTagesbudget(status)) {
+    for (const genehmigung of offen) {
+      await bucheEin(genehmigung);
+    }
+    await gleicheTagesbudgetAb(childId);
+    void notfallMeldungenSenden().catch(() => undefined);
+    return;
+  }
+
   for (const genehmigung of offen) {
     await loeseEin(genehmigung);
   }
@@ -189,6 +206,63 @@ export async function gleicheFreigabenAb(childId: string): Promise<void> {
       }
     }
   }
+}
+
+/**
+ * Tagesbudget: Freiminuten (Werktag/Wochenende) und alles, was heute seit
+ * 0 Uhr Ortszeit dazukam (genehmigt + extra vom Elternteil), ans Gerät geben
+ * und den Stand für die Eltern melden. Ohne Netz bleibt der Gerätestand.
+ */
+export async function gleicheTagesbudgetAb(childId: string, jetzt: Date = new Date()): Promise<ShieldStatus | null> {
+  const ab = tagesbeginn(jetzt).toISOString();
+  const [einstellungen, genehmigt, extra] = await Promise.all([
+    supabase.from('child_settings').select('screen_time_base_minutes, freiminuten_wochenende')
+      .eq('child_id', childId).maybeSingle(),
+    supabase.from('screen_time_unlocks').select('minutes, created_at')
+      .eq('child_id', childId).eq('source', 'parent_approval').gte('created_at', ab),
+    supabase.from('handyzeit_extra').select('minuten, created_at')
+      .eq('child_id', childId).gte('created_at', ab),
+  ]);
+  if (einstellungen.error || genehmigt.error || extra.error) return null;
+
+  const werktag = einstellungen.data?.screen_time_base_minutes ?? DEFAULT_BASE_MINUTES;
+  const wochenende = einstellungen.data?.freiminuten_wochenende ?? werktag;
+  const zusatz = zusatzHeute([
+    ...(genehmigt.data ?? []).map((z) => ({ minuten: z.minutes, zeit: z.created_at as string })),
+    ...(extra.data ?? []).map((z) => ({ minuten: z.minuten, zeit: z.created_at })),
+  ], jetzt);
+
+  const status = await ScreenTime.setTagesbudget({ werktag, wochenende, zusatz, tag: tagSchluessel(jetzt) });
+  await meldeHandyzeit(status, jetzt);
+  try { window.dispatchEvent(new Event(HANDYZEIT_GEAENDERT)); } catch { /* kein Fenster */ }
+  return status;
+}
+
+/** Stand für die Eltern (eine Zeile je Kind, kein Verlauf). Fehler egal. */
+export async function meldeHandyzeit(status: ShieldStatus, jetzt: Date = new Date()): Promise<void> {
+  if (!status.managing) return;
+  try {
+    await supabase.rpc('handyzeit_stand_melden', {
+      p_tag: tagSchluessel(jetzt),
+      p_genutzt: status.genutzt ?? 0,
+      p_budget: status.tagesbudget ?? (null as unknown as number),
+      p_aufgebraucht: status.aufgebraucht ?? false,
+    });
+  } catch { /* beim nächsten Öffnen */ }
+}
+
+/**
+ * Tagesbudget: Genehmigung nur buchen. Das Gerät bekommt danach die Summe
+ * (gleicheTagesbudgetAb) — schlägt das fehl, holt es der nächste Abgleich
+ * nach, nichts geht verloren.
+ */
+async function bucheEin(genehmigung: OffeneGenehmigung): Promise<void> {
+  const { data, error } = await supabase.rpc('claim_approved_time', { p_request_id: genehmigung.id });
+  const erteilt = (data as ErteilteFreigabe[] | null)?.[0];
+  if (error || !erteilt) return;
+  toast.success(`${erteilt.minutes} Minuten mehr Handyzeit`, {
+    description: 'Sie zählen nur, wenn du das Handy nutzt.',
+  });
 }
 
 /** Eine Genehmigung einlösen: erst in der Datenbank buchen, dann entsperren. */

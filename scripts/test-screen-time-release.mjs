@@ -7,6 +7,8 @@
  *   3. Eine laufende Freigabe wird nur dann nachgeholt, wenn das Geraet
  *      wirklich keine kennt. Sonst verdoppelt sich die Zeit, weil
  *      `releaseFor` verlaengert statt ersetzt.
+ *   4. Tagesbudget (17.10.2026): Genehmigungen werden nur gebucht, das
+ *      Geraet bekommt die Summe von heute — absolut, nie obendrauf.
  *
  * Warum ein eigenes Skript: Wie bei scripts/test-analytics.mjs gibt es fuer
  * `src/` keinen Unit-Runner. Diese drei Punkte sind aber genau die, bei denen
@@ -26,13 +28,15 @@ const stubs = {
     build.onResolve({ filter: /^@\/lib\/supabase$/ }, () => ({ path: 'supabase', namespace: 'stub' }));
     build.onResolve({ filter: /^@\/services\/screenTime\/plugin$/ }, () => ({ path: 'plugin', namespace: 'stub' }));
     build.onResolve({ filter: /^sonner$/ }, () => ({ path: 'sonner', namespace: 'stub' }));
+    build.onResolve({ filter: /^@\/services\/screenTime\/notfall$/ }, () => ({ path: 'notfall', namespace: 'stub' }));
     build.onLoad({ filter: /.*/, namespace: 'stub' }, ({ path }) => ({
       loader: 'js',
       contents: {
         // Lazy: Die Ersatzobjekte stehen erst kurz vor jedem Testfall fest,
         // das Modul wird aber einmal am Anfang geladen.
         supabase: 'export const supabase = new Proxy({}, { get: (_, k) => globalThis.__sb[k] });',
-        plugin: 'export const ScreenTime = new Proxy({}, { get: (_, k) => globalThis.__st[k] }); export const screenTimeSupportedPlatform = () => true;',
+        plugin: 'export const ScreenTime = new Proxy({}, { get: (_, k) => globalThis.__st[k] }); export const screenTimeSupportedPlatform = () => true; export const kannTagesbudget = (s) => Boolean(s && "budgetEingestellt" in s);',
+        notfall: 'export const notfallMeldungenSenden = async () => {};',
         sonner: 'export const toast = { success: (...a) => globalThis.__toasts.push(a) };',
       }[path],
     }));
@@ -57,19 +61,21 @@ const pruefe = (bedingung, text) => {
 };
 
 /** Baut einen Supabase-Ersatz, der feste Zeilen liefert und Aufrufe mitschreibt. */
-function baueSupabase({ genehmigt = [], freigaben = [], antwort }) {
+function baueSupabase({ genehmigt = [], freigaben = [], antwort, tabellen = {} }) {
   const aufrufe = [];
   const kette = (zeilen) => {
     const selbst = {
       select: () => selbst, eq: () => selbst, gte: () => selbst,
       order: () => Promise.resolve({ data: zeilen }),
-      then: (aufloesen) => Promise.resolve({ data: zeilen }).then(aufloesen),
+      maybeSingle: () => Promise.resolve({ data: Array.isArray(zeilen) ? zeilen[0] ?? null : zeilen, error: null }),
+      then: (aufloesen) => Promise.resolve({ data: zeilen, error: null }).then(aufloesen),
     };
     return selbst;
   };
   return {
     aufrufe,
-    from: (tabelle) => kette(tabelle === 'screen_time_requests' ? genehmigt : freigaben),
+    from: (tabelle) => kette(tabelle in tabellen ? tabellen[tabelle]
+      : tabelle === 'screen_time_requests' ? genehmigt : freigaben),
     rpc: async (name, argumente) => {
       aufrufe.push({ name, ...argumente });
       return antwort({ name, ...argumente });
@@ -350,5 +356,57 @@ async function laufGrundzeit({ antwort, releaseWirft = false, releasedUntilNachh
 }
 
 await rm(dir, { recursive: true, force: true });
+
+// ── 5. Tagesbudget (17.10.2026) ──────────────────────────────────────────
+async function laufBudget({ genehmigt = [], freigaben = [], tabellen = {}, antwort = erfolg }) {
+  globalThis.__toasts = [];
+  const releases = [];
+  const budgets = [];
+  globalThis.__st = {
+    getStatus: async () => ({
+      authorization: 'approved', managing: true, shieldAll: true, shieldedCount: 0,
+      trialUntil: null, releasedUntil: null, budgetEingestellt: true, tagesbudget: 30, genutzt: 0, aufgebraucht: false,
+    }),
+    releaseFor: async ({ minutes }) => { releases.push(minutes); return {}; },
+    setTagesbudget: async (werte) => {
+      budgets.push(werte);
+      return { managing: true, tagesbudget: werte.werktag + werte.zusatz, genutzt: 10, aufgebraucht: false };
+    },
+  };
+  const sb = baueSupabase({ genehmigt, freigaben, antwort, tabellen });
+  globalThis.__sb = sb;
+  await gleicheFreigabenAb('kind-1');
+  return { releases, budgets, aufrufe: sb.aufrufe, toasts: globalThis.__toasts };
+}
+
+{
+  const jetzt = new Date();
+  const gestern = new Date(jetzt); gestern.setDate(gestern.getDate() - 1); gestern.setHours(23, 0, 0, 0);
+  const { releases, budgets, aufrufe, toasts } = await laufBudget({
+    genehmigt: [{ id: 'a', requested_minutes: 15 }],
+    tabellen: {
+      child_settings: [{ screen_time_base_minutes: 40, freiminuten_wochenende: 90 }],
+      screen_time_unlocks: [{ minutes: 15, created_at: jetzt.toISOString() }, { minutes: 20, created_at: gestern.toISOString() }],
+      handyzeit_extra: [{ minuten: 30, created_at: jetzt.toISOString() }],
+    },
+  });
+  pruefe(aufrufe[0]?.name === 'claim_approved_time', 'Tagesbudget: Genehmigung wird gebucht');
+  pruefe(releases.length === 0, 'Tagesbudget: kein releaseFor (kein Zaehlen obendrauf)');
+  pruefe(budgets.length === 1 && budgets[0].werktag === 40 && budgets[0].wochenende === 90,
+    'Tagesbudget: Freiminuten werktags/Wochenende ans Geraet');
+  pruefe(budgets[0]?.zusatz === 45, 'Tagesbudget: Zusatz = heute genehmigt + extra, gestern zaehlt nicht');
+  pruefe(/^\d{4}-\d{2}-\d{2}$/.test(budgets[0]?.tag ?? ''), 'Tagesbudget: Tag in Ortszeit mitgegeben');
+  const meldung = aufrufe.find((a) => a.name === 'handyzeit_stand_melden');
+  pruefe(meldung?.p_budget === 85 && meldung?.p_genutzt === 10, 'Tagesbudget: Stand wird fuer die Eltern gemeldet');
+  pruefe(toasts.length === 1, 'Tagesbudget: das Kind erfaehrt von den neuen Minuten');
+}
+
+{
+  const { budgets } = await laufBudget({
+    tabellen: { child_settings: [{ screen_time_base_minutes: 25, freiminuten_wochenende: null }], screen_time_unlocks: [], handyzeit_extra: [] },
+  });
+  pruefe(budgets[0]?.wochenende === 25 && budgets[0]?.zusatz === 0, 'Tagesbudget: ohne Wochenend-Wert gilt werktags, ohne Zusatz 0');
+}
+
 console.log(fehler === 0 ? '\nAlle Pruefungen bestanden.' : `\n${fehler} Pruefung(en) fehlgeschlagen.`);
 process.exit(fehler === 0 ? 0 : 1);
