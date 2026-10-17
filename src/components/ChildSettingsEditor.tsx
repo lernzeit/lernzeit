@@ -129,6 +129,10 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
   // Freiminuten wirken nur mit der LernZeit-Sperre, die vorerst nur freigeschaltete Kinder haben
   const handysperreFreigaben = useHandysperreFreigaben();
   const handysperreAn = !!handysperreFreigaben?.has(childId);
+  // Freiminuten und Handysperre erst, wenn sie auf dem Kinder-Handy läuft
+  // (meldet das Gerät über set_screen_time_managed). So bleibt es bei Familien
+  // mit Android oder Apples Bildschirmzeit unsichtbar, auch wenn freigeschaltet.
+  const [sperreEingerichtet, setSperreEingerichtet] = useState(false);
   const [visibility, setVisibility] = useState<SubjectVisibility>({});
   const [priorities, setPriorities] = useState<SubjectPriority>({});
   const [grade, setGrade] = useState<number>(currentGrade || 1);
@@ -169,6 +173,8 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
         .maybeSingle();
 
       if (settingsError) throw settingsError;
+
+      setSperreEingerichtet(Boolean((settingsData as { screen_time_managed?: boolean } | null)?.screen_time_managed));
 
       if (settingsData) {
         setSettings({
@@ -447,7 +453,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           <Zeile titel="Am Wochenende" hinweis="höchstens">
             <Stepper label="Am Wochenende" wert={settings.weekend_max_minutes} min={5} max={180} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('weekend_max_minutes', v)} />
           </Zeile>
-          {handysperreAn && (
+          {handysperreAn && sperreEingerichtet && (
           <>
           <Zeile titel="Freiminuten werktags" hinweis="Handyzeit ohne Lernen">
             <Stepper label="Freiminuten werktags" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
@@ -462,8 +468,16 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
 
       {handysperreAn && (
         <Gruppe titel="Handysperre">
-          <HandysperreHeute childId={childId} childName={childName} />
-          <RuhezeitEinstellung childId={childId} />
+          {sperreEingerichtet ? (
+            <>
+              <HandysperreHeute childId={childId} childName={childName} />
+              <RuhezeitEinstellung childId={childId} />
+            </>
+          ) : (
+            <Zeile titel="LernZeit-Handysperre" hinweis={`Nur iPhone: auf dem Handy von ${childName} unter Einstellungen → „Handy sperren“ einrichten.`}>
+              <span />
+            </Zeile>
+          )}
         </Gruppe>
       )}
 

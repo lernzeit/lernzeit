@@ -189,6 +189,11 @@ Supabase-Secrets gelöscht werden.
 - Elterncode statt Passwort: 6 Ziffern, Schritt 30 Min., HOTP/SHA-256 in SQL
   (`notfallcode_berechnen`) und TS (`lib/notfallcode.ts`, Test mit festen SQL-Werten in `npm run test:reise`),
   Prüfung ohne Internet, Nutzung → `notfall_entsperrungen` + Push `notfall_genutzt`.
+- Eltern sehen Freiminuten und den Bereich „Handysperre“ erst, wenn das Kinder-Handy die Sperre meldet
+  (`child_settings.screen_time_managed`, gesetzt bei jedem Abgleich); vorher nur eine Zeile „Nur iPhone: …
+  einrichten“. Kein Hinweis mehr auf „Heute“. Freischalten für alle geht deshalb ohne neuen Build nur per
+  Datenbank (`handysperre_freigaben`, ggf. Trigger für neue Kinder) – erst, wenn die meisten die App-Version
+  mit Tagesbudget haben (ältere zeigen noch „Freiminuten starten“).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

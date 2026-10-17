@@ -67,9 +67,6 @@ export function ShieldSetupNotice({ parentId }: ShieldSetupNoticeProps) {
     return () => { abgebrochen = true; };
   }, [parentId]);
 
-  // Nur zeigen, wo noch nichts eingerichtet ist. Wo die Sperre läuft, ist der
-  // Hinweis überflüssig — Eltern merken es daran, dass Anfragen kommen.
-  const offen = staende.filter((stand) => !stand.verwaltet && !!freigaben?.has(stand.childId));
   // Kinder, auf deren Handy die alte LernZeit-Sperre noch läuft, die aber
   // nicht freigeschaltet sind: Mit dem neuen Build hebt LernZeit die Sperre
   // dort auf (useHandysperreAbschalten). Eltern sollen das vorher wissen.
@@ -92,18 +89,9 @@ export function ShieldSetupNotice({ parentId }: ShieldSetupNoticeProps) {
     );
   }
 
-  if (offen.length === 0) return null;
-
-  // Kurz (Rückmeldung 10.10.2026: überall zu viel Text)
-  return (
-    <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 space-y-1">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <Smartphone className="h-4 w-4 text-blue-600" />
-        Handysperre einrichten
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Auf dem Handy von {offen.map((stand) => stand.name).join(' und ')}: LernZeit → Einstellungen → „Handy sperren“.
-      </p>
-    </div>
-  );
+  // „Handysperre einrichten“ steht seit 17.10.2026 nicht mehr auf „Heute“,
+  // sondern als eine Zeile unter Regeln (ChildSettingsEditor): Wird die
+  // Sperre für alle freigeschaltet, sähen sonst auch Familien mit Android
+  // oder Apples Bildschirmzeit täglich eine Aufforderung.
+  return null;
 }

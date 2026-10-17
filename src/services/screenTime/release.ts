@@ -242,6 +242,8 @@ export async function gleicheTagesbudgetAb(childId: string, jetzt: Date = new Da
 export async function meldeHandyzeit(status: ShieldStatus, jetzt: Date = new Date()): Promise<void> {
   if (!status.managing) return;
   try {
+    // Hält auch den Eltern-Stand „eingerichtet“ aktuell (ChildSettingsEditor).
+    await supabase.rpc('set_screen_time_managed', { ist_verwaltet: true });
     await supabase.rpc('handyzeit_stand_melden', {
       p_tag: tagSchluessel(jetzt),
       p_genutzt: status.genutzt ?? 0,

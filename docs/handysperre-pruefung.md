@@ -50,6 +50,15 @@ Erst der Codemagic-Build zeigt Typfehler.
 - [ ] Nach Mitternacht (oder am nächsten Morgen): Handy offen, Stand 0, Wochenend-Wert am Samstag.
 - [ ] iOS-Version von Klaras Handy notieren (vor 17.4 zählt ein neu angemeldetes Fenster ab dann, mit Abzug des schon Gezählten).
 
+- [ ] Eltern-Handy: Unter Kinder → Regeln steht vor der Einrichtung nur „Nur iPhone: … einrichten“; nach
+      dem ersten Öffnen von LernZeit auf Klaras Handy (Sperre läuft) erscheinen Freiminuten und Handysperre.
+
+## Für alle freischalten (nach bestandenem Test, ohne neuen Build)
+
+1. Warten, bis die App-Version mit Tagesbudget im App Store ist und die meisten sie haben.
+2. Kinder in `handysperre_freigaben` eintragen; für neue Kinder ein Trigger (Claude bitten).
+3. Eltern sehen danach nur eine Zeile unter Regeln, bis die Sperre auf dem iPhone des Kindes läuft.
+
 ## Auf Klaras Handy prüfen (Build vom 10.10.2026)
 
 - [x] Sperre aktiv: Telefonieren geht, LernZeit öffnet (10.10.2026).
