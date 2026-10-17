@@ -66,6 +66,7 @@ import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
 import { BaseTimeCard } from '@/components/screenTime/BaseTimeCard';
 import { useHandysperreAbschalten, useHandysperreFreigaben, useRuhezeitAbgleich } from '@/hooks/useHandysperre';
+import { useAppStandMelden } from '@/lib/appStand';
 
 interface UserProfileProps {
   user: any;
@@ -184,6 +185,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // Die Sperre liegt dort, und nur dort lässt sie sich öffnen.
   useScreenTimeRelease(user?.id, profile?.role === 'child' && handysperreAn);
   useRuhezeitAbgleich(user?.id, profile?.role === 'child' && handysperreAn);
+  // Für die Wortwahl der Mitteilungen (Klecksi statt Lernpflanze, lib/appStand.ts)
+  useAppStandMelden(user?.id, profile?.role === 'child');
 
   // Check for parent-child relationship
   const checkParentLink = async () => {

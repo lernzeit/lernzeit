@@ -59,7 +59,8 @@ Alles, was in der App steckt, soll für Nutzer und App Review erkennbar sein.
 - Die Werkbank `VITE_SCREENTIME_UI` ist im Store-Build aus (`codemagic.yaml`), in
   Ordnung.
 
-Vorschlag für die Review-Hinweise (Englisch, Apple liest die Hinweise):
+Vollständiger Text zum Einfügen (mit Tagesbudget und Elterncode, 17.10.2026):
+`docs/store-texte-2.1.0.md`, Abschnitt „Notes für App Review“. Erste Fassung:
 
 > LernZeit lets children earn screen time by solving school tasks; parents approve.
 > Seasonal: Advent calendar visible 1–26 December. Optional: a parent can enter a

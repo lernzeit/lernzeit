@@ -50,3 +50,48 @@ Klecksi ist da! Der kleine Tintenklecks begleitet dein Kind: Jede Runde malt ein
 - **Zeitpunkt:** Der Adventskalender erscheint erst ab 1.12. und braucht das Update auf dem Handy.
   Build bis Ende Oktober einreichen, damit er Anfang Dezember verteilt ist.
 - **Markenprüfung „Klecksi“** beim DPMA steht noch aus; der Name ist jetzt im Store-Eintrag sichtbar.
+
+## App Store Connect – „Notes“ für App Review (Englisch, Stand 17.10.2026)
+
+Unter „App-Review-Informationen“ → „Notizen“ einfügen. Passwörter **nicht** hier im
+Repo: Eltern-Konto in die Felder „Anmeldeinformationen“, die Passwörter der beiden
+Kinder an den markierten Stellen von Hand einsetzen.
+
+```
+LernZeit is a learning app for school children: children solve short school tasks and
+earn screen time, a parent approves it on their own device.
+
+ACCOUNTS
+- Parent: apple.review.parent@lernzeit.app (see Sign-In Information)
+- Child 1: username "applereviewkind", password: [PASSWORT KIND 1]
+- Child 2: username "applereviewkind2", password: [PASSWORT KIND 2]
+Children sign in on "Anmelden" (sign in) with the username in "E-Mail oder Benutzername".
+
+DEVICE LOCK (Family Controls, iPhone/iPad only)
+The device lock is enabled only for accounts on an allow-list while we finish testing.
+Both review child accounts are on that list.
+- Apple requires the child device to be signed in with a child Apple Account in Family
+  Sharing (FamilyControls authorization .child).
+- Setup on the child device: log in as a child > Einstellungen (Settings) >
+  Bildschirmzeit > "Handy sperren" > "Sperre einrichten". iOS asks for the Screen Time
+  passcode, then "Was zählt als Handyzeit?" (what counts as screen time): choose
+  "All Apps & Categories".
+- Behaviour: like Screen Time app limits. The phone stays usable until the minutes of
+  the day are used up (daily free minutes + time the child earned and the parent
+  approved). Only active use of apps counts. Phone calls and LernZeit always stay open.
+  Optional quiet hours.
+- Parent device: Kinder (Children) > child > Regeln (Rules) > Handysperre: usage today,
+  "+15 Min.", "+30 Min.", "Heute ohne Limit" (no limit today) and the parent code.
+- Parent code ("Elterncode"): 6 digits, changes every 30 minutes, checked on the child
+  device without internet. It opens the phone for 15/30/60 minutes or allows changes
+  to the lock. Every use is reported to the parent.
+- Any change that loosens the lock on the child device needs approval on the parent
+  device (push notification, card on "Heute") or the parent code.
+
+OTHER
+- Seasonal: Advent calendar is visible from 1 to 26 December only.
+- Optional referral code at sign-up (parents): 2 months of Premium instead of 1.
+- AI explanations and the AI tutor are labelled "KI" (AI). Every AI tutor answer and
+  every forum post or comment by others has a "Melden" (report) button; reports are
+  reviewed within 24 hours.
+```

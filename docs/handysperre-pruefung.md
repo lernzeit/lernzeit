@@ -42,7 +42,7 @@ Erst der Codemagic-Build zeigt Typfehler.
 ## Auf Klaras Handy prüfen (Build ab 17.10.2026)
 
 - [ ] Nach dem Update LernZeit öffnen: Karte „Deine Handyzeit heute“ zeigt „noch X Min.“ ohne Knopf, Handy ist offen.
-- [ ] Fehlt „Was zählt als Handyzeit?“: Karte sagt es; Einstellungen → Handy sperren → wählen („Alle Apps & Kategorien“, LernZeit abwählen).
+- [ ] Fehlt „Was zählt als Handyzeit?“: Karte sagt es; Einstellungen → Bildschirmzeit → „Handy sperren“ → wählen („Alle Apps & Kategorien“, LernZeit abwählen).
 - [ ] Freiminuten auf 10 stellen, LernZeit auf Klaras Handy öffnen, 10 Min. eine andere App nutzen → Sperre kommt.
 - [ ] Handy 15 Min. liegen lassen → Stand ändert sich nicht.
 - [ ] Danach auf dem Eltern-Handy „+15 Min.“ → Klara bekommt Push, öffnet LernZeit → Handy wieder offen, Schwelle 25.

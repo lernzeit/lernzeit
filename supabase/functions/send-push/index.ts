@@ -310,6 +310,12 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       if (!childId || !streak) {
         return { skipped: true, reason: "missing_streak_or_child" };
       }
+      const { data: kindProfil } = await supabase
+        .from("profiles")
+        .select("app_stand, klecksi, grade")
+        .eq("id", childId)
+        .maybeSingle();
+      const stil = lerntageStil(kindProfil);
       const titles: Record<number, string> = {
         3: "🌱 3 Tage in Folge!",
         7: "🌼 Eine Woche: Deine Pflanze blüht!",
@@ -332,9 +338,11 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         300: "300 Tage am Stück lernen. Wow, einfach nur wow!",
         365: "Ein ganzes Jahr jeden Tag gelernt! Du bist ein absoluter Champion! 🏅",
       };
+      if (stil !== "pflanze") Object.assign(titles, MEILENSTEIN_TITEL);
+      if (stil !== "pflanze") Object.assign(messages, stil === "klecksi" ? MEILENSTEIN_KLECKSI : MEILENSTEIN_SACHLICH);
       return sendOneSignalPush({
         userIds: [childId],
-        title: titles[streak] || `🌳 ${streak} Tage in Folge!`,
+        title: titles[streak] || `${stil === "pflanze" ? "🌳" : "✨"} ${streak} Tage in Folge!`,
         message: messages[streak] || `Du lernst seit ${streak} Tagen in Folge. Mach weiter so!`,
         data: { type: "streak_milestone", streak },
       });
@@ -484,13 +492,90 @@ const STREAK_START_REMINDERS = [
   { title: "🎯 Weiter geht's!", message: "Ein Tag allein ist gut, zwei sind besser. Los geht's!" },
 ];
 
+// ── Lerntage-Wörter je App-Stand (17.10.2026) ───────────────────────────────
+// Alte App-Versionen zeigen die Lernpflanze, ab Stand 20261013 (profiles.
+// app_stand, gemeldet von src/lib/appStand.ts) Klecksi; Kinder ohne Klecksi
+// (profiles.klecksi, null = bis Klasse 6 an, wie src/lib/klecksiModus.ts)
+// bekommen sachliche Sätze mit Tropfen. Klecksi leidet nie: blass, trocknet.
+type LerntageStil = "pflanze" | "klecksi" | "sachlich";
+const KLECKSI_LERNTAGE_AB = 20261013;
+
+function lerntageStil(
+  p: { app_stand?: number | null; klecksi?: string | null; grade?: number | null } | null,
+): LerntageStil {
+  if (!p?.app_stand || p.app_stand < KLECKSI_LERNTAGE_AB) return "pflanze";
+  const an = p.klecksi === "an" ? true : p.klecksi === "aus" ? false : (p.grade ?? 1) < 7;
+  return an ? "klecksi" : "sachlich";
+}
+
+const MEILENSTEIN_TITEL: Record<number, string> = {
+  3: "✨ 3 Tage in Folge!",
+  7: "✨ Eine Woche!",
+  14: "🌟 2 Wochen!",
+  30: "🏆 30 Tage!",
+};
+const MEILENSTEIN_KLECKSI: Record<number, string> = {
+  3: "Drei Tage hintereinander gelernt. Klecksi ist gewachsen!",
+  7: "7 Tage am Stück. Klecksi ist jetzt ein großer Klecks!",
+  14: "14 Tage in Folge. Klecksi glänzt!",
+  30: "30 Tage durchgehalten. Klecksi strahlt – du bist großartig!",
+};
+const MEILENSTEIN_SACHLICH: Record<number, string> = {
+  3: "Drei Tage hintereinander gelernt. Dein Tropfen ist gewachsen!",
+  7: "7 Tage am Stück gelernt. Dein Tropfen wird größer!",
+  14: "14 Tage in Folge. Dein Tropfen glänzt!",
+  30: "30 Tage durchgehalten. Dein Tropfen strahlt!",
+};
+
+const LERNTAGE_PAUSE: Record<Exclude<LerntageStil, "pflanze">, { blass: [string, string]; trocknet: [string, string] }> = {
+  klecksi: {
+    blass: ["💧 Klecksi wird blass", "Eine Runde heute, dann leuchtet er wieder."],
+    trocknet: ["💧 Klecksi trocknet", "Heute noch eine Runde, dann bleiben deine Tage in Folge erhalten."],
+  },
+  sachlich: {
+    blass: ["💧 Deine Lerntage warten", "Eine Runde heute, dann geht deine Reihe weiter."],
+    trocknet: ["💧 Deine Lerntage", "Heute noch eine Runde, dann bleiben deine Tage in Folge erhalten."],
+  },
+};
+
+// Gleiche Länge und Reihenfolge wie oben, damit dasselbe Kind am selben Tag
+// dieselbe Variante bekommt. Ersetzt sind nur die Sätze mit der Pflanze.
+const STREAK_REMINDERS_NACH_STIL: Record<LerntageStil, typeof STREAK_REMINDERS> = {
+  pflanze: STREAK_REMINDERS,
+  klecksi: [
+    { title: (_s: number) => `✨ Klecksi wartet`, message: (s: number) => `${s} Tage in Folge. Eine Runde heute, dann wächst er weiter!` },
+    ...STREAK_REMINDERS.slice(1, 4),
+    { title: (_s: number) => `💧 Nicht aufhören!`, message: (s: number) => `${s} Tage in Folge. Halte Klecksi heute frisch!` },
+    ...STREAK_REMINDERS.slice(5),
+  ],
+  sachlich: [
+    { title: (_s: number) => `📚 Deine Reihe wartet`, message: (s: number) => `${s} Tage in Folge. Lern heute, dann werden es ${s + 1}!` },
+    ...STREAK_REMINDERS.slice(1, 4),
+    { title: (_s: number) => `💧 Nicht aufhören!`, message: (s: number) => `${s} Tage in Folge. Eine Runde heute hält die Reihe!` },
+    ...STREAK_REMINDERS.slice(5),
+  ],
+};
+const STREAK_START_NACH_STIL: Record<LerntageStil, typeof STREAK_START_REMINDERS> = {
+  pflanze: STREAK_START_REMINDERS,
+  klecksi: [
+    { title: "✨ Tag 2 wartet!", message: "Gestern ging's los. Heute wird's Tag 2 – dann wächst Klecksi!" },
+    { title: "✨ Klein, aber oho!", message: "Deine Reihe hat gerade angefangen. Eine Runde heute, und sie wächst." },
+    ...STREAK_START_REMINDERS.slice(2),
+  ],
+  sachlich: [
+    { title: "✨ Tag 2 wartet!", message: "Gestern ging's los. Heute wird's Tag 2!" },
+    { title: "✨ Klein, aber oho!", message: "Deine Reihe hat gerade angefangen. Eine Runde heute, und sie wächst." },
+    ...STREAK_START_REMINDERS.slice(2),
+  ],
+};
+
 async function sendChildLearningReminders(berlinHour: number, force = false) {
   const today = new Date().toISOString().slice(0, 10);
 
   // All children whose preferred reminder hour matches now
   let query = supabase
     .from("profiles")
-    .select("id, name, learning_reminder_hour")
+    .select("id, name, learning_reminder_hour, app_stand, klecksi, grade")
     .eq("role", "child");
   if (!force) query = query.eq("learning_reminder_hour", berlinHour);
   const { data: children } = await query;
@@ -522,26 +607,31 @@ async function sendChildLearningReminders(berlinHour: number, force = false) {
     let message = "Du hast heute noch nicht gelernt. Sammel jetzt Bildschirmzeit!";
     let type = "child_learning_reminder";
     let isStreakPush = false;
+    const stil = lerntageStil(child);
     if (streakInfo.inactiveDays === 1 && streak > 0) {
-      title = "💧 Deine Lernpflanze hat Durst";
-      message = "Löse heute ein paar Aufgaben, damit sie weiter wächst!";
+      [title, message] = stil === "pflanze"
+        ? ["💧 Deine Lernpflanze hat Durst", "Löse heute ein paar Aufgaben, damit sie weiter wächst!"]
+        : LERNTAGE_PAUSE[stil].blass;
       type = "streak_dim";
       isStreakPush = true;
     } else if (streakInfo.inactiveDays === 2 && streak > 0) {
-      title = "🥀 Deine Lernpflanze welkt";
-      message = "Gieß sie wieder: Spiel eine Runde in der App und rette sie!";
+      [title, message] = stil === "pflanze"
+        ? ["🥀 Deine Lernpflanze welkt", "Gieß sie wieder: Spiel eine Runde in der App und rette sie!"]
+        : LERNTAGE_PAUSE[stil].trocknet;
       type = "streak_frozen";
       isStreakPush = true;
     } else if (streak >= 2) {
       const seed = `${child.id}-${today}`;
-      const idx = hashSeed(seed) % STREAK_REMINDERS.length;
-      const variant = STREAK_REMINDERS[idx];
+      const varianten = STREAK_REMINDERS_NACH_STIL[stil];
+      const idx = hashSeed(seed) % varianten.length;
+      const variant = varianten[idx];
       title = variant.title(streak);
       message = variant.message(streak);
     } else if (streak === 1) {
       const seed = `${child.id}-${today}`;
-      const idx = hashSeed(seed) % STREAK_START_REMINDERS.length;
-      const variant = STREAK_START_REMINDERS[idx];
+      const varianten = STREAK_START_NACH_STIL[stil];
+      const idx = hashSeed(seed) % varianten.length;
+      const variant = varianten[idx];
       title = variant.title;
       message = variant.message;
     } else {

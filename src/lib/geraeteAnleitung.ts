@@ -113,7 +113,7 @@ export function sperreNichtMoeglich(grund: SperreGrund | undefined, e: Endgeraet
       : 'Die Sperre gilt für das Handy des Kindes. Ein Elternteil richtet sie in der LernZeit-App auf dem iPhone oder iPad des Kindes ein.',
     schritte: [
       'LernZeit aus dem App Store laden und mit dem Konto des Kindes anmelden.',
-      'Dann: Einstellungen → „Handy sperren“.',
+      'Dann: Einstellungen → Bildschirmzeit → „Handy sperren“.',
     ],
     links: [],
   };

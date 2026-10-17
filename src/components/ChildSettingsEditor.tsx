@@ -480,7 +480,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               <RuhezeitEinstellung childId={childId} />
             </>
           ) : (
-            <Zeile titel="LernZeit-Handysperre" hinweis={`Auf dem iPhone von ${childName} unter Einstellungen → „Handy sperren“ einrichten.`}>
+            <Zeile titel="LernZeit-Handysperre" hinweis={`Auf dem iPhone von ${childName} unter Einstellungen → Bildschirmzeit → „Handy sperren“ einrichten.`}>
               <span />
             </Zeile>
           )}

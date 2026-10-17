@@ -2870,6 +2870,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      app_stand_melden: {
+        Args: { p_stand: number }
+        Returns: undefined
+      }
       extrazeit_geben: {
         Args: { p_child: string; p_minuten: number }
         Returns: string
