@@ -170,7 +170,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
           <CardDescription>{anleitung.text}</CardDescription>
         </CardHeader>
         <CardContent>
-          <SoGehtEs schritte={anleitung.schritte} links={anleitung.links} />
+          <SoGehtEs schritte={anleitung.schritte} links={Capacitor.isNativePlatform() ? [] : anleitung.links} />
         </CardContent>
       </Card>
     );

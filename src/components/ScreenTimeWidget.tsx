@@ -67,7 +67,8 @@ export function ScreenTimeWidget() {
           </div>
         )}
 
-        <SoGehtEs titel="So richtet ihr es ein" schritte={anleitung.schritte} links={anleitung.links} />
+        {/* In den Apps keine Links aus dem Kinderbereich heraus (Apple 1.3: nur hinter einer Eltern-Hürde) */}
+        <SoGehtEs titel="So richtet ihr es ein" schritte={anleitung.schritte} links={geraet.nativ ? [] : anleitung.links} />
 
         <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
