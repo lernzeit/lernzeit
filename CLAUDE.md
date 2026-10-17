@@ -90,8 +90,8 @@ Supabase-Secrets gelöscht werden.
   `gruen-hell`/`gruen-text`, `rotstift`, `karo` (tailwind), `.heft-karo`, `font-hand`.
   Keine Verläufe, Emoji nur bei Avatar und Stickern.
 - Kind: Zeit-Uhr, Lerntage in Folge als Klecksi (seit 13.10.2026, vorher Lernpflanze; Stufen in
-  `lib/klecksiLernstand.ts`, Kachel `child/LerntageKachel.tsx`; die Push-Texte von `send-push`
-  sprechen noch von der Pflanze, siehe „Klecksi und die Heftrand-Reise“), Fächer als Hefte mit eigener Farbe und Stickern
+  `lib/klecksiLernstand.ts`, Kachel `child/LerntageKachel.tsx`; Push-Texte je App-Stand, siehe
+  „Klecksi und die Heftrand-Reise“), Fächer als Hefte mit eigener Farbe und Stickern
   (Tabellen `kind_hefte`, `kind_sticker`). Sticker bei 5/5: Kind wählt selbst aus 56 (`sticker_darf_waehlen()`, `sticker_waehlen()`, Katalog = `STICKER` in `lib/hefte.ts`, nur Emoji bis Version 5), `sticker_vergeben()` (zufällig, nur die ersten 24) für alte App-Versionen. Konfetti bei 5/5 genau einmal (`triggerAllesRichtig`).
   Kind-Start (seit 05.10.2026): Uhr mit „Lernen starten“, Lernpläne, Tagesaufgabe,
   „Deine Erfolge“ (Lerntage-Kachel + `child/ErfolgeKachel.tsx`). Hefte nur auf der Fächer-Seite,
@@ -218,8 +218,8 @@ Supabase-Secrets gelöscht werden.
   trocken heißt matt, Risse, Augen zu, kleines Lächeln. Trocknet/trocken ist er oben passiv (steht
   still, grüßt nicht). Eine Runde, und er ist wieder farbig (Stufe 0, wächst neu). `Klecksi`-Prop
   `stand`, Kachel mit Tropfen-Variante für Kinder ohne Klecksi. Regeln mit Tests in
-  `npm run test:reise`. Noch offen: Push-Texte `send-push` (Pflanze/Durst/welkt) erst mit dem
-  App-Build anpassen, sonst lesen alte App-Versionen neue Wörter.
+  `npm run test:reise`. Push-Texte (`send-push`) richten sich nach `profiles.app_stand` (meldet die
+  App, `lib/appStand.ts`): vor 20261013 Lernpflanze, danach Klecksi, ohne Klecksi sachlich (Tropfen).
 - Berichtigung: Runde aus `review_queue` (`useBerichtigung`, LearningGame `mode='berichtigung'`),
   richtig = `is_retired`. Supabase-Anfragen ohne `await`/`.then()` werden nie abgeschickt.
 - DELETE über das Supabase-MCP wartet auf Bestätigung und läuft in eine Zeitüberschreitung.
