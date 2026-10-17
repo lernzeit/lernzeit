@@ -314,7 +314,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                     <dd>{status.tagesbudget != null
                       ? standText({ budget: status.tagesbudget, genutzt: status.genutzt ?? 0, aufgebraucht: Boolean(status.aufgebraucht) })
                       : <span className="text-destructive">zählt nicht – „Was zählt als Handyzeit?“ wählen</span>}</dd>
-                    <dt className="text-muted-foreground">Notfallcode</dt>
+                    <dt className="text-muted-foreground">Elterncode</dt>
                     <dd>{hatCode ? 'bereit' : 'fehlt noch'}</dd>
                   </>
                 ) : kannNutzung && (
@@ -381,13 +381,13 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
                         onClick={() =>
                           mitElternfreigabe(
                             'zaehlen',
-                            () => void fuehreAus('Notfallcode', async () => {
+                            () => void fuehreAus('Elterncode', async () => {
                               if (!(await notfallSchluesselHolen())) throw new Error('Bitte noch einmal auf dem Eltern-Handy erlauben.');
                             }),
                           )}
                       >
                         <KeyRound className="h-4 w-4 mr-2" />
-                        Notfallcode einrichten
+                        Elterncode einrichten
                       </Button>
                     )}
 

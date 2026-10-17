@@ -170,7 +170,7 @@ Supabase-Secrets gelöscht werden.
   (`hooks/useHandysperre.ts`). Kinder ohne Freischaltung, auf deren iPhone LernZeit noch sperrt,
   bekommen die Sperre beim ersten Start der neuen Version aufgehoben (`stopManaging`).
 - Änderungen an der Sperre auf dem Kinder-Handy erlaubt ein Elternteil auf dem eigenen Handy
-  (`geraet_freigaben`, Push `geraet_freigabe_neu`, Karte auf „Heute“); Notweg ist der Eltern-Code.
+  (`geraet_freigaben`, Push `geraet_freigabe_neu`, Karte auf „Heute“); Notweg ist der Elterncode.
 - Freie Zeit zählt nur nach Nutzung (Swift: `ScreenTimeShared.swift`, seit 17.10.2026 Tagesbudget,
   siehe unten; `freigeben`/`starteNutzung` nur noch für alte Wege). Ruhezeit:
   `child_settings.ruhezeit_von/_bis` (Minuten), Kinder-Handy übernimmt sie (`useRuhezeitAbgleich`).
@@ -185,8 +185,8 @@ Supabase-Secrets gelöscht werden.
   nie nach Uhr. Swift `lernzeit.tag` (täglich, `includesPastActivity`), App übergibt bei jedem Öffnen
   absolute Werte (`setTagesbudget`, `gleicheTagesbudgetAb` in `services/screenTime/release.ts`), meldet
   `handyzeit_stand`. „Was zählt als Handyzeit?“ ist Pflicht bei der Einrichtung. Eltern: Kinder → Regeln →
-  Handysperre (`parent/HandysperreHeute.tsx`: Stand, +15/+30, „Heute ohne Limit“, Notfallcode).
-- Eltern-Notfallcode statt Passwort: 6 Ziffern, Schritt 30 Min., HOTP/SHA-256 in SQL
+  Handysperre (`parent/HandysperreHeute.tsx`: Stand, +15/+30, „Heute ohne Limit“, Elterncode).
+- Elterncode statt Passwort: 6 Ziffern, Schritt 30 Min., HOTP/SHA-256 in SQL
   (`notfallcode_berechnen`) und TS (`lib/notfallcode.ts`, Test mit festen SQL-Werten in `npm run test:reise`),
   Prüfung ohne Internet, Nutzung → `notfall_entsperrungen` + Push `notfall_genutzt`.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.

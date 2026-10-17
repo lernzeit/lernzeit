@@ -13,14 +13,14 @@ import { HANDYZEIT_GEAENDERT } from '@/services/screenTime/release';
 const FEHLER: Record<'falsch' | 'gesperrt' | 'kein-schluessel', string> = {
   falsch: 'Der Code passt nicht. Bitte noch mal ablesen.',
   gesperrt: 'Zu viele falsche Versuche. In 15 Minuten geht es wieder.',
-  'kein-schluessel': 'Auf diesem Handy fehlt der Notfallcode noch. Einmal „Eltern-Handy fragen“, danach geht er.',
+  'kein-schluessel': 'Der Elterncode ist auf diesem Handy noch nicht eingerichtet. Einmal „Eltern-Handy fragen“, danach geht er.',
 };
 
 /** Hinweis, wo Eltern den Code finden. */
 export const CODE_ORT = 'Den Code sieht ein Elternteil in LernZeit unter Kinder → Regeln → Handysperre.';
 
 /**
- * Feld für den Eltern-Notfallcode. Prüft ohne Internet
+ * Feld für den Elterncode. Prüft ohne Internet
  * (services/screenTime/notfall.ts) und ruft `onOk`, wenn er passt.
  */
 export function NotfallCodeFeld({ onOk, knopf = 'Weiter' }: { onOk: () => void | Promise<void>; knopf?: string }) {
@@ -42,7 +42,7 @@ export function NotfallCodeFeld({ onOk, knopf = 'Weiter' }: { onOk: () => void |
   return (
     <div className="space-y-2">
       <Input
-        aria-label="Eltern-Code"
+        aria-label="Elterncode"
         inputMode="numeric"
         autoComplete="one-time-code"
         maxLength={7}
@@ -93,7 +93,7 @@ export function NotfallPauseDialog({ open, onOpenChange }: { open: boolean; onOp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5 text-primary" />
-            Eltern-Code
+            Elterncode
           </DialogTitle>
           <DialogDescription>{CODE_ORT}</DialogDescription>
         </DialogHeader>

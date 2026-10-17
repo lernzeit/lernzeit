@@ -33,7 +33,7 @@ Zählfenster über Mitternacht annimmt, ist nicht dokumentiert; sonst gilt es bi
 | Freiminuten ohne Knopf | Täglich wiederkehrendes Zählfenster `lernzeit.tag` (0:00–23:59:59 Ortszeit). Schwelle = Freiminuten (Werktag/Wochenende) + heute genehmigt + Extra der Eltern. Bis dahin offen, dann zu. Ab iOS 17.4 zählt die Nutzung seit 0 Uhr (`includesPastActivity: true`), neue Minuten heben nur die Schwelle. „Freiminuten starten“ und `claim_base_time` entfallen (bleibt für alte App-Versionen). |
 | Zählen immer nach Nutzung | „Was zählt als Handyzeit?“ ist Pflichtschritt der Einrichtung. Ohne Auswahl zählt nichts; Karte und Einrichtung sagen das. Kein Zählen nach Uhr, kein Probelauf mehr. |
 | Eltern-Einstellungen | Kinder → Regeln: Freiminuten werktags/am Wochenende (`child_settings.freiminuten_wochenende`), Ruhezeit, „+15/+30 Min.“, „Heute ohne Limit“ (`extrazeit_geben` → `handyzeit_extra`, Push an das Kind), Stand „noch 25 Min. (35 von 60)“ (`handyzeit_stand`, vom Kinder-Handy gemeldet). |
-| Notfallcode | 6 Ziffern, wechselt alle 30 Min., gilt mind. 30 Min. (HOTP/SHA-256, `notfallcode_anzeigen`, `src/lib/notfallcode.ts`). Kinder-Handy prüft ohne Internet; 5 Fehlversuche = 15 Min. Pause. Öffnet 15/30/60 Min. (auch in der Ruhezeit) oder ersetzt „Eltern-Handy fragen“. Jede Nutzung → `notfall_entsperrungen` + Push an die Eltern. Das Passwort entfällt. Schlüssel holt das Kinder-Handy einmal (`notfall_schluessel_holen`), danach nur nach „Erlauben“ auf dem Eltern-Handy. |
+| Elterncode | 6 Ziffern, wechselt alle 30 Min., gilt mind. 30 Min. (HOTP/SHA-256, `notfallcode_anzeigen`, `src/lib/notfallcode.ts`). Kinder-Handy prüft ohne Internet; 5 Fehlversuche = 15 Min. Pause. Öffnet 15/30/60 Min. (auch in der Ruhezeit) oder ersetzt „Eltern-Handy fragen“. Jede Nutzung → `notfall_entsperrungen` + Push an die Eltern. Das Passwort entfällt. Schlüssel holt das Kinder-Handy einmal (`notfall_schluessel_holen`), danach nur nach „Erlauben“ auf dem Eltern-Handy. |
 | Tag in Ortszeit | App (`lib/handyzeit.ts`) und Swift (`heuteText`) rechnen 'YYYY-MM-DD' in Ortszeit. |
 
 Nicht kompiliert geprüft: Der Swift-Teil ließ sich hier nur auf Syntax prüfen (kein Xcode).
@@ -46,7 +46,7 @@ Erst der Codemagic-Build zeigt Typfehler.
 - [ ] Freiminuten auf 10 stellen, LernZeit auf Klaras Handy öffnen, 10 Min. eine andere App nutzen → Sperre kommt.
 - [ ] Handy 15 Min. liegen lassen → Stand ändert sich nicht.
 - [ ] Danach auf dem Eltern-Handy „+15 Min.“ → Klara bekommt Push, öffnet LernZeit → Handy wieder offen, Schwelle 25.
-- [ ] Notfallcode: auf dem Eltern-Handy „Notfallcode zeigen“, auf Klaras Handy im Flugmodus eingeben → 15 Min. offen, auch in der Ruhezeit. Eltern bekommen Push.
+- [ ] Elterncode: auf dem Eltern-Handy „Elterncode zeigen“, auf Klaras Handy im Flugmodus eingeben → 15 Min. offen, auch in der Ruhezeit. Eltern bekommen Push.
 - [ ] Nach Mitternacht (oder am nächsten Morgen): Handy offen, Stand 0, Wochenend-Wert am Samstag.
 - [ ] iOS-Version von Klaras Handy notieren (vor 17.4 zählt ein neu angemeldetes Fenster ab dann, mit Abzug des schon Gezählten).
 

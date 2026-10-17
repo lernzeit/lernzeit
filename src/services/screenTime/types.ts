@@ -138,7 +138,7 @@ export interface ShieldStatus {
    * nichts gezählt (dann fehlt „Was zählt als Handyzeit?“).
    * `genutzt` — heute genutzt (in Schritten von 5 Min. und mehr).
    * `aufgebraucht` — heute aufgebraucht, Sperre zu.
-   * `notfallBis` — mit Eltern-Code offen bis (ISO-8601).
+   * `notfallBis` — mit Elterncode offen bis (ISO-8601).
    */
   budgetEingestellt?: boolean;
   tagesbudget?: number | null;
@@ -288,7 +288,7 @@ export interface ScreenTimePlugin {
    */
   setTagesbudget(options: { werktag: number; wochenende: number; zusatz: number; tag: string }): Promise<ShieldStatus>;
 
-  /** Notentsperrung nach gültigem Eltern-Code: `minuten` lang offen, auch in der Ruhezeit. */
+  /** Notentsperrung nach gültigem Elterncode: `minuten` lang offen, auch in der Ruhezeit. */
   pause(options: { minuten: number }): Promise<ShieldStatus>;
 }
 

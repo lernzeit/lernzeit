@@ -23,7 +23,7 @@ interface Notfall { id: string; zweck: string; minuten: number | null; genutzt_a
 
 /**
  * Handysperre vom Eltern-Handy aus (17.10.2026): Stand der Nutzung heute,
- * Extra-Zeit, „Heute ohne Limit“ und der Notfallcode zum Vorlesen.
+ * Extra-Zeit, „Heute ohne Limit“ und der Elterncode zum Vorlesen.
  * Wirksam wird alles, sobald LernZeit auf dem Kinder-Handy läuft — Apple
  * kennt keinen Fernzugriff; das Kind bekommt dafür eine Mitteilung.
  */
@@ -105,18 +105,18 @@ export function HandysperreHeute({ childId, childName }: { childId: string; chil
       <div className="border-t border-karo pt-3">
         {code ? (
           <div className="space-y-1">
-            <p className="text-sm font-bold text-tinte flex items-center gap-2"><KeyRound className="h-4 w-4 text-primary" />Notfallcode</p>
+            <p className="text-sm font-bold text-tinte flex items-center gap-2"><KeyRound className="h-4 w-4 text-primary" />Elterncode</p>
             <p className="text-3xl font-extrabold tracking-[0.25em] tabular text-tinte" aria-live="polite">
               {code.code.slice(0, 3)} {code.code.slice(3)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Gilt bis {uhr(code.gueltig_bis)} Uhr. Auf {childName}s Handy unter „Deine Handyzeit heute“ → „Notfall: Eltern-Code“ eingeben – geht auch ohne Internet.
+              Gilt bis {uhr(code.gueltig_bis)} Uhr. Auf {childName}s Handy unter „Deine Handyzeit heute“ → „Elterncode eingeben“ – geht auch ohne Internet.
             </p>
           </div>
         ) : (
           <Button size="sm" variant="ghost" className="px-0" disabled={codeLaedt} onClick={() => void codeZeigen()}>
             {codeLaedt ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
-            Notfallcode zeigen
+            Elterncode zeigen
           </Button>
         )}
         {notfaelle.length > 0 && (

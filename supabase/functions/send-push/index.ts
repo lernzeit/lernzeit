@@ -162,7 +162,7 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       });
     }
     case "notfall_genutzt": {
-      // Eltern-Notfallcode auf dem Kinder-Handy genutzt (Tabelle
+      // Elterncode auf dem Kinder-Handy genutzt (Tabelle
       // notfall_entsperrungen, 17.10.2026). Geht an alle verknüpften Eltern.
       const childId = body.child_id as string;
       const childName = await getChildName(childId);
@@ -179,8 +179,8 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       };
       return sendOneSignalPush({
         userIds: (eltern ?? []).map((e) => e.parent_id as string),
-        title: "🔑 Notfallcode genutzt",
-        message: was[body.zweck as string] ?? `Auf ${childName}s Handy wurde der Notfallcode genutzt.`,
+        title: "🔑 Elterncode genutzt",
+        message: was[body.zweck as string] ?? `Auf ${childName}s Handy wurde der Elterncode eingegeben.`,
         data: { type: "notfall_genutzt", eintrag_id: body.eintrag_id },
       });
     }

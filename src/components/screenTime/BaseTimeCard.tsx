@@ -23,7 +23,7 @@ const alsZeit = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:$
  * tippen, und ohne „Was zählt als Handyzeit?“ lief die Zeit nach Uhr ab.
  * Gezählt wird jetzt immer nur, während das Handy benutzt wird.
  *
- * Ist es zu (aufgebraucht oder Ruhezeit), öffnet ein Eltern-Code das Handy
+ * Ist es zu (aufgebraucht oder Ruhezeit), öffnet ein Elterncode das Handy
  * für eine kurze Zeit (NotfallCode.tsx).
  */
 export function BaseTimeCard({ childId }: BaseTimeCardProps) {
@@ -67,7 +67,7 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
         </div>
 
         {notfall ? (
-          <p className="text-sm text-muted-foreground">Mit Eltern-Code offen bis <strong>{uhr(notfall)} Uhr</strong>.</p>
+          <p className="text-sm text-muted-foreground">Mit Elterncode offen bis <strong>{uhr(notfall)} Uhr</strong>.</p>
         ) : stand.ruhezeit ? (
           <p className="text-sm text-muted-foreground">
             Ruhezeit{stand.ruheBis != null ? <> bis <strong>{alsZeit(stand.ruheBis)} Uhr</strong></> : null}. Telefon und LernZeit gehen.
@@ -92,7 +92,7 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
         {zu && (
           <Button variant="ghost" size="sm" className="w-full" onClick={() => setCodeOffen(true)}>
             <KeyRound className="h-4 w-4 mr-2" />
-            Notfall: Eltern-Code
+            Elterncode eingeben
           </Button>
         )}
       </CardContent>

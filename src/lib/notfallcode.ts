@@ -1,5 +1,5 @@
 /**
- * Eltern-Notfallcode (17.10.2026): sechs Ziffern, die alle 30 Minuten
+ * Elterncode (17.10.2026): sechs Ziffern, die alle 30 Minuten
  * wechseln. Das Elternteil sieht ihn in seiner App (RPC `notfallcode_anzeigen`),
  * das Kinder-Handy prüft ihn OHNE Internet mit demselben Schlüssel.
  *

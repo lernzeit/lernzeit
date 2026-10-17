@@ -37,7 +37,7 @@ type Schritt = 'fragen' | 'warten' | 'abgelehnt' | 'code';
  * SEINEM Handy auf „Erlauben“ (Push + Karte auf „Heute“, Tabelle
  * `geraet_freigaben`).
  *
- * Seit 17.10.2026 ist der Notweg der Eltern-Code (6 Ziffern, wechselt alle
+ * Seit 17.10.2026 ist der Notweg der Elterncode (6 Ziffern, wechselt alle
  * 30 Minuten, geprüft ohne Internet). Das LernZeit-Passwort entfiel: Konten
  * mit Apple/Google haben keins, und bei „E-Mail verbergen“ kennen Eltern
  * nicht einmal ihre LernZeit-E-Mail.
@@ -152,7 +152,7 @@ export function ParentGate({ open, onOpenChange, onVerified, zweck }: ParentGate
           )}
           {schritt !== 'code' ? (
             <Button variant="ghost" size="sm" onClick={() => { setFehler(null); setSchritt('code'); }} disabled={busy}>
-              Stattdessen mit Eltern-Code
+              Stattdessen mit Elterncode
             </Button>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => { setFehler(null); setSchritt(anfrageId ? 'warten' : 'fragen'); }} disabled={busy}>

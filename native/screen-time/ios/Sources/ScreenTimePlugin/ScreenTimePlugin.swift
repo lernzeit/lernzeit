@@ -434,7 +434,7 @@ extension ScreenTimePlugin {
         call.resolve(statusPayload())
     }
 
-    /// Notentsperrung nach gültigem Eltern-Code (geprüft in der App):
+    /// Notentsperrung nach gültigem Elterncode (geprüft in der App):
     /// `minuten` lang offen, auch in der Ruhezeit.
     @objc func pause(_ call: CAPPluginCall) {
         guard #available(iOS 16.0, *) else { return rejectUnavailable(call) }

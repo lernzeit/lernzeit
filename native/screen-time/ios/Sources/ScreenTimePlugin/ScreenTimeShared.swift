@@ -81,7 +81,7 @@ public enum LernzeitScreenTime {
         public static let budgetErschoepft = "lernzeit.screentime.budgetErschoepft"
         public static let budgetVerbraucht = "lernzeit.screentime.budgetVerbraucht"
         public static let budgetSchwelle = "lernzeit.screentime.budgetSchwelle"
-        /// Notentsperrung mit dem Eltern-Code: offen bis hier, auch in der Ruhezeit.
+        /// Notentsperrung mit dem Elterncode: offen bis hier, auch in der Ruhezeit.
         public static let notfallBis = "lernzeit.screentime.notfallBis"
     }
 
@@ -187,7 +187,7 @@ public enum LernzeitScreenTime {
     /// Stellt die Sperre passend zum Zustand ein (`sollSperren`).
     ///
     /// Seit 10.10.2026 entscheidet diese eine Stelle auch über Freigabe und
-    /// Ruhezeit, seit 17.10.2026 auch über Tagesbudget und Notfallcode.
+    /// Ruhezeit, seit 17.10.2026 auch über Tagesbudget und Elterncode.
     @available(iOS 16.0, *)
     public static func applyShield() {
         let store = ManagedSettingsStore()
@@ -219,7 +219,7 @@ public enum LernzeitScreenTime {
             ? nil : .specific(auswahl.categoryTokens)
     }
 
-    /// Reihenfolge: Notfallcode öffnet immer (auch in der Ruhezeit), Ruhezeit
+    /// Reihenfolge: Elterncode öffnet immer (auch in der Ruhezeit), Ruhezeit
     /// sperrt, eine laufende Freigabe öffnet. Mit Tagesbudget ist das Handy
     /// offen, bis es heute aufgebraucht ist; ohne (alte Einrichtung) zu.
     @available(iOS 16.0, *)
@@ -866,7 +866,7 @@ public enum LernzeitScreenTime {
         }
     }
 
-    /// Notentsperrung mit dem Eltern-Code: `minuten` lang offen, nach Uhr,
+    /// Notentsperrung mit dem Elterncode: `minuten` lang offen, nach Uhr,
     /// auch in der Ruhezeit. Danach sperrt die Erweiterung wieder
     /// (`startMonitoring(until:)` → `reshieldIfExpired`).
     @available(iOS 16.0, *)

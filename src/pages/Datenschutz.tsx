@@ -46,7 +46,7 @@ const Datenschutz = () => (
         <li>verdiente, angefragte und freigegebene Bildschirmzeit, Regeln der Eltern</li>
         <li>
           bei der LernZeit-Handysperre auf dem iPhone: wie viele Minuten das Kind heute genutzt hat (nur die Summe
-          des Tages, ohne Apps, wird überschrieben), Extra-Zeit der Eltern und wann der Eltern-Notfallcode genutzt
+          des Tages, ohne Apps, wird überschrieben), Extra-Zeit der Eltern und wann der Elterncode genutzt
           wurde. Welche Apps das Kind nutzt, erfahren wir nicht; Apple zählt die Nutzung auf dem Gerät.
         </li>
         <li>Lerntage in Folge, Sticker und gestaltete Hefte, Tintentropfen (Spielpunkte ohne Geldwert), Fortschritt der Lernreise, freigeschaltete Figuren und geöffnete Türchen im Adventskalender</li>

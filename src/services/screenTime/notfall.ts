@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { codePasst, istGesperrt, nachFehlversuch, type Fehlversuche } from '@/lib/notfallcode';
 
 /**
- * Eltern-Notfallcode auf dem Kinder-Handy (17.10.2026).
+ * Elterncode auf dem Kinder-Handy (17.10.2026).
  *
  * Der Schlüssel kommt einmal vom Server (`notfall_schluessel_holen`, beim
  * Einrichten der Sperre oder nach „Erlauben“ auf dem Eltern-Handy) und liegt
