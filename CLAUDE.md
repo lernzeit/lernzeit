@@ -190,8 +190,9 @@ Supabase-Secrets gelöscht werden.
   (`notfallcode_berechnen`) und TS (`lib/notfallcode.ts`, Test mit festen SQL-Werten in `npm run test:reise`),
   Prüfung ohne Internet, Nutzung → `notfall_entsperrungen` + Push `notfall_genutzt`.
 - Eltern sehen Freiminuten und den Bereich „Handysperre“ erst, wenn das Kinder-Handy die Sperre meldet
-  (`child_settings.screen_time_managed`, gesetzt bei jedem Abgleich); vorher nur eine Zeile „Nur iPhone: …
-  einrichten“. Kein Hinweis mehr auf „Heute“. Freischalten für alle geht deshalb ohne neuen Build nur per
+  (`child_settings.screen_time_managed`, gesetzt bei jedem Abgleich); vorher nur bei einem iPhone-Kind
+  (`get_children_platforms`: `last_platform`/Push-Token/Auswahl der Eltern) eine Zeile „Auf dem iPhone von …
+  einrichten“, bei Android oder unbekanntem Gerät nichts. Kein Hinweis mehr auf „Heute“. Freischalten für alle geht deshalb ohne neuen Build nur per
   Datenbank (`handysperre_freigaben`, ggf. Trigger für neue Kinder) – erst, wenn die meisten die App-Version
   mit Tagesbudget haben (ältere zeigen noch „Freiminuten starten“).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.

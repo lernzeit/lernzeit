@@ -35,6 +35,7 @@ import { PremiumFeature } from '@/components/PremiumGate';
 import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 import { RuhezeitEinstellung } from '@/components/parent/RuhezeitEinstellung';
 import { HandysperreHeute } from '@/components/parent/HandysperreHeute';
+import type { ChildPlatform } from '@/services/parentalControlsService';
 import { ReiseEinstellung } from '@/components/parent/ReiseEinstellung';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
@@ -50,6 +51,8 @@ interface ChildSettingsEditorProps {
   childName: string;
   parentId: string;
   currentGrade?: number;
+  /** Gerät des Kindes (get_children_platforms bzw. Auswahl der Eltern); null = unbekannt. */
+  kindPlattform?: ChildPlatform | null;
   onSettingsChanged?: () => void;
 }
 
@@ -124,7 +127,7 @@ const DEFAULT_SETTINGS: ChildSettings = {
   latin_seconds_per_task: DEFAULT_SECONDS_PER_TASK,
 };
 
-export function ChildSettingsEditor({ childId, childName, parentId, currentGrade, onSettingsChanged }: ChildSettingsEditorProps) {
+export function ChildSettingsEditor({ childId, childName, parentId, currentGrade, kindPlattform = null, onSettingsChanged }: ChildSettingsEditorProps) {
   const [settings, setSettings] = useState<ChildSettings>(DEFAULT_SETTINGS);
   // Freiminuten wirken nur mit der LernZeit-Sperre, die vorerst nur freigeschaltete Kinder haben
   const handysperreFreigaben = useHandysperreFreigaben();
@@ -466,7 +469,10 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
         </Gruppe>
       </PremiumFeature>
 
-      {handysperreAn && (
+      {/* Läuft die Sperre: alle Einstellungen. Sonst nur bei einem iPhone der
+          Hinweis, wo sie eingerichtet wird – bei Android oder unbekanntem Gerät
+          nichts (dort Family Link bzw. Apples Bildschirmzeit). */}
+      {handysperreAn && (sperreEingerichtet || kindPlattform === 'ios') && (
         <Gruppe titel="Handysperre">
           {sperreEingerichtet ? (
             <>
@@ -474,7 +480,7 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
               <RuhezeitEinstellung childId={childId} />
             </>
           ) : (
-            <Zeile titel="LernZeit-Handysperre" hinweis={`Nur iPhone: auf dem Handy von ${childName} unter Einstellungen → „Handy sperren“ einrichten.`}>
+            <Zeile titel="LernZeit-Handysperre" hinweis={`Auf dem iPhone von ${childName} unter Einstellungen → „Handy sperren“ einrichten.`}>
               <span />
             </Zeile>
           )}

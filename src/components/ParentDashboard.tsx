@@ -833,6 +833,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       childName={child.name || 'Kind'}
                       parentId={userId}
                       currentGrade={child.grade}
+                      kindPlattform={childPlatforms[child.id] ?? null}
                       onSettingsChanged={() => loadFamilyData(userId)}
                     />
                   </div>

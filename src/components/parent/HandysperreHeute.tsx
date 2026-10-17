@@ -57,7 +57,7 @@ export function HandysperreHeute({ childId, childName }: { childId: string; chil
     const { error } = await supabase.rpc('extrazeit_geben', { p_child: childId, p_minuten: minuten });
     setBusy(null);
     if (error) { setHinweis({ text: 'Ging nicht. Bitte noch mal.', fehler: true }); return; }
-    setHinweis({ text: `Gilt, sobald LernZeit auf ${childName}s Handy läuft. ${childName} bekommt eine Mitteilung.` });
+    setHinweis({ text: `Gilt, sobald LernZeit auf dem Handy von ${childName} läuft. ${childName} bekommt eine Mitteilung.` });
     void laden();
   };
 
@@ -80,7 +80,7 @@ export function HandysperreHeute({ childId, childName }: { childId: string; chil
         <p className="text-xs text-muted-foreground">
           {heute
             ? `${standText({ budget: heute.budget, genutzt: heute.genutzt, aufgebraucht: heute.aufgebraucht }) || 'zählt noch nicht'} · Stand ${uhr(heute.aktualisiert)} Uhr`
-            : `Noch kein Stand von ${childName}s Handy.`}
+            : `Noch kein Stand vom Handy von ${childName}.`}
         </p>
         {extraHeute > 0 && !ohneLimit && (
           <p className="text-xs text-muted-foreground">Heute schon extra: {extraHeute} Min.</p>
@@ -110,7 +110,7 @@ export function HandysperreHeute({ childId, childName }: { childId: string; chil
               {code.code.slice(0, 3)} {code.code.slice(3)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Gilt bis {uhr(code.gueltig_bis)} Uhr. Auf {childName}s Handy unter „Deine Handyzeit heute“ → „Elterncode eingeben“ – geht auch ohne Internet.
+              Gilt bis {uhr(code.gueltig_bis)} Uhr. Auf dem Handy von {childName} unter „Deine Handyzeit heute“ → „Elterncode eingeben“ – geht auch ohne Internet.
             </p>
           </div>
         ) : (
