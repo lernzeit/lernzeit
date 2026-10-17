@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
-  ArrowLeft, ArrowUp, MessageCircle, Loader2, Lightbulb, Send, Trash2, Plus,
+  ArrowLeft, ArrowUp, Flag, MessageCircle, Loader2, Lightbulb, Send, Trash2, Plus,
 } from 'lucide-react';
 
 type Category = 'learning' | 'ui' | 'parental' | 'gamification' | 'other';
@@ -40,6 +40,53 @@ interface Comment {
   content: string;
   created_at: string;
   author_name?: string | null;
+}
+
+/*
+ * Melden (17.10.2026, Apple 1.2): Wer einen Beitrag meldet, sieht ihn danach
+ * nicht mehr (Ausblenden fuer sich selbst, auf diesem Geraet); der Betreiber
+ * prueft die Meldung (Tabelle inhalt_meldungen, docs/support/leitfaden.md) und
+ * loescht den Beitrag oder sperrt das Konto.
+ */
+const GEMELDET_SCHLUESSEL = 'lernzeit_ideen_gemeldet';
+
+function gemeldeteLesen(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(GEMELDET_SCHLUESSEL) || '[]') as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function gemeldetMerken(id: string) {
+  try {
+    const ids = gemeldeteLesen();
+    ids.add(id);
+    localStorage.setItem(GEMELDET_SCHLUESSEL, JSON.stringify([...ids].slice(-500)));
+  } catch {
+    /* ohne Speicher: dann nur bis zum Neuladen ausgeblendet */
+  }
+}
+
+async function beitragMelden(art: 'idee' | 'kommentar', id: string, inhalt: string): Promise<boolean> {
+  gemeldetMerken(id);
+  const { data, error } = await supabase.rpc('inhalt_melden', { p_art: art, p_inhalt: inhalt, p_bezug_id: id });
+  return !error && data === true;
+}
+
+function MeldenKnopf({ onMelden }: { onMelden: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onMelden}
+      className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+      aria-label="Beitrag melden"
+      title="Beitrag melden"
+    >
+      <Flag className="w-3.5 h-3.5" />
+      <span className="text-xs">Melden</span>
+    </button>
+  );
 }
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -90,6 +137,7 @@ export default function IdeaForum() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [isParent, setIsParent] = useState(false);
+  const [gemeldet, setGemeldet] = useState<Set<string>>(() => gemeldeteLesen());
 
   // Create form state
   const [newTitle, setNewTitle] = useState('');
@@ -147,13 +195,23 @@ export default function IdeaForum() {
   };
 
   const filteredSorted = useMemo(() => {
-    let list = ideas.slice();
+    let list = ideas.filter((i) => !gemeldet.has(i.id));
     if (statusFilter !== 'all') list = list.filter((i) => i.status === statusFilter);
     if (categoryFilter !== 'all') list = list.filter((i) => i.category === categoryFilter);
     if (sort === 'top') list.sort((a, b) => b.vote_count - a.vote_count || b.created_at.localeCompare(a.created_at));
     else list.sort((a, b) => b.created_at.localeCompare(a.created_at));
     return list;
-  }, [ideas, sort, statusFilter, categoryFilter]);
+  }, [ideas, sort, statusFilter, categoryFilter, gemeldet]);
+
+  const ideeMelden = async (idea: Idea) => {
+    const ok = await beitragMelden('idee', idea.id, `${idea.title}\n\n${idea.description}`);
+    setGemeldet(gemeldeteLesen());
+    if (selectedIdea?.id === idea.id) setSelectedIdea(null);
+    toast({
+      title: 'Gemeldet. Danke!',
+      description: ok ? 'Wir schauen uns den Beitrag an. Für dich ist er ausgeblendet.' : 'Für dich ist er ausgeblendet. Die Meldung kam nicht an, bitte schreib an info@lernzeit.app.',
+    });
+  };
 
   const toggleVote = async (idea: Idea) => {
     if (!user) return;
@@ -344,6 +402,9 @@ export default function IdeaForum() {
                             <MessageCircle className="w-3.5 h-3.5" />
                             {idea.comment_count}
                           </button>
+                          {user?.id !== idea.user_id && (
+                            <MeldenKnopf onMelden={() => void ideeMelden(idea)} />
+                          )}
                           {user?.id === idea.user_id && (
                             <button
                               onClick={() => deleteIdea(idea)}
@@ -423,6 +484,7 @@ export default function IdeaForum() {
         onClose={() => setSelectedIdea(null)}
         currentUserId={user?.id ?? null}
         isParent={isParent}
+        onIdeeMelden={(i) => void ideeMelden(i)}
         onCommentCountChange={(id, delta) => {
           setIdeas((prev) => prev.map((i) => (i.id === id ? { ...i, comment_count: Math.max(0, i.comment_count + delta) } : i)));
           setSelectedIdea((prev) => (prev && prev.id === id ? { ...prev, comment_count: Math.max(0, prev.comment_count + delta) } : prev));
@@ -439,12 +501,14 @@ function IdeaDetailDialog({
   onClose,
   currentUserId,
   isParent,
+  onIdeeMelden,
   onCommentCountChange,
 }: {
   idea: Idea | null;
   onClose: () => void;
   currentUserId: string | null;
   isParent: boolean;
+  onIdeeMelden: (idea: Idea) => void;
   onCommentCountChange: (id: string, delta: number) => void;
 }) {
   const { toast } = useToast();
@@ -452,6 +516,16 @@ function IdeaDetailDialog({
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [posting, setPosting] = useState(false);
+  const [gemeldeteKommentare, setGemeldeteKommentare] = useState<Set<string>>(() => gemeldeteLesen());
+
+  const kommentarMelden = async (c: Comment) => {
+    const ok = await beitragMelden('kommentar', c.id, c.content);
+    setGemeldeteKommentare(gemeldeteLesen());
+    toast({
+      title: 'Gemeldet. Danke!',
+      description: ok ? 'Wir schauen uns den Kommentar an. Für dich ist er ausgeblendet.' : 'Für dich ist er ausgeblendet. Die Meldung kam nicht an, bitte schreib an info@lernzeit.app.',
+    });
+  };
 
   useEffect(() => {
     if (!idea) return;
@@ -533,6 +607,9 @@ function IdeaDetailDialog({
                 <Badge variant="outline">{CATEGORY_LABEL[idea.category]}</Badge>
                 <Badge variant="outline" className={STATUS_STYLE[idea.status]}>{STATUS_LABEL[idea.status]}</Badge>
                 <span className="text-xs text-muted-foreground">von {idea.author_name} · {formatDate(idea.created_at)}</span>
+                {idea.user_id !== currentUserId && (
+                  <span className="ml-auto"><MeldenKnopf onMelden={() => onIdeeMelden(idea)} /></span>
+                )}
               </div>
               <DialogTitle className="text-xl">{idea.title}</DialogTitle>
               <DialogDescription className="whitespace-pre-wrap text-foreground/80 pt-2">
@@ -552,12 +629,15 @@ function IdeaDetailDialog({
                 <p className="text-sm text-muted-foreground py-4">Noch keine Kommentare. Sag als Erste:r etwas dazu.</p>
               ) : (
                 <div className="space-y-3 mb-4">
-                  {comments.map((c) => (
+                  {comments.filter((c) => !gemeldeteKommentare.has(c.id)).map((c) => (
                     <div key={c.id} className="rounded-lg border border-border p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium">{c.author_name}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">{formatDate(c.created_at)}</span>
+                          {c.user_id !== currentUserId && (
+                            <MeldenKnopf onMelden={() => void kommentarMelden(c)} />
+                          )}
                           {c.user_id === currentUserId && (
                             <button onClick={() => deleteComment(c)} className="text-muted-foreground hover:text-red-400" aria-label="Löschen">
                               <Trash2 className="w-3.5 h-3.5" />

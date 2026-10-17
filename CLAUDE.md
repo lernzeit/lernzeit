@@ -229,6 +229,15 @@ Supabase-Secrets gelöscht werden.
   Einmaleins, negative Zahlen, Brüche … Auswahlfragen tragen den Index der richtigen Option (wie der
   Cache); ein Text wie „3“ würde in älteren Apps als Option Nr. 3 gelesen.
 
+## Meldungen und App Review (Stand 17.10.2026)
+
+- „Melden“ unter jeder KI-Tutor-Antwort und an fremden Ideen/Kommentaren im Forum (Apple 1.2):
+  RPC `inhalt_melden()` → Tabelle `inhalt_meldungen` (nur Service-Rolle). Gemeldete Forum-Beiträge
+  sind für den Meldenden ausgeblendet. Bearbeitung binnen 24 h: `docs/support/leitfaden.md`.
+- Review-Konten: Eltern `apple.review.parent@lernzeit.app`, Kinder `applereviewkind`/`applereviewkind2`
+  (beide in `handysperre_freigaben`, Apple 2.5.19). Prüfung der Richtlinien:
+  `docs/apple-richtlinien-pruefung-2026-10-17.md`.
+
 ## Hinweis auf die App im Browser (Stand 13.10.2026)
 
 - Im Browser (nie in den Apps, nicht im installierten PWA) steht „LernZeit ist für die App

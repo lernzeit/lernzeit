@@ -2789,6 +2789,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      inhalt_melden: {
+        Args: {
+          p_art: string
+          p_bezug_id?: string
+          p_inhalt: string
+          p_kontext?: string
+        }
+        Returns: boolean
+      }
       is_premium: { Args: { user_id: string }; Returns: boolean }
       lernplan_starten: { Args: { p_plan_id: string }; Returns: string }
       link_referral: { Args: { p_code: string }; Returns: Json }

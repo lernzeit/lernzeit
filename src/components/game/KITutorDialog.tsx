@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Sparkles, Send, Volume2, VolumeX, X } from 'lucide-react';
+import { Flag, Sparkles, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,22 @@ export function KITutorDialog({
   const initializedRef = useRef(false);
   // Klecksi ist der Tutor (11.10.2026); als KI gekennzeichnet. Ohne Klecksi: „KI-Tutor“.
   const mitKlecksi = useKlecksiAn();
+  // Gemeldete KI-Antworten (Apple 1.2): Index der Nachricht → gemeldet
+  const [gemeldet, setGemeldet] = useState<Record<number, boolean>>({});
+
+  /** Meldet eine KI-Antwort mit Aufgabe und Frage des Kindes (Tabelle inhalt_meldungen). */
+  const antwortMelden = async (index: number) => {
+    const antwort = messages[index]?.content ?? '';
+    const frage = [...messages.slice(0, index)].reverse().find((m) => m.role === 'user')?.content;
+    const kontext = [`Aufgabe: ${questionText}`, userAnswer ? `Antwort des Kindes: ${userAnswer}` : '', frage ? `Frage: ${frage}` : '', `Klasse ${grade}, ${subject}`]
+      .filter(Boolean).join(' | ');
+    setGemeldet((g) => ({ ...g, [index]: true }));
+    try {
+      await supabase.rpc('inhalt_melden', { p_art: 'ki_tutor', p_inhalt: antwort, p_kontext: kontext });
+    } catch {
+      /* Anzeige bleibt: das Kind soll nicht noch einmal melden muessen */
+    }
+  };
 
   // Auto-start explanation when dialog opens
   useEffect(() => {
@@ -288,14 +304,29 @@ export function KITutorDialog({
                 }`}>
                   <p className="whitespace-pre-wrap">{cleanTutorText(msg.content)}</p>
                   {msg.role === 'assistant' && msg.content && !isLoading && (
-                    <button
-                      onClick={() => speakText(msg.content)}
-                      className="mt-1.5 flex items-center gap-1 text-xs opacity-60 hover:opacity-100 transition-opacity"
-                      title="Vorlesen"
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                      Vorlesen
-                    </button>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <button
+                        onClick={() => speakText(msg.content)}
+                        className="flex items-center gap-1 text-xs opacity-60 hover:opacity-100 transition-opacity"
+                        title="Vorlesen"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                        Vorlesen
+                      </button>
+                      {/* Antwort melden (Apple 1.2): unpassende oder falsche KI-Antworten */}
+                      {gemeldet[i] ? (
+                        <span className="text-xs opacity-70">Gemeldet. Danke!</span>
+                      ) : (
+                        <button
+                          onClick={() => void antwortMelden(i)}
+                          className="flex items-center gap-1 text-xs opacity-60 hover:opacity-100 transition-opacity"
+                          title="Antwort melden"
+                        >
+                          <Flag className="w-3.5 h-3.5" />
+                          Melden
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

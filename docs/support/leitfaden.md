@@ -111,6 +111,26 @@ Absendern, Abwesenheitsnotizen, reine Dankesmails ohne Frage. Im Bericht nur
 als Zahl nennen. Rutscht eine Anbieterart öfter durch, im Bericht vorschlagen,
 ihre Domain in `ANBIETER` (support-postfach/index.ts) aufzunehmen.
 
+## Gemeldete Inhalte (seit 17.10.2026, Apple 1.2)
+
+Eltern und Kinder melden KI-Antworten des Tutors und Beiträge im Ideen-Forum
+(Tabelle `inhalt_meldungen`, nur Dashboard/Service-Rolle). Bei jedem Lauf
+offene Meldungen ansehen und **innerhalb von 24 Stunden** bearbeiten:
+
+```sql
+select id, art, inhalt, kontext, created_at from inhalt_meldungen
+where status = 'offen' order by created_at;
+```
+
+- **Forum (`idee`, `kommentar`):** Verstößt der Beitrag gegen die
+  Nutzungsbedingungen, im Dashboard löschen (`feature_ideas` bzw.
+  `feature_idea_comments`, `bezug_id`). Wiederholt sich das beim selben Konto,
+  Konto sperren (Auth → User → Ban) und den Betreiber informieren.
+- **KI-Tutor (`ki_tutor`):** Antwort und Kontext prüfen. Unpassend (nicht
+  kindgerecht, falsch, außerhalb der Schule): an den Betreiber als Entwurf
+  (Gruppe B), damit der Systemprompt in `ai-tutor` angepasst wird.
+- Danach `status` auf `erledigt` oder `unbegruendet` setzen.
+
 ## Ton
 
 - Anrede wie der Kunde: duzt er, `form: "du"`, sonst `form: "sie"`.
