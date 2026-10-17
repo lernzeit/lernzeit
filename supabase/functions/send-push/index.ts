@@ -304,6 +304,29 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       // who have not yet received it. Pass { force: true } to ignore the flag.
       return sendReferralAnnouncements(getBerlinHour(), true, Boolean(body.force));
     }
+    case "streak_pruefen": {
+      // Vom Trigger game_session_streak_pruefen (erste Runde des Tages):
+      // Meilenstein erreicht? Dann einmal je Kette senden.
+      const childId = body.child_id as string;
+      if (!childId) return { skipped: true, reason: "missing_child" };
+      const info = await computeStreakInfo(childId);
+      if (info.inactiveDays !== 0 || !STREAK_MEILENSTEINE.includes(info.streak)) {
+        return { skipped: true, streak: info.streak };
+      }
+      // Dieselbe Zahl kann frühestens nach `streak` Tagen wieder erreicht werden.
+      const seit = new Date(Date.now() - (info.streak - 0.5) * 86400000).toISOString();
+      const { data: schon } = await supabase
+        .from("streak_meilensteine")
+        .select("id")
+        .eq("child_id", childId)
+        .eq("streak", info.streak)
+        .gte("gesendet_am", seit)
+        .limit(1);
+      if (schon && schon.length > 0) return { skipped: true, reason: "schon_gesendet" };
+      const { error } = await supabase.from("streak_meilensteine").insert({ child_id: childId, streak: info.streak });
+      if (error) return { skipped: true, reason: "merken_fehlgeschlagen" };
+      return handleEvent("streak_milestone", { child_id: childId, streak: info.streak });
+    }
     case "streak_milestone": {
       const streak = Number(body.streak) || 0;
       const childId = body.child_id as string;
@@ -491,6 +514,8 @@ const STREAK_START_REMINDERS = [
   { title: "💪 Momentum!", message: "Du hast angefangen – jetzt nicht stoppen! Heute = Streak Tag 2!" },
   { title: "🎯 Weiter geht's!", message: "Ein Tag allein ist gut, zwei sind besser. Los geht's!" },
 ];
+
+const STREAK_MEILENSTEINE = [3, 7, 14, 30, 60, 100, 200, 300, 365];
 
 // ── Lerntage-Wörter je App-Stand (17.10.2026) ───────────────────────────────
 // Alte App-Versionen zeigen die Lernpflanze, ab Stand 20261013 (profiles.

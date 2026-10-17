@@ -220,6 +220,9 @@ Supabase-Secrets gelöscht werden.
   `stand`, Kachel mit Tropfen-Variante für Kinder ohne Klecksi. Regeln mit Tests in
   `npm run test:reise`. Push-Texte (`send-push`) richten sich nach `profiles.app_stand` (meldet die
   App, `lib/appStand.ts`): vor 20261013 Lernpflanze, danach Klecksi, ohne Klecksi sachlich (Tropfen).
+  Meilensteine (3/7/14/30 … Tage) löst seit 17.10.2026 der Server aus: Trigger `game_session_streak_pruefen`
+  (erste Runde des Tages) → send-push `streak_pruefen`, gemerkt in `streak_meilensteine`. Vorher rief die App
+  send-push selbst auf und wurde abgewiesen (nur Service-Rolle).
 - Berichtigung: Runde aus `review_queue` (`useBerichtigung`, LearningGame `mode='berichtigung'`),
   richtig = `is_retired`. Supabase-Anfragen ohne `await`/`.then()` werden nie abgeschickt.
 - DELETE über das Supabase-MCP wartet auf Bestätigung und läuft in eine Zeitüberschreitung.
