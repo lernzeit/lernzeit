@@ -53,7 +53,7 @@ Alles, was in der App steckt, soll für Nutzer und App Review erkennbar sein.
   den Code zusätzlich gegen `tester_codes` (ein Code aus der Testphase im Mai,
   bisher 0-mal benutzt). Trifft er, wird das Konto „Familie der ersten Stunde“ und
   bekommt nach dem ersten Feedback 3 Monate Premium, ohne Kauf. Das ist eine
-  versteckte Freischaltung; Vorschlag: Code deaktivieren.
+  versteckte Freischaltung. **Deaktiviert am 17.10.2026** (Migration `20261017130000`).
 - **Adventskalender (nur 1.–26.12.):** in den Store-Texten genannt, in den
   Review-Hinweisen mit Datum erwähnen.
 - Die Werkbank `VITE_SCREENTIME_UI` ist im Store-Build aus (`codemagic.yaml`), in

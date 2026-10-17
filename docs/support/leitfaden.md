@@ -129,7 +129,10 @@ where status = 'offen' order by created_at;
 - **KI-Tutor (`ki_tutor`):** Antwort und Kontext prüfen. Unpassend (nicht
   kindgerecht, falsch, außerhalb der Schule): an den Betreiber als Entwurf
   (Gruppe B), damit der Systemprompt in `ai-tutor` angepasst wird.
-- Danach `status` auf `erledigt` oder `unbegruendet` setzen.
+- Danach `status` auf `erledigt` oder `unbegruendet` setzen (macht der Betreiber).
+- Die Routine „Support-Postfach“ liest bei jedem Lauf (08:50 und 16:50) die offenen
+  Meldungen, bewertet sie und listet sie im Bericht mit empfohlener Aktion und
+  SQL-Zeile; sie ändert selbst nichts. Älter als 20 Stunden = dringend.
 
 ## Ton
 
