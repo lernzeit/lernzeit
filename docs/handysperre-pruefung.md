@@ -23,8 +23,9 @@ Bildschirmzeit verwiesen.
 | 5 | „Immer erlaubt (N)“ als eigener Knopf. Telefon bleibt offen (auf Klaras Handy geprüft). | nächster App-Build |
 
 Bekannte Grenzen: Apps, die als Handyzeit zählen, zählen auch, wenn sie „Immer erlaubt“
-sind – deshalb im Auswahldialog LernZeit und die immer erlaubten Apps abwählen. Ob iOS ein
-Zählfenster über Mitternacht annimmt, ist nicht dokumentiert; sonst gilt es bis 23:59.
+sind (vom Betreiber am 17.10.2026 so akzeptiert); LernZeit im Auswahldialog abwählen.
+Die Frage nach einem Zählfenster über Mitternacht ist seit dem Tagesbudget (Fenster 0–24 Uhr,
+täglich) erledigt. Offen bleibt nur Punkt 4 (Limits je App, optional).
 
 ## Stand 17.10.2026: Tagesbudget wie Apple (`docs/handysperre-konzept-2026-10-17.md`)
 
