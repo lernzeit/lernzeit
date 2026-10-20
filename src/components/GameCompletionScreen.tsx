@@ -75,11 +75,14 @@ export function GameCompletionScreen({
   const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
   const timeSpentSeconds = Math.round(sessionDuration / 1000);
   const perfectSessionBonusSeconds = isStreakRecovery ? 0 : perfectSessionBonus * 60;
-  const netTimeSeconds = isStreakRecovery ? 0 : Math.max(0, earnedSeconds - timeSpentSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
+  const isYoung = grade <= 4;
+  // Bis Klasse 4 wird die Zeit zum Lösen nicht abgezogen (20.10.2026): Lesen
+  // und Verstehen dauern dort noch lange. Gutgeschrieben wird ohnehin
+  // score × Sekunden (game_sessions.time_earned); hier geht es um die Anzeige.
+  const abzugSekunden = isYoung ? 0 : timeSpentSeconds;
+  const netTimeSeconds = isStreakRecovery ? 0 : Math.max(0, earnedSeconds - abzugSekunden + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
   const efficiency = Math.round((score / totalQuestions) * 100);
   const earnedMinutes = Number((netTimeSeconds / 60).toFixed(1));
-
-  const isYoung = grade <= 4;
 
   // Determine celebration level
   const getCelebrationLevel = () => {
