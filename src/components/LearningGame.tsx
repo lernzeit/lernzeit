@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { verdienteSekunden, zuLangeWeg } from '@/lib/appVerlassen';
 import { trackFireAndForget } from '@/lib/analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -157,6 +158,10 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
+  // Richtig, aber ohne Zeit: LernZeit während der Aufgabe verlassen (lib/appVerlassen.ts)
+  const [richtigOhneZeit, setRichtigOhneZeit] = useState(0);
+  const [aufgabeOhneZeit, setAufgabeOhneZeit] = useState(false);
+  const aufgabeOhneZeitRef = useRef(false);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -300,11 +305,33 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     }
   }, [question, hasAnswered, isInitialLoading, isValidatingAnswer, startTimer]);
 
+  // App verlassen, während die Aufgabe offen ist (z. B. um nachzuschlagen):
+  // ab 5 Sekunden bringt diese Aufgabe keine Zeit (lib/appVerlassen.ts).
+  useEffect(() => {
+    if (!question || hasAnswered || isInitialLoading || ohneZeit) return;
+    let wegAb: number | null = document.visibilityState === 'hidden' ? Date.now() : null;
+    const wechsel = () => {
+      if (document.visibilityState === 'hidden') {
+        wegAb = Date.now();
+        return;
+      }
+      if (zuLangeWeg(wegAb, Date.now())) {
+        aufgabeOhneZeitRef.current = true;
+        setAufgabeOhneZeit(true);
+      }
+      wegAb = null;
+    };
+    document.addEventListener('visibilitychange', wechsel);
+    return () => document.removeEventListener('visibilitychange', wechsel);
+  }, [question, hasAnswered, isInitialLoading, ohneZeit]);
+
   // Initialize answer state when question changes and scroll to top
   useEffect(() => {
     if (question) {
       resetAnswerState();
       setQuestionStartTime(Date.now());
+      aufgabeOhneZeitRef.current = false;
+      setAufgabeOhneZeit(false);
       if (question.questionType === 'SORT' && question.options) {
         const opts = Array.isArray(question.options) ? question.options : [];
         setSortOrder([...opts]);
@@ -600,6 +627,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
     if (correct) {
       setScore(prev => prev + 1);
+      if (aufgabeOhneZeitRef.current) setRichtigOhneZeit(prev => prev + 1);
       // Berichtigt: Die Aufgabe verlaesst die Fehlerkiste (Klecks weggewischt)
       if (istBerichtigung && question && user) {
         // .then() noetig: Supabase schickt die Anfrage erst beim Abwarten ab
@@ -702,6 +730,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
     setAnswerRecovered(true);
     setIsCorrect(true);
     setScore(prev => prev + 1);
+    if (aufgabeOhneZeitRef.current) setRichtigOhneZeit(prev => prev + 1);
     setCorrectStreak(prev => prev + 1);
 
     // Undo the "incorrect" penalty in the adaptive system
@@ -808,7 +837,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
       // Calculate earned time based on child settings
       const timeSpentSeconds = Math.floor(elapsedTime / 1000);
       const secondsPerTask = getSecondsPerTask();
-      const earnedSeconds = isStreakRecovery ? 0 : score * secondsPerTask;
+      const earnedSeconds = isStreakRecovery ? 0 : verdienteSekunden(score, richtigOhneZeit, secondsPerTask);
       const accuracyScore = Math.round((score / totalQuestions) * 100);
 
       // Perform adaptive difficulty adjustment at end of session → persists per subject
@@ -849,7 +878,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           // Sticker fuer eine Runde mit allen Aufgaben richtig: Das Kind waehlt
           // ihn selbst aus. Die Datenbank prueft (je Runde einer, hoechstens
           // drei am Tag) und vergibt erst beim Antippen.
-          if (!isStreakRecovery && score === totalQuestions && totalQuestions >= 5) {
+          if (!isStreakRecovery && score === totalQuestions && totalQuestions >= 5 && richtigOhneZeit === 0) {
             try {
               const { data: darf } = await supabase.rpc('sticker_darf_waehlen');
               if (darf === true) {
@@ -987,7 +1016,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const handleCompletionContinue = () => {
     const timeSpentSeconds = Math.floor(elapsedTime / 1000);
     const secondsPerTask = getSecondsPerTask();
-    const earnedSeconds = ohneZeit ? 0 : score * secondsPerTask;
+    const earnedSeconds = ohneZeit ? 0 : verdienteSekunden(score, richtigOhneZeit, secondsPerTask);
     const earnedMinutes = Math.ceil(earnedSeconds / 60);
     
     onComplete({
@@ -1045,8 +1074,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           totalQuestions={totalQuestions}
           sessionDuration={elapsedTime}
           timePerTask={secondsPerTask}
+          richtigOhneZeit={richtigOhneZeit}
           achievementBonusMinutes={achievementBonusMinutes}
-          perfectSessionBonus={score === totalQuestions ? 1 : 0}
+          perfectSessionBonus={score === totalQuestions && richtigOhneZeit === 0 ? 1 : 0}
           neuerSticker={neuerSticker}
           stickerWahl={neuerSticker ? null : stickerWahl}
           onStickerWaehlen={async (id) => {
@@ -1176,7 +1206,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
 
   // Verdiente Zeit dieser Runde (wie beim Speichern: Punkte x Sekunden je Aufgabe)
   const sekundenProAufgabe = getSecondsPerTask();
-  const verdienteSekunden = ohneZeit ? 0 : score * sekundenProAufgabe;
+  const sekundenDieseRunde = ohneZeit ? 0 : verdienteSekunden(score, richtigOhneZeit, sekundenProAufgabe);
   const zahlAntwort =
     (question?.questionType === 'FREETEXT' || shouldUseTextFallbackForMultipleChoice) &&
     istZahlAntwort(getCorrectAnswerText());
@@ -1208,8 +1238,8 @@ export const LearningGame: React.FC<LearningGameProps> = ({
           </div>
           {!ohneZeit ? (
             <VerdienteZeit
-              sekunden={verdienteSekunden}
-              gutschrift={hasAnswered && isCorrect ? sekundenProAufgabe : null}
+              sekunden={sekundenDieseRunde}
+              gutschrift={hasAnswered && isCorrect && !aufgabeOhneZeit ? sekundenProAufgabe : null}
               gutschriftSchluessel={currentIndex}
             />
           ) : (
@@ -1375,13 +1405,18 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                     <span className="text-2xl font-extrabold text-tinte">
                       {isCorrect ? 'Richtig!' : loesungGezeigt ? 'Kein Problem.' : grade <= 4 ? 'Fast.' : 'Nicht ganz.'}
                     </span>
-                    {isCorrect && !ohneZeit && (
+                    {isCorrect && !ohneZeit && !aufgabeOhneZeit && (
                       <span className="font-hand text-lg text-gruen-text">+{sekundenProAufgabe} Sek.</span>
                     )}
                     {!isCorrect && !zahlAntwort && (
                       <span className="frage-text font-hand text-lg text-rotstift">Richtig ist: {loesungText}</span>
                     )}
                   </div>
+                  {aufgabeOhneZeit && !ohneZeit && (
+                    <p className="text-sm text-muted-foreground">
+                      Du warst kurz außerhalb von LernZeit. Diese Aufgabe zählt ohne Zeit.
+                    </p>
+                  )}
                   {isCorrect && spellingHint && (
                     <p className="frage-text text-sm text-gruen-text">
                       Richtige Schreibweise: <strong>{spellingHint}</strong>

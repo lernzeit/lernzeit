@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { aufgabenMitZeit, verdienteSekunden } from '@/lib/appVerlassen';
 import { Button } from '@/components/ui/button';
 import { Check, UserPlus, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,8 +19,11 @@ import { FALTUNG_NAME, belohnungsText, istDoppelt, type RundenBelohnung } from '
 interface GameCompletionScreenProps {
   score: number;
   totalQuestions: number;
+  /** Dauer der Runde (ms). Wird seit 20.10.2026 nicht mehr abgezogen. */
   sessionDuration: number;
   timePerTask: number;
+  /** Richtige Aufgaben ohne Zeit, weil LernZeit währenddessen verlassen wurde */
+  richtigOhneZeit?: number;
   achievementBonusMinutes: number;
   perfectSessionBonus?: number;
   grade?: number;
@@ -41,8 +45,8 @@ interface GameCompletionScreenProps {
 export function GameCompletionScreen({
   score,
   totalQuestions,
-  sessionDuration,
   timePerTask,
+  richtigOhneZeit = 0,
   achievementBonusMinutes,
   perfectSessionBonus = 0,
   grade = 5,
@@ -72,15 +76,14 @@ export function GameCompletionScreen({
     }
     onContinue();
   };
-  const earnedSeconds = isStreakRecovery ? 0 : score * timePerTask;
-  const timeSpentSeconds = Math.round(sessionDuration / 1000);
+  // Seit 20.10.2026 ohne Abzug der Lösezeit, für alle Klassen: Lesen dauert
+  // unterschiedlich lange. Gegen Nachschlagen zählen nur Aufgaben ohne Zeit,
+  // bei denen LernZeit verlassen wurde (lib/appVerlassen.ts).
+  const mitZeit = aufgabenMitZeit(score, richtigOhneZeit);
+  const earnedSeconds = isStreakRecovery ? 0 : verdienteSekunden(score, richtigOhneZeit, timePerTask);
   const perfectSessionBonusSeconds = isStreakRecovery ? 0 : perfectSessionBonus * 60;
   const isYoung = grade <= 4;
-  // Bis Klasse 4 wird die Zeit zum Lösen nicht abgezogen (20.10.2026): Lesen
-  // und Verstehen dauern dort noch lange. Gutgeschrieben wird ohnehin
-  // score × Sekunden (game_sessions.time_earned); hier geht es um die Anzeige.
-  const abzugSekunden = isYoung ? 0 : timeSpentSeconds;
-  const netTimeSeconds = isStreakRecovery ? 0 : Math.max(0, earnedSeconds - abzugSekunden + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds);
+  const netTimeSeconds = isStreakRecovery ? 0 : earnedSeconds + (achievementBonusMinutes * 60) + perfectSessionBonusSeconds;
   const efficiency = Math.round((score / totalQuestions) * 100);
   const earnedMinutes = Number((netTimeSeconds / 60).toFixed(1));
 
@@ -231,8 +234,10 @@ export function GameCompletionScreen({
         <div className="rounded-[28px] bg-card px-6 py-2 ring-1 ring-inset ring-karo">
           <dl className="divide-y divide-karo text-sm">
             <div className="flex justify-between py-3"><dt>Genauigkeit</dt><dd className="tabular font-bold text-tinte">{efficiency} %</dd></div>
-            <div className="flex justify-between py-3"><dt>{score} richtig × {timePerTask} Sek.</dt><dd className="tabular font-bold text-tinte">{earnedSeconds} Sek.</dd></div>
-            <div className="flex justify-between py-3"><dt>Zeit beim Lösen</dt><dd className="tabular font-bold text-tinte">−{timeSpentSeconds} Sek.</dd></div>
+            <div className="flex justify-between py-3"><dt>{mitZeit} richtig × {timePerTask} Sek.</dt><dd className="tabular font-bold text-tinte">{earnedSeconds} Sek.</dd></div>
+            {richtigOhneZeit > 0 && (
+              <div className="flex justify-between py-3"><dt>Ohne Zeit (App verlassen)</dt><dd className="tabular font-bold text-tinte">{richtigOhneZeit}</dd></div>
+            )}
             {perfectSessionBonus > 0 && (
               <div className="flex justify-between py-3"><dt>Bonus: alles richtig</dt><dd className="tabular font-bold text-gruen-text">+{perfectSessionBonus} Min.</dd></div>
             )}
@@ -242,6 +247,11 @@ export function GameCompletionScreen({
             <div className="flex justify-between py-3"><dt className="font-bold text-tinte">Verdient</dt><dd className="tabular font-extrabold text-tinte">{netTimeSeconds} Sek.</dd></div>
           </dl>
         </div>
+      )}
+      {isYoung && !isStreakRecovery && richtigOhneZeit > 0 && (
+        <p className="text-center text-sm text-muted-foreground">
+          {richtigOhneZeit === 1 ? '1 Aufgabe zählt' : `${richtigOhneZeit} Aufgaben zählen`} ohne Zeit: Du warst währenddessen außerhalb von LernZeit.
+        </p>
       )}
       {isYoung && bonus && (
         <p className="text-center font-hand text-lg text-gruen-text">

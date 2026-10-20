@@ -240,6 +240,14 @@ Supabase-Secrets gelöscht werden.
 - Testen: Playwright-Uhr auf Dezember (`clock.setFixedTime`, Sitzung `expires_at` passend);
   SQL über `advent_runde_werten(kind, tag, richtig, gesamt, p_heute)` (nur Service-Rolle).
 
+## Verdiente Zeit je Runde (Stand 20.10.2026)
+
+- Richtige Aufgaben × Sekunden je Fach (`child_settings.*_seconds_per_task`); die Lösezeit wird nicht mehr
+  abgezogen (vorher nur in der Anzeige am Rundenende, gutgeschrieben wurde immer die volle Zeit).
+- Gegen Nachschlagen: Wer LernZeit während einer offenen Aufgabe ≥ 5 s verlässt (`visibilitychange`),
+  bekommt für diese Aufgabe keine Zeit, auch wenn sie richtig ist; kein Sticker/kein „alles richtig“-Bonus
+  in der Runde (`lib/appVerlassen.ts`, `LearningGame`, `GameCompletionScreen`, Test in `npm run test:reise`).
+
 ## Mathe-Grundlagen ohne KI (Stand 11.10.2026)
 
 - `ai-question-generator` liefert bei Mathe ohne Thema einen Anteil kurzer Aufgaben aus

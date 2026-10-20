@@ -33,6 +33,7 @@ const appHinweis = await laden('src/lib/appEmpfehlung.ts');
 const geraete = await laden('src/lib/geraeteAnleitung.ts');
 const notfall = await laden('src/lib/notfallcode.ts');
 const handyzeit = await laden('src/lib/handyzeit.ts');
+const appVerlassen = await laden('src/lib/appVerlassen.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -245,5 +246,13 @@ pruefe('Nach einem Fehler steht der Schritt vorn und der Rohtext hinten',
   const swift = await readFile('native/screen-time/ios/Sources/ScreenTimePlugin/ScreenTimeShared.swift', 'utf8');
   pruefe('Swift: „ohne Limit“ ab derselben Grenze', swift.includes(`ohneLimitMinuten = ${handyzeit.OHNE_LIMIT_MINUTEN}`), true);
 }
+
+// ── App verlassen statt Lösezeit abziehen (20.10.2026) ──
+pruefe('App verlassen: erst ab 5 Sekunden, nie ohne Weggehen',
+  [appVerlassen.zuLangeWeg(1000, 5999), appVerlassen.zuLangeWeg(1000, 6000), appVerlassen.zuLangeWeg(null, 99999)],
+  [false, true, false]);
+pruefe('Verdient: nur richtige Aufgaben mit Zeit, Lösezeit zählt nicht',
+  [appVerlassen.verdienteSekunden(4, 0, 30), appVerlassen.verdienteSekunden(4, 1, 30), appVerlassen.verdienteSekunden(1, 3, 30)],
+  [120, 90, 0]);
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }
