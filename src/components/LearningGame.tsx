@@ -975,7 +975,16 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             const frisch = berechneStreak(zeitpunkte);
             const freshStreak = frisch.inaktiveTage <= 1 ? frisch.streak : 0;
             const previousStreak = streakBeforeSession.current ?? 0;
-            if (freshStreak > previousStreak) {
+            // „Klecksi hat Tinte bekommen“ nur einmal am Tag (20.10.2026): bei
+            // der ersten Runde des Tages. Vorher reichte „höher als vor der
+            // Runde“ — war der Wert davor nicht geladen (0), kam es nach jeder Runde.
+            const heute = lokalerTag(new Date());
+            const rundenHeute = zeitpunkte.filter((z) => lokalerTag(new Date(z)) === heute).length;
+            const merkSchluessel = `lernzeit_tinte_gezeigt_${user.id}`;
+            let schonGezeigt = false;
+            try { schonGezeigt = localStorage.getItem(merkSchluessel) === heute; } catch { /* egal */ }
+            if (freshStreak > 0 && freshStreak >= previousStreak && rundenHeute <= 1 && !schonGezeigt) {
+              try { localStorage.setItem(merkSchluessel, heute); } catch { /* egal */ }
               setNewStreakValue(freshStreak);
               setShowStreakAnimation(true);
             }
