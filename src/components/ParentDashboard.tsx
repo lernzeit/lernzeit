@@ -1070,7 +1070,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </CardContent>
           </Card>
 
-          {!isPremium && (
+          {/* Nur solange die Testphase läuft – nicht nach Ablauf, nicht mit bezahltem Premium */}
+          {!isPaidPremium && trialDaysLeft !== null && trialDaysLeft > 0 && (
             <Card className="border-muted bg-card">
               <CardContent className="py-4">
                 <div className="flex items-start gap-3">
