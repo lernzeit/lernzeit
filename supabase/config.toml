@@ -95,3 +95,5 @@ project_id = "fsmgynpdfxkaiiuguqyr"
 # Abo im Eltern-Bereich kuendigen (prueft die Anmeldung selbst), 04.10.2026.
   [functions.abo-kuendigen]
     verify_jwt = false
+  [functions.vorlesen]
+    verify_jwt = false
