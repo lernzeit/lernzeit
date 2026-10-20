@@ -248,6 +248,18 @@ Supabase-Secrets gelöscht werden.
   bekommt für diese Aufgabe keine Zeit, auch wenn sie richtig ist; kein Sticker/kein „alles richtig“-Bonus
   in der Runde (`lib/appVerlassen.ts`, `LearningGame`, `GameCompletionScreen`, Test in `npm run test:reise`).
 
+## Vorlesen mit KI-Stimme (Stand 20.10.2026)
+
+- Bis Klasse 4: Knopf „Vorlesen“ an der Aufgabe (mit Antworten) und an der Erklärung (`LearningGame`,
+  `hooks/useVorlesen.ts`, `services/vorlesen.ts`). Ab Klasse 5 und im KI-Tutor weiter die Gerätestimme.
+- Funktion `vorlesen`: Gemini TTS (`gemini-3.8-flash-tts`, Stimme „Sulafat“, Env `VORLESEN_MODELLE`/`VORLESEN_STIMME`)
+  → MP3 (lamejs) → privater Bucket `vorlesen` (`JJJJ-MM/<sha256>.mp3`, aktueller und voriger Monat, ältere
+  räumt die Funktion selbst auf). Text ≤ 400 Zeichen, die App teilt an Satzgrenzen (`lib/vorlesenText.ts`:
+  „7 · 8“ → „7 mal 8“, Lücken). Tagesgrenze 300 neue Stücke je Nutzer (`vorlesen_tag`), Kosten in
+  `ai_model_metrics` (use_case `vorlesen`, ~0,2 Cent je 9 s). Probe: Service-Rolle mit `{probe:true}`.
+- Ton als `data:`-Adresse (blob: spielt WKWebView nicht sicher ab); CSP in `index.html` braucht `media-src data: blob:`.
+  Ohne Server/Anmeldung (z. B. Demo) liest die Gerätestimme.
+
 ## Mathe-Grundlagen ohne KI (Stand 11.10.2026)
 
 - `ai-question-generator` liefert bei Mathe ohne Thema einen Anteil kurzer Aufgaben aus

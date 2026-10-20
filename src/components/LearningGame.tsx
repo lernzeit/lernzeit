@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { verdienteSekunden, zuLangeWeg } from '@/lib/appVerlassen';
+import { aufgabeZumVorlesen, sprechbar } from '@/lib/vorlesenText';
+import { useVorlesen } from '@/hooks/useVorlesen';
 import { trackFireAndForget } from '@/lib/analytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -168,6 +170,9 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showTutorDialog, setShowTutorDialog] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // Bis Klasse 4 liest eine KI-Stimme vom Server vor (Aufgabe und Erklärung), 20.10.2026
+  const kiStimme = grade <= 4;
+  const vorleser = useVorlesen(grade);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [sessionSaved, setSessionSaved] = useState(false);
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
@@ -329,6 +334,7 @@ export const LearningGame: React.FC<LearningGameProps> = ({
   useEffect(() => {
     if (question) {
       resetAnswerState();
+      vorleser.beenden();
       setQuestionStartTime(Date.now());
       aufgabeOhneZeitRef.current = false;
       setAufgabeOhneZeit(false);
@@ -1265,6 +1271,24 @@ export const LearningGame: React.FC<LearningGameProps> = ({
             <div className="flex items-center justify-between gap-3 text-sm font-semibold text-muted-foreground">
               <span>{istBerichtigung ? 'Berichtigung: ' : ''}{istAdvent ? `Türchen ${advent?.tag ?? ''} · ` : ''}{getSubjectName(fragenFach)}{grade > 4 ? `, Klasse ${grade}` : ''}</span>
               <span className="flex items-center gap-2">
+                {kiStimme && (
+                  <button
+                    type="button"
+                    onClick={() => vorleser.aktiv === 'aufgabe'
+                      ? vorleser.beenden()
+                      : vorleser.starten('aufgabe', aufgabeZumVorlesen(
+                          question.questionText,
+                          question.questionType === 'MULTIPLE_CHOICE' && Array.isArray(question.options) ? question.options.map(String) : null,
+                        ))}
+                    aria-label={vorleser.aktiv === 'aufgabe' ? 'Vorlesen beenden' : 'Aufgabe vorlesen'}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3 text-sm font-bold text-primary ring-1 ring-inset ring-karo transition-colors hover:bg-primary/10"
+                  >
+                    {vorleser.aktiv === 'aufgabe'
+                      ? (vorleser.stand === 'laedt' ? <Loader2 className="h-4 w-4 animate-spin" /> : <VolumeX className="h-4 w-4" />)
+                      : <Volume2 className="h-4 w-4" />}
+                    {vorleser.aktiv === 'aufgabe' ? 'Stopp' : 'Vorlesen'}
+                  </button>
+                )}
                 {grade > 4 && (
                   <span className={cn('tabular inline-flex items-center gap-1', !isRunning && 'opacity-60')}>
                     <Clock className="h-3.5 w-3.5" />{formattedTime}
@@ -1449,7 +1473,23 @@ export const LearningGame: React.FC<LearningGameProps> = ({
                         <span className="rounded-md bg-background px-1.5 py-0.5 text-[11px] font-bold text-muted-foreground ring-1 ring-inset ring-karo" title="Erklärt von einer KI">KI</span>
                       )}
                     </div>
-                    {explanation && !isLoadingExplanation && (
+                    {explanation && !isLoadingExplanation && kiStimme && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => vorleser.aktiv === 'erklaerung'
+                          ? vorleser.beenden()
+                          : vorleser.starten('erklaerung', sprechbar(explanation.replace(/^#{1,3}\s/gm, '')))}
+                        className="h-8 px-2 text-primary hover:bg-primary/10"
+                      >
+                        {vorleser.aktiv === 'erklaerung' ? (
+                          <>{vorleser.stand === 'laedt' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <VolumeX className="w-4 h-4 mr-1" />} Stopp</>
+                        ) : (
+                          <><Volume2 className="w-4 h-4 mr-1" /> Vorlesen</>
+                        )}
+                      </Button>
+                    )}
+                    {explanation && !isLoadingExplanation && !kiStimme && (
                       <Button
                         variant="ghost"
                         size="sm"

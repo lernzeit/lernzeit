@@ -12,7 +12,7 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
  * Kanzlei. Offene Punkte: docs/rechtstexte-pruefung.md.
  */
 const Datenschutz = () => (
-  <RechtsSeite titel="Datenschutzerklärung" stand="17. Oktober 2026">
+  <RechtsSeite titel="Datenschutzerklärung" stand="20. Oktober 2026">
     <Seo
       title="Datenschutz – LernZeit"
       description="Datenschutzerklärung von LernZeit: welche Daten von Eltern und Kindern wir verarbeiten, wozu, auf welcher Rechtsgrundlage und welche Rechte Sie haben."
@@ -180,8 +180,10 @@ const Datenschutz = () => (
         </li>
         <li>
           <strong>Google (Gemini)</strong> und <strong>OpenRouter</strong>: Erstellen von Aufgaben, Erklärungen,
-          KI-Tutor und Lernplan, Auswertung von Lernplan-Fotos. Übermittelt werden die Aufgabe und die Eingabe bzw. die Fotos, ohne personenbezogene
-          Kennungen wie Name oder E-Mail-Adresse.
+          KI-Tutor und Lernplan, Auswertung von Lernplan-Fotos, Vorlesen von Aufgaben und Erklärungen (Google Gemini).
+          Übermittelt werden die Aufgabe und die Eingabe bzw. die Fotos, ohne personenbezogene Kennungen wie Name oder
+          E-Mail-Adresse. Vorgelesene Texte speichern wir als Tondatei bis zu zwei Monate, damit derselbe Text nicht
+          erneut erzeugt werden muss.
         </li>
         <li><strong>OneSignal, Inc.</strong> (USA): Push-Benachrichtigungen und Service-E-Mails an Eltern</li>
         <li><strong>IONOS SE</strong>: E-Mail-Postfach, Anmelde- und Bestätigungs-E-Mails, Eingangsbestätigungen</li>

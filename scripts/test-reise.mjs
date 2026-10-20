@@ -34,6 +34,7 @@ const geraete = await laden('src/lib/geraeteAnleitung.ts');
 const notfall = await laden('src/lib/notfallcode.ts');
 const handyzeit = await laden('src/lib/handyzeit.ts');
 const appVerlassen = await laden('src/lib/appVerlassen.ts');
+const vorlesenText = await laden('src/lib/vorlesenText.ts');
 const sql = await readFile('supabase/migrations/20261011200000_klecksi_reise.sql', 'utf8');
 // Neuere Fassungen von avatar_preis und sticker_waehlen, Adventskalender
 const sqlAdvent = await readFile('supabase/migrations/20261011230000_weihnachten_advent.sql', 'utf8');
@@ -254,5 +255,18 @@ pruefe('App verlassen: erst ab 5 Sekunden, nie ohne Weggehen',
 pruefe('Verdient: nur richtige Aufgaben mit Zeit, Lösezeit zählt nicht',
   [appVerlassen.verdienteSekunden(4, 0, 30), appVerlassen.verdienteSekunden(4, 1, 30), appVerlassen.verdienteSekunden(1, 3, 30)],
   [120, 90, 0]);
+
+// ── Vorlesen mit KI-Stimme: Text aufbereiten (20.10.2026) ──
+pruefe('Vorlesen: Rechenzeichen und Lücken sprechbar',
+  ['Wie viel ist 7 · 8?', '3 + ___ = 5', '12 : 4', '15 - 7', 'Finde das **richtige** Wort.', 'Die Katze (...) schläft.'].map(vorlesenText.sprechbar),
+  ['Wie viel ist 7 mal 8?', '3 plus Lücke gleich 5', '12 geteilt durch 4', '15 minus 7', 'Finde das richtige Wort.', 'Die Katze Lücke schläft.']);
+pruefe('Vorlesen: Aufgabe mit Antworten', vorlesenText.aufgabeZumVorlesen('Wie viel ist 7 · 8?', ['54', '56', '64', '48']),
+  'Wie viel ist 7 mal 8? 54, 56, 64 oder 48?');
+{
+  const lang = 'Das ist ein Satz. '.repeat(30) + 'Und ein langer Satz ohne Punkt, ' + 'wort '.repeat(80);
+  const stuecke = vorlesenText.inStuecke(lang);
+  pruefe('Vorlesen: Stücke höchstens 280 Zeichen, nichts geht verloren',
+    [stuecke.every((s) => s.length <= 280), stuecke.join(' ').replace(/\s+/g, ' ') === lang.trim().replace(/\s+/g, ' ')], [true, true]);
+}
 
 if (fehler) { console.error(`${fehler} Fehler`); process.exit(1); }
