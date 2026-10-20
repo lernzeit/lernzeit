@@ -161,6 +161,26 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         data: { type: "geraet_freigabe_neu", freigabe_id: body.freigabe_id },
       });
     }
+    case "eltern_fragen": {
+      // „Eltern fragen“ auf dem Sperrbildschirm (shield_attempts, Trigger
+      // shield_attempts_eltern_fragen, 20.10.2026). Geht an alle verknüpften Eltern.
+      const childId = body.child_id as string;
+      const childName = await getChildName(childId);
+      const { data: eltern } = await supabase
+        .from("parent_child_relationships")
+        .select("parent_id")
+        .eq("child_id", childId);
+      const zuletzt = body.zuletzt ? new Date(String(body.zuletzt)) : null;
+      const uhr = zuletzt && !Number.isNaN(zuletzt.getTime())
+        ? zuletzt.toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" })
+        : null;
+      return sendOneSignalPush({
+        userIds: (eltern ?? []).map((e) => e.parent_id as string),
+        title: `📱 ${childName} möchte mehr Handyzeit`,
+        message: `${uhr ? `Um ${uhr} Uhr auf dem Sperrbildschirm. ` : ""}Extra-Zeit gibst du unter Kinder → Regeln → Handysperre.`,
+        data: { type: "eltern_fragen", child_id: childId },
+      });
+    }
     case "notfall_genutzt": {
       // Elterncode auf dem Kinder-Handy genutzt (Tabelle
       // notfall_entsperrungen, 17.10.2026). Geht an alle verknüpften Eltern.

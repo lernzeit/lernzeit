@@ -195,6 +195,9 @@ Supabase-Secrets gelöscht werden.
   einrichten“, bei Android oder unbekanntem Gerät nichts. Kein Hinweis mehr auf „Heute“. Freischalten für alle geht deshalb ohne neuen Build nur per
   Datenbank (`handysperre_freigaben`, ggf. Trigger für neue Kinder) – erst, wenn die meisten die App-Version
   mit Tagesbudget haben (ältere zeigen noch „Freiminuten starten“).
+- „Eltern fragen“ auf dem Sperrbildschirm: Die Erweiterung merkt den Druck nur (kein App-Öffnen möglich),
+  LernZeit schreibt ihn beim nächsten Start nach `shield_attempts`; der Trigger `shield_attempts_eltern_fragen`
+  schickt dann Push `eltern_fragen` an die Eltern (je Kind höchstens alle 10 Min., nur Drücke < 12 h).
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)
