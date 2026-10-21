@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { usePremiumZugang } from '@/hooks/usePremiumZugang';
 import { PremiumFeature } from '@/components/PremiumGate';
@@ -125,29 +126,51 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fehler, setFehler] = useState(false);
   const { isPremium, isTrialing } = usePremiumZugang();
+  // Nur die jüngste Ladung darf den Zustand setzen (Kind gewechselt, neu geladen).
+  const ladung = useRef(0);
 
-  useEffect(() => {
-    loadAnalysis();
-  }, [childId]);
-
-  const loadAnalysis = async () => {
+  /*
+   * 21.10.2026: Auf dem iPhone stand „Lade Daten…“ dauerhaft da. Eine Anfrage,
+   * die beim Wechsel in den Hintergrund unterwegs ist, kommt in der App nicht
+   * immer zurück — ohne Zeitgrenze blieb die Karte für immer beim Laden.
+   * Jetzt: Abbruch nach 20 s, Fehler mit „Erneut versuchen“, und beim
+   * Zurückkehren in die App wird nachgeladen, falls noch nichts da ist.
+   */
+  const loadAnalysis = useCallback(async () => {
+    const nr = ++ladung.current;
+    const abbruch = new AbortController();
+    let zeitgrenze: ReturnType<typeof setTimeout> | undefined;
+    // Auch wenn schon das Holen der Sitzung hängt, endet das Warten.
+    const abgelaufen = new Promise<never>((_, nein) => {
+      zeitgrenze = setTimeout(() => { abbruch.abort(); nein(new Error('Zeitgrenze')); }, 20_000);
+    });
     try {
       setLoading(true);
+      setFehler(false);
 
-      const { data: sessions, error } = await supabase
-        .from('game_sessions')
-        .select('category, total_questions, correct_answers, time_spent, created_at')
-        .eq('user_id', childId)
-        .order('created_at', { ascending: true });
+      const { data: sessions, error } = await Promise.race([
+        supabase
+          .from('game_sessions')
+          .select('category, total_questions, correct_answers, time_spent, created_at')
+          .eq('user_id', childId)
+          .order('created_at', { ascending: true })
+          .abortSignal(abbruch.signal),
+        abgelaufen,
+      ]);
+
+      if (nr !== ladung.current) return;
 
       if (error) {
         console.error('Fehler beim Laden der Sessions:', error);
+        setFehler(true);
         return;
       }
 
       if (!sessions || sessions.length === 0) {
-        setLoading(false);
+        setSubjectStats([]);
+        setOverview(null);
         return;
       }
 
@@ -284,10 +307,27 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
 
     } catch (error) {
       console.error('Fehler bei der Analyse:', error);
+      if (nr === ladung.current) setFehler(true);
     } finally {
-      setLoading(false);
+      clearTimeout(zeitgrenze);
+      if (nr === ladung.current) setLoading(false);
     }
-  };
+  }, [childId]);
+
+  useEffect(() => {
+    void loadAnalysis();
+  }, [loadAnalysis]);
+
+  const leer = !overview || subjectStats.length === 0;
+  const nachladen = useRef(false);
+  nachladen.current = loading || fehler || leer;
+  useEffect(() => {
+    const sichtbar = () => {
+      if (document.visibilityState === 'visible' && nachladen.current) void loadAnalysis();
+    };
+    document.addEventListener('visibilitychange', sichtbar);
+    return () => document.removeEventListener('visibilitychange', sichtbar);
+  }, [loadAnalysis]);
 
   // Generiere Lernempfehlungen
   const recommendations = useMemo(() => {
@@ -364,6 +404,23 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
           </CardTitle>
           <CardDescription>Lade Daten...</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (fehler) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Lernanalyse
+          </CardTitle>
+          <CardDescription>Konnte nicht geladen werden. Besteht eine Internetverbindung?</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" size="sm" onClick={() => void loadAnalysis()}>Erneut versuchen</Button>
+        </CardContent>
       </Card>
     );
   }

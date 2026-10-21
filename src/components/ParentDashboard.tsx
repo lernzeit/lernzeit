@@ -31,6 +31,7 @@ import {
   AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Droplet, ChevronDown, ChevronLeft, ChevronRight, LogOut, Download, Apple, Gift, Share2
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
+import { HandyzeitUebersicht } from '@/components/parent/HandyzeitUebersicht';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
@@ -814,6 +815,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       <li className="flex justify-between py-3"><span>Aufgaben heute</span><b className="tabular text-tinte">{z?.questionsToday ?? 0}, davon {z?.correctToday ?? 0} richtig</b></li>
                       <li className="flex justify-between py-3"><span>Lerntage in Folge</span><b className="tabular text-tinte">{z?.streak ?? 0} {(z?.streak ?? 0) === 1 ? 'Tag' : 'Tage'}</b></li>
                     </ul>
+                    <HandyzeitUebersicht childId={child.id} childName={child.name || 'Kind'} />
                     <ChildLearningAnalysis childId={child.id} childName={child.name || 'Kind'} childGrade={child.grade} />
                   </div>
                 )}

@@ -78,3 +78,18 @@ export function anteilGenutzt(stand: TagesStand): number {
   if (stand.aufgebraucht) return 1;
   return Math.min(1, Math.max(0, stand.genutzt / stand.budget));
 }
+
+/** Die letzten n Tage als Schlüssel, ältester zuerst, heute zuletzt. */
+export function letzteTage(n: number, d: Date = new Date()): string[] {
+  return Array.from({ length: n }, (_, i) => tagSchluessel(new Date(d.getFullYear(), d.getMonth(), d.getDate() - (n - 1 - i))));
+}
+
+/** Summe je Tag (Ortszeit) für die Eltern-Übersicht; Tage ohne Eintrag zählen 0. */
+export function summeJeTag(zeilen: { wert: number; zeit: string }[], tage: string[]): Record<string, number> {
+  const summe: Record<string, number> = Object.fromEntries(tage.map((t) => [t, 0]));
+  for (const z of zeilen) {
+    const tag = tagSchluessel(new Date(z.zeit));
+    if (tag in summe) summe[tag] += Math.max(0, z.wert || 0);
+  }
+  return summe;
+}

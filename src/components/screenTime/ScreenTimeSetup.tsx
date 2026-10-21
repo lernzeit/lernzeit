@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Hourglass, KeyRound, Loader2, LockOpen, ShieldCheck, SlidersHorizontal, Smartphone, TimerReset } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -257,16 +256,9 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between gap-2">
-            <span className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4" />
-              Handy sperren
-            </span>
-            {status.managing && (
-              <Badge variant="secondary" className="font-normal">
-                {status.ruhezeit ? 'Ruhezeit' : freigabeLaeuft ? 'frei' : budgetModus ? (status.aufgebraucht ? 'zu' : 'offen') : 'aktiv'}
-              </Badge>
-            )}
+          <CardTitle className="text-base flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            Handy sperren
           </CardTitle>
           <CardDescription>Telefon und LernZeit bleiben immer offen.</CardDescription>
         </CardHeader>

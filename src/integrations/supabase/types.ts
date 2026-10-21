@@ -1144,6 +1144,36 @@ export type Database = {
         }
         Relationships: []
       }
+      handyzeit_tage: {
+        Row: {
+          aktualisiert: string
+          aufgebraucht: boolean
+          budget: number | null
+          child_id: string
+          genutzt: number
+          platz: number
+          tag: string
+        }
+        Insert: {
+          aktualisiert?: string
+          aufgebraucht?: boolean
+          budget?: number | null
+          child_id: string
+          genutzt?: number
+          platz: number
+          tag: string
+        }
+        Update: {
+          aktualisiert?: string
+          aufgebraucht?: boolean
+          budget?: number | null
+          child_id?: string
+          genutzt?: number
+          platz?: number
+          tag?: string
+        }
+        Relationships: []
+      }
       notfall_entsperrungen: {
         Row: {
           child_id: string

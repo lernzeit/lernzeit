@@ -202,6 +202,13 @@ Supabase-Secrets gelöscht werden.
   LernZeit reicht ihn beim Start nach `shield_attempts` nach (eindeutiger Index, keine Dublette). Der Trigger
   `shield_attempts_eltern_fragen` schickt Push `eltern_fragen` (je Kind höchstens alle 10 Min., nur Drücke < 12 h).
   Ob Apple der Erweiterung Netzzugriff erlaubt, zeigt erst das Gerät.
+- Eltern-Übersicht beim Kind (21.10.2026, `parent/HandyzeitUebersicht.tsx`): „Handyzeit heute“ (nur mit
+  `screen_time_managed`: genutzt/Budget, Freiminuten, freigegeben, Extra, Elterncode, „Eltern fragen“) und „Letzte 7
+  Tage“ (genutzt bzw. verdient, freigegeben). Verlauf in `handyzeit_tage` (31 Plätze je Kind, `platz` = Tag mod 31,
+  überschreibt statt zu löschen), gefüllt von `handyzeit_stand_melden`. Welche Apps: gibt Apple nicht heraus, Hinweis
+  auf Bildschirmzeit am Eltern-iPhone. Keine Plakette („zu/offen“) mehr in „Handy sperren“.
+- Hooks, deren Funktionen in Effekt-Abhängigkeiten stehen, müssen stabile Funktionen liefern
+  (`useEarnedMinutesTracker` = feste Funktionen): Am 21.10.2026 schickte Klaras Handy ~1.900 Abfragen je Minute.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

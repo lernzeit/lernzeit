@@ -12,108 +12,117 @@ interface EarnedMinutesTrackerProps {
   minutesEarned: number;
 }
 
-export function useEarnedMinutesTracker() {
-  const trackEarnedMinutes = async ({
-    userId,
-    sessionId,
-    sessionType,
-    minutesEarned,
-  }: EarnedMinutesTrackerProps) => {
-    try {
-      const { error } = await supabase
-        .from('user_earned_minutes')
-        .insert({
-          user_id: userId,
-          session_id: sessionId,
-          session_type: sessionType,
-          minutes_earned: minutesEarned,
-          minutes_requested: 0,
-        });
+/*
+ * Die Funktionen hängen an keinem Zustand und stehen deshalb außerhalb des
+ * Hooks: Effekte, die sie als Abhängigkeit führen (EarnedTimeWidget,
+ * ScreenTimeRequestWidget, ScreenTimeRequestCard), liefen sonst bei jedem
+ * Neuzeichnen erneut. Am 21.10.2026 schickte ein Kinder-Handy so rund
+ * 1.900 Abfragen je Minute und Tabelle.
+ */
+const trackEarnedMinutes = async ({
+  userId,
+  sessionId,
+  sessionType,
+  minutesEarned,
+}: EarnedMinutesTrackerProps) => {
+  try {
+    const { error } = await supabase
+      .from('user_earned_minutes')
+      .insert({
+        user_id: userId,
+        session_id: sessionId,
+        session_type: sessionType,
+        minutes_earned: minutesEarned,
+        minutes_requested: 0,
+      });
 
-      if (error) {
-        console.error('Error tracking earned minutes:', error);
-        return false;
-      }
-
-      console.log(`Tracked ${minutesEarned} earned minutes for ${sessionType} session`);
-      return true;
-    } catch (error) {
-      console.error('Error in trackEarnedMinutes:', error);
+    if (error) {
+      console.error('Error tracking earned minutes:', error);
       return false;
     }
-  };
 
-  const getTodayBreakdown = async (userId: string) => {
-    try {
-      return await fetchTodayScreenTimeBreakdown(userId);
-    } catch (error) {
-      console.error('Error loading canonical screen time breakdown:', error);
-      return { ...EMPTY_TODAY_SCREEN_TIME_BREAKDOWN };
-    }
-  };
+    console.log(`Tracked ${minutesEarned} earned minutes for ${sessionType} session`);
+    return true;
+  } catch (error) {
+    console.error('Error in trackEarnedMinutes:', error);
+    return false;
+  }
+};
 
-  const getTodaySessionMinutes = async (userId: string): Promise<number> => {
-    const breakdown = await getTodayBreakdown(userId);
-    return breakdown.todaySessionMinutes;
-  };
+const getTodayBreakdown = async (userId: string) => {
+  try {
+    return await fetchTodayScreenTimeBreakdown(userId);
+  } catch (error) {
+    console.error('Error loading canonical screen time breakdown:', error);
+    return { ...EMPTY_TODAY_SCREEN_TIME_BREAKDOWN };
+  }
+};
 
-  const getTodayAchievementMinutes = async (userId: string): Promise<number> => {
-    const breakdown = await getTodayBreakdown(userId);
-    return breakdown.todayAchievementMinutes;
-  };
+const getTodaySessionMinutes = async (userId: string): Promise<number> => {
+  const breakdown = await getTodayBreakdown(userId);
+  return breakdown.todaySessionMinutes;
+};
 
-  const getTodayAchievementDetails = async (userId: string): Promise<TodayAchievementDetail[]> => {
-    const breakdown = await getTodayBreakdown(userId);
-    return breakdown.achievementDetails;
-  };
+const getTodayAchievementMinutes = async (userId: string): Promise<number> => {
+  const breakdown = await getTodayBreakdown(userId);
+  return breakdown.todayAchievementMinutes;
+};
 
-  const getTodayApprovedMinutes = async (userId: string): Promise<number> => {
-    const breakdown = await getTodayBreakdown(userId);
-    return breakdown.todayApprovedMinutes;
-  };
+const getTodayAchievementDetails = async (userId: string): Promise<TodayAchievementDetail[]> => {
+  const breakdown = await getTodayBreakdown(userId);
+  return breakdown.achievementDetails;
+};
 
-  const getTodayPendingMinutes = async (userId: string): Promise<number> => {
-    const breakdown = await getTodayBreakdown(userId);
-    return breakdown.todayPendingMinutes;
-  };
+const getTodayApprovedMinutes = async (userId: string): Promise<number> => {
+  const breakdown = await getTodayBreakdown(userId);
+  return breakdown.todayApprovedMinutes;
+};
 
-  const getAvailableMinutes = async (userId: string): Promise<number> => {
-    const breakdown = await getTodayBreakdown(userId);
+const getTodayPendingMinutes = async (userId: string): Promise<number> => {
+  const breakdown = await getTodayBreakdown(userId);
+  return breakdown.todayPendingMinutes;
+};
 
-    console.log('Available minutes calculation (canonical UTC):', {
-      todaySessionMinutes: breakdown.todaySessionMinutes,
-      todayAchievementMinutes: breakdown.todayAchievementMinutes,
-      totalEarnedToday: breakdown.totalEarnedToday,
-      todayApprovedMinutes: breakdown.todayApprovedMinutes,
-      todayPendingMinutes: breakdown.todayPendingMinutes,
-      totalClaimedToday: breakdown.totalClaimedToday,
-      availableMinutes: breakdown.availableMinutes,
-    });
+const getAvailableMinutes = async (userId: string): Promise<number> => {
+  const breakdown = await getTodayBreakdown(userId);
 
-    return breakdown.availableMinutes;
-  };
+  console.log('Available minutes calculation (canonical UTC):', {
+    todaySessionMinutes: breakdown.todaySessionMinutes,
+    todayAchievementMinutes: breakdown.todayAchievementMinutes,
+    totalEarnedToday: breakdown.totalEarnedToday,
+    todayApprovedMinutes: breakdown.todayApprovedMinutes,
+    todayPendingMinutes: breakdown.todayPendingMinutes,
+    totalClaimedToday: breakdown.totalClaimedToday,
+    availableMinutes: breakdown.availableMinutes,
+  });
 
-  const getTodayRequestedMinutes = async (userId: string): Promise<number> => {
-    const breakdown = await getTodayBreakdown(userId);
-    return breakdown.todayRequestedMinutes;
-  };
+  return breakdown.availableMinutes;
+};
 
-  const getAvailableMinutesBreakdown = async (userId: string) => {
-    const breakdown = await getTodayBreakdown(userId);
+const getTodayRequestedMinutes = async (userId: string): Promise<number> => {
+  const breakdown = await getTodayBreakdown(userId);
+  return breakdown.todayRequestedMinutes;
+};
 
-    console.log('Available minutes breakdown (canonical UTC):', breakdown);
-    return breakdown;
-  };
+const getAvailableMinutesBreakdown = async (userId: string) => {
+  const breakdown = await getTodayBreakdown(userId);
 
-  return {
-    trackEarnedMinutes,
-    getAvailableMinutes,
-    getTodayRequestedMinutes,
-    getAvailableMinutesBreakdown,
-    getTodaySessionMinutes,
-    getTodayAchievementMinutes,
-    getTodayApprovedMinutes,
-    getTodayPendingMinutes,
-    getTodayAchievementDetails,
-  };
+  console.log('Available minutes breakdown (canonical UTC):', breakdown);
+  return breakdown;
+};
+
+const TRACKER = {
+  trackEarnedMinutes,
+  getAvailableMinutes,
+  getTodayRequestedMinutes,
+  getAvailableMinutesBreakdown,
+  getTodaySessionMinutes,
+  getTodayAchievementMinutes,
+  getTodayApprovedMinutes,
+  getTodayPendingMinutes,
+  getTodayAchievementDetails,
+};
+
+export function useEarnedMinutesTracker() {
+  return TRACKER;
 }

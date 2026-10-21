@@ -12,7 +12,7 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
  * Kanzlei. Offene Punkte: docs/rechtstexte-pruefung.md.
  */
 const Datenschutz = () => (
-  <RechtsSeite titel="Datenschutzerklärung" stand="20. Oktober 2026">
+  <RechtsSeite titel="Datenschutzerklärung" stand="21. Oktober 2026">
     <Seo
       title="Datenschutz – LernZeit"
       description="Datenschutzerklärung von LernZeit: welche Daten von Eltern und Kindern wir verarbeiten, wozu, auf welcher Rechtsgrundlage und welche Rechte Sie haben."
@@ -45,8 +45,8 @@ const Datenschutz = () => (
         <li>gelöste Aufgaben, Antworten, Lernfortschritt und Statistiken</li>
         <li>verdiente, angefragte und freigegebene Bildschirmzeit, Regeln der Eltern</li>
         <li>
-          bei der LernZeit-Handysperre auf dem iPhone: wie viele Minuten das Kind heute genutzt hat (nur die Summe
-          des Tages, ohne Apps, wird überschrieben), Extra-Zeit der Eltern und wann der Elterncode genutzt
+          bei der LernZeit-Handysperre auf dem iPhone: wie viele Minuten das Kind an einem Tag genutzt hat (nur die Summe
+          je Tag, ohne Apps; nach 31 Tagen überschrieben), Extra-Zeit der Eltern und wann der Elterncode genutzt
           wurde. Welche Apps das Kind nutzt, erfahren wir nicht; Apple zählt die Nutzung auf dem Gerät.
         </li>
         <li>Lerntage in Folge, Sticker und gestaltete Hefte, Tintentropfen (Spielpunkte ohne Geldwert), Fortschritt der Lernreise, freigeschaltete Figuren und geöffnete Türchen im Adventskalender</li>

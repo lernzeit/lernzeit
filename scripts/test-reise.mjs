@@ -245,6 +245,12 @@ pruefe('Nach einem Fehler steht der Schritt vorn und der Rohtext hinten',
      handyzeit.standText({ budget: 1500, genutzt: 10, aufgebraucht: false })],
     ['noch 25 Min. (35 von 60 genutzt)', 'Für heute aufgebraucht', 'Heute ohne Limit']);
   const swift = await readFile('native/screen-time/ios/Sources/ScreenTimePlugin/ScreenTimeShared.swift', 'utf8');
+  pruefe('Letzte 7 Tage, über die Zeitumstellung', handyzeit.letzteTage(3, new Date(2026, 9, 26, 12)), ['2026-10-24', '2026-10-25', '2026-10-26']);
+  pruefe('Summe je Tag in Ortszeit', handyzeit.summeJeTag([
+    { wert: 10, zeit: new Date(2026, 9, 25, 23, 59).toISOString() },
+    { wert: 5, zeit: new Date(2026, 9, 26, 0, 1).toISOString() },
+    { wert: 7, zeit: new Date(2026, 9, 1).toISOString() },
+  ], ['2026-10-25', '2026-10-26']), { '2026-10-25': 10, '2026-10-26': 5 });
   pruefe('Swift: „ohne Limit“ ab derselben Grenze', swift.includes(`ohneLimitMinuten = ${handyzeit.OHNE_LIMIT_MINUTEN}`), true);
 }
 

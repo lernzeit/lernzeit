@@ -19,11 +19,7 @@ interface ScreenTimeRequestWidgetProps {
 
 export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidgetProps) {
   const { requests, loading, createRequest, respondToRequest, refreshRequests } = useScreenTimeRequests(role);
-  const { 
-    getAvailableMinutes, 
-    getTodayRequestedMinutes, 
-    getAvailableMinutesBreakdown 
-  } = useEarnedMinutesTracker();
+  const { getAvailableMinutesBreakdown } = useEarnedMinutesTracker();
   const { toast } = useToast();
   
   const [message, setMessage] = useState('');
@@ -57,11 +53,10 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
   const recentRequests = requests.slice(0, 3);
 
   const loadMinutesData = async () => {
-    const [available, requested, breakdown] = await Promise.all([
-      getAvailableMinutes(userId),
-      getTodayRequestedMinutes(userId),
-      getAvailableMinutesBreakdown(userId)
-    ]);
+    // Eine Abfrage-Runde statt drei: alle Werte stecken im selben Stand.
+    const breakdown = await getAvailableMinutesBreakdown(userId);
+    const available = breakdown.availableMinutes;
+    const requested = breakdown.todayRequestedMinutes;
     setAvailableMinutes(available);
     setTodayRequestedMinutes(requested);
     setMinutesBreakdown(breakdown);
@@ -70,7 +65,7 @@ export function ScreenTimeRequestWidget({ userId, role }: ScreenTimeRequestWidge
 
   useEffect(() => {
     loadMinutesData();
-  }, [userId, getAvailableMinutes, getTodayRequestedMinutes, getAvailableMinutesBreakdown, requests]);
+  }, [userId, getAvailableMinutesBreakdown, requests]);
 
   const handleRequestScreenTime = async () => {
     setIsSubmitting(true);
