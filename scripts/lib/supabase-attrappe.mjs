@@ -191,7 +191,18 @@ export function beantworte(route, d) {
     return json({});
   }
 
-  if (u.pathname.startsWith('/rest/v1/rpc/')) return json(d.rpc?.[u.pathname.split('/').pop()] ?? null);
+  if (u.pathname.startsWith('/rest/v1/rpc/')) {
+    const fn = u.pathname.split('/').pop();
+    // Wie der Server: runde_belohnen traegt die neuen Felder ein (Rundenende malt sie aus)
+    if (fn === 'runde_belohnen') {
+      for (const f of d.rpc?.runde_belohnen?.felder ?? []) {
+        if (!(d.kind_reise_felder || []).some((z) => z.seite === f.seite && z.feld === f.feld)) {
+          (d.kind_reise_felder ||= []).push({ child_id: d.ich, ...f, sitzung_id: null, created_at: new Date().toISOString() });
+        }
+      }
+    }
+    return json(d.rpc?.[fn] ?? null);
+  }
 
   const tabelle = u.pathname.replace('/rest/v1/', '');
   if (['POST', 'PATCH', 'DELETE'].includes(q.method())) {

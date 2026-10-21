@@ -212,8 +212,16 @@ try {
       await page.getByRole('button', { name: /Weiter|Fertig/ }).last().click();
       await page.waitForTimeout(700);
     }
-    // Konfetti (5 von 5) abklingen lassen
-    await page.waitForTimeout(4500);
+    // Klecksi malt die neuen Felder auf der Reise aus (ReisePfad, Klasse reise-malt). Aufnahme,
+    // waehrend er das zweite Feld malt, mit dem Pinsel in der Hand; bis dahin ist das Konfetti
+    // (5 von 5) weitgehend verflogen. Ohne Reise wie bisher: Konfetti abklingen lassen.
+    const zweitesFeld = await page.waitForFunction(() => {
+      const w = window;
+      if (document.querySelector('.reise-malt')) { if (w.__malPause) return true; w.__malt = true; }
+      else if (w.__malt) w.__malPause = true;
+      return false;
+    }, null, { polling: 40, timeout: 12000 }).then(() => true, () => false);
+    await page.waitForTimeout(zweitesFeld ? 0 : 4500);
     // Ab den Kaestchen, damit die verdiente Zeit auch im kleinen Ausschnitt oben steht
     await ausschnitt(page, 'rundenende', page.locator('ol[aria-label$="richtig"]').first(), 40);
     await ctx.close();

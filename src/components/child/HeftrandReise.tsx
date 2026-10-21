@@ -93,19 +93,6 @@ export const MAL_PAUSE = 700;
 export const MAL_DAUER = 1100;
 export const MAL_HUEPFEN = 750;
 
-/** Ein Pinsel in der Farbe des Fachs, wackelt beim Malen (CSS reise-pinsel). */
-function Pinsel({ x, y, farbe }: { x: number; y: number; farbe: string }) {
-  return (
-    <g transform={`translate(${x} ${y})`}>
-      <g className="reise-pinsel">
-        <path d="M0 0 L9 -26" stroke="#b7793a" strokeWidth={4} strokeLinecap="round" />
-        <path d="M-1.5 1 L4 -9 L8 -7 L3 3 Z" fill="#c9cfe0" stroke={TINTE} strokeWidth={1.2} strokeLinejoin="round" />
-        <path d="M-1.5 1 C-5 6 -4 10 -2 12 C1 9 3 6 3 3 Z" fill={farbe} stroke={TINTE} strokeWidth={1.2} strokeLinejoin="round" />
-      </g>
-    </g>
-  );
-}
-
 /**
  * Das Spielbrett der Reise: Pfad mit 12 Feldern, Klecksi auf dem naechsten
  * Feld, oben die Faltfigur. Auch auf der Startseite (landing/KlecksiReise).
@@ -203,7 +190,6 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, neu
                 <g mask={`url(#${maskeId}-${i})`}>
                   <Kritzel form={FORMEN[i]} x={x} y={y} zustand="fertig" farbe={farbe(f.fach)} />
                 </g>
-                {mitKlecksi && <Pinsel x={x + (x > 200 ? -18 : 18)} y={y + 4} farbe={farbe(f.fach)} />}
               </g>
             );
           }
@@ -225,9 +211,10 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, neu
         )}
       </svg>
       {/* Klecksi steht auf dem naechsten Feld */}
-      {mitKlecksi && <div className="reise-klecksi pointer-events-none absolute transition-[left,top] duration-700 ease-out motion-reduce:transition-none"
+      {mitKlecksi && <div className={`reise-klecksi ${malt != null ? 'reise-malt' : ''} pointer-events-none absolute transition-[left,top] duration-700 ease-out motion-reduce:transition-none`}
         style={{ left: `${((kx - 26) / B) * 100}%`, top: `${((ky - 58) / H) * 100}%`, width: `${(52 / B) * 100}%` }}>
-        <Klecksi groesse="voll" stand={stand} festeGroesse />
+        <Klecksi groesse="voll" stand={stand} festeGroesse
+          pinsel={malt != null && felder[malt] ? { farbe: farbe(felder[malt].fach), seite: seitlich > 0 ? 'links' : 'rechts' } : undefined} />
       </div>}
     </div>
   );

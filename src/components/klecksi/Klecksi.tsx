@@ -35,6 +35,8 @@ export interface KlecksiProps {
   stand?: LernStand;
   /** Mit `stand` die Groesse der Stufe nicht anwenden (z. B. auf der Reise) */
   festeGroesse?: boolean;
+  /** Haelt einen Pinsel in der Fachfarbe und malt (Arm zur Seite des Feldes, Reise am Rundenende) */
+  pinsel?: { farbe: string; seite: 'links' | 'rechts' };
   className?: string;
 }
 
@@ -123,6 +125,26 @@ function Risse({ anzahl }: { anzahl: 2 | 4 }) {
   );
 }
 
+/**
+ * Arm mit Pinsel (21.10.2026). Der Arm hat die Koerperfarbe und keinen Rand,
+ * so waechst er nahtlos aus dem Klecks. Gezeichnet fuer links; rechts wird
+ * gespiegelt. Der Arm schwingt um die Schulter (CSS klecksi-malen).
+ */
+function PinselArm({ farbe, pinselFarbe, seite, ruhig }: { farbe: string; pinselFarbe: string; seite: 'links' | 'rechts'; ruhig: boolean }) {
+  return (
+    <g transform={seite === 'rechts' ? 'translate(120 0) scale(-1 1)' : undefined}>
+      <g className={ruhig ? undefined : 'klecksi-malen'}>
+        <path d="M30 80 Q16 86 8 100" fill="none" stroke={farbe} strokeWidth="12" strokeLinecap="round" />
+        {/* Pinsel: Stiel hinter der Hand, Zwinge, Spitze in der Fachfarbe */}
+        <path d="M14 88 L-2 116" stroke="#b7793a" strokeWidth="4.5" strokeLinecap="round" />
+        <path d="M2 109 L-6 116 L-2 120 L6 113 Z" fill="#c9cfe0" stroke={TINTE} strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M-6 116 C-12 120 -13 126 -11 129 C-6 127 -3 124 -2 120 Z" fill={pinselFarbe} stroke={TINTE} strokeWidth="1.4" strokeLinejoin="round" />
+        <circle cx="8" cy="100" r="7.5" fill={farbe} />
+      </g>
+    </g>
+  );
+}
+
 /** Weihnachtsmuetze, sitzt auf dem Kopf und atmet mit */
 function Muetze() {
   return (
@@ -192,7 +214,7 @@ function Gesicht({ stimmung }: { stimmung: KlecksiStimmung }) {
 }
 
 export const Klecksi = forwardRef<KlecksiHandle, KlecksiProps>(function Klecksi(
-  { groesse = 104, stimmung = 'froh', gruessen = false, label, muetze, stand, festeGroesse = false, className },
+  { groesse = 104, stimmung = 'froh', gruessen = false, label, muetze, stand, festeGroesse = false, pinsel, className },
   ref,
 ) {
   const grussRef = useRef<SVGAnimateElement | null>(null);
@@ -282,6 +304,7 @@ export const Klecksi = forwardRef<KlecksiHandle, KlecksiProps>(function Klecksi(
                 keyTimes="0;0.2;0.36;0.52;0.68;0.84;1" calcMode="spline" keySplines={Array(6).fill(SPLINE).join(';')} />
             )}
           </path>
+          {pinsel && <PinselArm farbe={farbe} pinselFarbe={pinsel.farbe} seite={pinsel.seite} ruhig={ruhig} />}
           {frische === 'trocknet' && <Risse anzahl={2} />}
           {frische === 'trocken' && <Risse anzahl={4} />}
           {glanz >= 2 && <ellipse cx="44" cy="44" rx={glanz >= 3 ? 7 : 6} ry={glanz >= 3 ? 4 : 3.4} transform="rotate(-30 44 44)" fill="#fff" opacity={lichtDeckkraft} />}
