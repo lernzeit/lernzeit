@@ -14,7 +14,6 @@ import { useChildPlatforms } from '@/hooks/useChildPlatforms';
 import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
 import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
-import { ShieldAttemptsNotice } from '@/components/ShieldAttemptsNotice';
 import { ShieldSetupNotice } from '@/components/screenTime/ShieldSetupNotice';
 import { GeraetFreigabenKarte } from '@/components/screenTime/GeraetFreigabenKarte';
 import { SoGehtEs } from '@/components/SoGehtEs';
@@ -207,11 +206,10 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
   // Entscheidung noetig ist. Genehmigen ist der Normalfall, Ablehnen leiser.
   return (
     <div className="space-y-4">
-      {/* Steht die Sperre auf dem Kindgeraet? Versuche am Sperrbildschirm?
-          Beides beschreibt die Lage und steht deshalb ueber den Anfragen. */}
+      {/* Steht die Sperre auf dem Kindgeraet? Das beschreibt die Lage und
+          steht deshalb ueber den Anfragen. */}
       <GeraetFreigabenKarte />
       <ShieldSetupNotice parentId={userId} />
-      <ShieldAttemptsNotice parentId={userId} />
 
       {pendingRequests.length > 0 ? (
         <ul className="space-y-3">

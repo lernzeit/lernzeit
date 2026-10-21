@@ -201,6 +201,7 @@ Supabase-Secrets gelöscht werden.
   Sperrbildschirm zeigt dann „Anfrage ist raus“ bzw. „Gemerkt“ (ohne Netz). Zusätzlich merkt sie den Druck,
   LernZeit reicht ihn beim Start nach `shield_attempts` nach (eindeutiger Index, keine Dublette). Der Trigger
   `shield_attempts_eltern_fragen` schickt Push `eltern_fragen` (je Kind höchstens alle 10 Min., nur Drücke < 12 h).
+  Keine Kachel „Gesperrte Apps wurden angetippt“ mehr auf „Heute“ (21.10.2026, kein Mehrwert).
   Ob Apple der Erweiterung Netzzugriff erlaubt, zeigt erst das Gerät.
 - Eltern-Übersicht beim Kind (21.10.2026, `parent/HandyzeitUebersicht.tsx`): „Handyzeit heute“ (nur mit
   `screen_time_managed`: genutzt/Budget, Freiminuten, freigegeben, Extra, Elterncode, „Eltern fragen“) und „Letzte 7

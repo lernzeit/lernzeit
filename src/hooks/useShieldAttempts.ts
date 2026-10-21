@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ScreenTime, screenTimePendingRequests, screenTimeSupportedPlatform } from '@/services/screenTime/plugin';
 import { SUPABASE_ANON_KEY, SUPABASE_PROJECT_URL } from '@/integrations/supabase/client';
@@ -12,26 +12,10 @@ import { SUPABASE_ANON_KEY, SUPABASE_PROJECT_URL } from '@/integrations/supabase
  * nur in der App Group vermerken. Erst LernZeit selbst kann ihn weitergeben —
  * beim nächsten Start auf dem Gerät des Kindes.
  *
- * Zwei Rollen, zwei Aufgaben:
- *
- *   child    holt die gemerkten Zeitpunkte ab und schreibt sie weg
- *   parent   liest, was die verknüpften Kinder hinterlassen haben
+ * Die Eltern bekommen pro Bitte eine Mitteilung (Trigger
+ * `shield_attempts_eltern_fragen`); die Kachel „Gesperrte Apps wurden
+ * angetippt“ auf „Heute“ ist seit 21.10.2026 weg (kein Mehrwert).
  */
-
-export interface ShieldAttempt {
-  id: string;
-  childId: string;
-  attemptedAt: string;
-}
-
-/** Je Kind zusammengefasst — das ist die Form, die Eltern lesen wollen. */
-export interface ShieldAttemptSummary {
-  childId: string;
-  childName: string;
-  count: number;
-  /** Jüngster Versuch, ISO-8601. */
-  lastAttemptAt: string;
-}
 
 /**
  * Kindgerät: gemerkte Drücke abholen und speichern.
@@ -83,76 +67,4 @@ export function useSyncShieldAttempts(childId: string | undefined, enabled: bool
     void zugangAblegen();
     return () => { abgebrochen = true; };
   }, [childId, enabled]);
-}
-
-/**
- * Elternseite: die Versuche der verknüpften Kinder, jüngste zuerst.
- *
- * Bewusst nur die letzten sieben Tage: Ältere Versuche sagen nichts mehr über
- * die Lage von heute, und die Liste soll kurz bleiben.
- */
-export function useShieldAttempts(parentId: string | undefined, enabled: boolean) {
-  const [attempts, setAttempts] = useState<ShieldAttempt[]>([]);
-  const [namen, setNamen] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-
-  const laden = useCallback(async () => {
-    if (!parentId || !enabled) { setAttempts([]); return; }
-    setLoading(true);
-    const seit = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data } = await supabase
-      .from('shield_attempts')
-      .select('id, child_id, attempted_at')
-      .gte('attempted_at', seit)
-      .order('attempted_at', { ascending: false })
-      .limit(50);
-    const zeilen = (data ?? []).map((zeile) => ({
-      id: zeile.id,
-      childId: zeile.child_id,
-      attemptedAt: zeile.attempted_at,
-    }));
-    setAttempts(zeilen);
-
-    // Namen nur für die Kinder holen, die tatsächlich vorkommen. Ohne
-    // Versuche gibt es nichts anzuzeigen und nichts abzufragen.
-    const kinder = [...new Set(zeilen.map((z) => z.childId))];
-    if (kinder.length > 0) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .in('id', kinder);
-      setNamen(Object.fromEntries((profile ?? []).map((p) => [p.id, p.name ?? ''])));
-    } else {
-      setNamen({});
-    }
-    setLoading(false);
-  }, [parentId, enabled]);
-
-  useEffect(() => { void laden(); }, [laden]);
-
-  /**
-   * Je Kind eine Zeile. Eine Liste einzelner Zeitstempel wäre für Eltern
-   * unlesbar — interessant ist, WER es WIE OFT versucht hat und wann zuletzt.
-   */
-  const summaries: ShieldAttemptSummary[] = Object.values(
-    attempts.reduce<Record<string, ShieldAttemptSummary>>((gesammelt, versuch) => {
-      const vorhanden = gesammelt[versuch.childId];
-      if (vorhanden) {
-        vorhanden.count += 1;
-        if (versuch.attemptedAt > vorhanden.lastAttemptAt) {
-          vorhanden.lastAttemptAt = versuch.attemptedAt;
-        }
-      } else {
-        gesammelt[versuch.childId] = {
-          childId: versuch.childId,
-          childName: namen[versuch.childId]?.trim() || 'Dein Kind',
-          count: 1,
-          lastAttemptAt: versuch.attemptedAt,
-        };
-      }
-      return gesammelt;
-    }, {}),
-  ).sort((a, b) => b.lastAttemptAt.localeCompare(a.lastAttemptAt));
-
-  return { attempts, summaries, loading, reload: laden };
 }
