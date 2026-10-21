@@ -36,7 +36,6 @@ import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 import { RuhezeitEinstellung } from '@/components/parent/RuhezeitEinstellung';
 import { HandysperreHeute } from '@/components/parent/HandysperreHeute';
 import type { ChildPlatform } from '@/services/parentalControlsService';
-import { ReiseEinstellung } from '@/components/parent/ReiseEinstellung';
 import { isSubjectAvailableForGrade } from '@/lib/category';
 import {
   DEFAULT_BASE_MINUTES,
@@ -524,10 +523,6 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
             </div>
           );
         })}
-      </Gruppe>
-
-      <Gruppe titel="Klecksis Reise">
-        <ReiseEinstellung childId={childId} parentId={parentId} childName={childName} />
       </Gruppe>
 
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-live="polite">

@@ -227,8 +227,8 @@ Supabase-Secrets gelöscht werden.
 - Eine Reise für alle Fächer auf dem Kind-Start (`child/HeftrandReise.tsx`): 12 Felder je Seite in
   Heftfarbe, Lernplan/Schwerpunkt doppelt, bunte Seite (3 Fächer) +20 Tinte, Faltung fürs Regal.
 - Vergabe nur serverseitig: `runde_belohnen(p_sitzung)` nach `saveSession` (Tinte, Felder, Seite,
-  Eltern-Bonus `child_settings.reise_bonus_minuten`, zählt in App und `screen-time-request` zur
-  verdienten Zeit). Figuren: `mit_tinte_freischalten`, Trigger `avatar_pruefen`; Preise in
+  Eltern-Bonus `child_settings.reise_bonus_minuten` – seit 21.10.2026 überall 0 und ohne Einstellung
+  in der App: keine Extra-Minuten für fertige Seiten). Figuren: `mit_tinte_freischalten`, Trigger `avatar_pruefen`; Preise in
   `avatar_preis()` und `lib/federmaeppchen.ts` gleich halten (`npm run test:reise` prüft das).
 - Lerntage als Klecksi (13.10.2026, ersetzt die Lernpflanze): Größe und Glanz nach 3/7/14/30 Tagen
   (`KLECKS_STUFEN`), Rechnung unverändert aus `useStreak`. 1 Tag Pause = blass, 2 = trocknet (Kette
