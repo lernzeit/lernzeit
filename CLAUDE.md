@@ -241,6 +241,9 @@ Supabase-Secrets gelöscht werden.
   Meilensteine (3/7/14/30 … Tage) löst seit 17.10.2026 der Server aus: Trigger `game_session_streak_pruefen`
   (erste Runde des Tages) → send-push `streak_pruefen`, gemerkt in `streak_meilensteine`. Vorher rief die App
   send-push selbst auf und wurde abgewiesen (nur Service-Rolle).
+- Ausmalen am Rundenende (21.10.2026): Ausschnitt der Seite (`ReiseAusmalen` in `child/HeftrandReise.tsx`,
+  `ReisePfad` mit `neuAb`), Klecksi steht neben jedem neuen Feld und malt es mit dem Pinsel aus (SVG-Maske,
+  SMIL per `beginElement`), startet erst sichtbar, bei „Bewegung reduzieren“ sofort fertig. Ersetzt die Kästchen.
 - Berichtigung: Runde aus `review_queue` (`useBerichtigung`, LearningGame `mode='berichtigung'`),
   richtig = `is_retired`. Supabase-Anfragen ohne `await`/`.then()` werden nie abgeschickt.
 - DELETE über das Supabase-MCP wartet auf Bestätigung und läuft in eine Zeitüberschreitung.

@@ -5,7 +5,7 @@
  * = Lernplan oder Schwerpunkt (doppelt weit). Klecksi steht auf dem naechsten
  * Feld, oben wartet, was er am Seitenende faltet. Regeln: lib/reise.ts.
  */
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { useKlecksiAn } from '@/hooks/useKlecksi';
 import type { LernStand } from '@/lib/klecksiLernstand';
@@ -88,11 +88,34 @@ function Kritzel({ form, x, y, zustand, farbe }: {
   return <g transform={`translate(${x} ${y})`}>{inhalt}</g>;
 }
 
+/** Zeitplan beim Ausmalen (ms): warten, ein Feld malen, zum naechsten huepfen */
+export const MAL_PAUSE = 700;
+export const MAL_DAUER = 1100;
+export const MAL_HUEPFEN = 750;
+
+/** Ein Pinsel in der Farbe des Fachs, wackelt beim Malen (CSS reise-pinsel). */
+function Pinsel({ x, y, farbe }: { x: number; y: number; farbe: string }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <g className="reise-pinsel">
+        <path d="M0 0 L9 -26" stroke="#b7793a" strokeWidth={4} strokeLinecap="round" />
+        <path d="M-1.5 1 L4 -9 L8 -7 L3 3 Z" fill="#c9cfe0" stroke={TINTE} strokeWidth={1.2} strokeLinejoin="round" />
+        <path d="M-1.5 1 C-5 6 -4 10 -2 12 C1 9 3 6 3 3 Z" fill={farbe} stroke={TINTE} strokeWidth={1.2} strokeLinejoin="round" />
+      </g>
+    </g>
+  );
+}
+
 /**
  * Das Spielbrett der Reise: Pfad mit 12 Feldern, Klecksi auf dem naechsten
  * Feld, oben die Faltfigur. Auch auf der Startseite (landing/KlecksiReise).
+ *
+ * `neuAb` (Rundenende, 21.10.2026): Felder ab diesem Index sind neu. Klecksi
+ * stellt sich neben jedes neue Feld und malt es mit dem Pinsel aus (Maske
+ * wie ein Pinselstrich), dann huepft er weiter. Bei „Bewegung reduzieren“
+ * steht sofort das Ergebnis da.
  */
-export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, className = '' }: {
+export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, neuAb, bereit = true, className = '' }: {
   seite: number;
   felder: ReiseFeld[];
   farbe: (fach: string) => string;
@@ -100,11 +123,42 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, cla
   stand?: LernStand;
   /** Faltfigur oben schon fertig (Seite voll) statt mit Bleistift */
   zielFertig?: boolean;
+  /** Felder ab diesem Index nacheinander ausmalen (Animation) */
+  neuAb?: number;
+  /** Ausmalen erst starten, wenn sichtbar (ReiseAusmalen) */
+  bereit?: boolean;
   className?: string;
 }) {
-  const gemalt = felder.length;
+  const maskeId = useId().replace(/:/g, '');
+  const [schritt, setSchritt] = useState<{ gezeigt: number; malt: number | null }>(
+    () => ({ gezeigt: neuAb != null ? Math.min(neuAb, felder.length) : felder.length, malt: null }),
+  );
+  useEffect(() => {
+    if (neuAb == null || neuAb >= felder.length) { setSchritt({ gezeigt: felder.length, malt: null }); return; }
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setSchritt({ gezeigt: felder.length, malt: null }); return; }
+    setSchritt({ gezeigt: neuAb, malt: null });
+    if (!bereit) return;
+    const uhr: number[] = [];
+    let t = MAL_PAUSE;
+    for (let i = neuAb; i < felder.length; i++) {
+      uhr.push(window.setTimeout(() => setSchritt({ gezeigt: i, malt: i }), t));
+      t += MAL_DAUER;
+      uhr.push(window.setTimeout(() => setSchritt({ gezeigt: i + 1, malt: null }), t));
+      t += MAL_HUEPFEN;
+    }
+    return () => uhr.forEach((u) => window.clearTimeout(u));
+  }, [neuAb, felder.length, bereit]);
+
+  const gemalt = schritt.gezeigt;
+  const malt = schritt.malt;
   const faltung = faltungFuer(seite);
-  const [kx, ky] = FELDER[Math.min(gemalt, FELDER_JE_SEITE - 1)];
+  const [fx, fy] = FELDER[Math.min(gemalt, FELDER_JE_SEITE - 1)];
+  // Solange noch Felder auszumalen sind, steht Klecksi neben dem naechsten
+  // (rechts, in der rechten Spalte links), danach wieder auf dem Feld.
+  const laeuft = neuAb != null && gemalt < felder.length;
+  const seitlich = !laeuft ? 0 : fx > 200 ? -1 : 1;
+  const kx = seitlich === 0 ? fx : fx + seitlich * 42;
+  const ky = seitlich === 0 ? fy : fy + 8;
   const mitKlecksi = useKlecksiAn();
   return (
     <div className={`heft-karo relative overflow-hidden rounded-2xl ring-1 ring-inset ring-karo ${className}`} style={{ aspectRatio: `${B} / ${H}` }}>
@@ -134,7 +188,26 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, cla
         </g>
         {FELDER.map(([x, y], i) => {
           const f = felder[i];
-          if (f) {
+          if (f && i === malt) {
+            return (
+              <g key={i}>
+                <mask id={`${maskeId}-${i}`} maskUnits="userSpaceOnUse" x={x - 30} y={y - 30} width={60} height={60}>
+                  <path transform={`translate(${x} ${y})`} d="M-24 -15 L22 -17 L-22 -5 L23 -6 L-23 6 L22 5 L-21 17 L20 18"
+                    fill="none" stroke="#fff" strokeWidth={14} strokeLinecap="round" strokeLinejoin="round"
+                    pathLength={1} strokeDasharray="1 1" strokeDashoffset={1}>
+                    <animate attributeName="stroke-dashoffset" from="1" to="0" dur={`${(MAL_DAUER - 200) / 1000}s`} begin="indefinite" fill="freeze"
+                      ref={(el) => { try { (el as unknown as { beginElement?: () => void } | null)?.beginElement?.(); } catch { /* ohne SMIL: sofort fertig */ } }} />
+                  </path>
+                </mask>
+                <Kritzel form={FORMEN[i]} x={x} y={y} zustand="jetzt" />
+                <g mask={`url(#${maskeId}-${i})`}>
+                  <Kritzel form={FORMEN[i]} x={x} y={y} zustand="fertig" farbe={farbe(f.fach)} />
+                </g>
+                {mitKlecksi && <Pinsel x={x + (x > 200 ? -18 : 18)} y={y + 4} farbe={farbe(f.fach)} />}
+              </g>
+            );
+          }
+          if (f && i < gemalt) {
             return (
               <g key={i}>
                 <Kritzel form={FORMEN[i]} x={x} y={y} zustand="fertig" farbe={farbe(f.fach)} />
@@ -144,7 +217,7 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, cla
               </g>
             );
           }
-          return <Kritzel key={i} form={FORMEN[i]} x={x} y={y} zustand={i === gemalt ? 'jetzt' : 'offen'} />;
+          return <Kritzel key={i} form={FORMEN[i]} x={x} y={y} zustand={i === gemalt && malt == null ? 'jetzt' : 'offen'} />;
         })}
         {/* Ohne Klecksi: ein Tintentropfen ueber dem naechsten Feld */}
         {!mitKlecksi && gemalt < FELDER_JE_SEITE && (
@@ -156,6 +229,39 @@ export function ReisePfad({ seite, felder, farbe, zielFertig = false, stand, cla
         style={{ left: `${((kx - 26) / B) * 100}%`, top: `${((ky - 58) / H) * 100}%`, width: `${(52 / B) * 100}%` }}>
         <Klecksi groesse="voll" stand={stand} festeGroesse />
       </div>}
+    </div>
+  );
+}
+
+/**
+ * Ausschnitt der Seite am Rundenende (21.10.2026): nur die Reihen um die
+ * neuen Felder, darin malt Klecksi sie aus (ReisePfad mit `neuAb`).
+ */
+const FENSTER = 210;
+export function ReiseAusmalen({ seite, felder, neuAb, farbe }: {
+  seite: number;
+  /** alle Felder der Seite, die neuen zuletzt */
+  felder: ReiseFeld[];
+  neuAb: number;
+  farbe: (fach: string) => string;
+}) {
+  const erstes = FELDER[Math.min(neuAb, FELDER_JE_SEITE - 1)][1];
+  const letztes = FELDER[Math.min(Math.max(neuAb, felder.length - 1), FELDER_JE_SEITE - 1)][1];
+  const oben = Math.max(0, Math.min(H - FENSTER, (erstes + letztes) / 2 - FENSTER / 2 + 10));
+  const [rahmen, setRahmen] = useState<HTMLDivElement | null>(null);
+  const [sichtbar, setSichtbar] = useState(false);
+  useEffect(() => {
+    if (!rahmen || sichtbar) return;
+    if (typeof IntersectionObserver === 'undefined') { setSichtbar(true); return; }
+    const beobachter = new IntersectionObserver(([e]) => { if (e?.isIntersecting) setSichtbar(true); }, { threshold: 0.6 });
+    beobachter.observe(rahmen);
+    return () => beobachter.disconnect();
+  }, [rahmen, sichtbar]);
+  return (
+    <div ref={setRahmen} className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: `${B} / ${FENSTER}` }}>
+      <div className="absolute inset-x-0" style={{ top: `${(-oben / FENSTER) * 100}%` }}>
+        <ReisePfad seite={seite} felder={felder} farbe={farbe} neuAb={neuAb} bereit={sichtbar} />
+      </div>
     </div>
   );
 }

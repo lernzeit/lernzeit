@@ -14,7 +14,8 @@ import { Faltung } from '@/components/child/Faltung';
 import { FaltAnleitung } from '@/components/child/FaltAnleitung';
 import { TintenTropfen } from '@/components/child/KlecksiStart';
 import { rundenSatz } from '@/lib/klecksi';
-import { FALTUNG_NAME, belohnungsText, istDoppelt, type RundenBelohnung } from '@/lib/reise';
+import { FALTUNG_NAME, belohnungsText, istDoppelt, type ReiseFeld, type RundenBelohnung } from '@/lib/reise';
+import { ReiseAusmalen } from '@/components/child/HeftrandReise';
 
 interface GameCompletionScreenProps {
   score: number;
@@ -282,14 +283,24 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
   const mitKlecksi = useKlecksiAn();
   // Felder in der Heftfarbe, die das Kind gewaehlt hat (wie auf der Reise)
   const [heftFarben, setHeftFarben] = useState<Record<string, string>>({});
+  // Die Seite mit den neuen Feldern: Klecksi malt sie dort aus (21.10.2026)
+  const malSeite = belohnung?.felder[0]?.seite ?? null;
+  const [seitenFelder, setSeitenFelder] = useState<ReiseFeld[] | null>(null);
   useEffect(() => {
     if (!belohnung?.felder.length) return;
     let aktiv = true;
     supabase.from('kind_hefte').select('fach, farbe').then(({ data }) => {
       if (aktiv) setHeftFarben(Object.fromEntries((data ?? []).map((h) => [h.fach, h.farbe])));
     });
+    supabase.from('kind_reise_felder').select('seite, feld, fach, quelle').eq('seite', malSeite as number)
+      .order('feld', { ascending: true })
+      .then(({ data, error }) => { if (aktiv && !error) setSeitenFelder((data ?? []) as ReiseFeld[]); });
     return () => { aktiv = false; };
-  }, [belohnung]);
+  }, [belohnung, malSeite]);
+  const neuAufSeite = belohnung?.felder.filter((f) => f.seite === malSeite) ?? [];
+  const ersterNeuer = neuAufSeite.length ? Math.min(...neuAufSeite.map((f) => f.feld)) - 1 : 0;
+  const ausmalen = malSeite != null && seitenFelder && seitenFelder.length > ersterNeuer
+    ? { felder: seitenFelder, neuAb: ersterNeuer } : null;
   const { satz, stimmung } = rundenSatz({
     richtig: score,
     gesamt: totalQuestions,
@@ -316,7 +327,10 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
               <TintenTropfen groesse={20} />+{belohnung.tinte} Tinte
             </span>
           )}
-          {belohnung.felder.length > 0 && (
+          {belohnung.felder.length > 0 && ausmalen && (
+            <span className="text-sm font-bold text-tinte">{belohnungsText(belohnung)}</span>
+          )}
+          {belohnung.felder.length > 0 && !ausmalen && (
             <span className="flex items-center gap-1.5" aria-label={belohnungsText(belohnung)}>
               {belohnung.felder.map((f) => (
                 <span key={`${f.seite}-${f.feld}`} className="relative h-5 w-5 rounded-[5px] ring-2 ring-tinte" style={{ backgroundColor: farbeVon(heftFarben[f.fach], f.fach as FachId) }}>
@@ -329,6 +343,12 @@ function KlecksiErgebnis({ score, totalQuestions, belohnung, istBerichtigung }: 
           {belohnung.felder.length === 0 && (
             <span className="text-sm font-semibold text-muted-foreground">{belohnungsText(belohnung)}</span>
           )}
+        </div>
+      )}
+      {ausmalen && malSeite != null && (
+        <div className="mt-3">
+          <ReiseAusmalen seite={malSeite} felder={ausmalen.felder} neuAb={ausmalen.neuAb}
+            farbe={(fach) => farbeVon(heftFarben[fach], fach as FachId)} />
         </div>
       )}
       {belohnung?.seite_fertig && (
