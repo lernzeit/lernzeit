@@ -195,9 +195,13 @@ Supabase-Secrets gelöscht werden.
   einrichten“, bei Android oder unbekanntem Gerät nichts. Kein Hinweis mehr auf „Heute“. Freischalten für alle geht deshalb ohne neuen Build nur per
   Datenbank (`handysperre_freigaben`, ggf. Trigger für neue Kinder) – erst, wenn die meisten die App-Version
   mit Tagesbudget haben (ältere zeigen noch „Freiminuten starten“).
-- „Eltern fragen“ auf dem Sperrbildschirm: Die Erweiterung merkt den Druck nur (kein App-Öffnen möglich),
-  LernZeit schreibt ihn beim nächsten Start nach `shield_attempts`; der Trigger `shield_attempts_eltern_fragen`
-  schickt dann Push `eltern_fragen` an die Eltern (je Kind höchstens alle 10 Min., nur Drücke < 12 h).
+- „Eltern fragen“ auf dem Sperrbildschirm (App öffnen kann Apple dort nicht): Ab dem Build nach dem 20.10.2026
+  schickt die ShieldAction-Erweiterung die Bitte selbst an die Funktion `eltern-fragen` (Schlüssel je Kind
+  `sperre_anfrage_schluessel`, legt LernZeit beim Start in der App Group ab) und antwortet mit `.defer`; der
+  Sperrbildschirm zeigt dann „Anfrage ist raus“ bzw. „Gemerkt“ (ohne Netz). Zusätzlich merkt sie den Druck,
+  LernZeit reicht ihn beim Start nach `shield_attempts` nach (eindeutiger Index, keine Dublette). Der Trigger
+  `shield_attempts_eltern_fragen` schickt Push `eltern_fragen` (je Kind höchstens alle 10 Min., nur Drücke < 12 h).
+  Ob Apple der Erweiterung Netzzugriff erlaubt, zeigt erst das Gerät.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

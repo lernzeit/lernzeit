@@ -24,6 +24,12 @@ class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     /// Titel und Satz je nach Grund (17.10.2026): Ruhezeit, Tagesbudget
     /// aufgebraucht oder (alte Einrichtung ohne Budget) noch keine Zeit.
     private func texte() -> (titel: String, satz: String) {
+        // Gerade „Eltern fragen“ getippt (ShieldAction antwortet mit .defer)
+        if let am = LernzeitScreenTime.letzteAnfrageAm, Date().timeIntervalSince(am) < 120 {
+            return LernzeitScreenTime.letzteAnfrageGesendet
+                ? ("Anfrage ist raus", "Deine Eltern bekommen Bescheid.")
+                : ("Gemerkt", "Deine Eltern erfahren es, sobald du LernZeit öffnest.")
+        }
         if LernzeitScreenTime.ruheAktiv {
             return ("Ruhezeit", "Jetzt ist Pause vom Handy. Telefon und LernZeit gehen weiter.")
         }

@@ -97,3 +97,5 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.vorlesen]
     verify_jwt = false
+  [functions.eltern-fragen]
+    verify_jwt = false

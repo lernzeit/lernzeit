@@ -290,6 +290,12 @@ export interface ScreenTimePlugin {
 
   /** Notentsperrung nach gültigem Elterncode: `minuten` lang offen, auch in der Ruhezeit. */
   pause(options: { minuten: number }): Promise<ShieldStatus>;
+
+  /**
+   * „Eltern fragen“ direkt vom Sperrbildschirm (Build ab 20.10.2026): Adresse der
+   * Funktion `eltern-fragen`, öffentlicher Schlüssel und Geheimnis des Kindes.
+   */
+  setAnfrageZugang(options: { url: string; apikey: string; schluessel: string }): Promise<{ ok: boolean }>;
 }
 
 /**

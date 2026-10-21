@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { screenTimePendingRequests } from '@/services/screenTime/plugin';
+import { ScreenTime, screenTimePendingRequests, screenTimeSupportedPlatform } from '@/services/screenTime/plugin';
+import { SUPABASE_ANON_KEY, SUPABASE_PROJECT_URL } from '@/integrations/supabase/client';
 
 /**
  * Holt die Drücke auf „Eltern fragen“ vom Sperrbildschirm ab und macht sie
@@ -61,7 +62,25 @@ export function useSyncShieldAttempts(childId: string | undefined, enabled: bool
       }
     };
 
+    // Zugang für „Eltern fragen“ direkt vom Sperrbildschirm (Funktion
+    // eltern-fragen). Ältere Builds kennen die Methode nicht: dann nichts.
+    const zugangAblegen = async () => {
+      if (!screenTimeSupportedPlatform()) return;
+      try {
+        const { data: schluessel, error } = await supabase.rpc('sperre_anfrage_schluessel_holen');
+        if (abgebrochen || error || typeof schluessel !== 'string') return;
+        await ScreenTime.setAnfrageZugang({
+          url: `${SUPABASE_PROJECT_URL}/functions/v1/eltern-fragen`,
+          apikey: SUPABASE_ANON_KEY,
+          schluessel,
+        });
+      } catch {
+        /* älterer Build oder kein Netz: beim nächsten Start erneut */
+      }
+    };
+
     void abholen();
+    void zugangAblegen();
     return () => { abgebrochen = true; };
   }, [childId, enabled]);
 }

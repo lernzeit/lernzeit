@@ -2870,6 +2870,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      sperre_anfrage_schluessel_holen: {
+        Args: never
+        Returns: string
+      }
       app_stand_melden: {
         Args: { p_stand: number }
         Returns: undefined

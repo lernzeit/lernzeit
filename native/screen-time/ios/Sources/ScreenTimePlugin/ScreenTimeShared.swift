@@ -83,6 +83,12 @@ public enum LernzeitScreenTime {
         public static let budgetSchwelle = "lernzeit.screentime.budgetSchwelle"
         /// Notentsperrung mit dem Elterncode: offen bis hier, auch in der Ruhezeit.
         public static let notfallBis = "lernzeit.screentime.notfallBis"
+        /// „Eltern fragen“ direkt vom Sperrbildschirm (20.10.2026)
+        public static let anfrageUrl = "lernzeit.screentime.anfrageUrl"
+        public static let anfrageApikey = "lernzeit.screentime.anfrageApikey"
+        public static let anfrageSchluessel = "lernzeit.screentime.anfrageSchluessel"
+        public static let letzteAnfrageAm = "lernzeit.screentime.letzteAnfrageAm"
+        public static let letzteAnfrageGesendet = "lernzeit.screentime.letzteAnfrageGesendet"
     }
 
     /// Faellt auf UserDefaults.standard zurueck, falls die App Group fehlt —
@@ -302,6 +308,62 @@ public enum LernzeitScreenTime {
             zeiten = Array(zeiten.suffix(maxShieldRequests))
         }
         defaults.set(zeiten, forKey: Keys.shieldRequests)
+    }
+
+    // MARK: - „Eltern fragen“ direkt senden (20.10.2026)
+    //
+    // Die ShieldAction-Erweiterung kann LernZeit nicht öffnen. Sie schickt die
+    // Bitte deshalb selbst an die Funktion `eltern-fragen` (geheimer Schlüssel
+    // des Kindes, von der App abgelegt). Klappt das nicht (kein Netz, oder
+    // Apple lässt der Erweiterung keinen Netzzugriff), bleibt der Druck
+    // gemerkt und geht beim nächsten Start von LernZeit raus.
+
+    public static func setzeAnfrageZugang(url: String, apikey: String, schluessel: String) {
+        defaults.set(url, forKey: Keys.anfrageUrl)
+        defaults.set(apikey, forKey: Keys.anfrageApikey)
+        defaults.set(schluessel, forKey: Keys.anfrageSchluessel)
+    }
+
+    public static var letzteAnfrageAm: Date? {
+        get { defaults.object(forKey: Keys.letzteAnfrageAm) as? Date }
+        set {
+            if let newValue { defaults.set(newValue, forKey: Keys.letzteAnfrageAm) }
+            else { defaults.removeObject(forKey: Keys.letzteAnfrageAm) }
+        }
+    }
+
+    public static var letzteAnfrageGesendet: Bool {
+        get { defaults.bool(forKey: Keys.letzteAnfrageGesendet) }
+        set { defaults.set(newValue, forKey: Keys.letzteAnfrageGesendet) }
+    }
+
+    /// Gleiches Format wie `pendingShieldRequests` im Plugin — so erkennt die
+    /// Datenbank denselben Druck wieder, wenn LernZeit ihn später nachreicht.
+    public static func zeitpunktText(_ d: Date) -> String {
+        ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: d.timeIntervalSince1970))
+    }
+
+    /// Schickt die Bitte an den Server; `fertig(true)` nur bei Erfolg.
+    public static func anfrageSenden(zeitpunkt: Date, fertig: @escaping (Bool) -> Void) {
+        guard let basis = defaults.string(forKey: Keys.anfrageUrl),
+              let schluessel = defaults.string(forKey: Keys.anfrageSchluessel),
+              let url = URL(string: basis) else {
+            fertig(false)
+            return
+        }
+        var anfrage = URLRequest(url: url, timeoutInterval: 8)
+        anfrage.httpMethod = "POST"
+        anfrage.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let apikey = defaults.string(forKey: Keys.anfrageApikey), !apikey.isEmpty {
+            anfrage.setValue(apikey, forHTTPHeaderField: "apikey")
+            anfrage.setValue("Bearer \(apikey)", forHTTPHeaderField: "Authorization")
+        }
+        let koerper: [String: String] = ["schluessel": schluessel, "zeitpunkt": zeitpunktText(zeitpunkt)]
+        anfrage.httpBody = try? JSONSerialization.data(withJSONObject: koerper)
+        URLSession.shared.dataTask(with: anfrage) { _, antwort, fehler in
+            let status = (antwort as? HTTPURLResponse)?.statusCode ?? 0
+            fertig(fehler == nil && (200..<300).contains(status))
+        }.resume()
     }
 
     /// Gibt die gemerkten Anfragen zurueck und leert die Liste.

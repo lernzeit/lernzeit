@@ -55,6 +55,13 @@ Erst der Codemagic-Build zeigt Typfehler.
       (nur bei iPhone-Kindern, bei Android nichts); nach
       dem ersten Öffnen von LernZeit auf Klaras Handy (Sperre läuft) erscheinen Freiminuten und Handysperre.
 
+## „Eltern fragen“ direkt vom Sperrbildschirm (Build nach dem 20.10.2026)
+
+- [ ] Auf Klaras Handy eine gesperrte App öffnen, „Eltern fragen“ tippen: Sperrbildschirm bleibt und zeigt
+      „Anfrage ist raus“; auf dem Eltern-Handy kommt „Klara möchte mehr Handyzeit“, ohne dass Klara LernZeit öffnet.
+- [ ] Im Flugmodus: Sperrbildschirm zeigt „Gemerkt“; nach dem Öffnen von LernZeit (mit Netz) kommt die Mitteilung.
+- [ ] Zeigt er „Gemerkt“ auch mit Netz, lässt Apple der Erweiterung keinen Netzzugriff — dann bleibt der Weg über LernZeit.
+
 ## Für alle freischalten (nach bestandenem Test, ohne neuen Build)
 
 1. Warten, bis die App-Version mit Tagesbudget im App Store ist und die meisten sie haben.

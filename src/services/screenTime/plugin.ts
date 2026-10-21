@@ -39,6 +39,7 @@ const nichtVerfuegbar: ScreenTimePlugin = {
   setRuhezeit: async () => EMPTY_STATUS,
   setTagesbudget: async () => EMPTY_STATUS,
   pause: async () => EMPTY_STATUS,
+  setAnfrageZugang: async () => ({ ok: false }),
 };
 
 const ScreenTime = registerPlugin<ScreenTimePlugin>('ScreenTime', {

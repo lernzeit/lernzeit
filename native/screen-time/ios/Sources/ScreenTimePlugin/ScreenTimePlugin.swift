@@ -51,7 +51,8 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "pickCountedApps", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setRuhezeit", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setTagesbudget", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "pause", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "pause", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAnfrageZugang", returnType: CAPPluginReturnPromise)
     ]
 
     // MARK: - Zustand
@@ -432,6 +433,16 @@ extension ScreenTimePlugin {
             tag: call.getString("tag") ?? LernzeitScreenTime.heuteText()
         )
         call.resolve(statusPayload())
+    }
+
+    /// „Eltern fragen“ direkt vom Sperrbildschirm: Adresse der Funktion
+    /// `eltern-fragen`, öffentlicher Schlüssel und Geheimnis des Kindes.
+    @objc func setAnfrageZugang(_ call: CAPPluginCall) {
+        guard let url = call.getString("url"), let schluessel = call.getString("schluessel") else {
+            return call.reject("url und schluessel fehlen")
+        }
+        LernzeitScreenTime.setzeAnfrageZugang(url: url, apikey: call.getString("apikey") ?? "", schluessel: schluessel)
+        call.resolve(["ok": true])
     }
 
     /// Notentsperrung nach gültigem Elterncode (geprüft in der App):
