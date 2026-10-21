@@ -815,8 +815,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       <li className="flex justify-between py-3"><span>Aufgaben heute</span><b className="tabular text-tinte">{z?.questionsToday ?? 0}, davon {z?.correctToday ?? 0} richtig</b></li>
                       <li className="flex justify-between py-3"><span>Lerntage in Folge</span><b className="tabular text-tinte">{z?.streak ?? 0} {(z?.streak ?? 0) === 1 ? 'Tag' : 'Tage'}</b></li>
                     </ul>
-                    <HandyzeitUebersicht childId={child.id} childName={child.name || 'Kind'} />
-                    <ChildLearningAnalysis childId={child.id} childName={child.name || 'Kind'} childGrade={child.grade} />
+                    <HandyzeitUebersicht childId={child.id} />
+                    <ChildLearningAnalysis childId={child.id} childName={child.name || 'Kind'} childGrade={child.grade} onUpgrade={() => setActiveTab('subscription')} />
                   </div>
                 )}
 

@@ -206,7 +206,10 @@ Supabase-Secrets gelöscht werden.
   `screen_time_managed`: genutzt/Budget, Freiminuten, freigegeben, Extra, Elterncode, „Eltern fragen“) und „Letzte 7
   Tage“ (genutzt bzw. verdient, freigegeben). Verlauf in `handyzeit_tage` (31 Plätze je Kind, `platz` = Tag mod 31,
   überschreibt statt zu löschen), gefüllt von `handyzeit_stand_melden`. Welche Apps: gibt Apple nicht heraus, Hinweis
-  auf Bildschirmzeit am Eltern-iPhone. Keine Plakette („zu/offen“) mehr in „Handy sperren“.
+  auf Bildschirmzeit am Eltern-iPhone. Keine Plakette („zu/offen“) mehr in „Handy sperren“. Ohne erklärende
+  Sätze (Wunsch des Betreibers): kein „Stand … Uhr“, keine Legende, kein Apps-Hinweis, kein „Eltern fragen“-Zähler.
+- Premium-Vorschau (`PremiumFeature`): verschwommen und gekappt; die Lernanalyse zeigt ohne Premium nur
+  Beispielwerte (`BEISPIEL_*` in `ChildLearningAnalysis.tsx`), nie die echten Ergebnisse.
 - Hooks, deren Funktionen in Effekt-Abhängigkeiten stehen, müssen stabile Funktionen liefern
   (`useEarnedMinutesTracker` = feste Funktionen): Am 21.10.2026 schickte Klaras Handy ~1.900 Abfragen je Minute.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.

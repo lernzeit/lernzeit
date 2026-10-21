@@ -114,11 +114,15 @@ export function PremiumFeature({
     return <>{children}</>;
   }
 
+  // Ohne Premium nur eine verschwommene, gekappte Vorschau (21.10.2026: mit
+  // opacity-40 war die Lernanalyse ohne Premium vollständig lesbar).
   return (
-    <div className="relative rounded-lg border-2 border-dashed border-warning bg-warning/5 p-4">
-      <div className="pointer-events-none opacity-40">{children}</div>
-      <div className="absolute inset-0 flex items-center justify-center rounded-lg">
-        <div className="flex flex-col items-center gap-3 text-center">
+    <div className="relative overflow-hidden rounded-[20px] ring-1 ring-inset ring-karo">
+      <div aria-hidden className="pointer-events-none max-h-64 select-none overflow-hidden opacity-60 blur-md" {...{ inert: '' }}>
+        {children}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center bg-card/60 p-4">
+        <div className="flex flex-col items-center gap-3 rounded-2xl bg-card px-6 py-5 text-center shadow-[0_2px_12px_hsl(var(--tinte)/0.12)]">
           <Crown className="h-8 w-8 text-warning" />
           <div>
             <p className="font-medium text-foreground">{featureName}</p>

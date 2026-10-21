@@ -24,6 +24,8 @@ interface ChildLearningAnalysisProps {
   childId: string;
   childName: string;
   childGrade?: number;
+  /** Zum Abo wechseln (Knopf „Upgraden“ ohne Premium). */
+  onUpgrade?: () => void;
 }
 
 interface SubjectStats {
@@ -121,7 +123,24 @@ function getWeekKey(date: Date): string {
   return `KW ${weekNumber}`;
 }
 
-export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: ChildLearningAnalysisProps) {
+/*
+ * Ohne Premium zeigt die verschwommene Vorschau nur diese Beispielwerte,
+ * nie die echten Ergebnisse des Kindes (21.10.2026).
+ */
+const BEISPIEL_WOCHEN: WeeklyData[] = [
+  { week: 'KW 1', successRate: 62, questions: 40 },
+  { week: 'KW 2', successRate: 70, questions: 55 },
+  { week: 'KW 3', successRate: 68, questions: 35 },
+  { week: 'KW 4', successRate: 78, questions: 60 },
+];
+const BEISPIEL_FAECHER: SubjectStats[] = [
+  { subject: 'math', displayName: 'Mathematik', totalQuestions: 120, correctAnswers: 90, successRate: 75, avgTimePerQuestion: 14, sessionCount: 24, trend: 'improving', errorCount: 30 },
+  { subject: 'german', displayName: 'Deutsch', totalQuestions: 80, correctAnswers: 52, successRate: 65, avgTimePerQuestion: 16, sessionCount: 16, trend: 'stable', errorCount: 28 },
+  { subject: 'english', displayName: 'Englisch', totalQuestions: 60, correctAnswers: 51, successRate: 85, avgTimePerQuestion: 12, sessionCount: 12, trend: 'stable', errorCount: 9 },
+];
+const BEISPIEL_EMPFEHLUNGEN = ['Mathematik: Brüche üben', 'Deutsch: Kommasetzung'];
+
+export function ChildLearningAnalysis({ childId, childName, childGrade = 4, onUpgrade }: ChildLearningAnalysisProps) {
   const [subjectStats, setSubjectStats] = useState<SubjectStats[]>([]);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [overview, setOverview] = useState<OverviewStats | null>(null);
@@ -442,6 +461,9 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
   }
 
   const hasPremiumAccess = isPremium || isTrialing;
+  const woche = hasPremiumAccess ? weeklyData : BEISPIEL_WOCHEN;
+  const faecher = hasPremiumAccess ? subjectStats : BEISPIEL_FAECHER;
+  const empfehlungen = hasPremiumAccess ? recommendations : BEISPIEL_EMPFEHLUNGEN;
 
   return (
     <div className="space-y-4">
@@ -509,11 +531,11 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
       {/* Premium-Bereich: Zeitverlauf, Fachstatistiken, Empfehlungen */}
       <PremiumFeature
         featureName="Detaillierte Lernanalyse"
-        onUpgradeClick={() => {}}
+        onUpgradeClick={onUpgrade}
       >
         <div className="space-y-4">
           {/* Zeitlicher Verlauf */}
-          {weeklyData.length >= 2 && (
+          {woche.length >= 2 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -533,7 +555,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
                   <ResponsiveContainer width="100%" height="100%">
                     {/* Eine Achse (Erfolgsquote). Die Anzahl der Aufgaben steht im
                         Tooltip, nicht auf einer zweiten Achse (App-Redesign). */}
-                    <LineChart data={weeklyData} margin={{ top: 12, right: 12, bottom: 0, left: -12 }}>
+                    <LineChart data={woche} margin={{ top: 12, right: 12, bottom: 0, left: -12 }}>
                       <CartesianGrid vertical={false} stroke="hsl(var(--karo))" />
                       <XAxis
                         dataKey="week"
@@ -597,7 +619,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {subjectStats.map((stat) => (
+                {faecher.map((stat) => (
                   <div key={stat.subject} className="p-3 border rounded-lg bg-muted/30 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center justify-between flex-1">
@@ -628,7 +650,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
           </Card>
 
           {/* Lernempfehlungen */}
-          {recommendations.length > 0 && (
+          {empfehlungen.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -645,7 +667,7 @@ export function ChildLearningAnalysis({ childId, childName, childGrade = 4 }: Ch
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {recommendations.map((rec, index) => (
+                  {empfehlungen.map((rec, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
                       <Zap className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
                       <span>{rec}</span>
