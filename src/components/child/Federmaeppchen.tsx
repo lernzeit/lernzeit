@@ -35,7 +35,11 @@ export function Federmaeppchen({ kindId, avatarId, stand, onStand, onAvatar, onZ
   const weihnachten = istWeihnachtszeit();
   const figuren = [
     ...(weihnachten ? AVATAR_LIBRARY.filter((a) => WEIHNACHTS_FIGUREN.includes(a.id)) : []),
-    ...AVATAR_LIBRARY.filter((a) => !WEIHNACHTS_FIGUREN.includes(a.id)),
+    // Eigene zuerst, dann nach Preis (81 Figuren seit 22.10.2026): Was man sich bald leisten kann, steht oben
+    ...AVATAR_LIBRARY.filter((a) => !WEIHNACHTS_FIGUREN.includes(a.id))
+      .map((a, i) => ({ a, i, preis: gesperrt(a.id) ?? 0 }))
+      .sort((x, y) => x.preis - y.preis || x.i - y.i)
+      .map((x) => x.a),
     ...(weihnachten ? [] : AVATAR_LIBRARY.filter((a) => WEIHNACHTS_FIGUREN.includes(a.id) && (gesperrt(a.id) === null || a.id === avatarId))),
   ];
   const [frage, setFrage] = useState<{ id: string; name: string; preis: number } | null>(null);

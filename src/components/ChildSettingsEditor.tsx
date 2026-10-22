@@ -457,18 +457,21 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
           <Zeile titel="Am Wochenende" hinweis="höchstens">
             <Stepper label="Am Wochenende" wert={settings.weekend_max_minutes} min={5} max={180} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('weekend_max_minutes', v)} />
           </Zeile>
-          {handysperreAn && sperreEingerichtet && (
-          <>
-          <Zeile titel="Freiminuten werktags" hinweis="Handyzeit ohne Lernen">
-            <Stepper label="Freiminuten werktags" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
-          </Zeile>
-          <Zeile titel="Freiminuten am Wochenende" hinweis="Sa und So">
-            <Stepper label="Freiminuten am Wochenende" wert={settings.freiminuten_wochenende ?? settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('freiminuten_wochenende', v)} />
-          </Zeile>
-          </>
-          )}
         </Gruppe>
       </PremiumFeature>
+
+      {/* Freiminuten (22.10.2026): für alle, nur die Höhe einstellen ist Premium
+          (ohne Premium gilt der Standard, child_settings.screen_time_base_minutes = 30) */}
+      {handysperreAn && sperreEingerichtet && (
+        <Gruppe titel="Freiminuten" premium={!hasPremiumAccess}>
+          <Zeile titel="Werktags" hinweis="Handyzeit ohne Lernen">
+            <Stepper label="Freiminuten werktags" wert={settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('screen_time_base_minutes', v)} />
+          </Zeile>
+          <Zeile titel="Am Wochenende" hinweis="Sa und So">
+            <Stepper label="Freiminuten am Wochenende" wert={settings.freiminuten_wochenende ?? settings.screen_time_base_minutes} min={0} max={480} schritt={5} einheit="Min." disabled={!hasPremiumAccess} onChange={(v) => updateSetting('freiminuten_wochenende', v)} />
+          </Zeile>
+        </Gruppe>
+      )}
 
       {/* Läuft die Sperre: alle Einstellungen. Sonst nur bei einem iPhone der
           Hinweis, wo sie eingerichtet wird (ältere App: erst aktualisieren) –

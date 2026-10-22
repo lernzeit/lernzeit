@@ -212,6 +212,7 @@ Supabase-Secrets gelöscht werden.
   Sätze (Wunsch des Betreibers): kein „Stand … Uhr“, keine Legende, kein Apps-Hinweis, kein „Eltern fragen“-Zähler.
 - Premium-Vorschau (`PremiumFeature`): verschwommen und gekappt; die Lernanalyse zeigt ohne Premium nur
   Beispielwerte (`BEISPIEL_*` in `ChildLearningAnalysis.tsx`), nie die echten Ergebnisse.
+- Freiminuten (22.10.2026): eigene Gruppe in den Regeln, gelten für alle (Standard 30); nur die Höhe ändern ist Premium.
 - Hooks, deren Funktionen in Effekt-Abhängigkeiten stehen, müssen stabile Funktionen liefern
   (`useEarnedMinutesTracker` = feste Funktionen): Am 21.10.2026 schickte Klaras Handy ~1.900 Abfragen je Minute.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
@@ -230,7 +231,9 @@ Supabase-Secrets gelöscht werden.
 - Vergabe nur serverseitig: `runde_belohnen(p_sitzung)` nach `saveSession` (Tinte, Felder, Seite,
   Eltern-Bonus `child_settings.reise_bonus_minuten` – seit 21.10.2026 überall 0 und ohne Einstellung
   in der App: keine Extra-Minuten für fertige Seiten). Figuren: `mit_tinte_freischalten`, Trigger `avatar_pruefen`; Preise in
-  `avatar_preis()` und `lib/federmaeppchen.ts` gleich halten (`npm run test:reise` prüft das).
+  `avatar_preis()` (neueste Fassung `20261022150000_figuren_preise.sql`) und `lib/federmaeppchen.ts` gleich halten
+  (`npm run test:reise` prüft das). Seit 22.10.2026 81 Figuren (`data/avatars.ts`, neu: Fantasie, Sport & Spiel),
+  Preise 150–1500 (vorher 40–150; Klara sammelte ~60 Tinte am Tag), Federmäppchen nach Preis sortiert.
 - Lerntage als Klecksi (13.10.2026, ersetzt die Lernpflanze): Größe und Glanz nach 3/7/14/30 Tagen
   (`KLECKS_STUFEN`), Rechnung unverändert aus `useStreak`. 1 Tag Pause = blass, 2 = trocknet (Kette
   noch zu retten, Rettungsrunde ohne Minuten), ab 3 = trocken und klein (Kette 0). Er leidet nie:

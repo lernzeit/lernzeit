@@ -57,11 +57,16 @@ pruefe('Seite 1 Papierflieger, Seite 9 wieder', [reise.faltungFuer(1), reise.fal
 // Reihenfolge der Faltungen wie in runde_belohnen
 const sqlFaltungen = [...sql.match(/v_faltungen text\[\] := array\[([^\]]+)\]/s)[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 pruefe('Faltungen wie in der Datenbank', [...reise.FALTUNGEN], sqlFaltungen);
-// Preise wie in avatar_preis
-const preisSql = sqlAdvent.match(/function public\.avatar_preis[\s\S]*?\$\$;/)[0];
+// Preise wie in avatar_preis (neueste Fassung, 22.10.2026)
+const sqlPreiseDatei = await readFile('supabase/migrations/20261022150000_figuren_preise.sql', 'utf8');
+const preisSql = sqlPreiseDatei.match(/function public\.avatar_preis[\s\S]*?\$\$;/)[0];
 const sqlPreise = Object.fromEntries([...preisSql.matchAll(/when '([a-z_]+)' then (\d+)/g)].map((m) => [m[1], Number(m[2])]));
 pruefe('Figurenpreise wie in der Datenbank', feder.AVATAR_PREIS, sqlPreise);
 pruefe('8 Figuren frei', Object.values(feder.AVATAR_PREIS).filter((p) => p === 0).length, 8);
+const avatare = await laden('src/data/avatars.ts');
+pruefe('Jede Figur hat einen Preis, jeder Preis eine Figur',
+  [...avatare.AVATAR_LIBRARY.map((a) => a.id)].sort(), Object.keys(feder.AVATAR_PREIS).sort());
+pruefe('81 Figuren, teuerste 1500 Tinte', [avatare.AVATAR_LIBRARY.length, Math.max(...Object.values(feder.AVATAR_PREIS))], [81, 1500]);
 
 const lage = { name: 'Mia', felderGemalt: 11, faltung: 'papierschiff', faecherAufSeite: 2, berichtigung: 3, lernplanFach: 'Englisch' };
 const saetze = klecksi.startSaetze(lage);
