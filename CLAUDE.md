@@ -162,13 +162,16 @@ Supabase-Secrets gelöscht werden.
   in Google Cloud/Supabase: `docs/google-anmeldung.md`. Kein eigenes Budget für eine Supabase-Domain.
 - Im Facebook-/Instagram-Browser sperrt Google jede Anmeldung; dort steht ein Hinweis statt des Knopfs.
 
-## LernZeit-Handysperre (Stand 17.10.2026)
+## LernZeit-Handysperre (Stand 22.10.2026)
 
-- Vorerst nur für Kinder in `handysperre_freigaben` (Klara, Testgerät mit Store-App; Eltern/Kind lesen,
-  eintragen nur per Dashboard/Service-Rolle). Alle anderen: keine Einrichtung, keine Freiminuten,
-  keine Sperr-Hinweise; Eltern werden auf Apples Bildschirmzeit/Family Link verwiesen
-  (`hooks/useHandysperre.ts`). Kinder ohne Freischaltung, auf deren iPhone LernZeit noch sperrt,
-  bekommen die Sperre beim ersten Start der neuen Version aufgehoben (`stopManaging`).
+- Für alle ab App-Fassung `HANDYSPERRE_FUER_ALLE_AB` = 20261022 (`lib/appStand.ts`, `APP_STAND` gleich): Kind-Seite
+  immer an. Ältere Fassungen nur für Kinder in `handysperre_freigaben` (heben sie bei anderen auf). Eltern-Seite
+  (`hooks/useHandysperre.ts`): Kind in der Tabelle ODER `profiles.app_stand` ≥ 20261022; sonst bei iPhone-Kindern
+  „Erst LernZeit aktualisieren“. Auf Klaras Handy erfolgreich getestet (21.10.2026).
+- Erklärungen verweisen auf die LernZeit-Sperre; Apples Bildschirmzeit nur noch zurückhaltend als letzter
+  aufklappbarer Schritt (`lib/geraeteAnleitung.ts`), kein Absprung in Apples Einstellungen mehr (Kind-Karte,
+  Genehmigen). Genehmigen bei laufender Sperre (`useHandysperreLaeuft`): „LernZeit gibt die Zeit … frei“.
+  Android unverändert Family Link.
 - Änderungen an der Sperre auf dem Kinder-Handy erlaubt ein Elternteil auf dem eigenen Handy
   (`geraet_freigaben`, Push `geraet_freigabe_neu`, Karte auf „Heute“); Notweg ist der Elterncode.
 - Freie Zeit zählt nur nach Nutzung (Swift: `ScreenTimeShared.swift`, seit 17.10.2026 Tagesbudget,
@@ -192,9 +195,7 @@ Supabase-Secrets gelöscht werden.
 - Eltern sehen Freiminuten und den Bereich „Handysperre“ erst, wenn das Kinder-Handy die Sperre meldet
   (`child_settings.screen_time_managed`, gesetzt bei jedem Abgleich); vorher nur bei einem iPhone-Kind
   (`get_children_platforms`: `last_platform`/Push-Token/Auswahl der Eltern) eine Zeile „Auf dem iPhone von …
-  einrichten“, bei Android oder unbekanntem Gerät nichts. Kein Hinweis mehr auf „Heute“. Freischalten für alle geht deshalb ohne neuen Build nur per
-  Datenbank (`handysperre_freigaben`, ggf. Trigger für neue Kinder) – erst, wenn die meisten die App-Version
-  mit Tagesbudget haben (ältere zeigen noch „Freiminuten starten“).
+  einrichten“, bei Android oder unbekanntem Gerät nichts. Kein Hinweis mehr auf „Heute“.
 - „Eltern fragen“ auf dem Sperrbildschirm (App öffnen kann Apple dort nicht): Ab dem Build nach dem 20.10.2026
   schickt die ShieldAction-Erweiterung die Bitte selbst an die Funktion `eltern-fragen` (Schlüssel je Kind
   `sperre_anfrage_schluessel`, legt LernZeit beim Start in der App Group ab) und antwortet mit `.defer`; der

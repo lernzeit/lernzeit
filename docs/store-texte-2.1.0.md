@@ -68,8 +68,7 @@ ACCOUNTS
 Children sign in on "Anmelden" (sign in) with the username in "E-Mail oder Benutzername".
 
 DEVICE LOCK (Family Controls, iPhone/iPad only)
-The device lock is enabled only for accounts on an allow-list while we finish testing.
-Both review child accounts are on that list.
+The device lock is available for every child account in this version.
 - Apple requires the child device to be signed in with a child Apple Account in Family
   Sharing (FamilyControls authorization .child).
 - Setup on the child device: log in as a child > Einstellungen (Settings) >

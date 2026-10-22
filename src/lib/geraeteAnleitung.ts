@@ -34,10 +34,10 @@ export interface Anleitung {
   links: { text: string; url: string }[];
 }
 
-const SCHRITTE_APPLE = [
-  'Einstellungen → Bildschirmzeit öffnen und als Gerät des Kindes einrichten.',
-  'Auszeit und App-Limits wählen, dann einen Bildschirmzeit-Code festlegen, den nur das Elternteil kennt.',
-  'Verdiente Zeit geben: bei „Mehr Zeit anfragen“ den Code eingeben und die Zeit wählen.',
+const SCHRITTE_LERNZEIT = [
+  'In LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“ und bei Apple bestätigen.',
+  '„Was zählt als Handyzeit?“ wählen.',
+  'Freiminuten und Ruhezeit stellt das Elternteil auf seinem Handy ein: Kinder → Regeln.',
 ];
 
 const SCHRITTE_FAMILY_LINK = [
@@ -51,11 +51,14 @@ const SCHRITTE_FAMILY_LINK = [
  * wo ein? Immer das Elternteil, immer auf dem Geraet des Kindes.
  */
 export function kindGeraetAnleitung(e: Endgeraet): Anleitung {
+  // iPhone/iPad (22.10.2026): die LernZeit-Handysperre, Apples Bildschirmzeit nur als letzter Schritt
   if (e.system === 'ios') {
     return {
-      text: 'Das richtet ein Elternteil auf diesem Gerät ein, in Apples Bildschirmzeit.',
-      schritte: SCHRITTE_APPLE,
-      links: [{ text: 'Anleitung von Apple', url: APPLE_BILDSCHIRMZEIT_URL }],
+      text: e.nativ
+        ? 'Das richtet ein Elternteil hier in LernZeit ein: unten bei „Handy sperren“.'
+        : 'Das richtet ein Elternteil in der LernZeit-App auf diesem iPhone oder iPad ein.',
+      schritte: e.nativ ? SCHRITTE_LERNZEIT : ['LernZeit aus dem App Store laden und mit dem Konto des Kindes anmelden.', ...SCHRITTE_LERNZEIT],
+      links: [],
     };
   }
   if (e.system === 'android') {
@@ -68,11 +71,10 @@ export function kindGeraetAnleitung(e: Endgeraet): Anleitung {
   return {
     text: 'Das richtet ein Elternteil auf dem Handy oder Tablet des Kindes ein.',
     schritte: [
-      'iPhone oder iPad: Einstellungen → Bildschirmzeit, Limits wählen, Code festlegen.',
+      'iPhone oder iPad: LernZeit-App auf dem Gerät des Kindes, dort Einstellungen → Bildschirmzeit → „Handy sperren“.',
       'Android: Google Family Link auf dem Handy des Elternteils, dort das Gerät verbinden.',
     ],
     links: [
-      { text: 'Anleitung von Apple', url: APPLE_BILDSCHIRMZEIT_URL },
       { text: 'Family Link im Play Store', url: FAMILY_LINK_PLAY_URL },
     ],
   };
@@ -113,7 +115,7 @@ export function sperreNichtMoeglich(grund: SperreGrund | undefined, e: Endgeraet
       : 'Die Sperre gilt für das Handy des Kindes. Ein Elternteil richtet sie in der LernZeit-App auf dem iPhone oder iPad des Kindes ein.',
     schritte: [
       'LernZeit aus dem App Store laden und mit dem Konto des Kindes anmelden.',
-      'Dann: Einstellungen → Bildschirmzeit → „Handy sperren“.',
+      'Dann in LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“.',
     ],
     links: [],
   };
@@ -150,14 +152,19 @@ export function appleAblehnung(grund: string): string {
  * Eltern-Geraet: Wo wird die genehmigte Zeit freigegeben? `kurz` steht
  * sichtbar, `schritte` zum Aufklappen (fuer alle, die es nicht mehr wissen).
  */
-export function freigabeWeg(kind: 'ios' | 'android', name: string): { kurz: string; schritte: string[] } {
+export function freigabeWeg(kind: 'ios' | 'android', name: string, lernzeitSperre = false): { kurz: string; schritte: string[] } {
+  // iPhone (22.10.2026): Mit der LernZeit-Handysperre gibt LernZeit die Zeit
+  // selbst frei. Sonst steht die Einrichtung vorne, Apples Weg nur zuletzt.
+  if (kind === 'ios' && lernzeitSperre) {
+    return { kurz: `LernZeit gibt die Zeit auf dem iPhone von ${name} frei.`, schritte: [] };
+  }
   if (kind === 'ios') {
     return {
-      kurz: 'Die Zeit gibst du in Apples Bildschirmzeit frei.',
+      kurz: 'Mit der LernZeit-Handysperre gibt LernZeit genehmigte Zeit selbst frei.',
       schritte: [
-        `Am Gerät von ${name}: bei „Mehr Zeit anfragen“ deinen Bildschirmzeit-Code eingeben und die Zeit wählen.`,
-        `Oder ${name} tippt dort auf „Anfrage senden“, und du bestätigst die Mitteilung auf deinem iPhone.`,
-        `Limits ändern: Einstellungen → Bildschirmzeit → ${name}.`,
+        `Auf dem iPhone von ${name} in LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“.`,
+        'Ist „Handy sperren“ dort nicht zu sehen: LernZeit im App Store aktualisieren.',
+        `Bis dahin: am iPhone von ${name} bei „Mehr Zeit anfragen“ deinen Bildschirmzeit-Code eingeben.`,
       ],
     };
   }

@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { HandyzeitUebersicht } from '@/components/parent/HandyzeitUebersicht';
+import { useHandysperreLaeuft } from '@/hooks/useHandysperre';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
@@ -221,6 +222,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   } = useFamilyLinking();
 
   const { summaries, loading: summariesLoading, refresh: zusammenfassungNeuLaden } = useChildDaySummary(userId, linkedChildren);
+  // LernZeit-Handysperre auf dem Kinder-iPhone: dann gibt LernZeit genehmigte Zeit selbst frei
+  const sperreLaeuft = useHandysperreLaeuft(linkedChildren.map((k) => k.id));
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
   const isNativeApp = Capacitor.isNativePlatform();
 
@@ -822,14 +825,18 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
 
                 {kindBereich === 'regeln' && (
                   <div className="space-y-6">
+                    {/* iPhone: steht unter „Handysperre“ (ChildSettingsEditor), hier nicht doppelt */}
+                    {childPlatforms[child.id] !== 'ios' && (
                     <section>
                       <h3 className="mb-2 px-1 text-sm font-extrabold">Bildschirmzeit freigeben</h3>
                       <ChildParentalControlButton
                         childName={child.name || 'Kind'}
                         platform={childPlatforms[child.id] ?? null}
+                        lernzeitSperre={!!sperreLaeuft[child.id]}
                         onPlatformSelected={(pl) => setChildPlatform(child.id, pl)}
                       />
                     </section>
+                    )}
                     <ChildSettingsEditor
                       childId={child.id}
                       childName={child.name || 'Kind'}

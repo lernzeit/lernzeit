@@ -11,6 +11,8 @@ interface Props {
   platform: ChildPlatform | null;
   onPlatformSelected: (platform: ChildPlatform) => void;
   minutes?: number;
+  /** Auf dem iPhone des Kindes läuft die LernZeit-Handysperre */
+  lernzeitSperre?: boolean;
   className?: string;
 }
 
@@ -24,11 +26,12 @@ export function ChildParentalControlButton({
   platform,
   onPlatformSelected,
   minutes,
+  lernzeitSperre = false,
   className,
 }: Props) {
   const { toast } = useToast();
   const [askOpen, setAskOpen] = useState(false);
-  const target = parentalControlsService.getTargetForChild(platform, childName);
+  const target = parentalControlsService.getTargetForChild(platform, childName, lernzeitSperre);
 
   const handleOpen = async () => {
     const result = await parentalControlsService.openForChild(platform, minutes);

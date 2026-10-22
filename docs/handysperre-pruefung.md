@@ -1,8 +1,9 @@
 # LernZeit-Handysperre – Prüfung vom 10.10.2026, Umbau 17.10.2026
 
-Bis alles fertig und getestet ist, sehen nur freigeschaltete Kinder die Sperre
-(Tabelle `handysperre_freigaben`, zurzeit Klara). Alle anderen werden auf Apples
-Bildschirmzeit verwiesen.
+Seit der App-Fassung 20261022 (Build nach dem 22.10.2026) bietet LernZeit die Sperre jedem Kind an;
+auf Klaras Handy erfolgreich getestet. Ältere Fassungen zeigen sie weiter nur Kindern aus
+`handysperre_freigaben`. Eltern sehen sie für Kinder in der Tabelle oder mit `profiles.app_stand` ≥ 20261022.
+Apples Bildschirmzeit steht nur noch als letzter Schritt zum Aufklappen.
 
 | # | Befund im Code | Lösung | Aufwand |
 |---|---|---|---|

@@ -15,6 +15,7 @@ export const bildschirmzeitEinstellen: RatgeberArtikel = {
     'Welche Einstellungen Apple mit der Bildschirmzeit und Google mit Family Link für Kinderhandys anbieten, und wie Kinder zu mehr Zeit kommen.',
   veroeffentlicht: true,
   datum: '2026-10-04',
+  aktualisiert: '2026-10-22',
   lesezeitMinuten: 5,
   abschnitte: [
     {
@@ -51,7 +52,7 @@ export const bildschirmzeitEinstellen: RatgeberArtikel = {
       ueberschrift: 'Und wo LernZeit dazukommt',
       absaetze: [
         'LernZeit dreht die Frage um: Statt Zeit nur zu begrenzen, kann das Kind sich Zeit verdienen. Für jede richtig gelöste Aufgabe gibt es 30 Sekunden, bis zu einer Obergrenze von 30 Minuten an Werktagen und 60 am Wochenende.',
-        'Möchte das Kind die Zeit einlösen, schickt es eine Anfrage, und die Eltern entscheiden. Die verdiente Zeit gibst du heute noch selbst in Family Link beziehungsweise in der Bildschirmzeit frei.',
+        'Möchte das Kind die Zeit einlösen, schickt es eine Anfrage, und die Eltern entscheiden. Auf dem iPhone sperrt LernZeit das Handy selbst und gibt genehmigte Zeit frei; auf Android gibst du sie in Family Link frei.',
       ],
     },
   ],

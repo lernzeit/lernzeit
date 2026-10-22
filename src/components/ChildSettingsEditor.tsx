@@ -128,9 +128,11 @@ const DEFAULT_SETTINGS: ChildSettings = {
 
 export function ChildSettingsEditor({ childId, childName, parentId, currentGrade, kindPlattform = null, onSettingsChanged }: ChildSettingsEditorProps) {
   const [settings, setSettings] = useState<ChildSettings>(DEFAULT_SETTINGS);
-  // Freiminuten wirken nur mit der LernZeit-Sperre, die vorerst nur freigeschaltete Kinder haben
+  // Freiminuten wirken nur mit der LernZeit-Sperre; die kann die App des Kindes ab
+  // HANDYSPERRE_FUER_ALLE_AB (oder das Kind ist freigeschaltet, useHandysperre.ts)
   const handysperreFreigaben = useHandysperreFreigaben();
   const handysperreAn = !!handysperreFreigaben?.has(childId);
+  const appZuAlt = handysperreFreigaben !== null && !handysperreAn;
   // Freiminuten und Handysperre erst, wenn sie auf dem Kinder-Handy läuft
   // (meldet das Gerät über set_screen_time_managed). So bleibt es bei Familien
   // mit Android oder Apples Bildschirmzeit unsichtbar, auch wenn freigeschaltet.
@@ -469,17 +471,19 @@ export function ChildSettingsEditor({ childId, childName, parentId, currentGrade
       </PremiumFeature>
 
       {/* Läuft die Sperre: alle Einstellungen. Sonst nur bei einem iPhone der
-          Hinweis, wo sie eingerichtet wird – bei Android oder unbekanntem Gerät
-          nichts (dort Family Link bzw. Apples Bildschirmzeit). */}
-      {handysperreAn && (sperreEingerichtet || kindPlattform === 'ios') && (
+          Hinweis, wo sie eingerichtet wird (ältere App: erst aktualisieren) –
+          bei Android oder unbekanntem Gerät nichts (dort Family Link). */}
+      {((handysperreAn && sperreEingerichtet) || kindPlattform === 'ios') && (
         <Gruppe titel="Handysperre">
-          {sperreEingerichtet ? (
+          {handysperreAn && sperreEingerichtet ? (
             <>
               <HandysperreHeute childId={childId} childName={childName} />
               <RuhezeitEinstellung childId={childId} />
             </>
           ) : (
-            <Zeile titel="LernZeit-Handysperre" hinweis={`Auf dem iPhone von ${childName} unter Einstellungen → Bildschirmzeit → „Handy sperren“ einrichten.`}>
+            <Zeile titel="LernZeit-Handysperre" hinweis={appZuAlt
+              ? `Erst LernZeit auf dem iPhone von ${childName} aktualisieren, dann dort in LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“.`
+              : `Auf dem iPhone von ${childName} in LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“.`}>
               <span />
             </Zeile>
           )}

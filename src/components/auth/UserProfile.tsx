@@ -65,7 +65,7 @@ import { openStripeUrl } from '@/utils/checkoutRedirect';
 import { useSyncShieldAttempts } from '@/hooks/useShieldAttempts';
 import { useScreenTimeRelease } from '@/hooks/useScreenTimeRelease';
 import { BaseTimeCard } from '@/components/screenTime/BaseTimeCard';
-import { useHandysperreAbschalten, useHandysperreFreigaben, useRuhezeitAbgleich } from '@/hooks/useHandysperre';
+import { useRuhezeitAbgleich } from '@/hooks/useHandysperre';
 import { useAppStandMelden } from '@/lib/appStand';
 
 interface UserProfileProps {
@@ -172,12 +172,8 @@ export function UserProfile({ user, onSignOut, onStartGame, onStartStreakRecover
   // Drücke auf „Eltern fragen“ am Sperrbildschirm einsammeln. Läuft nur auf
   // dem Gerät des Kindes — dort liegen sie in der App Group, und nur LernZeit
   // selbst kann sie weitergeben.
-  // LernZeit-Sperre nur für freigeschaltete Kinder (10.10.2026, useHandysperre.ts).
-  // Alle anderen: kein Einsammeln, kein Einlösen, und eine noch aktive Sperre
-  // wird einmal aufgehoben.
-  const handysperreFreigaben = useHandysperreFreigaben();
-  const handysperreAn = !!user?.id && !!handysperreFreigaben?.has(user.id);
-  useHandysperreAbschalten(user?.id, profile?.role === 'child', handysperreFreigaben);
+  // LernZeit-Sperre für alle Kinder ab dieser App-Fassung (22.10.2026, useHandysperre.ts)
+  const handysperreAn = !!user?.id;
 
   useSyncShieldAttempts(user?.id, profile?.role === 'child' && handysperreAn);
 

@@ -12,9 +12,9 @@ import { parentalControlsService } from '@/services/parentalControlsService';
 import { vielleichtUmBewertungBitten } from '@/lib/reviewPrompt';
 import { useChildPlatforms } from '@/hooks/useChildPlatforms';
 import { ChildPlatformDialog } from '@/components/ChildPlatformDialog';
+import { useHandysperreLaeuft } from '@/hooks/useHandysperre';
 import { trackFireAndForget } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
-import { ShieldSetupNotice } from '@/components/screenTime/ShieldSetupNotice';
 import { GeraetFreigabenKarte } from '@/components/screenTime/GeraetFreigabenKarte';
 import { SoGehtEs } from '@/components/SoGehtEs';
 
@@ -80,7 +80,8 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
   const pendingChildName = pendingChildId ? getChildName(pendingChildId) : 'Kind';
   const pendingChildPlatform = pendingChildId ? (childPlatforms[pendingChildId] ?? null) : null;
   // Ziel richtet sich nach der Plattform des KINDES (bestehende Logik im Service)
-  const target = parentalControlsService.getTargetForChild(pendingChildPlatform, pendingChildName);
+  const sperreLaeuft = useHandysperreLaeuft(requests.map((r) => r.child_id));
+  const target = parentalControlsService.getTargetForChild(pendingChildPlatform, pendingChildName, !!(pendingChildId && sperreLaeuft[pendingChildId]));
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 5);
@@ -124,7 +125,9 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
           void vielleichtUmBewertungBitten(reqChildId, false);
           toast({
             title: "Anfrage genehmigt! ✅",
-            description: `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
+            description: target.kind === 'lernzeit' || target.kind === 'unsupported'
+              ? target.hint
+              : `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
           });
         }
 
@@ -209,7 +212,6 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
       {/* Steht die Sperre auf dem Kindgeraet? Das beschreibt die Lage und
           steht deshalb ueber den Anfragen. */}
       <GeraetFreigabenKarte />
-      <ShieldSetupNotice parentId={userId} />
 
       {pendingRequests.length > 0 ? (
         <ul className="space-y-3">

@@ -18,11 +18,9 @@ export function ParentScreenTimeRequests({ userId }: ParentScreenTimeRequestsPro
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Kurz und nur Apples Bildschirmzeit (10.10.2026): Die LernZeit-Sperre
-              ist vorerst nur für freigeschaltete Testgeräte sichtbar. */}
+          {/* LernZeit-Handysperre für alle (22.10.2026): auf dem iPhone gibt LernZeit frei */}
           <p className="text-sm text-muted-foreground">
-            Genehmigte Zeit gibst du in der Bildschirmzeit des Kindes frei: auf dem iPhone unter
-            Einstellungen → Bildschirmzeit, auf Android in Family Link.
+            Auf dem iPhone gibt LernZeit genehmigte Zeit selbst frei, auf Android gibst du sie in Family Link frei.
           </p>
           
           <ScreenTimeRequestWidget userId={userId} role="parent" />

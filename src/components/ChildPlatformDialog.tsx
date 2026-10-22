@@ -24,7 +24,7 @@ export function ChildPlatformDialog({ open, onOpenChange, childName, onSelect }:
         <DialogHeader>
           <DialogTitle>Welches Gerät nutzt {childName}?</DialogTitle>
           <DialogDescription>
-            Damit wir dich zur richtigen Stelle bringen: Family Link (Android) oder Apples Bildschirmzeit (iPhone/iPad).
+            Auf dem iPhone sperrt und öffnet LernZeit das Handy selbst, auf Android läuft es über Family Link.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">

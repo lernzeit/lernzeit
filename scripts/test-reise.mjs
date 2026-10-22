@@ -183,11 +183,12 @@ pruefe('Endgeraet: App iOS/Android, Browser iPhone/Android/Computer',
   [e('ios'), e('android'), e('web', UA_IPHONE, 5), e('web', UA_ANDROID, 5), e('web', UA_MAC, 0)],
   [{ system: 'ios', nativ: true }, { system: 'android', nativ: true }, { system: 'ios', nativ: false }, { system: 'android', nativ: false }, { system: 'andere', nativ: false }]);
 const karten = [e('ios'), e('android'), e('web', UA_IPHONE, 5), e('web', UA_ANDROID, 5), e('web', UA_MAC, 0)].map(geraete.kindGeraetAnleitung);
-pruefe('Kindersicherung: iPhone Apple Bildschirmzeit, Android Family Link, Computer beides',
-  [karten[0].schritte.join(' ').includes('Bildschirmzeit'), karten[0].schritte.join(' ').includes('Family Link'),
-   karten[1].schritte.join(' ').includes('Family Link'), karten[1].schritte.join(' ').includes('Einstellungen → Bildschirmzeit'),
-   karten[4].schritte.length === 2],
-  [true, false, true, false, true]);
+pruefe('Kindersicherung: iPhone LernZeit-Handysperre (kein Apple-Code), Android Family Link, Computer beides',
+  [karten[0].schritte.join(' ').includes('Handy sperren'), karten[0].schritte.join(' ').includes('Family Link'),
+   [karten[0], karten[2]].some((k) => (k.text + k.schritte.join(' ')).includes('Bildschirmzeit-Code')),
+   karten[1].schritte.join(' ').includes('Family Link'), karten[1].schritte.join(' ').includes('Handy sperren'),
+   karten[2].schritte[0].includes('App Store'), karten[4].schritte.length === 2],
+  [true, false, false, true, false, true, true]);
 pruefe('Immer ein Elternteil und die Schritte, nie nur ein „geht nicht“',
   karten.every((k) => /Elternteil/.test(k.text) && k.schritte.length >= 2), true);
 const sperre = (g, ger) => geraete.sperreNichtMoeglich(g, ger);
@@ -199,11 +200,13 @@ pruefe('Apple-Ablehnung: jede Meldung nennt einen naechsten Schritt (kein nackte
   ['invalidAccountType', 'authorizationCanceled', 'authorizationConflict', 'restricted', 'authenticationMethodUnavailable', 'networkError', 'unavailable', 'irgendwas']
     .map(geraete.appleAblehnung).every((t) => /(Das Elternteil|Tippe|Richte|Verbinde|Aktualisiere|Versuche)/.test(t)), true);
 const wegIos = geraete.freigabeWeg('ios', 'Mia');
+const wegIosSperre = geraete.freigabeWeg('ios', 'Mia', true);
 const wegAndroid = geraete.freigabeWeg('android', 'Mia');
 pruefe('Freigabe am Eltern-Geraet: ein kurzer Satz sichtbar, Schritte mit Namen zum Aufklappen',
-  [wegIos.kurz.length < 70, wegAndroid.kurz.length < 70, wegIos.schritte.some((t) => t.includes('Mia') && t.includes('Code')),
-   wegAndroid.schritte.some((t) => t.includes('Mia')), wegIos.kurz.includes('Bildschirmzeit'), wegAndroid.kurz.includes('Family Link')],
-  [true, true, true, true, true, true]);
+  [wegIos.kurz.length < 80, wegAndroid.kurz.length < 70, wegIos.schritte[0].includes('Mia') && wegIos.schritte[0].includes('Handy sperren'),
+   wegIos.schritte.at(-1).includes('Code'), wegAndroid.schritte.some((t) => t.includes('Mia')), wegIos.kurz.includes('LernZeit'),
+   wegAndroid.kurz.includes('Family Link'), wegIosSperre.schritte.length === 0 && wegIosSperre.kurz.includes('Mia')],
+  [true, true, true, true, true, true, true, true]);
 pruefe('Keine Platzhalter wie [Kind] in den Texten',
   [...karten.flatMap((k) => [k.text, ...k.schritte]), ...wegIos.schritte, ...wegAndroid.schritte].some((t) => /\[|\]/.test(t)), false);
 pruefe('Kindersicherung: vorne hoechstens ein kurzer Satz',

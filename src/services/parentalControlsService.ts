@@ -11,7 +11,7 @@ export type { Platform, OpenParentalControlsResult };
 /** Plattform des Kindes (Web zählt als „unbekannt" für Absprünge). */
 export type ChildPlatform = 'android' | 'ios';
 
-export type ParentalControlTargetKind = 'family_link' | 'screen_time' | 'unsupported' | 'manual';
+export type ParentalControlTargetKind = 'family_link' | 'screen_time' | 'lernzeit' | 'unsupported' | 'manual';
 
 export interface ParentalControlTarget {
   kind: ParentalControlTargetKind;
@@ -85,7 +85,7 @@ class ParentalControlsService {
    * Das Ziel ergibt sich aus der Plattform des KINDES,
    * die Plattform des Elternteils entscheidet nur, ob ein Absprung möglich ist.
    */
-  getTargetForChild(childPlatform: ChildPlatform | null, childName = 'dein Kind'): ParentalControlTarget {
+  getTargetForChild(childPlatform: ChildPlatform | null, childName = 'dein Kind', lernzeitSperre = false): ParentalControlTarget {
     const parent = this.getPlatform();
     const native = this.isNativePlatform();
 
@@ -101,23 +101,15 @@ class ParentalControlsService {
     }
 
     // Kurzer Satz sichtbar, die Schritte zum Aufklappen (lib/geraeteAnleitung.ts)
-    const weg = freigabeWeg(childPlatform, childName);
+    const weg = freigabeWeg(childPlatform, childName, lernzeitSperre);
 
+    // Kind iPhone (22.10.2026): Die LernZeit-Handysperre gibt genehmigte Zeit
+    // selbst frei. Kein Absprung mehr in Apples Bildschirmzeit; deren Weg steht
+    // nur noch als letzter Schritt zum Aufklappen (lib/geraeteAnleitung.ts).
     if (childPlatform === 'ios') {
-      // Absprung über einen nicht dokumentierten Link — siehe parentalControls/ios.ts.
-      if (native && parent === 'ios') {
-        return {
-          kind: 'screen_time',
-          appName: 'Bildschirmzeit',
-          buttonLabel: 'Bildschirmzeit öffnen',
-          hint: weg.kurz,
-          schritte: weg.schritte,
-          canOpen: true,
-        };
-      }
       return {
-        kind: 'unsupported',
-        appName: 'Bildschirmzeit',
+        kind: lernzeitSperre ? 'lernzeit' : 'unsupported',
+        appName: 'LernZeit',
         buttonLabel: '',
         hint: weg.kurz,
         schritte: weg.schritte,

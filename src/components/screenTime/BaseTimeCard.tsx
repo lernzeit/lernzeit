@@ -73,7 +73,7 @@ export function BaseTimeCard({ childId }: BaseTimeCardProps) {
             Ruhezeit{stand.ruheBis != null ? <> bis <strong>{alsZeit(stand.ruheBis)} Uhr</strong></> : null}. Telefon und LernZeit gehen.
           </p>
         ) : budget == null ? (
-          <p className="text-sm text-muted-foreground">Ein Elternteil wählt noch „Was zählt als Handyzeit?“ (Einstellungen → Bildschirmzeit → „Handy sperren“).</p>
+          <p className="text-sm text-muted-foreground">Ein Elternteil wählt noch „Was zählt als Handyzeit?“ (hier in LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“).</p>
         ) : (
           <>
             <p className="text-sm text-tinte"><strong>{standText(tagesStand)}</strong></p>

@@ -24,7 +24,7 @@ const steps = [
   },
   {
     title: 'Du gibst frei',
-    description: 'Die Anfrage kommt auf dein Handy. Du genehmigst sie und gibst die Zeit in der Bildschirmzeit deines Kindes frei: auf dem iPhone in den Einstellungen, auf Android in Family Link.',
+    description: 'Die Anfrage kommt auf dein Handy. Du genehmigst sie mit einem Tipp, und auf dem iPhone gibt LernZeit die Zeit selbst frei. Auf Android gibst du sie in Family Link frei.',
     bild: '/landing/eltern-freigabe.webp',
     alt: 'Eltern-Ansicht: Anfrage von Mia über 8 Minuten mit Nachricht, Knöpfe „Ablehnen“ und „Genehmigen“',
   },

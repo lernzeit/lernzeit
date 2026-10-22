@@ -1,28 +1,41 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ScreenTime, screenTimeSupportedPlatform } from '@/services/screenTime/plugin';
+import { HANDYSPERRE_FUER_ALLE_AB } from '@/lib/appStand';
 
 /**
- * LernZeit-Handysperre nur für freigeschaltete Kinder (10.10.2026).
+ * LernZeit-Handysperre für alle ab der App-Fassung HANDYSPERRE_FUER_ALLE_AB
+ * (22.10.2026; vorher nur Kinder aus `handysperre_freigaben`, seit 10.10.2026).
  *
- * Die eigene Sperre ist noch nicht fertig (Zeit läuft nach Uhr statt nach
- * Nutzung, kein Ruhezeit-Fenster, keine App-Limits). Bis dahin sehen nur Kinder
- * aus `handysperre_freigaben` (und deren Eltern) Einrichtung, Freiminuten und
- * Hinweise; alle anderen den Weg über Apples Bildschirmzeit. Ein
- * Datenbank-Schalter, weil das Testgerät die Store-App nutzt (kein TestFlight).
+ * Gesteuert über die App-Version: Diese Fassung bietet die Sperre jedem Kind
+ * an (Kind-Seite immer an). Ältere Fassungen prüfen weiter die Tabelle und
+ * heben die Sperre bei nicht freigeschalteten Kindern auf — deshalb zeigt die
+ * Eltern-Seite die Sperre nur für Kinder, deren App sie kann: in der Tabelle
+ * ODER `profiles.app_stand` (meldet die Kinder-App, lib/appStand.ts) ab
+ * HANDYSPERRE_FUER_ALLE_AB.
  */
 
 let zwischenspeicher: { zeit: number; ids: Set<string> } | null = null;
 let laufend: Promise<Set<string> | null> | null = null;
 
-/** Freigeschaltete Kinder, die der Angemeldete sehen darf. null = unbekannt (Fehler). */
+/** Kinder mit Handysperre, die der Angemeldete sehen darf. null = unbekannt (Fehler). */
 async function freigabenLaden(): Promise<Set<string> | null> {
   if (zwischenspeicher && Date.now() - zwischenspeicher.zeit < 5 * 60_000) return zwischenspeicher.ids;
   if (!laufend) {
     laufend = (async () => {
-      const { data, error } = await supabase.from('handysperre_freigaben').select('child_id');
-      if (error) return null;
-      const ids = new Set((data ?? []).map((zeile) => zeile.child_id as string));
+      const [freigaben, kinder] = await Promise.all([
+        supabase.from('handysperre_freigaben').select('child_id'),
+        supabase.from('parent_child_relationships').select('child_id'),
+      ]);
+      if (freigaben.error) return null;
+      const ids = new Set((freigaben.data ?? []).map((zeile) => zeile.child_id as string));
+      const kinderIds = [...new Set((kinder.data ?? []).map((zeile) => zeile.child_id as string))];
+      if (kinderIds.length > 0) {
+        const { data } = await supabase.from('profiles').select('id, app_stand').in('id', kinderIds);
+        for (const p of (data ?? []) as unknown as { id: string; app_stand: number | null }[]) {
+          if ((p.app_stand ?? 0) >= HANDYSPERRE_FUER_ALLE_AB) ids.add(p.id);
+        }
+      }
       zwischenspeicher = { zeit: Date.now(), ids };
       return ids;
     })().finally(() => { laufend = null; });
@@ -31,9 +44,9 @@ async function freigabenLaden(): Promise<Set<string> | null> {
 }
 
 /**
- * Menge der freigeschalteten Kinder. `null`, solange geladen wird oder wenn
- * das Laden scheiterte — Aufrufer zeigen dann nichts von der Sperre an und
- * schalten auch nichts ab.
+ * Eltern-Seite: Menge der Kinder, deren App die Sperre kann. `null`, solange
+ * geladen wird oder wenn das Laden scheiterte — Aufrufer zeigen dann nichts
+ * von der Sperre an.
  */
 export function useHandysperreFreigaben(): Set<string> | null {
   const [ids, setIds] = useState<Set<string> | null>(zwischenspeicher?.ids ?? null);
@@ -43,32 +56,6 @@ export function useHandysperreFreigaben(): Set<string> | null {
     return () => { aktiv = false; };
   }, []);
   return ids;
-}
-
-/**
- * Kind-Gerät: Ist das Kind NICHT freigeschaltet, aber LernZeit sperrt hier
- * noch (eingerichtet vor dem 10.10.2026), wird die Sperre einmal aufgehoben.
- * Sonst bliebe das Telefon zu, ohne dass jemand die Einstellungen sieht.
- * Nur, wenn die Freigaben sicher geladen sind — bei einem Netzfehler bleibt
- * alles, wie es ist.
- */
-export function useHandysperreAbschalten(childId: string | undefined, istKind: boolean, freigaben: Set<string> | null) {
-  const erledigt = useRef(false);
-  useEffect(() => {
-    if (!childId || !istKind || freigaben === null || erledigt.current) return;
-    if (freigaben.has(childId) || !screenTimeSupportedPlatform()) return;
-    erledigt.current = true;
-    void (async () => {
-      try {
-        const status = await ScreenTime.getStatus();
-        if (!status.managing) return;
-        await ScreenTime.stopManaging();
-        await supabase.rpc('set_screen_time_managed', { ist_verwaltet: false });
-      } catch {
-        erledigt.current = false; // beim nächsten Start erneut
-      }
-    })();
-  }, [childId, istKind, freigaben]);
 }
 
 /**
@@ -109,4 +96,24 @@ export function useRuhezeitAbgleich(childId: string | undefined, aktiv: boolean)
     document.addEventListener('visibilitychange', sichtbar);
     return () => document.removeEventListener('visibilitychange', sichtbar);
   }, [childId, aktiv]);
+}
+
+/**
+ * Eltern-Seite: Läuft die LernZeit-Sperre auf dem Handy des Kindes? (meldet
+ * das Kinder-Handy, `child_settings.screen_time_managed`). Dann gibt LernZeit
+ * genehmigte Zeit selbst frei (parentalControlsService, 22.10.2026).
+ */
+export function useHandysperreLaeuft(childIds: string[]): Record<string, boolean> {
+  const schluessel = [...new Set(childIds.filter(Boolean))].sort().join(',');
+  const [stand, setStand] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!schluessel) return;
+    let aktiv = true;
+    void supabase.from('child_settings').select('child_id, screen_time_managed').in('child_id', schluessel.split(','))
+      .then(({ data }) => {
+        if (aktiv && data) setStand(Object.fromEntries(data.map((z) => [z.child_id, !!z.screen_time_managed])));
+      });
+    return () => { aktiv = false; };
+  }, [schluessel]);
+  return stand;
 }

@@ -32,7 +32,6 @@ import { AchievementDisplay } from '@/components/AchievementDisplay';
 import { AccountDeleteSection } from '@/components/AccountDeleteSection';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { unregisterPushDevice } from '@/hooks/useOneSignal';
-import { useHandysperreFreigaben } from '@/hooks/useHandysperre';
 import { Switch } from '@/components/ui/switch';
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { useKlecksiWahl } from '@/hooks/useKlecksi';
@@ -56,9 +55,8 @@ interface ParentInfo {
 
 export function ChildSettingsMenu({ user, profile, onSignOut, onBack, initialSection }: ChildSettingsMenuProps) {
   const istAndroid = Capacitor.getPlatform() === 'android';
-  // Einrichtung der LernZeit-Sperre nur für freigeschaltete Kinder (useHandysperre.ts)
-  const handysperreFreigaben = useHandysperreFreigaben();
-  const handysperreAn = !!handysperreFreigaben?.has(user.id);
+  // Einrichtung der LernZeit-Sperre für alle Kinder ab dieser App-Fassung (22.10.2026, useHandysperre.ts)
+  const handysperreAn = true;
   const [activeSection, setActiveSection] = useState<string | null>(initialSection || null);
   const [parentInfoList, setParentInfoList] = useState<ParentInfo[]>([]);
   const [loadingParentInfo, setLoadingParentInfo] = useState(true);
