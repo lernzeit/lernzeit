@@ -150,6 +150,9 @@ Supabase-Secrets gelöscht werden.
   `parent_child_relationships` erlauben keine INSERTs.
 - `DROP` über das Supabase-MCP hängt (Timeout); Policies mit `ALTER POLICY` ändern, Cron-Jobs nur im Dashboard.
 - Keine Zugangsdaten ins Repo (am 05.10.2026 noch öffentlich); e2e liest `E2E_*` aus der Umgebung.
+- Ab 30.10.2026 bekommen NEUE Tabellen in `public` keine automatischen Rechte mehr (Supabase). In jeder Migration,
+  die eine Tabelle anlegt, `grant … to authenticated, service_role` (und `anon` nur, wenn nötig) selbst schreiben;
+  RLS bleibt die eigentliche Schranke. Bestehende Tabellen behalten ihre Rechte.
 
 ## Anmeldung mit Google (Stand 06.10.2026)
 
