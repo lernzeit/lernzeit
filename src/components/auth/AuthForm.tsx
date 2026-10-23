@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { AppEmpfehlung } from '@/components/AppEmpfehlung';
+import { APP_STORE_URL, PLAY_STORE_URL, erkenneGeraet } from '@/lib/appEmpfehlung';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +14,7 @@ import { googleDirekterWeg, googleImAppBrowserGesperrt, googleNativ, googleWebAb
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { fehlerTyp, useRegistrierungsMessung } from '@/hooks/useRegistrierungsMessung';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound, ChevronLeft, Check } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound, ChevronLeft, Check, Smartphone } from 'lucide-react';
 import Handy from '@/components/landing/Handy';
 import Randnotiz from '@/components/landing/Randnotiz';
 import { useTurnstile } from '@/hooks/useTurnstile';
@@ -73,6 +74,29 @@ const TAB =
   'h-10 rounded-full text-[0.9375rem] font-bold text-[var(--lp-leise)] data-[state=active]:bg-white data-[state=active]:text-[var(--lp-tinte)] data-[state=active]:shadow-[0_1px_3px_rgba(26,43,109,0.15)]';
 const ABSENDEN =
   'w-full h-12 rounded-full bg-[var(--lp-blau)] text-base font-bold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.7)] hover:bg-[#1d4ed8]';
+
+/**
+ * Registrieren im Facebook-/Instagram-Browser (23.10.2026): ganz oben „In der
+ * App registrieren“ (Store je Betriebssystem), darunter E-Mail, Apple zuletzt.
+ * Dort verlangt Apple Passwort und Zwei-Faktor-Code, Google sperrt ganz.
+ * Klicks zaehlt der AnalyticsTracker (Store-Link, Stelle „anmeldung_iab“).
+ */
+function InDerAppRegistrieren() {
+  const geraet = typeof navigator === 'undefined' ? 'andere' : erkenneGeraet(navigator.userAgent, navigator.maxTouchPoints || 0);
+  const link = geraet === 'android'
+    ? PLAY_STORE_URL.replace('utm_source=website', 'utm_source=meta_iab')
+    : APP_STORE_URL;
+  return (
+    <a
+      href={link}
+      data-stelle="anmeldung_iab"
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--lp-blau)] text-base font-bold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.7)] hover:bg-[#1d4ed8]"
+    >
+      <Smartphone className="h-5 w-5" aria-hidden="true" />
+      In der App registrieren
+    </a>
+  );
+}
 
 /** Statt des Google-Knopfs im Facebook-/Instagram-Browser (Google sperrt dort). */
 function GoogleImAppBrowserHinweis() {
@@ -960,6 +984,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-5 animate-fade-in">
+                {googleGesperrt && <InDerAppRegistrieren />}
                 {role === null ? (
                   <div className="space-y-4 animate-fade-in">
                     <div className="text-center mb-2">
@@ -1038,7 +1063,9 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                   </p>
                 )}
 
-                {/* Social sign-up (fast path) — shown above the manual form */}
+                {/* Social sign-up (fast path) — shown above the manual form.
+                    Im Facebook-/Instagram-Browser nicht: dort Apple unter dem Formular */}
+                {!googleGesperrt && (<>
                 <div className="space-y-3">
                   {googleGesperrt ? (
                     <GoogleImAppBrowserHinweis />
@@ -1076,6 +1103,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     <span className="bg-card px-3 text-[var(--lp-leise)]">oder mit E-Mail</span>
                   </div>
                 </div>
+                </>)}
 
                 <form
                   onSubmit={handleSignUp}
@@ -1301,6 +1329,18 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
                     )}
                   </Button>
                 </form>
+                {googleGesperrt && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-12 rounded-full border-[1.5px] border-[var(--lp-karo-dunkel)] text-base font-bold text-[var(--lp-tinte)] hover:bg-[var(--lp-heft)]"
+                    onClick={() => { messung.schritt('oauth', { anbieter: 'apple' }); void handleAppleSignIn(); }}
+                    disabled={loading}
+                  >
+                    <AppleIcon />
+                    <span className="ml-2">Mit Apple registrieren</span>
+                  </Button>
+                )}
                 </>
                 )}
               </TabsContent>

@@ -160,7 +160,10 @@ Supabase-Secrets gelöscht werden.
   codemagic – kein Facebook-SDK in der Kinder-App, Build bricht sonst ab).
 - Schalter in `config/google.ts` (Web, iOS-Client-ID, Android); aus = bisheriger Weg. Einrichtung
   in Google Cloud/Supabase: `docs/google-anmeldung.md`. Kein eigenes Budget für eine Supabase-Domain.
-- Im Facebook-/Instagram-Browser sperrt Google jede Anmeldung; dort steht ein Hinweis statt des Knopfs.
+- Im Facebook-/Instagram-Browser sperrt Google jede Anmeldung, Apple verlangt Passwort und Zwei-Faktor-Code.
+  Registrieren dort (23.10.2026, `InDerAppRegistrieren` in `AuthForm`): ganz oben „In der App registrieren“ (iPhone
+  App Store, Android Google Play mit `utm_source=meta_iab`, Stelle `anmeldung_iab`), darunter E-Mail, Apple zuletzt;
+  kein Google-Knopf. Beim Anmelden weiter der Hinweis statt Google.
 
 ## LernZeit-Handysperre (Stand 22.10.2026)
 
