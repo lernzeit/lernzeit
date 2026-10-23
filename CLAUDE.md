@@ -218,8 +218,8 @@ Supabase-Secrets gelöscht werden.
 - Freiminuten (22.10.2026): eigene Gruppe in den Regeln, gelten für alle (Standard 30); nur die Höhe ändern ist Premium.
 - Restminuten (23.10.2026): lokale Mitteilung an das Kind bei 15/10/5/3/1 Minuten Rest (Swift `restMinuten`,
   Ereignisse `lernzeit.tag.rest.<rest>.<schwelle>`, `meldeRestzeit` in der Monitor-Erweiterung; nicht in Ruhezeit
-  oder mit Elterncode). Keine regelmäßigen Zwischenstände mehr: „genutzt“ (Kind-Karte, Eltern-Übersicht)
-  ist nur bei 15/10/5/3/1 Min. Rest und am Ende genau. Ab dem Build nach dem 23.10.2026.
+  oder mit Elterncode). Zwischenstände nur für die Anzeige „genutzt“ (ohne Mitteilung): höchstens 40, bis
+  40 Min. Budget jede Minute, darüber gleichmäßig. Ab dem Build nach dem 23.10.2026.
 - Hooks, deren Funktionen in Effekt-Abhängigkeiten stehen, müssen stabile Funktionen liefern
   (`useEarnedMinutesTracker` = feste Funktionen): Am 21.10.2026 schickte Klaras Handy ~1.900 Abfragen je Minute.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.

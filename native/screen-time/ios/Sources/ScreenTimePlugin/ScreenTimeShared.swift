@@ -878,9 +878,17 @@ public enum LernzeitScreenTime {
                 }
             }
         }
-        // Keine regelmäßigen Zwischenstände mehr (Betreiber, 23.10.2026): nur das Ende
-        // und die Restminuten-Hinweise. Die genutzten Minuten sind deshalb nur an
-        // diesen Punkten bekannt (budgetVerbraucht).
+        // Zwischenstände nur für die Anzeige „genutzt“ (keine Mitteilung), so fein wie
+        // möglich: höchstens 40, also bis 40 Min. jede Minute, bei 80 alle 2 Min. usw.
+        // (23.10.2026; vorher in 5-Minuten-Schritten). Dazu kommen Ende und Restminuten.
+        let obergrenze = min(ohneLimit ? 720 : schwelle, 720)
+        let schritt = max(1, (obergrenze + 39) / 40)
+        if obergrenze > schritt {
+            for m in stride(from: schritt, to: obergrenze, by: schritt) where m > basis {
+                ereignisse[DeviceActivityEvent.Name(tagSchrittPrefix + String(m))] =
+                    tagEreignis(auswahl, minuten: m - basis)
+            }
+        }
 
         // Auch ohne Ereignisse (0 Minuten) anmelden: Der Tageswechsel um
         // Mitternacht kommt über intervalDidStart.
