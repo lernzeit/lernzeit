@@ -85,3 +85,10 @@ Erst der Codemagic-Build zeigt Typfehler.
 - Änderungen der Eltern wirken erst, wenn LernZeit auf dem Kind-Handy läuft
   (öffnen oder im Hintergrund aufwachen) – kein Fernzugriff.
 - Android: keine Schnittstelle für Dritte, dort bleibt Family Link.
+
+## Restminuten-Hinweise (Build nach dem 23.10.2026)
+
+- [ ] Freiminuten auf 20 stellen, andere App nutzen: Mitteilungen „Noch 15 / 10 / 5 / 3 Minuten“ und „Noch 1 Minute Handyzeit“ kommen je einmal.
+- [ ] In der Ruhezeit und mit Elterncode offen: keine Restminuten-Mitteilungen.
+- [ ] Nach „+15 Min.“ vom Eltern-Handy: Hinweise gelten für das neue Budget.
+

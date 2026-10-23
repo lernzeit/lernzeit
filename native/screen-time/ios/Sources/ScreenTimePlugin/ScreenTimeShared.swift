@@ -2,6 +2,7 @@ import DeviceActivity
 import FamilyControls
 import Foundation
 import ManagedSettings
+import UserNotifications
 
 /// Gemeinsamer Zustand von App und DeviceActivityMonitor-Erweiterung.
 ///
@@ -46,6 +47,10 @@ public enum LernzeitScreenTime {
     public static let tagName = DeviceActivityName("lernzeit.tag")
     static let tagEndePrefix = "lernzeit.tag.ende."
     static let tagSchrittPrefix = "lernzeit.tag.min."
+    /// Restminuten-Hinweis (23.10.2026): "lernzeit.tag.rest.<rest>.<schwelle>"
+    static let tagRestPrefix = "lernzeit.tag.rest."
+    /// Bei so vielen Restminuten bekommt das Kind eine Mitteilung.
+    static let restMinuten = [15, 10, 5, 3, 1]
     /// Ab so vielen Minuten gilt der Tag als „ohne Limit“ (wie OHNE_LIMIT_MINUTEN in src/lib/handyzeit.ts).
     public static let ohneLimitMinuten = 1440
 
@@ -866,11 +871,16 @@ public enum LernzeitScreenTime {
             } else {
                 ereignisse[DeviceActivityEvent.Name(tagEndePrefix + String(schwelle))] =
                     tagEreignis(auswahl, minuten: schwelle - basis)
+                // Mitteilung bei 15, 10, 5, 3 und 1 Minute(n) Rest
+                for rest in restMinuten where schwelle - rest > basis {
+                    ereignisse[DeviceActivityEvent.Name(tagRestPrefix + "\(rest).\(schwelle)")] =
+                        tagEreignis(auswahl, minuten: schwelle - rest - basis)
+                }
             }
         }
-        // Zwischenstände für die Anzeige, höchstens etwa 40.
+        // Zwischenstände für die Anzeige, höchstens etwa 34 (dazu Ende und 5 Restminuten-Hinweise).
         let obergrenze = min(ohneLimit ? 720 : schwelle, 720)
-        let schritt = max(5, ((obergrenze + 39) / 40 + 4) / 5 * 5)
+        let schritt = max(5, ((obergrenze + 33) / 34 + 4) / 5 * 5)
         if obergrenze > schritt {
             for m in stride(from: schritt, to: obergrenze, by: schritt) where m > basis {
                 ereignisse[DeviceActivityEvent.Name(tagSchrittPrefix + String(m))] =
@@ -923,9 +933,37 @@ public enum LernzeitScreenTime {
             applyShield()
             return
         }
+        if roh.hasPrefix(tagRestPrefix) {
+            let teile = roh.dropFirst(tagRestPrefix.count).split(separator: ".")
+            guard teile.count == 2, let rest = Int(teile[0]), let schwelle = Int(teile[1]),
+                  schwelle == budgetSchwelle else { return }
+            budgetVerbraucht = max(budgetVerbraucht, schwelle - rest)
+            // In der Ruhezeit oder mit Elterncode offen zählt das Budget gerade nicht
+            if ruheAktiv || (notfallBis.map { $0 > now } ?? false) || budgetErschoepft { return }
+            meldeRestzeit(rest, schwelle: schwelle, tag: heute)
+            return
+        }
         if roh.hasPrefix(tagSchrittPrefix), let m = Int(roh.dropFirst(tagSchrittPrefix.count)) {
             budgetVerbraucht = max(budgetVerbraucht, m)
         }
+    }
+
+    /// Lokale Mitteilung an das Kind: „Noch 5 Minuten Handyzeit“. Ohne
+    /// Erlaubnis für Mitteilungen passiert nichts. Je Tag, Schwelle und Rest
+    /// höchstens einmal (gleiche Kennung ersetzt eine noch sichtbare).
+    static func meldeRestzeit(_ rest: Int, schwelle: Int, tag: String) {
+        let inhalt = UNMutableNotificationContent()
+        inhalt.title = rest == 1 ? "Noch 1 Minute Handyzeit" : "Noch \(rest) Minuten Handyzeit"
+        inhalt.body = rest <= 1
+            ? "Gleich ist Schluss für heute. Mehr Zeit gibt es fürs Lernen in LernZeit."
+            : "Danach ist Schluss für heute. Mehr Zeit gibt es fürs Lernen in LernZeit."
+        inhalt.sound = .default
+        let anfrage = UNNotificationRequest(
+            identifier: "lernzeit.rest.\(tag).\(schwelle).\(rest)",
+            content: inhalt,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(anfrage) { _ in }
     }
 
     /// Notentsperrung mit dem Elterncode: `minuten` lang offen, nach Uhr,

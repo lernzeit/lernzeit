@@ -58,8 +58,8 @@ pruefe('Seite 1 Papierflieger, Seite 9 wieder', [reise.faltungFuer(1), reise.fal
 const sqlFaltungen = [...sql.match(/v_faltungen text\[\] := array\[([^\]]+)\]/s)[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 pruefe('Faltungen wie in der Datenbank', [...reise.FALTUNGEN], sqlFaltungen);
 // Preise wie in avatar_preis (neueste Fassung, 22.10.2026)
-const sqlPreiseDatei = await readFile('supabase/migrations/20261022150000_figuren_preise.sql', 'utf8');
-const preisSql = sqlPreiseDatei.match(/function public\.avatar_preis[\s\S]*?\$\$;/)[0];
+const sqlPreiseDatei = await readFile('supabase/migrations/20261023120000_figuren_preise_ab_montag.sql', 'utf8');
+const preisSql = sqlPreiseDatei.split('-- ab 26.10.2026')[2];
 const sqlPreise = Object.fromEntries([...preisSql.matchAll(/when '([a-z_]+)' then (\d+)/g)].map((m) => [m[1], Number(m[2])]));
 pruefe('Figurenpreise wie in der Datenbank', feder.AVATAR_PREIS, sqlPreise);
 pruefe('8 Figuren frei', Object.values(feder.AVATAR_PREIS).filter((p) => p === 0).length, 8);
