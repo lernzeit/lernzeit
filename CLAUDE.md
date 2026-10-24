@@ -9,6 +9,13 @@
 | Android | **Android Studio beim Betreiber**, aus dem Ordner `android/` dieses Repos |
 | Edge Functions | GitHub-Workflow `deploy-supabase.yml` spielt bei jedem Push auf `main`, der `supabase/functions/` ändert, alle Funktionen ein (seit 03.10.2026 mit gültigem `SUPABASE_ACCESS_TOKEN`; erster Lauf erfolgreich). Danach den Lauf prüfen (`actions_list` → Ergebnis `success`). Änderungen nur an `supabase/config.toml` lösen ihn nicht aus – dann von Hand starten (`workflow_dispatch`). Lovable spielt daneben manchmal selbst ein |
 
+Versionsnummer (Wunsch des Betreibers, 24.10.2026): Sobald es heißt „wir arbeiten an einem neuen Build“,
+setzt Claude die Version selbst hoch – iOS `IOS_MARKETING_VERSION` in `codemagic.yaml` (Apple nimmt keine
+Builds für eine schon freigegebene Version an). Schema: Fehlerbehebung/kleine Änderungen = dritte Stelle
+(2.1.0 → 2.1.1), neue Funktionen = zweite Stelle (2.1.x → 2.2.0), großer Umbau = erste Stelle. Stand:
+iOS 2.1.1 (24.10.2026). Android (`versionCode`/`versionName` in `android/app/build.gradle`, zuletzt 18 / 2.0.1)
+nur nach Rücksprache ändern – `android/` fasst Claude sonst nicht an.
+
 Folgen daraus:
 
 - Vor jedem Android-Studio-Build: `git pull`, `npm install`, `npm run build`,
