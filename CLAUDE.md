@@ -1,5 +1,54 @@
 # LernZeit — Hinweise für Claude
 
+## Arbeitsweise: Routing an Sub-Agenten
+
+Der Haupt-Agent löst Aufgaben **nicht selbst**, sondern zerlegt sie und
+delegiert jeden Teil per `Agent`-Tool an einen Sub-Agenten. Er ist nur
+Router: planen, Modell wählen, Ergebnisse prüfen, dem Nutzer berichten.
+
+**Selbst erledigen darf der Haupt-Agent nur:** Rückfragen an den Nutzer,
+kurze Antworten aus bereits vorliegendem Kontext, das Zusammenfassen von
+Agenten-Ergebnissen und Git-Abschluss (commit/push), wenn ein Agent die
+Änderung schon gemacht hat.
+
+### Modellwahl (`model`-Parameter)
+
+Immer das **günstigste Modell, das die Aufgabe sicher schafft**.
+
+| Modell | Wofür | Beispiele |
+|---|---|---|
+| `haiku` | Mechanisch, eindeutig, wenig Kontext | Dateien/Stellen finden, Texte/Übersetzungen anpassen, Umbenennen, Lint-/Format-Fixes, Logs lesen und zusammenfassen, einfache SQL-Abfragen |
+| `sonnet` | Normale Entwicklungsarbeit (Standard) | Feature in wenigen Dateien, Bugfix mit klarer Ursache, Tests schreiben, Komponenten bauen, Edge Function anpassen |
+| `opus` | Schwer, riskant oder unklar | Architektur, Bugs mit unklarer Ursache, Refactoring über viele Dateien, DB-Migrationen/RLS, Sicherheit, Auth, Zahlungen |
+
+Regeln:
+
+- Im Zweifel `sonnet`. Nicht aus Bequemlichkeit `opus`.
+- Scheitert ein Agent oder ist das Ergebnis schwach: **eine Stufe höher**
+  erneut versuchen, mit dem bisherigen Ergebnis als Kontext.
+- Reine Suche: `subagent_type: "Explore"` mit `haiku`.
+  Planung großer Änderungen: `subagent_type: "Plan"` mit `opus`,
+  Umsetzung danach mit `sonnet`.
+- Unabhängige Teilaufgaben parallel starten (mehrere `Agent`-Aufrufe in
+  einer Antwort).
+
+### Auftrag an den Sub-Agenten
+
+Sub-Agenten starten ohne Kontext. Jeder Auftrag enthält:
+
+1. Ziel und Abnahmekriterium („fertig, wenn …“)
+2. Relevante Dateien/Pfade, soweit bekannt
+3. Einschränkungen (nichts committen, keine Deploys, nur diese Dateien …)
+4. Gewünschte Rückgabe (kurz: was geändert, wo, offene Punkte)
+
+Deploys, Migrationen auf Produktion und andere schwer umkehrbare Schritte
+führt kein Sub-Agent ohne Freigabe des Nutzers aus.
+
+### Prüfen
+
+Der Haupt-Agent prüft jedes Ergebnis (Diff ansehen, ggf. `npm run build`
+bzw. Tests per `haiku`-Agent laufen lassen), bevor er es als erledigt meldet.
+
 ## Wie gebaut und ausgeliefert wird
 
 | Plattform | Weg |
