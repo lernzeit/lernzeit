@@ -82,7 +82,7 @@ export function parseChoiceOptions(value: unknown): string[] {
     const texte = value.map((x) => (x === null || x === undefined ? '' : String(x)));
     // Saubere Liste: nur trimmen, Inhalt nicht anfassen.
     if (!texte.some(istVerdaechtig)) {
-      return Array.from(new Set(texte.map((t) => t.trim()).filter(Boolean)));
+      return ohneRahmenZitat(Array.from(new Set(texte.map((t) => t.trim()).filter(Boolean))));
     }
     // Zerschnittene Liste: mit ", " wieder zusammensetzen — so wurde sie
     // zerlegt — und als Ganzes lesen.
@@ -94,6 +94,33 @@ export function parseChoiceOptions(value: unknown): string[] {
   if (!text) return [];
   if (text.includes('[') && text.includes(']')) return ausListenText(text);
   return eindeutig(text.replace(/\r/g, '\n').split(/[\n,;|]+/).map((e) => e.replace(/^[\s•\-–—]*(?:[A-Z]\)|\d+[.)])?\s*/i, '')));
+}
+
+/**
+ * Stehen ALLE Eintraege komplett in Anfuehrungszeichen ("Ural", "Alpen" …),
+ * gehoeren die Zeichen nicht zum Inhalt — die App zeigte sie woertlich an
+ * (Befund 24.10.2026). Einzelne Zitate wie `Paul fragte: "Kommt ihr mit?"`
+ * bleiben unveraendert.
+ */
+export function ohneRahmenZitat(liste: string[]): string[] {
+  const gerahmt = (s: string) => /^["„“]/.test(s) && /["“”]$/.test(s) && s.length > 2 && !/["„“”]/.test(s.slice(1, -1));
+  return liste.length > 0 && liste.every(gerahmt) ? liste.map((s) => s.slice(1, -1).trim()) : liste;
+}
+
+/**
+ * True, wenn ein Text Auszeichnungen enthaelt, die die App woertlich zeigt:
+ * HTML (`<u>Gestern</u>`), Fett/Kursiv mit Sternchen oder Unterstrichen
+ * (`**den Ausflug**`, `_draußen_`), oder ein Verweis auf solche Auszeichnung
+ * („das unterstrichene Wort“) — ohne sie ist die Aufgabe nicht loesbar.
+ * Luecken `___` zaehlen nicht. Befund 24.10.2026.
+ */
+export function hatAuszeichnung(text: string): boolean {
+  if (/<\/?[a-z][a-z0-9]*(\s[^<>]*)?\/?>/i.test(text)) return true;
+  if (/&(nbsp|amp|lt|gt|quot|#\d+);/i.test(text)) return true;
+  if (/\*\*[^*\s][^*]*\*\*/.test(text)) return true;
+  if (/(^|[\s(„"'])_(?!_)[^_\s][^_]*[^_\s]_(?!_)/.test(text) || /(^|[\s(„"'])_[^_\s]_(?!_)/.test(text)) return true;
+  return /\b(unterstrichen\w*|fett\s*gedruckt\w*|kursiv\w*|hervorgehobene\w*)\b/i.test(text)
+    || /\bmarkierte[nm]?\s+(Wort|Wörter|Satzglied\w*|Satzteil\w*|Stelle\w*|Ausdr\w*)/i.test(text);
 }
 
 /** True, wenn in einer Option noch Klammer- oder Codereste stehen. */

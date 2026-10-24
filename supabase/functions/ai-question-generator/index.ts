@@ -12,7 +12,7 @@ import {
   THEORY_SUBJECTS,
   type QuestionCategory,
 } from "../_shared/question-prompt.ts";
-import { cleanHint, hatCodeReste, parseChoiceOptions } from '../_shared/choice-options.ts';
+import { cleanHint, hatAuszeichnung, hatCodeReste, parseChoiceOptions } from '../_shared/choice-options.ts';
 import { grundlagenAnteil, grundlagenFrage } from '../_shared/grundlagen-mathe.ts';
 
 const corsHeaders = {
@@ -982,6 +982,10 @@ function isRenderableQuestionPayload(
   task: unknown
 ): boolean {
   if (typeof questionText !== 'string' || questionText.trim().length === 0) return false;
+  // HTML, **fett**, _kursiv_ oder „das unterstrichene Wort“ zeigt die App
+  // woertlich bzw. gar nicht an (Befund 24.10.2026).
+  const texte = [questionText, typeof task === 'string' ? task : '', JSON.stringify(options ?? ''), JSON.stringify(correctAnswer ?? '')];
+  if (texte.some(hatAuszeichnung)) return false;
 
   switch (questionType) {
     case 'MULTIPLE_CHOICE': {
@@ -1073,6 +1077,7 @@ ${answerFormatRule(category, subject)}
 - Vergleichsfragen NUR mit konkreten Zahlen/Daten (keine vagen Vergleiche)
 - Keine Tautologien (Antwort darf nicht in der Frage stehen)
 - Keine Emoji-Vergleiche für physische Eigenschaften
+- Nur reiner Text: kein HTML, kein **fett**, keine _Unterstriche_, keine Anführungszeichen um ganze Antworten. Die App kann nichts unterstreichen oder hervorheben – das gemeinte Wort in der Frage nennen (z. B. „Welches Satzglied ist ‚wegen des Regens‘?“)
 - Jede Frage hat genau EINE eindeutige korrekte Antwort`;
 }
 

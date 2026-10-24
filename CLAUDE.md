@@ -144,6 +144,9 @@ Supabase-Secrets gelöscht werden.
   bringt sie ins alte Format. Ohne Typen lieferte Gemini Listen als `"["` (bis 88 % verworfen).
 - Formatfehler stehen mit Rohantwort im Funktionsprotokoll (`🧾 Roh …`). Kontrolle:
   `query_logs` nach `Unrenderable` bzw. `Cache fallback: serving` zählen.
+- Auszeichnungen (24.10.2026): HTML, `**fett**`, `_kursiv_` und Verweise wie „das unterstrichene Wort“ kann die App
+  nicht darstellen → `hatAuszeichnung()` verwirft sie; Optionen ganz in Anführungszeichen verlieren diese
+  (`ohneRahmenZitat`, beides in `_shared/choice-options.ts`).
 - Lernplan-Fragen: nur Inhalte des Plans (Thema, Tages-Schwerpunkte, Foto-Stoff), bis zu drei
   Versuche, nie eine Ersatzfrage aus dem Cache.
 

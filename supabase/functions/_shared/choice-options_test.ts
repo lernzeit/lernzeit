@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { cleanHint, hatCodeReste, parseChoiceOptions } from './choice-options.ts';
+import { cleanHint, hatAuszeichnung, hatCodeReste, parseChoiceOptions } from './choice-options.ts';
 
 // Alle Eingaben stammen aus ai_question_cache (Befund 29.09.2026).
 
@@ -70,4 +70,38 @@ Deno.test('Hinweis: Platzhalter und Listen fallen weg', () => {
   assertEquals(cleanHint(null), null);
   assertEquals(cleanHint('["Die Erfindung des Rades", "Die Entwicklung der Landwirtschaft"]'), null);
   assertEquals(cleanHint('Denke an eine Landkarte (Norden oben).'), 'Denke an eine Landkarte (Norden oben).');
+});
+
+// Befund 24.10.2026 (Screenshots aus der App).
+
+Deno.test('Optionen komplett in Anfuehrungszeichen verlieren sie', () => {
+  assertEquals(
+    parseChoiceOptions(['"I go to the bakery."', '"I go to the library."', '"I go to the zoo."']),
+    ['I go to the bakery.', 'I go to the library.', 'I go to the zoo.'],
+  );
+  // Zitat als Teil des Inhalts bleibt.
+  assertEquals(
+    parseChoiceOptions(['Paul fragte: "Kommt ihr mit?"', 'Paul fragte, "Kommt ihr mit?".', 'Paul fragte: Kommt ihr mit?']),
+    ['Paul fragte: "Kommt ihr mit?"', 'Paul fragte, "Kommt ihr mit?".', 'Paul fragte: Kommt ihr mit?'],
+  );
+});
+
+Deno.test('Auszeichnungen, die die App nicht darstellen kann', () => {
+  assertEquals(hatAuszeichnung('<u>Gestern</u> hat es stark geregnet.'), true);
+  assertEquals(hatAuszeichnung('Die Schüler freuen sich auf **den anstehenden Ausflug**.'), true);
+  assertEquals(hatAuszeichnung('Das Kind spielt _draußen_ im Garten.'), true);
+  assertEquals(hatAuszeichnung('In welchem Satz ist das unterstrichene Wort ein Adverb?'), true);
+  assertEquals(hatAuszeichnung('Welche Funktion hat das fett gedruckte Satzglied?'), true);
+  assertEquals(hatAuszeichnung('Bestimme das markierte Satzglied.'), true);
+  // Kein Fehler
+  assertEquals(hatAuszeichnung('Der ___ verläuft durch Greenwich.'), false);
+  assertEquals(hatAuszeichnung('Welches Ereignis markiert den Übergang zur Neuzeit?'), false);
+  assertEquals(hatAuszeichnung('Ist 3 < 5 und 7 > 2?'), false);
+  assertEquals(hatAuszeichnung('Berechne 2 * 3 * 4.'), false);
+});
+
+Deno.test('„hervorgehoben“ als Verb ist keine Auszeichnung', () => {
+  assertEquals(hatAuszeichnung('damit der Garten als Ort besonders hervorgehoben wird'), false);
+  assertEquals(hatAuszeichnung('Bestimme das hervorgehobene Wort.'), true);
+  assertEquals(hatAuszeichnung('der fettgedruckten Wörter'), true);
 });
