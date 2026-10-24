@@ -2912,6 +2912,10 @@ export type Database = {
         Args: { p_child: string; p_minuten: number }
         Returns: string
       }
+      handysperre_stand_melden: {
+        Args: { ist_verwaltet: boolean; p_grund?: Json }
+        Returns: undefined
+      }
       handyzeit_stand_melden: {
         Args: { p_aufgebraucht: boolean; p_budget: number; p_genutzt: number; p_tag: string }
         Returns: undefined

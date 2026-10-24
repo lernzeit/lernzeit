@@ -92,3 +92,16 @@ Erst der Codemagic-Build zeigt Typfehler.
 - [ ] In der Ruhezeit und mit Elterncode offen: keine Restminuten-Mitteilungen.
 - [ ] Nach „+15 Min.“ vom Eltern-Handy: Hinweise gelten für das neue Budget.
 
+
+## Sperre geht unbemerkt aus (24.10.2026)
+
+Klaras Sperre war vom 24.10. 12:53 bis 18:29 (Berliner Zeit) aus, ohne Aufheben über App oder Elterncode;
+Ursache unbekannt. Seitdem: Push `handysperre_aus` an die Eltern, Hinweis „Handysperre ist aus“ in der Eltern-Ansicht,
+Protokoll `handysperre_wechsel` (mit `grund` ab dem nächsten Build). Prüfen:
+
+```sql
+select child_id, an, app_stand, grund, zeit from handysperre_wechsel order by zeit desc limit 50;
+```
+
+Mögliche Ursachen laut Code: App neu installiert (App-Group-Daten weg), Bildschirmzeit-Erlaubnis für LernZeit entzogen
+(`authorization` ≠ approved), abgelaufener Probelauf (`trialUntil`, nur alter nativer Teil), `stopManaging`.

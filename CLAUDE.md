@@ -217,6 +217,9 @@ Supabase-Secrets gelöscht werden.
   (`SperreAusHinweis`, `sperreFehlt` in `ParentDashboard`); Wechsel an → aus schickt Push `handysperre_aus` (Trigger
   `child_settings_handysperre_aus`, nicht nach erlaubtem Aufheben). „Letzte 7 Tage“ beschriftet „genutzt“ bzw. „verdient“;
   „genutzt“ zählt nur die gesperrten Apps (nicht LernZeit/Telefon), weniger als Apples Gesamt-Bildschirmzeit.
+  Jeder Wechsel an/aus steht in `handysperre_wechsel` (nur Service-Rolle; Trigger `child_settings_handysperre_wechsel`);
+  ab dem Build nach dem 24.10.2026 meldet `ScreenTimeSetup` über `handysperre_stand_melden` den technischen Stand
+  dazu (`grund`: Apple-Erlaubnis, Probelauf, Tagesbudget). Regelmäßig ansehen: Geht die Sperre wieder aus?
 - „Eltern fragen“ auf dem Sperrbildschirm (App öffnen kann Apple dort nicht): Ab dem Build nach dem 20.10.2026
   schickt die ShieldAction-Erweiterung die Bitte selbst an die Funktion `eltern-fragen` (Schlüssel je Kind
   `sperre_anfrage_schluessel`, legt LernZeit beim Start in der App Group ab) und antwortet mit `.defer`; der

@@ -13,6 +13,7 @@ import { standText } from '@/lib/handyzeit';
 import { Capacitor } from '@capacitor/core';
 import { SoGehtEs } from '@/components/SoGehtEs';
 import { appleAblehnung, endgeraetVon, nachFehler, sperreNichtMoeglich, type SperreGrund } from '@/lib/geraeteAnleitung';
+import { APP_STAND } from '@/lib/appStand';
 
 /**
  * Dauer des Probelaufs bei der ersten Aktivierung.
@@ -84,7 +85,7 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
       const neuerStand = await ScreenTime.getStatus();
       setStatus(neuerStand);
       setHatCode(await hatNotfallSchluessel());
-      await meldeStand(neuerStand.managing);
+      await meldeStand(neuerStand);
     } catch {
       /* Zustand nicht lesbar — die Ansicht bleibt beim leeren Stand. */
     }
@@ -436,9 +437,24 @@ export function ScreenTimeSetup({ childId }: ScreenTimeSetupProps) {
  * Fehler werden geschluckt. Ein Anzeigewert ist kein Grund, eine Einrichtung
  * scheitern zu lassen, die auf dem Gerät längst funktioniert.
  */
-async function meldeStand(verwaltet: boolean) {
+async function meldeStand(stand: ShieldStatus) {
   try {
-    await supabase.rpc('set_screen_time_managed', { ist_verwaltet: verwaltet });
+    // Mit technischem Stand, damit sich klären lässt, warum eine Sperre
+    // ausging (Protokoll handysperre_wechsel, 24.10.2026). Keine Apps, keine Namen.
+    const { error } = await supabase.rpc('handysperre_stand_melden', {
+      ist_verwaltet: stand.managing,
+      p_grund: {
+        ort: 'einstellungen',
+        authorization: stand.authorization,
+        trialUntil: stand.trialUntil ?? null,
+        budgetEingestellt: stand.budgetEingestellt ?? null,
+        shieldedCount: stand.shieldedCount,
+        zaehltNutzung: stand.zaehltNutzung ?? null,
+        shieldAll: stand.shieldAll,
+        appStand: APP_STAND,
+      },
+    });
+    if (error) await supabase.rpc('set_screen_time_managed', { ist_verwaltet: stand.managing });
   } catch {
     /* Ohne Netz bleibt der Serverstand alt und wird beim nächsten Öffnen
        nachgezogen. */
