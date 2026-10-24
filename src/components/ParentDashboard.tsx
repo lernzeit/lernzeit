@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { HandyzeitUebersicht } from '@/components/parent/HandyzeitUebersicht';
-import { useHandysperreLaeuft } from '@/hooks/useHandysperre';
+import { useHandysperreFreigaben, useHandysperreLaeuft } from '@/hooks/useHandysperre';
 import { ParentScreenTimeRequestsDashboard } from '@/components/ParentScreenTimeRequestsDashboard';
 import { ChildSettingsEditor } from '@/components/ChildSettingsEditor';
 import { LearningPlanGenerator } from '@/components/LearningPlanGenerator';
@@ -224,6 +224,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const { summaries, loading: summariesLoading, refresh: zusammenfassungNeuLaden } = useChildDaySummary(userId, linkedChildren);
   // LernZeit-Handysperre auf dem Kinder-iPhone: dann gibt LernZeit genehmigte Zeit selbst frei
   const sperreLaeuft = useHandysperreLaeuft(linkedChildren.map((k) => k.id));
+  const sperreMoeglich = useHandysperreFreigaben();
+  // iPhone-Kind, dessen App die Sperre kann, das sie aber nicht meldet → Hinweis (24.10.2026)
+  const sperreFehlt = (id: string) => childPlatforms[id] === 'ios' && !!sperreMoeglich?.has(id) && sperreLaeuft[id] === false;
   const isIOSNativeApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
   const isNativeApp = Capacitor.isNativePlatform();
 
@@ -749,6 +752,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                                 ? `${z.questionsToday} Aufgaben, ${z.correctToday} richtig`
                                 : 'Heute noch nicht gelernt'}
                           </span>
+                          {sperreFehlt(child.id) && (
+                            <span className="block truncate text-xs font-bold text-rotstift">Handysperre ist aus</span>
+                          )}
                         </span>
                         {z && z.minutesEarned > 0 && (
                           <span className="tabular shrink-0 text-sm font-extrabold text-gruen-text">{z.minutesEarned} Min.</span>
@@ -818,7 +824,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
                       <li className="flex justify-between py-3"><span>Aufgaben heute</span><b className="tabular text-tinte">{z?.questionsToday ?? 0}, davon {z?.correctToday ?? 0} richtig</b></li>
                       <li className="flex justify-between py-3"><span>Lerntage in Folge</span><b className="tabular text-tinte">{z?.streak ?? 0} {(z?.streak ?? 0) === 1 ? 'Tag' : 'Tage'}</b></li>
                     </ul>
-                    <HandyzeitUebersicht childId={child.id} />
+                    <HandyzeitUebersicht childId={child.id} childName={child.name || 'Kind'} sperreFehlt={sperreFehlt(child.id)} />
                     <ChildLearningAnalysis childId={child.id} childName={child.name || 'Kind'} childGrade={child.grade} onUpgrade={() => setActiveTab('subscription')} />
                   </div>
                 )}

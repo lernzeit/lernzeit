@@ -211,7 +211,12 @@ Supabase-Secrets gelöscht werden.
 - Eltern sehen Freiminuten und den Bereich „Handysperre“ erst, wenn das Kinder-Handy die Sperre meldet
   (`child_settings.screen_time_managed`, gesetzt bei jedem Abgleich); vorher nur bei einem iPhone-Kind
   (`get_children_platforms`: `last_platform`/Push-Token/Auswahl der Eltern) eine Zeile „Auf dem iPhone von …
-  einrichten“, bei Android oder unbekanntem Gerät nichts. Kein Hinweis mehr auf „Heute“.
+  einrichten“, bei Android oder unbekanntem Gerät nichts.
+- „Handysperre ist aus“ (24.10.2026, Klaras Sperre war unbemerkt aus, Freigaben wirkten nicht): iPhone-Kind mit
+  sperrfähiger App, aber `screen_time_managed` = false → rote Zeile auf „Heute“ und Karte in der Übersicht beim Kind
+  (`SperreAusHinweis`, `sperreFehlt` in `ParentDashboard`); Wechsel an → aus schickt Push `handysperre_aus` (Trigger
+  `child_settings_handysperre_aus`, nicht nach erlaubtem Aufheben). „Letzte 7 Tage“ beschriftet „genutzt“ bzw. „verdient“;
+  „genutzt“ zählt nur die gesperrten Apps (nicht LernZeit/Telefon), weniger als Apples Gesamt-Bildschirmzeit.
 - „Eltern fragen“ auf dem Sperrbildschirm (App öffnen kann Apple dort nicht): Ab dem Build nach dem 20.10.2026
   schickt die ShieldAction-Erweiterung die Bitte selbst an die Funktion `eltern-fragen` (Schlüssel je Kind
   `sperre_anfrage_schluessel`, legt LernZeit beim Start in der App Group ab) und antwortet mit `.defer`; der

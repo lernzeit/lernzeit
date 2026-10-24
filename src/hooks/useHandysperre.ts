@@ -109,11 +109,18 @@ export function useHandysperreLaeuft(childIds: string[]): Record<string, boolean
   useEffect(() => {
     if (!schluessel) return;
     let aktiv = true;
-    void supabase.from('child_settings').select('child_id, screen_time_managed').in('child_id', schluessel.split(','))
-      .then(({ data }) => {
-        if (aktiv && data) setStand(Object.fromEntries(data.map((z) => [z.child_id, !!z.screen_time_managed])));
-      });
-    return () => { aktiv = false; };
+    const laden = () => {
+      void supabase.from('child_settings').select('child_id, screen_time_managed').in('child_id', schluessel.split(','))
+        .then(({ data }) => {
+          if (aktiv && data) setStand(Object.fromEntries(data.map((z) => [z.child_id, !!z.screen_time_managed])));
+        });
+    };
+    laden();
+    // Wird die Sperre auf dem Kinder-Handy (neu) eingerichtet, soll der Hinweis
+    // „Handysperre ist aus“ beim Zurückkehren in die App verschwinden.
+    const sichtbar = () => { if (document.visibilityState === 'visible') laden(); };
+    document.addEventListener('visibilitychange', sichtbar);
+    return () => { aktiv = false; document.removeEventListener('visibilitychange', sichtbar); };
   }, [schluessel]);
   return stand;
 }

@@ -181,6 +181,22 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         data: { type: "eltern_fragen", child_id: childId },
       });
     }
+    case "handysperre_aus": {
+      // Kinder-Handy meldet: LernZeit-Sperre nicht mehr eingerichtet
+      // (Trigger child_settings_handysperre_aus, 24.10.2026).
+      const childId = body.child_id as string;
+      const childName = await getChildName(childId);
+      const { data: eltern } = await supabase
+        .from("parent_child_relationships")
+        .select("parent_id")
+        .eq("child_id", childId);
+      return sendOneSignalPush({
+        userIds: (eltern ?? []).map((e) => e.parent_id as string),
+        title: `⚠️ Handysperre bei ${childName} ist aus`,
+        message: `Freigaben wirken erst wieder, wenn du sie auf ${childName}s iPhone einrichtest: LernZeit → Einstellungen → Bildschirmzeit → „Handy sperren“.`,
+        data: { type: "handysperre_aus", child_id: childId },
+      });
+    }
     case "notfall_genutzt": {
       // Elterncode auf dem Kinder-Handy genutzt (Tabelle
       // notfall_entsperrungen, 17.10.2026). Geht an alle verknüpften Eltern.

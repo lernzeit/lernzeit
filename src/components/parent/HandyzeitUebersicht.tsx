@@ -35,7 +35,12 @@ function tagName(tag: string, heute: string): string {
  * Bildschirmzeit auf dem Eltern-iPhone. Die genutzten Minuten meldet das
  * Kinder-Handy, wenn LernZeit dort geöffnet wird (`handyzeit_stand_melden`).
  */
-export function HandyzeitUebersicht({ childId }: { childId: string }) {
+export function HandyzeitUebersicht({ childId, childName, sperreFehlt = false }: {
+  childId: string;
+  childName: string;
+  /** iPhone-Kind, dessen App die Sperre kann, aber das Handy meldet sie nicht (24.10.2026). */
+  sperreFehlt?: boolean;
+}) {
   const [daten, setDaten] = useState<Daten | null>(null);
 
   const laden = useCallback(async () => {
@@ -98,6 +103,7 @@ export function HandyzeitUebersicht({ childId }: { childId: string }) {
 
   return (
     <div className="space-y-5">
+      {sperreFehlt && !daten.sperre && <SperreAusHinweis childName={childName} />}
       {daten.sperre && (
         <section className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-inset ring-karo">
           <p className="text-sm font-extrabold text-tinte">Handyzeit heute</p>
@@ -142,6 +148,9 @@ export function HandyzeitUebersicht({ childId }: { childId: string }) {
                   <span className={tag === heute ? 'font-bold text-tinte' : 'text-tinte'}>{tagName(tag, heute)}</span>
                   <b className="tabular text-tinte">
                     {daten.sperre && !daten.handy[tag] ? '–' : `${w} Min.`}
+                    {!(daten.sperre && !daten.handy[tag]) && (
+                      <span className="ml-1 text-xs font-semibold text-muted-foreground">{daten.sperre ? 'genutzt' : 'verdient'}</span>
+                    )}
                   </b>
                 </div>
                 <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-karo" aria-hidden>
@@ -154,5 +163,21 @@ export function HandyzeitUebersicht({ childId }: { childId: string }) {
         </ul>
       </section>
     </div>
+  );
+}
+
+/**
+ * Die Sperre läuft nicht, obwohl das Kind sie haben könnte (24.10.2026): Dann
+ * sperrt LernZeit nichts und Freigaben wirken nicht — bei Klara blieb das
+ * unbemerkt, weil sie weiter lernte und Anfragen stellte.
+ */
+export function SperreAusHinweis({ childName }: { childName: string }) {
+  return (
+    <section className="rounded-[20px] bg-rotstift/10 px-4 py-3 ring-1 ring-inset ring-rotstift/30">
+      <p className="text-sm font-extrabold text-rotstift">Handysperre ist aus</p>
+      <p className="mt-0.5 text-sm text-tinte">
+        Auf dem iPhone von {childName} in LernZeit: Einstellungen → Bildschirmzeit → „Handy sperren“.
+      </p>
+    </section>
   );
 }
