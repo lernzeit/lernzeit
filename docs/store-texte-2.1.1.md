@@ -9,7 +9,7 @@ Google Play „Neuerungen“ 500 Zeichen.
 | Plattform | Wert | Wo |
 |---|---|---|
 | iOS | `IOS_MARKETING_VERSION: "2.1.1"` | `codemagic.yaml` (gesetzt) |
-| Android | `versionCode` +1 (2.1.0 hatte 19 → 20), `versionName "2.1.1"` | `android/app/build.gradle` in Android Studio |
+| Android | `versionCode 19`, `versionName "2.1.1"` (vorher 18 / 2.0.1) | `android/app/build.gradle` in Android Studio (gebaut 24.10.2026) |
 
 ## App Store – Werbetext (Deutsch, unter 170 Zeichen)
 
