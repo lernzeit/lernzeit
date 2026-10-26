@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { FAQ } from '@/content/faq';
 
-// Liste der häufigen Fragen. Das JSON-LD (FAQPage) gibt nur die Seite /faq aus.
+// Liste der häufigen Fragen. Das JSON-LD (FAQPage) steht auf /start und /faq (Start.tsx, Faq.tsx).
 export const FaqListe = () => (
   <Accordion type="single" collapsible className="w-full">
     {FAQ.map(({ f, a }, i) => (

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { META_DATENSCHUTZ } from '@/content/meta';
 import Seo from '@/components/Seo';
 import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
 
@@ -14,8 +15,8 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
 const Datenschutz = () => (
   <RechtsSeite titel="Datenschutzerklärung" stand="21. Oktober 2026">
     <Seo
-      title="Datenschutz – LernZeit"
-      description="Datenschutzerklärung von LernZeit: welche Daten von Eltern und Kindern wir verarbeiten, wozu, auf welcher Rechtsgrundlage und welche Rechte Sie haben."
+      title={META_DATENSCHUTZ.title}
+      description={META_DATENSCHUTZ.description}
       path="/datenschutz"
     />
 

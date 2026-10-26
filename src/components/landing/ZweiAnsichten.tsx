@@ -57,7 +57,7 @@ const KAPITEL: Kapitel[] = [
   {
     ansicht: 'eltern',
     titel: 'Alles auf einen Blick',
-    text: 'Auf „Heute“ siehst du offene Anfragen und was dein Kind gelernt hat. Die verdiente Zeit wird nie automatisch freigegeben – du entscheidest.',
+    text: 'Auf „Heute“ siehst du offene Anfragen und was dein Kind gelernt hat. Du genehmigst jede Anfrage selbst – nichts wird von allein freigegeben.',
     bild: '/landing/eltern-anfrage.webp',
     notiz: { text: 'Heute gelernt: 15 Aufgaben', hoehe: 72 },
   },

@@ -3,6 +3,8 @@ import { bildschirmzeitNachAlter } from './bildschirmzeit-nach-alter';
 import { eigenesSmartphone } from './eigenes-smartphone';
 import { mediennutzungsvertrag } from './mediennutzungsvertrag';
 import { bildschirmzeitEinstellen } from './bildschirmzeit-einstellen';
+import { bildschirmzeitIphoneKind } from './bildschirmzeit-iphone-kind';
+import { familyLinkOderBildschirmzeit } from './family-link-oder-bildschirmzeit';
 
 // Alle Artikel, auch Entwuerfe. Sichtbar ist nur, was sichtbareArtikel() liefert.
 export const artikel: RatgeberArtikel[] = [
@@ -10,6 +12,8 @@ export const artikel: RatgeberArtikel[] = [
   eigenesSmartphone,
   mediennutzungsvertrag,
   bildschirmzeitEinstellen,
+  bildschirmzeitIphoneKind,
+  familyLinkOderBildschirmzeit,
 ];
 
 // Nur veröffentlichte Artikel, deren Quellen alle geprüft sind, werden

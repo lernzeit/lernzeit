@@ -11,6 +11,10 @@ import PricingComparison from '@/components/landing/PricingComparison';
 import LegalFooter from '@/components/layout/LegalFooter';
 import Seo from '@/components/Seo';
 import FaqSection from '@/components/landing/FaqSection';
+import MehrErfahren from '@/components/landing/MehrErfahren';
+import JsonLd from '@/components/JsonLd';
+import { startJsonLd } from '@/content/jsonld-routen';
+import { META_START } from '@/content/meta';
 import { StoreLinks } from '@/components/landing/StoreLinks';
 import LandingNav from '@/components/landing/LandingNav';
 import { trackFireAndForget } from '@/lib/analytics';
@@ -53,10 +57,11 @@ const Start = () => {
   return (
     <main ref={seite} className="lp relative min-h-screen pb-safe-bottom px-safe">
       <Seo
-        title="LernZeit – Lernen belohnen. Handyzeit verdienen."
-        description="Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Lehrplanorientiert für Klasse 1–10. Jetzt starten."
+        title={META_START.title}
+        description={META_START.description}
         path="/start"
       />
+      <JsonLd daten={startJsonLd()} />
       <LandingNav />
       <HeroSection />
       <HowItWorks />
@@ -95,6 +100,7 @@ const Start = () => {
           </div>
         </section>
 
+        <MehrErfahren />
         <LegalFooter className="pb-8 pt-6" />
       </div>
       <CtaLeiste />

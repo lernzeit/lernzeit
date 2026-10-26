@@ -111,6 +111,21 @@ Supabase-Secrets gelöscht werden.
   (FFMPEG/CHROMIUM setzen; ffmpeg mit x264/VP9/WebP z. B. aus dem PyPI-Paket `imageio-ffmpeg`,
   Chromium unter `/opt/pw-browsers/chromium`).
 
+## Seiten für Crawler und KI-Suchen (Stand 26.10.2026)
+
+- Vorgerendert (Puppeteer beim Build, `vite.config.ts`): `/start`, die Inhaltsseiten aus `src/content/seiten/index.ts`
+  (`/bildschirmzeit-kind`, `/kindersicherung-ergaenzen`, `/lern-app-klasse-1-10`, `/vergleich`, `/preise`,
+  `/hilfe/einrichtung`), Ratgeber, FAQ und Rechtsseiten. Neue Inhaltsseite = ein Eintrag dort; Route, Vorrendern,
+  Sitemap und Prüfung ergeben sich daraus. Der Stamm `/` liefert in `index.html` echten Text samt Links.
+- Titel, Beschreibung und JSON-LD setzt der Build selbst aus `src/content/meta.ts` und `jsonld-routen.ts`
+  (`postProcess`), weil react-helmet-async beim Vorrendern nicht zuverlässig schreibt (26.10.2026: falscher Titel auf
+  /faq, /widerruf, /support, kein JSON-LD auf Artikeln). Eine neue Seite mit eigenem `Seo` braucht dort einen Eintrag,
+  sonst meldet `npm run build` (verify-prerender) „Standardtitel“.
+- JSON-LD: Organization, SoftwareApplication (Preise), FAQPage, VideoObject, Article, BreadcrumbList; `public/llms.txt`.
+- Texte folgen `docs/funktionsstand.md` und `docs/projektanweisungen-aenderungen-2026-10-24.md`: iPhone Sperre und
+  Entsperren automatisch, Eltern genehmigen immer von Hand, Android nur Family Link; nie „unumgehbar“ oder „Sperre
+  immer aktiv“. Keine Skripte von Google oder Meta auf der Website (siehe `docs/conversion-tracking-2026-10-26.md`).
+
 ## Rechtstexte (Stand 04.10.2026)
 
 - Impressum, Datenschutz, Nutzungsbedingungen, `/widerruf` (Belehrung, Muster-Formular,

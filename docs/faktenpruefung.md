@@ -26,7 +26,7 @@ geprüft — nicht gegen ein Marketing-Dokument und nicht gegen eine Erinnerung.
 | 7 | Android-App live | nicht prüfbar (Netzsperre) |
 | 8 | Kinderprofile unbegrenzt / alle Fächer | teils bestätigt, teils missverständlich |
 | 9 | Premium-Funktionen erreichbar | bestätigt |
-| 10 | Verdiente Zeit nicht automatisch freigegeben | bestätigt |
+| 10 | Genehmigt wird immer von Hand; Entsperren automatisch nur auf dem iPhone | bestätigt (26.10.2026) |
 | 11 | Server in der EU | bestätigt |
 | 12 | Keine Datenweitergabe an Dritte | drei Sätze kollidieren mit Werbe-Tracking |
 
@@ -221,42 +221,42 @@ Erprobung. Vor einer Anzeige, die ihn bewirbt, selbst mehrfach durchspielen.
 
 ---
 
-## 10. Verdiente Zeit wird NICHT automatisch freigegeben
+## 10. Genehmigt wird immer von Hand; das Entsperren läuft auf dem iPhone automatisch
 
-**Status: BESTÄTIGT — sie wird weiterhin von Hand freigegeben**
+**Status: BESTÄTIGT, Fassung vom 26.10.2026** (Beleg und Ablauf: `docs/funktionsstand.md`)
 
 | | |
 |---|---|
-| Fundstelle | `child_settings.screen_time_managed` Standard `false`, `screen_time_auto_release` Standard `false` |
-| Zustand | Die Gerätesperre über Apple Family Controls ist gebaut; ob sie auf einem echten Gerät greift, ist noch nicht belegt |
+| Fundstelle | `child_settings.screen_time_auto_release` Standard `false` (keine Genehmigung ohne Eltern), `screen_time_managed` meldet das Kinder-Handy |
+| Zustand | Die iPhone-Sperre läuft auf einem echten Gerät; der Betreiber hat Sperre und Freigabe am 24.10.2026 bestätigt |
 
-Eltern geben die verdiente Zeit heute in Family Link beziehungsweise in Apples
-Bildschirmzeit selbst frei.
+Die Zusage lautet jetzt: **Eltern genehmigen jede Anfrage selbst.** Eine
+automatische Genehmigung gibt es nicht (`screen_time_auto_release` steht auf
+`false`). Danach gilt:
 
-**Was sich am 20.09.2026 geändert hat:** Genehmigte Zeit öffnet das Telefon
-jetzt selbst — aber nur dort, wo ein Elternteil die Sperre auf dem Gerät des
-Kindes eingerichtet hat, und nur nach einer Genehmigung. Ohne Genehmigung
-passiert weiterhin nichts; `screen_time_auto_release` steht unverändert auf
-`false`. Die Zusage „verdiente Zeit wird nicht automatisch freigegeben" bleibt
-damit richtig.
+- **iPhone/iPad (iOS-App, iOS 16+, Apple-Kinderkonto in der Familienfreigabe):**
+  Das Handy entsperrt sich nach der Genehmigung von allein, sobald das Kind
+  LernZeit öffnet. Apple erlaubt keinen Fernzugriff.
+- **Android:** keine Sperre durch LernZeit; die Eltern geben die Minuten in
+  Family Link als Bonuszeit frei (Google bietet keine Schnittstelle).
+- **Browser:** keine Sperre.
 
-**Neu und sauber zu trennen — die Grundzeit:** Seit demselben Tag stehen einem
-Kind täglich 30 Minuten zu, die es *nicht* verdienen muss
-(`child_settings.screen_time_base_minutes`, Vorgabe am 20.09.2026 gegen die
-Datenbank geprüft: `30`). Das ist keine verdiente Zeit und ändert die Zusage
-oben nicht — wohl aber das Bild, das ein Werbetext zeichnen darf: „Das Handy
-bleibt zu, bis gelernt wurde" wäre ab jetzt falsch. Richtig ist: „Nach den
-Freiminuten bleibt das Handy zu, bis gelernt wurde." Eltern können die
-Freiminuten im Premium-Bereich bis auf 0 senken.
+Der frühere Satz „Verdiente Zeit wird nicht automatisch freigegeben“ ist damit
+als Gesamtaussage überholt. Er stimmt nur noch für die Genehmigung, nicht für
+das Entsperren. Die Webseite sagt das seit dem 26.10.2026 so (FAQ, Zielseiten).
 
-**Noch nicht belegt:** Dass die Kette auf einem echten iPhone durchläuft. Das
-lässt sich nur auf einem Gerät mit der Apple-Berechtigung prüfen, nicht hier.
-Bis dahin darf kein Werbetext behaupten, LernZeit sperre das Handy.
+**Nicht versprechen:** „unumgehbar“ und „Sperre immer aktiv“. Am 24.10.2026 war
+die Sperre auf einem Kinder-iPhone einige Stunden aus, ohne dass jemand sie
+aufgehoben hatte. LernZeit meldet das seitdem den Eltern.
 
-**Wichtig für die Werbung:** Das ist der Punkt, an dem Eltern erfahrungsgemäß
-abspringen, wenn sie etwas anderes erwartet haben. Er gehört offen kommuniziert,
-nicht versteckt. Erst wenn die Sperre auf einem Gerät nachweislich greift, wird
-daraus ein Argument — diese Zeile ist dann erneut zu prüfen.
+**Grundzeit:** Kinder haben täglich Freiminuten ohne Aufgaben
+(`child_settings.screen_time_base_minutes`, Vorgabe 30). „Das Handy bleibt zu,
+bis gelernt wurde“ wäre falsch. Richtig: „Nach den Freiminuten bleibt das Handy
+zu, bis gelernt wurde.“ Die Höhe der Freiminuten ändern ist Premium.
+
+**Wichtig für die Werbung:** Dieser Punkt gehört offen kommuniziert. Wer
+„automatisch“ schreibt, muss „genehmigst du immer selbst“ und „nur iPhone, nur
+in der App“ im selben Atemzug nennen.
 
 ---
 

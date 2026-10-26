@@ -37,6 +37,7 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { edgeAntwort } from '@/lib/edgeAntwort';
 import { useToast } from '@/hooks/use-toast';
+import { META_SUPPORT } from '@/content/meta';
 import Seo from '@/components/Seo';
 import { Helmet } from 'react-helmet-async';
 
@@ -282,8 +283,8 @@ const Support = () => {
   return (
     <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
       <Seo
-        title="Support & Hilfe – LernZeit"
-        description="Hilfe, FAQ und Kontaktformular für LernZeit. Wir helfen Eltern und Kindern bei Fragen rund um die App."
+        title={META_SUPPORT.title}
+        description={META_SUPPORT.description}
         path="/support"
       />
       <Helmet>

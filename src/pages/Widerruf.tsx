@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { META_WIDERRUF } from '@/content/meta';
 import Seo from '@/components/Seo';
 import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
 import { VertragsErklaerung } from '@/components/recht/VertragsErklaerung';
@@ -28,8 +29,8 @@ const Widerruf = () => {
   return (
     <RechtsSeite titel="Widerrufsbelehrung" stand="4. Oktober 2026">
       <Seo
-        title="Widerrufsbelehrung – LernZeit"
-        description="Widerrufsbelehrung und Muster-Widerrufsformular für LernZeit Premium. Vertrag direkt online widerrufen."
+        title={META_WIDERRUF.title}
+        description={META_WIDERRUF.description}
         path="/widerruf"
       />
 

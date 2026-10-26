@@ -1,12 +1,46 @@
 # LernZeit
 
-> Spielerische Lern-App: Kinder lösen lehrplanorientierte Aufgaben (Klasse 1–10) und verdienen damit Bildschirmzeit. Eltern behalten die Kontrolle über Fächer, Limits und Belohnungen.
+> LernZeit ist eine Lern-App für Kinder der Klassen 1 bis 10. Kinder lösen Aufgaben und verdienen pro richtiger Antwort Bildschirmzeit. Eltern genehmigen jede Anfrage selbst. Anbieter ist die LernZeit UG (haftungsbeschränkt), Daten liegen auf Servern in der EU (Frankfurt am Main).
 
-LernZeit verbindet Lernen mit Bildschirmzeit-Belohnung. Pro richtig gelöster Aufgabe wird Handyzeit freigeschaltet – die Eltern definieren, wie viel. Inhalte decken Mathe, Deutsch, Englisch, Sachunterricht und weitere Fächer ab.
+Stand: 26.10.2026. Alle Angaben stehen auch auf den verlinkten Seiten.
 
-## Pages
+## Wie es funktioniert
 
-- [Start](/start): Landingpage mit Funktionsübersicht, Zielgruppen, Preisen und Anmeldung.
-- [Datenschutz](/datenschutz): Datenschutzerklärung nach DSGVO.
-- [Nutzungsbedingungen](/nutzungsbedingungen): Nutzungsbedingungen der App.
-- [Impressum](/impressum): Anbieterkennzeichnung gemäß § 5 TMG.
+- Das Kind löst Aufgaben (Mathematik, Deutsch, Englisch, Sachkunde und weitere Fächer, Klasse 1 bis 10). Pro richtiger Antwort gibt es standardmäßig 30 Sekunden Bildschirmzeit, mit Obergrenze (werktags 30, am Wochenende 60 Minuten). Mit Premium stellen Eltern beides selbst ein.
+- Das Kind fragt die verdiente Zeit an. Die Eltern genehmigen oder lehnen ab. Es gibt keine automatische Genehmigung.
+- Verfügbarkeit: iOS (native App im App Store), Android (native App), jedes andere Gerät im Browser.
+
+## Sperre und Freigabe: was geht und was nicht
+
+- iPhone und iPad: Die Sperre und das Entsperren auf dem Kinder-Handy laufen automatisch über Apples Bildschirmzeit-Schnittstelle. Die Eltern genehmigen die Anfrage immer von Hand. Das gilt nur in der iOS-App, nicht im Browser. Voraussetzung sind iOS 16 oder neuer und ein Apple-Kinderkonto in der Familienfreigabe. Nach dem Genehmigen muss das Kind LernZeit einmal öffnen.
+- Android: Es gibt keine Sperre durch LernZeit. Die Eltern genehmigen in LernZeit und geben die Minuten danach in Google Family Link als Bonuszeit frei. Google bietet dafür keine Schnittstelle.
+- Nicht zugesagt: dass die Sperre unumgehbar ist oder immer aktiv bleibt. LernZeit meldet den Eltern, wenn die Sperre aus ist.
+
+## Preise
+
+- 4 Wochen alle Funktionen kostenlos, ohne Zahlungsdaten. Danach bleiben Aufgaben in allen Fächern, Bildschirmzeit verdienen und beliebig viele Kinderprofile kostenlos.
+- Premium: 2,99 € im Monat oder 29,99 € im Jahr (KI-Lernplan für Klassenarbeiten, Schwerpunktfächer, Belohnung je Fach, eigene Zeitlimits, erweiterte Lernanalyse).
+
+## Seiten
+
+- [Startseite](https://lernzeit.app/start): Überblick, Funktionen, Preise, häufige Fragen.
+- [Bildschirmzeit fürs Kind](https://lernzeit.app/bildschirmzeit-kind): Ablauf von Aufgabe bis Freigabe, iPhone und Android, Grenzen.
+- [Kindersicherung ergänzen](https://lernzeit.app/kindersicherung-ergaenzen): wie LernZeit zu Apple Bildschirmzeit und Family Link passt.
+- [Lern-App für Klasse 1 bis 10](https://lernzeit.app/lern-app-klasse-1-10): Fächer nach Klassenstufe, Ablauf einer Runde, Grenzen der Aufgaben.
+- [Vergleich](https://lernzeit.app/vergleich): LernZeit, Apple Bildschirmzeit und Google Family Link nebeneinander.
+- [Preise](https://lernzeit.app/preise): kostenlos, Premium, Testphase, Kündigung.
+- [Einrichtung](https://lernzeit.app/hilfe/einrichtung): Anleitung von der Anmeldung bis zur ersten Freigabe.
+- [Häufige Fragen](https://lernzeit.app/faq)
+
+## Ratgeber
+
+- [Bildschirmzeit auf dem iPhone des Kindes](https://lernzeit.app/ratgeber/bildschirmzeit-iphone-kind)
+- [Family Link oder Bildschirmzeit?](https://lernzeit.app/ratgeber/family-link-oder-bildschirmzeit)
+- [Alle Ratgeber](https://lernzeit.app/ratgeber)
+
+## Rechtliches und Kontakt
+
+- [Datenschutz](https://lernzeit.app/datenschutz)
+- [Nutzungsbedingungen](https://lernzeit.app/nutzungsbedingungen)
+- [Impressum](https://lernzeit.app/impressum)
+- [Support](https://lernzeit.app/support), E-Mail: info@lernzeit.app

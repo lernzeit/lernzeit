@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Trash2, Mail, Smartphone, ShieldCheck, ExternalLink } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { META_KONTO } from '@/content/meta';
 import Seo from '@/components/Seo';
 import LegalFooter from '@/components/layout/LegalFooter';
 
@@ -21,8 +22,8 @@ const KontoLoeschen: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-bg p-4 pt-safe-top pb-safe-bottom px-safe">
       <Seo
-        title="Konto & Daten löschen – LernZeit"
-        description="So löschst du dein LernZeit-Konto und alle personenbezogenen Daten – direkt in der App oder per E-Mail-Antrag nach Art. 17 DSGVO."
+        title={META_KONTO.title}
+        description={META_KONTO.description}
         path="/konto-loeschen"
       />
       <div className="max-w-3xl mx-auto">

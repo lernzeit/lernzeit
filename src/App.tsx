@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import AndroidAppBanner from "./components/AndroidAppBanner";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import PlatformReporter from "./components/PlatformReporter";
+import { seiten } from "./content/seiten";
 
 // Lazy load pages - not needed on initial load
 const Start = lazy(() => import("./pages/Start"));
@@ -27,6 +28,7 @@ const KontoLoeschen = lazy(() => import("./pages/KontoLoeschen"));
 const Faq = lazy(() => import("./pages/Faq"));
 const Ratgeber = lazy(() => import("./pages/Ratgeber"));
 const RatgeberArtikel = lazy(() => import("./pages/RatgeberArtikel"));
+const Inhaltsseite = lazy(() => import("./pages/Inhaltsseite"));
 
 const queryClient = new QueryClient();
 
@@ -112,6 +114,14 @@ const App = () => (
               <RatgeberArtikel />
             </Suspense>
           } />
+          {/* Zielseiten, Vergleich, Preise, Hilfe: Texte in src/content/seiten, vorgerendert (vite.config.ts) */}
+          {seiten.map((s) => (
+            <Route key={s.pfad} path={s.pfad} element={
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
+                <Inhaltsseite pfad={s.pfad} />
+              </Suspense>
+            } />
+          ))}
           <Route path="/ideen" element={
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Lädt...</div>}>
               <IdeaForum />

@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
 import { sichtbareArtikel } from "./src/content/ratgeber/index";
+import { seiten as inhaltsseiten } from "./src/content/seiten/index";
+import { jsonLdFuerRoute } from "./src/content/jsonld-routen";
+import { metaFuerRoute } from "./src/content/meta";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
 import prerender from "@prerenderer/rollup-plugin";
@@ -13,7 +16,8 @@ import PuppeteerRenderer from "@prerenderer/renderer-puppeteer";
 // weiterhin klassische SPA.
 // Ratgeber: /ratgeber plus alle sichtbaren Artikel, automatisch aus den Daten.
 const RATGEBER_ARTIKEL_ROUTES = sichtbareArtikel().map((a) => `/ratgeber/${a.slug}`);
-const PRERENDER_ROUTES = ['/start', '/impressum', '/datenschutz', '/nutzungsbedingungen', '/widerruf', '/kuendigen', '/support', '/konto-loeschen', '/faq', '/ratgeber', ...RATGEBER_ARTIKEL_ROUTES];
+const INHALTSSEITEN_ROUTES = inhaltsseiten.map((s) => s.pfad);
+const PRERENDER_ROUTES = ['/start', ...INHALTSSEITEN_ROUTES, '/impressum', '/datenschutz', '/nutzungsbedingungen', '/widerruf', '/kuendigen', '/support', '/konto-loeschen', '/faq', '/ratgeber', ...RATGEBER_ARTIKEL_ROUTES];
 
 // Schreibt nach dem Build die Ratgeber-Routen für scripts/verify-prerender.mjs
 // und ergänzt dist/sitemap.xml um /ratgeber und alle sichtbaren Artikel
@@ -29,7 +33,14 @@ const ratgeberBuildPlugin = (): Plugin => ({
       path.join(dist, 'ratgeber-routes.json'),
       JSON.stringify(artikel.length ? ['/ratgeber', ...RATGEBER_ARTIKEL_ROUTES] : []),
     );
+    fs.writeFileSync(path.join(dist, 'inhaltsseiten-routes.json'), JSON.stringify(inhaltsseiten.map((s) => ({ pfad: s.pfad, h1: s.h1 }))));
     const sitemap = path.join(dist, 'sitemap.xml');
+    if (fs.existsSync(sitemap)) {
+      const seitenEintraege = inhaltsseiten.map((s) =>
+        `  <url>\n    <loc>https://lernzeit.app${s.pfad}</loc>\n    <lastmod>${s.aktualisiert}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.8</priority>\n  </url>`,
+      ).join('\n');
+      fs.writeFileSync(sitemap, fs.readFileSync(sitemap, 'utf8').replace('</urlset>', `${seitenEintraege}\n</urlset>`));
+    }
     if (artikel.length && fs.existsSync(sitemap)) {
       const eintraege = [
         `  <url>\n    <loc>https://lernzeit.app/ratgeber</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`,
@@ -181,10 +192,36 @@ export default defineConfig(({ mode }) => ({
         // Alle vorhandenen canonical/og:url Tags entfernen
         html = html.replace(/<link[^>]*rel=["']canonical["'][^>]*>\s*/gi, '');
         html = html.replace(/<meta[^>]*property=["']og:url["'][^>]*>\s*/gi, '');
+        // Titel und Beschreibung: Wo die Route feste Texte hat, gelten genau diese, sonst
+        // bleibt der Titel der Seite und die doppelte Beschreibung aus index.html fällt weg.
+        const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const meta = metaFuerRoute(renderedRoute.route);
+        let metaTags = '';
+        if (meta) {
+          html = html.replace(/<title[^>]*>[\s\S]*?<\/title>\s*/gi, '');
+          html = html.replace(/<meta[^>]*name=["']description["'][^>]*>\s*/gi, '');
+          html = html.replace(/<meta[^>]*(property|name)=["'](og:title|og:description|twitter:title|twitter:description)["'][^>]*>\s*/gi, '');
+          metaTags =
+            `<title>${esc(meta.title)}</title>` +
+            `<meta name="description" content="${esc(meta.description)}" />` +
+            `<meta property="og:title" content="${esc(meta.title)}" />` +
+            `<meta property="og:description" content="${esc(meta.description)}" />` +
+            `<meta name="twitter:title" content="${esc(meta.title)}" />` +
+            `<meta name="twitter:description" content="${esc(meta.description)}" />`;
+        } else if (/<meta[^>]*name=["']description["'][^>]*data-rh/i.test(html)) {
+          html = html.replace(/<meta name="description"(?![^>]*data-rh)[^>]*>\s*/i, '');
+        }
+        // Strukturierte Daten: Helmet-Blöcke entfernen, die festen Daten der Route einsetzen
+        html = html.replace(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>\s*/gi, '');
+        const ldJson = jsonLdFuerRoute(renderedRoute.route)
+          .map((d) => `<script type="application/ld+json">${JSON.stringify(d).replace(/</g, '\\u003c')}</script>`)
+          .join('');
         // Frische Tags direkt vor </head> einfügen
         const inject =
           `<link rel="canonical" href="${canonical}" />` +
-          `<meta property="og:url" content="${canonical}" />`;
+          `<meta property="og:url" content="${canonical}" />` +
+          metaTags +
+          ldJson;
         if (/<\/head>/i.test(html)) {
           html = html.replace(/<\/head>/i, `${inject}</head>`);
         } else {

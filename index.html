@@ -104,13 +104,32 @@
       })();
     </script>
     <div id="root">
-      <!-- Visible fallback while JS loads - prevents white screen on slow devices -->
-      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;background:#f8fafc;">
-        <div style="text-align:center;">
-          <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto;"></div>
-          <p style="margin-top:1rem;color:#64748b;">LernZeit lädt...</p>
+      <!--
+        Sichtbarer Inhalt, solange das Skript lädt: Er verhindert den weißen Bildschirm auf
+        langsamen Geräten und gibt Suchmaschinen und KI-Suchen ohne JavaScript echten Text.
+        React ersetzt ihn beim Start. Die Seiten selbst stehen vorgerendert unter /start usw.
+      -->
+      <main style="min-height:100vh;font-family:sans-serif;background:#f8fafc;color:#1e293b;padding:2rem 1.25rem;line-height:1.6;">
+        <div style="max-width:40rem;margin:0 auto;">
+          <h1 style="font-size:1.75rem;line-height:1.25;margin:0 0 1rem;">LernZeit: Lernen belohnen. Handyzeit verdienen.</h1>
+          <p style="margin:0 0 1rem;">Dein Kind löst Aufgaben für Klasse 1 bis 10 und verdient pro richtiger Antwort Bildschirmzeit. Es fragt an, du genehmigst jede Anfrage selbst. Auf dem iPhone sperrt LernZeit das Handy und gibt genehmigte Zeit frei. Auf Android gibst du die Minuten in Google Family Link frei.</p>
+          <p style="margin:0 0 1rem;">Die ersten 4 Wochen sind alle Funktionen kostenlos, ohne Zahlungsdaten. Danach bleibt das Wichtigste kostenlos, Premium kostet 2,99 € im Monat oder 29,99 € im Jahr.</p>
+          <ul style="margin:0 0 1.5rem;padding-left:1.25rem;">
+            <li><a href="/start">Startseite</a></li>
+            <li><a href="/bildschirmzeit-kind">Bildschirmzeit fürs Kind</a></li>
+            <li><a href="/kindersicherung-ergaenzen">Kindersicherung ergänzen</a></li>
+            <li><a href="/lern-app-klasse-1-10">Lern-App für Klasse 1 bis 10</a></li>
+            <li><a href="/preise">Preise</a></li>
+            <li><a href="/hilfe/einrichtung">Einrichtung</a></li>
+            <li><a href="/faq">Häufige Fragen</a></li>
+            <li><a href="/ratgeber">Ratgeber</a></li>
+          </ul>
+          <div style="display:flex;align-items:center;gap:0.75rem;color:#64748b;">
+            <div style="width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;"></div>
+            <span>LernZeit lädt ...</span>
+          </div>
         </div>
-      </div>
+      </main>
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     </div>
     <script type="module" src="/src/main.tsx"></script>

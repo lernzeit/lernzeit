@@ -17,21 +17,31 @@ const SITE_URL = 'https://lernzeit.app';
 // Pick text that only the fully rendered marketing page produces, so a bare
 // `#root` shell (JS-only) can't accidentally pass the check.
 const ROUTES = [
-  { path: '/start',              needle: 'Handyzeit' },
+  { path: '/start',              needle: 'Handyzeit', jsonLd: true },
   { path: '/impressum',          needle: 'Impressum' },
   { path: '/datenschutz',        needle: 'Datenschutz' },
   { path: '/nutzungsbedingungen', needle: 'Nutzungsbedingungen' },
   { path: '/widerruf',           needle: 'Muster-Widerrufsformular' },
   { path: '/kuendigen',          needle: 'Verträge hier kündigen' },
   { path: '/konto-loeschen',     needle: 'Konto' },
-  { path: '/faq',                needle: 'Häufige Fragen' },
+  { path: '/faq',                needle: 'Häufige Fragen', jsonLd: true },
 ];
 
 // Ratgeber-Routen schreibt vite.config.ts beim Build aus sichtbareArtikel().
 const ratgeberDatei = resolve(DIST, 'ratgeber-routes.json');
 if (existsSync(ratgeberDatei)) {
   for (const path of JSON.parse(readFileSync(ratgeberDatei, 'utf8'))) {
-    ROUTES.push({ path, needle: 'Ratgeber' });
+    // /ratgeber (Liste) hat kein JSON-LD, die Artikel haben es
+    ROUTES.push({ path, needle: 'Ratgeber', jsonLd: path !== '/ratgeber' });
+  }
+}
+
+// Inhaltsseiten (Zielseiten, Vergleich, Preise, Hilfe) schreibt vite.config.ts beim Build.
+const inhaltsDatei = resolve(DIST, 'inhaltsseiten-routes.json');
+if (existsSync(inhaltsDatei)) {
+  for (const { pfad, h1 } of JSON.parse(readFileSync(inhaltsDatei, 'utf8'))) {
+    // Erste Wörter der Überschrift (ohne Sonderzeichen) müssen im JS-losen HTML stehen
+    ROUTES.push({ path: pfad, needle: h1.split(/[\s:,]+/)[0], jsonLd: true });
   }
 }
 
@@ -50,7 +60,7 @@ const textContent = (html) =>
 
 const failures = [];
 
-for (const { path, needle } of ROUTES) {
+for (const { path, needle, jsonLd } of ROUTES) {
   const file = resolve(DIST, `.${path}`, 'index.html');
   if (!existsSync(file)) {
     failures.push(`✗ ${path}: dist${path}/index.html fehlt – Prerendering nicht gelaufen?`);
@@ -96,6 +106,22 @@ for (const { path, needle } of ROUTES) {
   }
   if (!/property=["']og:title["']/.test(html) || !/name=["']twitter:card["']/.test(html)) {
     failures.push(`✗ ${path}: og:title oder twitter:card Meta-Tag fehlt.`);
+    continue;
+  }
+
+  // Genau eine Beschreibung, und der Titel ist nicht der Standardtitel der Startseite
+  const beschreibungen = (html.match(/<meta[^>]*name=["']description["'][^>]*>/gi) || []).length;
+  if (beschreibungen !== 1) {
+    failures.push(`✗ ${path}: ${beschreibungen} Meta-Beschreibungen statt genau einer.`);
+    continue;
+  }
+  const titel = (html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '';
+  if (path !== '/start' && titel.startsWith('LernZeit – Lernen belohnen')) {
+    failures.push(`✗ ${path}: Titel ist noch der Standardtitel der Startseite.`);
+    continue;
+  }
+  if (jsonLd && !/<script[^>]*type=["']application\/ld\+json["']/i.test(html)) {
+    failures.push(`✗ ${path}: JSON-LD (application/ld+json) fehlt im statischen HTML.`);
     continue;
   }
 

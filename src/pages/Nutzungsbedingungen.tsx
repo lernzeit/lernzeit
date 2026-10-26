@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { META_NUTZUNG } from '@/content/meta';
 import Seo from '@/components/Seo';
 import { RechtsSeite } from '@/components/landing/RechtsSeite';
 import { STRIPE_MONTHLY_PRICE_LABEL, STRIPE_YEARLY_PRICE_LABEL } from '@/config/pricing';
@@ -16,8 +17,8 @@ import { STRIPE_MONTHLY_PRICE_LABEL, STRIPE_YEARLY_PRICE_LABEL } from '@/config/
 const Nutzungsbedingungen = () => (
   <RechtsSeite titel="Nutzungsbedingungen" stand="4. Oktober 2026">
     <Seo
-      title="Nutzungsbedingungen – LernZeit"
-      description="Nutzungsbedingungen (AGB) von LernZeit: Leistungen, Testphase, Premium-Abo, Preise, Laufzeit, Kündigung und Widerruf."
+      title={META_NUTZUNG.title}
+      description={META_NUTZUNG.description}
       path="/nutzungsbedingungen"
     />
 

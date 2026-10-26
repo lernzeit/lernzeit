@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Seo from '@/components/Seo';
 import { Unterseite, Brotkrumen } from '@/components/landing/Unterseite';
+import { artikelJsonLd } from '@/content/jsonld-routen';
+import { artikelTitel } from '@/content/meta';
 import { findeSichtbarenArtikel, formatiereDatum, sichtbareArtikel } from '@/content/ratgeber';
 
 const NotFound = lazy(() => import('./NotFound'));
@@ -45,26 +47,14 @@ const RatgeberArtikel = () => {
     );
   }
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: a.titel,
-    description: a.beschreibung,
-    datePublished: a.datum,
-    dateModified: a.aktualisiert ?? a.datum,
-    author: { '@type': 'Organization', name: 'LernZeit' },
-    publisher: { '@type': 'Organization', name: 'LernZeit' },
-    mainEntityOfPage: `https://lernzeit.app/ratgeber/${a.slug}`,
-  };
-
   const kapitel = a.abschnitte.filter((ab) => ab.ueberschrift).map((ab) => ab.ueberschrift as string);
   const weitere = sichtbareArtikel().filter((x) => x.slug !== a.slug);
 
   return (
     <Unterseite position="ratgeber_artikel">
-      <Seo title={`${a.titel} – LernZeit Ratgeber`} description={a.beschreibung} path={`/ratgeber/${a.slug}`} />
+      <Seo title={artikelTitel(a.titel)} description={a.beschreibung} path={`/ratgeber/${a.slug}`} />
       <Helmet>
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(artikelJsonLd(a))}</script>
       </Helmet>
 
       <header className="relative overflow-hidden">
@@ -101,6 +91,32 @@ const RatgeberArtikel = () => {
                   {mitVerweisen(p)}
                 </p>
               ))}
+              {ab.tabelle && (
+                <div className="mb-5 overflow-x-auto rounded-2xl ring-1 ring-[var(--lp-karo)]">
+                  <table className="w-full min-w-[32rem] border-collapse text-left text-[0.9375rem] leading-snug">
+                    <thead className="bg-[var(--lp-heft)]">
+                      <tr>
+                        {ab.tabelle.kopf.map((k) => (
+                          <th key={k} scope="col" className="px-4 py-3 font-bold text-[var(--lp-tinte)]">{k}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ab.tabelle.zeilen.map((z) => (
+                        <tr key={z[0]} className="border-t border-[var(--lp-karo)] align-top">
+                          {z.map((zelle, i) =>
+                            i === 0 ? (
+                              <th key={i} scope="row" className="px-4 py-3 font-bold text-[var(--lp-tinte)]">{zelle}</th>
+                            ) : (
+                              <td key={i} className="px-4 py-3">{mitVerweisen(zelle)}</td>
+                            ),
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           ))}
 

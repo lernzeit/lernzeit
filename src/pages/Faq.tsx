@@ -2,12 +2,13 @@ import { Helmet } from 'react-helmet-async';
 import Seo from '@/components/Seo';
 import { Unterseite, Brotkrumen } from '@/components/landing/Unterseite';
 import { FAQ, FAQ_JSON_LD } from '@/content/faq';
+import { META_FAQ } from '@/content/meta';
 
 const Faq = () => (
   <Unterseite position="faq_seite">
     <Seo
-      title="Häufige Fragen – LernZeit"
-      description="Antworten zu Kosten, Testphase, Bildschirmzeit, Fächern, Verbindung mit dem Kind, Datenschutz und Kontolöschung bei LernZeit."
+      title={META_FAQ.title}
+      description={META_FAQ.description}
       path="/faq"
     />
     <Helmet>

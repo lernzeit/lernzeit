@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { META_KUENDIGEN } from '@/content/meta';
 import Seo from '@/components/Seo';
 import { RechtsSeite } from '@/components/landing/RechtsSeite';
 import { VertragsErklaerung } from '@/components/recht/VertragsErklaerung';
@@ -11,8 +12,8 @@ import { VertragsErklaerung } from '@/components/recht/VertragsErklaerung';
 const Kuendigen = () => (
   <RechtsSeite titel="Verträge hier kündigen">
     <Seo
-      title="Verträge hier kündigen – LernZeit"
-      description="LernZeit Premium kündigen: ohne Anmeldung, mit sofortiger Eingangsbestätigung per E-Mail."
+      title={META_KUENDIGEN.title}
+      description={META_KUENDIGEN.description}
       path="/kuendigen"
     />
     <div className="max-w-[44rem]">

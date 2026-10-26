@@ -82,7 +82,7 @@ if (!url || !key) {
   for (const [zeile, was] of [
     [1, 'Dauer der Testphase'], [2, 'Gueltigkeit des Einladungscodes'],
     [3, 'Sekunden je richtiger Aufgabe'], [4, 'Tagesobergrenzen'],
-    [10, 'Verdiente Zeit wird nicht automatisch freigegeben'],
+    [10, 'Keine automatische Genehmigung (Eltern genehmigen immer selbst)'],
   ]) ueberspringe(zeile, was, 'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY nicht gesetzt');
 } else {
   const antwort = await fetch(`${url}/rest/v1/rpc/claim_facts`, {

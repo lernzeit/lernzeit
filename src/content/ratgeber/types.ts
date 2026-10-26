@@ -12,6 +12,8 @@ export interface RatgeberQuelle {
 export interface RatgeberAbschnitt {
   ueberschrift?: string;
   absaetze: string[];
+  /** Tabelle nach den Absätzen; Quellenverweise wie [1] in den Zellen sind erlaubt */
+  tabelle?: { kopf: string[]; zeilen: string[][] };
 }
 
 export interface RatgeberArtikel {

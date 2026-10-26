@@ -4,14 +4,15 @@ import Seo from '@/components/Seo';
 import { Unterseite, Brotkrumen } from '@/components/landing/Unterseite';
 import Randnotiz from '@/components/landing/Randnotiz';
 import { sichtbareArtikel, formatiereDatum } from '@/content/ratgeber';
+import { META_RATGEBER } from '@/content/meta';
 
 const Ratgeber = () => {
   const liste = sichtbareArtikel();
   return (
     <Unterseite position="ratgeber">
       <Seo
-        title="Ratgeber – LernZeit"
-        description="Artikel für Eltern rund um Bildschirmzeit, Smartphone und Lernen: was Fachleute empfehlen und was Studien zeigen."
+        title={META_RATGEBER.title}
+        description={META_RATGEBER.description}
         path="/ratgeber"
       />
       {liste.length === 0 && (

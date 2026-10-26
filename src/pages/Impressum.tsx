@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { META_IMPRESSUM } from '@/content/meta';
 import Seo from '@/components/Seo';
 import { RechtsSeite } from '@/components/landing/RechtsSeite';
 
@@ -10,8 +11,8 @@ import { RechtsSeite } from '@/components/landing/RechtsSeite';
 const Impressum = () => (
   <RechtsSeite titel="Impressum" stand="4. Oktober 2026">
     <Seo
-      title="Impressum – LernZeit"
-      description="Impressum und Anbieterkennzeichnung von LernZeit gemäß § 5 DDG."
+      title={META_IMPRESSUM.title}
+      description={META_IMPRESSUM.description}
       path="/impressum"
     />
 

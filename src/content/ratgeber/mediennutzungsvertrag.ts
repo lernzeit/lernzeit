@@ -52,7 +52,7 @@ export const mediennutzungsvertrag: RatgeberArtikel = {
       ueberschrift: 'Eine Regel, die sich selbst erklärt',
       absaetze: [
         'Manche Familien schreiben in den Vertrag, dass es Bildschirmzeit für Lernen gibt. Darauf beruht LernZeit: Für jede richtig gelöste Aufgabe gibt es 30 Sekunden. Eine Obergrenze bleibt trotzdem, werktags 30 Minuten und am Wochenende 60.',
-        'Die verdiente Zeit wird nicht automatisch freigegeben. Möchte das Kind sie einlösen, schickt es eine Anfrage, und die Eltern entscheiden.',
+        'Die Eltern genehmigen immer selbst. Möchte das Kind verdiente Zeit einlösen, schickt es eine Anfrage, und die Eltern entscheiden.',
       ],
     },
   ],

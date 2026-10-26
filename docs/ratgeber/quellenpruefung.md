@@ -109,3 +109,10 @@ Namen. Die Erklärungen stammen deshalb aus dem iPhone-Handbuch für iOS 26.
 - **Mediensucht (DAK/UKE):** Die Zahlen unterscheiden sich je nach Berichtsjahr
   (Bericht vom 12.03.2025, neuer Bericht vom 24.03.2026 mit KI-Chatbots).
   Erst schreiben, wenn der aktuelle Ergebnisbericht im Original gelesen ist.
+
+## Artikel 5 und 6 (26.10.2026)
+
+`bildschirmzeit-iphone-kind` und `family-link-oder-bildschirmzeit` benutzen dieselben Quellen wie Artikel 4
+(Apple [1]–[4], Google [5]–[6], am 04.10.2026 geprüft) und nur Aussagen, die dort schon stehen. Die Aussagen zu LernZeit
+stammen aus `docs/funktionsstand.md`. Zwei Sätze sind Folgerungen und als solche formuliert: „Ohne Familienfreigabe fehlt
+dir dieser Weg“ und die Hinweise für gemischte Familien (Eltern ohne Apple-Gerät). Beim nächsten Quellencheck am Original prüfen.
