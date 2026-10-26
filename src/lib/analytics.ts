@@ -345,9 +345,16 @@ async function resolveAdClick(userId: string | null, audience: Audience | null):
     if (audience !== 'parent' || !userId) return;
     if (!hatWerbeEinwilligung()) return;
     if (readLocal(AD_RECORDED_KEY) === userId) return;
+    // Notaus (ad_settings.tags_enabled): aus = keine neue Zuordnungszeile
+    const { werbeTagsErlaubt } = await import('./werbemessung');
+    if (!(await werbeTagsErlaubt())) return;
 
-    const klick = leseKlickAusAdresse();
-    if (!klick) return;
+    // Seit 26.10.2026 genügt auch eine Kampagnenbezeichnung ohne Klick-Kennung (iOS ohne
+    // gclid, Meta): Dann steht in der Zeile utm_source/utm_campaign, damit sich das
+    // Elternkonto der Kampagne zuordnen lässt. Weiterhin nur mit Einwilligung.
+    const klick = leseKlickAusAdresse() ?? {};
+    const kampagne = getAttribution();
+    if (Object.keys(klick).length === 0 && !kampagne.utm_source && !kampagne.utm_campaign) return;
 
     writeLocal(AD_RECORDED_KEY, userId);
 
@@ -579,6 +586,12 @@ export async function track(
     void resolveAdClick(userId, audience);
     if (audience !== 'child') {
       pushToDataLayer(eventName, { ...properties, platform, page_path: pagePath });
+      // „Registrierung abgeschlossen“ eines Elternkontos an Google und Meta: nur mit Einwilligung
+      // und Notaus offen (werbemessung.ts prüft beides). Dynamisch geladen, damit die Tags nie
+      // zum Startpaket gehören.
+      if (eventName === 'sign_up_completed' && properties.role === 'parent') {
+        void import('./werbemessung').then((m) => m.meldeRegistrierung()).catch(() => undefined);
+      }
     }
 
     const payload: AnalyticsEventInsert = {

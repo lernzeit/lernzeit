@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, FileText, Building2, LifeBuoy, Trash2, BookOpen, HelpCircle } from 'lucide-react';
 import { sichtbareArtikel } from '@/content/ratgeber';
+import { WerbeEinstellungenLink } from '@/components/WerbeEinwilligung';
 
 interface LegalFooterProps {
   className?: string;
@@ -70,6 +71,8 @@ const LegalFooter: React.FC<LegalFooterProps> = ({ className = '', variant = 'li
             </Link>
           </>
         )}
+        {/* Nur sichtbar, wenn die Werbemessung eingeschaltet ist (ad_settings.tags_enabled) */}
+        <WerbeEinstellungenLink className={`flex items-center gap-1.5 transition-colors ${textClass}`} />
       </div>
       <p className={`text-center text-xs mt-2 ${variant === 'dark' ? 'text-gray-300' : 'text-muted-foreground'}`}>
         © {new Date().getFullYear()} LernZeit. Alle Rechte vorbehalten.

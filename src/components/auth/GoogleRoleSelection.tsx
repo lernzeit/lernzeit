@@ -1,3 +1,4 @@
+import { trackFireAndForget } from '@/lib/analytics';
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,8 @@ export function GoogleRoleSelection({ userId, onComplete }: GoogleRoleSelectionP
       }
 
       localStorage.setItem(`lernzeit_role_confirmed_${userId}`, 'true');
+      // Anmeldung mit Google/Apple: erst hier steht die Rolle fest („sign_up_completed“ gab es auf diesem Weg nicht)
+      trackFireAndForget('sign_up_completed', { role, method: 'oauth' });
       onComplete(role, role === 'child' ? grade : undefined);
     } catch (error: any) {
       toast({

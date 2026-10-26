@@ -8,12 +8,16 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
  * Anschrift, Rechtsgrundlagen je Zweck, Website-Hosting, eigene Messung
  * (analytics_events, Zufallskennung im Browser), RevenueCat, Kuendigung und
  * Widerruf, Speicherdauer, Widerspruchsrecht nach Art. 21, zustaendige
- * Aufsichtsbehoerde. Kein Werbe-Tracking: der Entwurf mit § 8a
- * (docs/datenschutz-entwurf.md) ist NICHT eingearbeitet, er wartet auf die
- * Kanzlei. Offene Punkte: docs/rechtstexte-pruefung.md.
+ * Aufsichtsbehoerde.
+ *
+ * 26.10.2026: Abschnitt 5.4 „Werbemessung“ (Google Ads und Meta nur nach
+ * Einwilligung, nur Website, nur Erwachsene). Entscheidung des Betreibers, der
+ * die Verantwortung traegt; Variante B in docs/conversion-tracking-2026-10-26.md.
+ * Die Kanzlei hat den Wortlaut NICHT geprueft (ihr Entwurf § 8a sah keine
+ * Skripte vor). Offene Punkte: docs/rechtstexte-pruefung.md.
  */
 const Datenschutz = () => (
-  <RechtsSeite titel="Datenschutzerklärung" stand="21. Oktober 2026">
+  <RechtsSeite titel="Datenschutzerklärung" stand="26. Oktober 2026">
     <Seo
       title={META_DATENSCHUTZ.title}
       description={META_DATENSCHUTZ.description}
@@ -112,11 +116,13 @@ const Datenschutz = () => (
         </li>
         <li>
           <strong>Kein Tracking, keine Profile für Dritte:</strong> keine geräte- oder app-übergreifende Verfolgung,
-          keine Werbe-Kennungen (IDFA/AAID). Die App fragt unter iOS deshalb keine Tracking-Erlaubnis (ATT) ab.
+          keine Werbe-Kennungen (IDFA/AAID). Die App fragt unter iOS deshalb keine Tracking-Erlaubnis (ATT) ab. Die
+          Werbemessung nach Abschnitt 5.4 gibt es nur auf der Website, nur für Erwachsene, nur mit Zustimmung – nie in
+          den Apps und nie für Kinder.
         </li>
         <li>
-          <strong>Keine Weitergabe an Werbenetzwerke oder Datenhändler.</strong> Nutzungsereignisse aus Kinderkonten
-          bleiben in unserer eigenen Datenbank.
+          <strong>Keine Weitergabe von Kinderdaten an Werbenetzwerke oder Datenhändler.</strong> Nutzungsereignisse aus
+          Kinderkonten bleiben in unserer eigenen Datenbank.
         </li>
         <li>
           <strong>Käufe nur durch Eltern:</strong> Premium ist nur im Elternkonto erhältlich.
@@ -148,7 +154,8 @@ const Datenschutz = () => (
         Browsers (localStorage) eine zufällige Kennung und gegebenenfalls die Kampagnen-Angaben aus dem Link ab, über
         den Sie gekommen sind (z. B. utm_source, verweisende Seite). Die Ereignisse speichern wir ausschließlich in
         unserer eigenen Datenbank in der EU; sie gehen an keinen Dritten. Wir setzen keine Cookies für diese
-        Auswertung und kein Analyse- oder Werbewerkzeug eines anderen Anbieters ein.
+        Auswertung und kein Analysewerkzeug eines anderen Anbieters ein. Die Werbemessung, die es nur mit Ihrer
+        Zustimmung gibt, steht in Abschnitt 5.4.
       </p>
       <p>
         Sie können die Speicherung verhindern, indem Sie die Website-Daten in Ihrem Browser löschen oder blockieren.
@@ -159,6 +166,54 @@ const Datenschutz = () => (
         Für die Anmeldung und Ihre Einstellungen (z. B. gewählte Ansicht, ob ein Hinweis schon gezeigt wurde) nutzen
         Website und App den lokalen Speicher des Geräts. Ohne diese Speicherung funktioniert die Anmeldung nicht.
       </p>
+      <h3 id="werbung">5.4 Werbemessung (nur mit Ihrer Zustimmung)</h3>
+      <p>
+        Wir bewerben LernZeit bei Google und Meta. Damit wir erkennen, welche Anzeigen dazu führen, dass sich Eltern
+        registrieren, und die Anzeigen darauf ausrichten können, melden wir die Registrierung eines Elternkontos an
+        Google (Google Ads) und Meta (Facebook, Instagram), <strong>wenn Sie dem zustimmen</strong>. Ohne Ihre Zustimmung
+        lädt die Website keine Skripte dieser Anbieter und übermittelt nichts an sie.
+      </p>
+      <ul>
+        <li>
+          <strong>Wo und für wen:</strong> nur auf unserer Website (lernzeit.app), nur auf Seiten für Erwachsene
+          (Startseite, Zielseiten, Ratgeber, Preise, FAQ) und beim Anlegen eines Elternkontos. Nie in den Apps, nie
+          für Kinder, nie auf Seiten mit Einladungscode, nie bei angemeldeten Konten.
+        </li>
+        <li>
+          <strong>Was Sie gefragt werden:</strong> Beim ersten Besuch erscheint ein Hinweis. Sie wählen getrennt für
+          Google und Meta; „Alle ablehnen“ und „Alle zulassen“ sind gleich leicht erreichbar. Ihre Entscheidung speichern
+          wir im lokalen Speicher Ihres Browsers.
+        </li>
+        <li>
+          <strong>Was geladen wird:</strong> bei Zustimmung für Google das Google-Tag (Google Ireland Limited), bei Zustimmung
+          für Meta das Meta-Pixel (Meta Platforms Ireland Limited). Die Anbieter erhalten dabei technisch bedingt Ihre
+          IP-Adresse, Browserangaben und die Adresse der aufgerufenen Seite und können Cookies bzw. Kennungen setzen
+          (z. B. Google: _gcl_aw, Meta: _fbp, in der Regel bis zu 90 Tage). Bei Google ist die Personalisierung von
+          Anzeigen ausgeschaltet.
+        </li>
+        <li>
+          <strong>Was gemeldet wird:</strong> ausschließlich das Ereignis „Registrierung abgeschlossen“ eines Elternkontos.
+          Keine E-Mail-Adresse, kein Name, keine Nutzerkennung, kein Betrag, keine Daten von Kindern. Kinder- und
+          Testkonten werden nicht gemeldet.
+        </li>
+        <li>
+          <strong>Zuordnung bei uns:</strong> Haben Sie zugestimmt und registrieren sich als Elternteil, speichern wir bei
+          Ihrem Konto die Kampagnenangaben des Links (utm_source, utm_campaign u. a.) und, falls vorhanden, die Klick-Kennung
+          der Anzeige (gclid, gbraid, wbraid). Sie dienen nur dazu, Konten Anzeigen zuzuordnen, und werden nach
+          13 Monaten gelöscht.
+        </li>
+        <li>
+          <strong>Rechtsgrundlage:</strong> Ihre Einwilligung, Art. 6 Abs. 1 lit. a DSGVO und § 25 Abs. 1 TDDDG.
+          Für die Erhebung und Weitergabe durch das Meta-Pixel sind wir gemeinsam mit Meta Platforms Ireland Limited
+          verantwortlich (Art. 26 DSGVO); die Vereinbarung dazu stellt Meta in seinen Bedingungen für Business-Tools bereit.
+          Übermittlungen in die USA stützen die Anbieter auf Standardvertragsklauseln bzw. das EU-US Data Privacy Framework.
+        </li>
+        <li>
+          <strong>Widerruf:</strong> jederzeit mit Wirkung für die Zukunft unter „Werbe-Einstellungen“ im Seitenfuß der
+          Website. Wir löschen dann die Cookies der Anbieter in Ihrem Browser und, wenn Sie angemeldet sind, die
+          Zuordnung Ihres Kontos zu einer Anzeige. Die Rechtmäßigkeit der bisherigen Verarbeitung bleibt unberührt.
+        </li>
+      </ul>
     </section>
 
     <section>
@@ -187,6 +242,10 @@ const Datenschutz = () => (
           erneut erzeugt werden muss.
         </li>
         <li><strong>OneSignal, Inc.</strong> (USA): Push-Benachrichtigungen und Service-E-Mails an Eltern</li>
+        <li>
+          <strong>Google Ireland Limited</strong> und <strong>Meta Platforms Ireland Limited</strong>: Messung unserer
+          Werbung, nur mit Ihrer Einwilligung und nur auf der Website (Abschnitt 5.4)
+        </li>
         <li><strong>IONOS SE</strong>: E-Mail-Postfach, Anmelde- und Bestätigungs-E-Mails, Eingangsbestätigungen</li>
       </ul>
       <p>

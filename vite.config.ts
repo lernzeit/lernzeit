@@ -59,6 +59,10 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
+  // Die lokale Vorschau darf unter lernzeit.app angesprochen werden (scripts/test-werbemessung.mjs bildet den Host nach)
+  preview: {
+    allowedHosts: ['lernzeit.app', 'www.lernzeit.app'],
+  },
   plugins: [
     react(),
     ratgeberBuildPlugin(),

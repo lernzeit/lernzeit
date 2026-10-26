@@ -124,7 +124,15 @@ Supabase-Secrets gelöscht werden.
 - JSON-LD: Organization, SoftwareApplication (Preise), FAQPage, VideoObject, Article, BreadcrumbList; `public/llms.txt`.
 - Texte folgen `docs/funktionsstand.md` und `docs/projektanweisungen-aenderungen-2026-10-24.md`: iPhone Sperre und
   Entsperren automatisch, Eltern genehmigen immer von Hand, Android nur Family Link; nie „unumgehbar“ oder „Sperre
-  immer aktiv“. Keine Skripte von Google oder Meta auf der Website (siehe `docs/conversion-tracking-2026-10-26.md`).
+  immer aktiv“.
+
+## Werbemessung (Stand 26.10.2026)
+
+- Google-Tag (`AW-18531716505`) und Meta-Pixel (`1463780805688443`) nur im Browser auf lernzeit.app, nur nach Einwilligung
+  (`WerbeEinwilligung.tsx`, „Werbe-Einstellungen“ im Seitenfuß), nur auf Seiten für Erwachsene, nie in den Apps, nie für Kinder.
+  Gemeldet wird allein „Registrierung abgeschlossen“ eines Elternkontos. Notaus `ad_settings.tags_enabled` (steht auf `false`,
+  Einschalten und Entscheidung: `docs/conversion-tracking-2026-10-26.md`). Test: `npm run test:werbemessung`.
+- Neue Seiten mit Werbemessung nur in `MARKETING_PFADE` (`lib/werbemessung.ts`) eintragen; nie auf `/`, nie auf Kinderseiten.
 
 ## Rechtstexte (Stand 04.10.2026)
 

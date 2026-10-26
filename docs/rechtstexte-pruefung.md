@@ -148,3 +148,11 @@ Lerndaten, kein neues Tracking. Tinte ist nie mit Geld kaufbar und nie in Bildsc
 tauschbar; keine Zufallsbelohnungen. Für die Kanzlei: reicht das als Ergänzung, oder braucht
 das Spielgeld einen eigenen Abschnitt (Kinder-App, Store-Regeln)? Name „Klecksi“ gegen die
 Marke „Karl Klecks“ (pme Lernwelten) prüfen.
+
+
+## Offen: Werbemessung, Datenschutzerklärung Abschnitt 5.4 (26.10.2026)
+
+Der Betreiber hat Browser-Tags für Google Ads und Meta nach Einwilligung beschlossen und trägt die Verantwortung. Der Text in
+`Datenschutz.tsx` (5.4, Dienstleisterliste, Kinder-Abschnitt) und der Hinweis in `WerbeEinwilligung.tsx` sind **nicht** von der Kanzlei
+geprüft. Zu klären: gemeinsame Verantwortlichkeit mit Meta (Art. 26), Wortlaut und Gestaltung der Einwilligung, Cookie-Laufzeiten,
+Drittlandübermittlung. Die frühere Abstimmung (serverseitig, kein Meta) ist in `docs/anwalt-nachlieferung.md` festgehalten.

@@ -9,6 +9,7 @@ import { Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import AndroidAppBanner from "./components/AndroidAppBanner";
 import AnalyticsTracker from "./components/AnalyticsTracker";
+import WerbeEinwilligung from "./components/WerbeEinwilligung";
 import PlatformReporter from "./components/PlatformReporter";
 import { seiten } from "./content/seiten";
 
@@ -39,6 +40,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AnalyticsTracker />
+        <WerbeEinwilligung />
         <PlatformReporter />
         <AndroidAppBanner />
         <Routes>

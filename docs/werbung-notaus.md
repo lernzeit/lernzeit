@@ -30,7 +30,7 @@ Die Tabelle `public.ad_settings` hat genau eine Zeile:
 
 | Spalte | Bedeutung |
 |---|---|
-| `tags_enabled` | Ob lernzeit.app Werbe-Tags laden darf. Steht heute auf `false`. |
+| `tags_enabled` | Ob lernzeit.app Werbe-Tags laden und den Einwilligungshinweis zeigen darf (`werbemessung.ts`, `WerbeEinwilligung.tsx`). Steht auf `false`, bis der Betreiber es einschaltet (`docs/conversion-tracking-2026-10-26.md`). |
 | `monthly_cap_eur` | Der vereinbarte Deckel, 250 €. Dokumentiert den Beschluss; er erzwingt ihn nicht. |
 | `note` | Warum der Schalter gerade so steht. |
 
