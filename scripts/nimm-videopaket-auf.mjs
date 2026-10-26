@@ -182,7 +182,7 @@ try {
       if (i === 0) await bild(page, '03-kind-lernt', 4, 'antwort-gewaehlt', 'Kind: Antwort gewählt, „Prüfen“');
       await page.getByRole('button', { name: 'Prüfen' }).click();
       await page.waitForTimeout(900);
-      if (i === 0) await bild(page, '03-kind-lernt', 5, 'richtig', 'Kind: richtige Antwort mit Erklärung');
+      if (i === 0) await bild(page, '03-kind-lernt', 5, 'richtig', 'Kind: richtige Antwort (grün, „Richtig! +30 Sek.“)');
       await page.getByRole('button', { name: /Weiter|Fertig/ }).last().click();
       await page.waitForTimeout(700);
     }
