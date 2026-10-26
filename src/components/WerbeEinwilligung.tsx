@@ -24,6 +24,7 @@ const WerbeEinwilligung = () => {
   const [offen, setOffen] = useState(false);
   const [google, setGoogle] = useState(false);
   const [meta, setMeta] = useState(false);
+  const [auswahl, setAuswahl] = useState(false);
 
   // Gespeicherte Entscheidung übernehmen und Tags laden, wenn zugestimmt wurde
   useEffect(() => {
@@ -52,6 +53,7 @@ const WerbeEinwilligung = () => {
       const e = leseEinwilligung();
       setGoogle(Boolean(e?.google));
       setMeta(Boolean(e?.meta));
+      setAuswahl(Boolean(e));
       setOffen(true);
     };
     window.addEventListener(WERBE_EINSTELLUNGEN_OEFFNEN, oeffnen);
@@ -76,7 +78,7 @@ const WerbeEinwilligung = () => {
 
   if (!offen) return null;
 
-  const knopf = 'inline-flex h-11 shrink-0 items-center sm:flex-1 justify-center rounded-full px-4 text-sm font-bold ring-1 ring-inset ring-karo transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-white text-tinte hover:bg-muted';
+  const knopf = 'inline-flex h-10 flex-1 items-center justify-center rounded-full px-4 text-sm font-bold ring-1 ring-inset ring-karo transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary bg-white text-tinte hover:bg-muted';
 
   return (
     <div
@@ -85,29 +87,32 @@ const WerbeEinwilligung = () => {
       aria-labelledby="werbe-titel"
       className="fixed inset-x-0 bottom-0 z-[100] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5"
     >
-      <div className="mx-auto max-w-2xl rounded-[24px] bg-white p-5 shadow-[0_20px_60px_-20px_rgba(26,43,109,0.45)] ring-1 ring-inset ring-karo sm:p-6">
-        <h2 id="werbe-titel" className="text-base font-extrabold text-tinte">Darf LernZeit messen, welche Anzeigen wirken?</h2>
-        <p className="mt-2 text-sm leading-relaxed text-tinte">
-          Registrierst du dich als Elternteil, melden wir Google und Meta dieses eine Ereignis – ohne E-Mail-Adresse,
-          Namen oder Nutzer-ID. Dafür lädt erst nach deiner Zustimmung ein Skript des Anbieters, das Cookies und
-          Browserdaten nutzt. Für Kinder wird nie gemessen. Ohne Zustimmung passiert nichts. Widerrufen kannst du
-          jederzeit unter „Werbe-Einstellungen“ im Seitenfuß. Mehr in der{' '}
-          <Link to="/datenschutz#werbung" className="font-semibold text-primary underline underline-offset-2">Datenschutzerklärung</Link>.
+      <div className="mx-auto max-w-xl rounded-[20px] bg-white p-4 shadow-[0_20px_60px_-20px_rgba(26,43,109,0.45)] ring-1 ring-inset ring-karo">
+        <p id="werbe-titel" className="text-sm leading-snug text-tinte">
+          <b>Wirken unsere Anzeigen?</b> Das messen wir nur mit deiner Zustimmung und nur, wenn du dich als Elternteil
+          registrierst, ohne E-Mail-Adresse oder Namen. Für Kinder nie.{' '}
+          <Link to="/datenschutz#werbung" className="font-semibold text-primary underline underline-offset-2">Mehr</Link>
         </p>
-        <div className="mt-4 space-y-2.5 text-sm text-tinte">
-          <label className="flex items-start gap-3">
-            <input type="checkbox" className="mt-1 h-4 w-4" checked={google} onChange={(e) => setGoogle(e.target.checked)} />
-            <span><b>Google Ads</b> (Google Ireland Limited)</span>
-          </label>
-          <label className="flex items-start gap-3">
-            <input type="checkbox" className="mt-1 h-4 w-4" checked={meta} onChange={(e) => setMeta(e.target.checked)} />
-            <span><b>Meta</b> (Meta Platforms Ireland Limited), Meta-Pixel</span>
-          </label>
-        </div>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <button type="button" className={knopf} onClick={() => void speichern(false, false)}>Alle ablehnen</button>
-          <button type="button" className={knopf} onClick={() => void speichern(google, meta)}>Auswahl speichern</button>
-          <button type="button" className={knopf} onClick={() => void speichern(true, true)}>Alle zulassen</button>
+        {auswahl && (
+          <div className="mt-3 space-y-2 text-sm text-tinte">
+            <label className="flex items-center gap-2.5">
+              <input type="checkbox" className="h-4 w-4" checked={google} onChange={(e) => setGoogle(e.target.checked)} />
+              <span><b>Google Ads</b></span>
+            </label>
+            <label className="flex items-center gap-2.5">
+              <input type="checkbox" className="h-4 w-4" checked={meta} onChange={(e) => setMeta(e.target.checked)} />
+              <span><b>Meta</b> (Pixel)</span>
+            </label>
+          </div>
+        )}
+        <div className="mt-3 flex gap-2">
+          <button type="button" className={knopf} onClick={() => void speichern(false, false)}>Ablehnen</button>
+          {auswahl ? (
+            <button type="button" className={knopf} onClick={() => void speichern(google, meta)}>Speichern</button>
+          ) : (
+            <button type="button" className={knopf} onClick={() => { setGoogle(false); setMeta(false); setAuswahl(true); }}>Auswahl</button>
+          )}
+          <button type="button" className={knopf} onClick={() => void speichern(true, true)}>Zustimmen</button>
         </div>
       </div>
     </div>

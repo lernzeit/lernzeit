@@ -180,8 +180,8 @@ const Datenschutz = () => (
           für Kinder, nie auf Seiten mit Einladungscode, nie bei angemeldeten Konten.
         </li>
         <li>
-          <strong>Was Sie gefragt werden:</strong> Beim ersten Besuch erscheint ein Hinweis. Sie wählen getrennt für
-          Google und Meta; „Alle ablehnen“ und „Alle zulassen“ sind gleich leicht erreichbar. Ihre Entscheidung speichern
+          <strong>Was Sie gefragt werden:</strong> Beim ersten Besuch erscheint ein Hinweis. Sie können ablehnen, zustimmen oder getrennt
+          für Google und Meta wählen („Auswahl“); „Ablehnen“ und „Zustimmen“ sind gleich leicht erreichbar. Ihre Entscheidung speichern
           wir im lokalen Speicher Ihres Browsers.
         </li>
         <li>

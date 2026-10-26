@@ -25,9 +25,8 @@ Die Kanzlei hatte A empfohlen und Meta ausgeschlossen; B weicht davon ab. Das Ri
 
 ## Was gebaut ist
 
-- **Einwilligung** (`src/components/WerbeEinwilligung.tsx`, `src/lib/werbeEinwilligung.ts`): Hinweis „Darf LernZeit messen, welche Anzeigen wirken?“
-  mit getrennten Feldern für Google und Meta (nicht vorausgewählt) und drei gleich großen Knöpfen („Alle ablehnen“, „Auswahl speichern“,
-  „Alle zulassen“). Widerruf jederzeit über „Werbe-Einstellungen“ im Seitenfuß (löscht die Cookies der Anbieter und die Konto-Zuordnung, lädt neu).
+- **Einwilligung** (`src/components/WerbeEinwilligung.tsx`, `src/lib/werbeEinwilligung.ts`): kleiner Hinweis „Wirken unsere Anzeigen?“ (drei Zeilen) mit drei gleich großen Knöpfen („Ablehnen“, „Auswahl“, „Zustimmen“);
+  unter „Auswahl“ stehen Google und Meta getrennt (nicht vorausgewählt). Widerruf jederzeit über „Werbe-Einstellungen“ im Seitenfuß (löscht die Cookies der Anbieter und die Konto-Zuordnung, lädt neu).
   Ohne Entscheidung gilt „nein“. Die Entscheidung liegt in `localStorage` (`lernzeit_werbe_einwilligung`, Version 1; bei Änderung der Zwecke
   `EINWILLIGUNG_VERSION` erhöhen, dann wird neu gefragt).
 - **Wo und wann** (`src/lib/werbemessung.ts`): nur im Browser auf lernzeit.app, nur auf Seiten für Erwachsene (Startseite, Zielseiten, Ratgeber, Preise,
@@ -55,7 +54,7 @@ Die Kanzlei hatte A empfohlen und Meta ausgeschlossen; B weicht davon ab. Das Ri
    ```sql
    update public.ad_settings set tags_enabled = true, note = 'Werbemessung an, 26.10.2026, Variante B', updated_at = now();
    ```
-3. Testen: lernzeit.app in einem frischen Browserfenster öffnen: Der Hinweis erscheint. Mit „Alle zulassen“ ein Test-Elternkonto anlegen
+3. Testen: lernzeit.app in einem frischen Browserfenster öffnen: Der Hinweis erscheint. Mit „Zustimmen“ ein Test-Elternkonto anlegen
    und in Google Ads (Conversions, „Registrierung“) bzw. im Meta-Events-Manager (Testereignisse) prüfen, ob das Ereignis ankommt.
    Testkonten nicht als echte Registrierung zählen lassen (die Zählung in Google Ads kann bis zu 24 Stunden dauern).
 4. Aus: Reihenfolge wie in `docs/werbung-notaus.md` (erst die Kampagne pausieren, dann `tags_enabled = false`). Wirkt sofort ohne Build.

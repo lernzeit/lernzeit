@@ -62,11 +62,11 @@ try {
   // 2. Notaus offen, noch keine Entscheidung: Hinweis, aber nichts geladen
   {
     const { page, ctx, anfragen } = await seite({ tagsAn: true, pfad: '/start' });
-    pruefe('Hinweis erscheint auf /start', (await page.getByRole('dialog', { name: /welche Anzeigen wirken/ }).count()) === 1);
+    pruefe('Hinweis erscheint auf /start', (await page.getByRole('dialog', { name: /Wirken unsere Anzeigen/ }).count()) === 1);
     pruefe('Vor der Entscheidung: keine Anfrage an Google oder Meta', anfragen.length === 0, anfragen.join(', '));
     pruefe('Nichts gespeichert', (await page.evaluate(() => localStorage.getItem('lernzeit_werbe_einwilligung'))) === null);
     // Ablehnen
-    await page.getByRole('button', { name: 'Alle ablehnen' }).click();
+    await page.getByRole('button', { name: 'Ablehnen' }).click();
     await page.waitForTimeout(800);
     const gespeichert = JSON.parse(await page.evaluate(() => localStorage.getItem('lernzeit_werbe_einwilligung')));
     pruefe('Ablehnen speichert „nein, nein“', gespeichert?.google === false && gespeichert?.meta === false);
@@ -80,8 +80,9 @@ try {
   // 3. Zustimmung nur für Google: Google-Tag lädt, Meta nicht
   {
     const { page, ctx, anfragen } = await seite({ tagsAn: true, pfad: '/bildschirmzeit-kind?utm_source=google&utm_campaign=test' });
+    await page.getByRole('button', { name: 'Auswahl' }).click();
     await page.getByRole('checkbox', { name: /Google Ads/ }).check();
-    await page.getByRole('button', { name: 'Auswahl speichern' }).click();
+    await page.getByRole('button', { name: 'Speichern' }).click();
     await page.waitForTimeout(1500);
     pruefe('Google-Tag lädt nach Zustimmung', anfragen.some((u) => u.includes('googletagmanager.com/gtag/js?id=AW-18531716505')), anfragen.join(', '));
     pruefe('Meta lädt nicht ohne Zustimmung', !anfragen.some((u) => /facebook/.test(u)));
