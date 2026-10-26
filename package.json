@@ -30,7 +30,8 @@
     "werbung:video": "node scripts/nimm-demo-auf.mjs",
     "werbung:erklaervideo": "node scripts/erzeuge-erklaervideo.mjs",
     "werbung:landing": "node scripts/nimm-landing-auf.mjs",
-    "werbung:app-bilder": "node scripts/nimm-app-bilder-auf.mjs"
+    "werbung:app-bilder": "node scripts/nimm-app-bilder-auf.mjs",
+    "werbung:videopaket": "node scripts/nimm-videopaket-auf.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",
