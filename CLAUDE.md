@@ -13,7 +13,7 @@ Versionsnummer (Wunsch des Betreibers, 24.10.2026): Sobald es heißt „wir arbe
 setzt Claude die Version selbst hoch – iOS `IOS_MARKETING_VERSION` in `codemagic.yaml` (Apple nimmt keine
 Builds für eine schon freigegebene Version an). Schema: Fehlerbehebung/kleine Änderungen = dritte Stelle
 (2.1.0 → 2.1.1), neue Funktionen = zweite Stelle (2.1.x → 2.2.0), großer Umbau = erste Stelle. Stand:
-iOS 2.1.1 (24.10.2026). Android (`versionCode`/`versionName` in `android/app/build.gradle`, zuletzt 19 / 2.1.1, gebaut 24.10.2026 beim Betreiber, im Repo noch 18 / 2.0.1)
+iOS 2.1.2 (28.10.2026; 2.1.1 von Apple freigegeben). Android (`versionCode`/`versionName` in `android/app/build.gradle`, zuletzt 19 / 2.1.1, gebaut 24.10.2026 beim Betreiber, im Repo noch 18 / 2.0.1)
 nur nach Rücksprache ändern – `android/` fasst Claude sonst nicht an.
 
 Folgen daraus:
@@ -104,7 +104,7 @@ Supabase-Secrets gelöscht werden.
   „Deine Erfolge“ (Lerntage-Kachel + `child/ErfolgeKachel.tsx`). Hefte nur auf der Fächer-Seite,
   dort auch „Gestalten“.
 - Spiel: Kästchen-Fortschritt, eigenes Ziffernfeld für Zahlenaufgaben, Haken/Rotstift.
-- Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Regeln speichern sofort mit
+- Eltern: Navigation unten (Heute, Kinder, Abo, Konto), Anfragen mit einem Tipp genehmigen (28.10.2026; Dialog nur bei unbekanntem Gerät oder Family-Link-Absprung), Regeln speichern sofort mit
   leisem Hinweis „Wird gespeichert …“ (kein Speichern-Knopf, keine Toasts).
 - Website-Bilder nach App-Änderungen neu aufnehmen: `npm run build`, dann
   `npm run werbung:app-bilder` (auch Video `kind-start`) und `npm run werbung:landing`

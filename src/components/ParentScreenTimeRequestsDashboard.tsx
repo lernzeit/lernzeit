@@ -78,26 +78,44 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
 
   const pendingChildId = pendingApprovalRequest?.child_id ?? null;
   const pendingChildName = pendingChildId ? getChildName(pendingChildId) : 'Kind';
-  const pendingChildPlatform = pendingChildId ? (childPlatforms[pendingChildId] ?? null) : null;
   // Ziel richtet sich nach der Plattform des KINDES (bestehende Logik im Service)
   const sperreLaeuft = useHandysperreLaeuft(requests.map((r) => r.child_id));
-  const target = parentalControlsService.getTargetForChild(pendingChildPlatform, pendingChildName, !!(pendingChildId && sperreLaeuft[pendingChildId]));
+  const zielFuer = (request: ScreenTimeRequest) =>
+    parentalControlsService.getTargetForChild(
+      childPlatforms[request.child_id] ?? null,
+      getChildName(request.child_id),
+      !!sperreLaeuft[request.child_id],
+    );
+
+  const target = pendingApprovalRequest
+    ? zielFuer(pendingApprovalRequest)
+    : parentalControlsService.getTargetForChild(null, pendingChildName);
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const recentRequests = requests.slice(0, 5);
 
-  // Step 1: User clicks approve → show dialog with option to open parental app
+  // Ein Tipp genügt (28.10.2026). Nur wo es wirklich etwas zu entscheiden gibt –
+  // Gerät des Kindes unbekannt oder Absprung in Family Link möglich – fragt ein Dialog nach.
   const handleApproveClick = (request: ScreenTimeRequest) => {
-    setPendingApprovalRequest(request);
-    setShowApprovalDialog(true);
+    const ziel = zielFuer(request);
+    if (ziel.kind === 'manual' || ziel.canOpen) {
+      setPendingApprovalRequest(request);
+      setShowApprovalDialog(true);
+      return;
+    }
+    void approve(request, false);
   };
 
-  // Step 2: Actually approve and optionally open parental control app
-  const handleApproveAndOpen = async (openApp: boolean) => {
-    if (!pendingApprovalRequest) return;
-    const reqId = pendingApprovalRequest.id;
-    const reqMinutes = pendingApprovalRequest.requested_minutes;
-    const reqChildId = pendingApprovalRequest.child_id;
+  const handleApproveAndOpen = (openApp: boolean) => {
+    if (pendingApprovalRequest) void approve(pendingApprovalRequest, openApp);
+  };
+
+  const approve = async (request: ScreenTimeRequest, openApp: boolean) => {
+    const reqId = request.id;
+    const reqMinutes = request.requested_minutes;
+    const reqChildId = request.child_id;
+    const reqPlatform = childPlatforms[reqChildId] ?? null;
+    const target = zielFuer(request);
 
     setRespondingId(reqId);
     try {
@@ -107,14 +125,14 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
       if (result.success) {
         trackFireAndForget('screen_time_approved', {
           minutes: reqMinutes,
-          platform_combo: parentalControlsService.getPlatformCombo(pendingChildPlatform),
+          platform_combo: parentalControlsService.getPlatformCombo(reqPlatform),
           jump_target: target.kind,
           jumped: openApp && target.canOpen,
         });
 
         // Then try to open the parental control app for THIS child's platform
         if (openApp && target.canOpen) {
-          const openResult = await parentalControlsService.openForChild(pendingChildPlatform, reqMinutes);
+          const openResult = await parentalControlsService.openForChild(reqPlatform, reqMinutes);
           void vielleichtUmBewertungBitten(reqChildId, openResult.opened);
 
           toast({
@@ -123,12 +141,15 @@ export function ParentScreenTimeRequestsDashboard({ userId, refreshTrigger, onOf
           });
         } else {
           void vielleichtUmBewertungBitten(reqChildId, false);
-          toast({
-            title: "Anfrage genehmigt! ✅",
-            description: target.kind === 'lernzeit' || target.kind === 'unsupported'
-              ? target.hint
-              : `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
-          });
+          // LernZeit-Sperre gibt die Zeit selbst frei: Die Anfrage verschwindet, mehr braucht es nicht.
+          if (target.kind !== 'lernzeit') {
+            toast({
+              title: "Anfrage genehmigt! ✅",
+              description: target.kind === 'unsupported'
+                ? target.hint
+                : `Bitte gib ${reqMinutes} Minuten Bildschirmzeit in ${target.appName} frei.`,
+            });
+          }
         }
 
         setShowApprovalDialog(false);
