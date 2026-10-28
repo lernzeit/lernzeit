@@ -1,8 +1,8 @@
 # Conversion-Tracking: Entscheidung und Betrieb (26.10.2026)
 
 Stand 26.10.2026. **Entscheidung des Betreibers: Variante B (Browser-Tags nur nach Einwilligung). Er trägt die Verantwortung.**
-Gebaut, getestet (`npm run test:werbemessung`), im Code auf `main`. **Der Notaus steht auf „aus“** (`ad_settings.tags_enabled = false`):
-Solange er aus ist, lädt nichts, fragt nichts und meldet nichts. Einschalten: siehe unten.
+Gebaut, getestet (`npm run test:werbemessung`), im Code auf `main`. **Seit 28.10.2026 ist die Werbemessung an** (`ad_settings.tags_enabled = true`, vom Betreiber nach Lesen von Datenschutz 5.4 eingeschaltet, per SQL-Editor bestätigt).
+War der Notaus aus, lud nichts, fragte nichts und meldete nichts. Ausschalten: `docs/werbung-notaus.md`.
 
 ## Angelegte Werte
 
