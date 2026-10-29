@@ -13,7 +13,7 @@ Versionsnummer (Wunsch des Betreibers, 24.10.2026): Sobald es heißt „wir arbe
 setzt Claude die Version selbst hoch – iOS `IOS_MARKETING_VERSION` in `codemagic.yaml` (Apple nimmt keine
 Builds für eine schon freigegebene Version an). Schema: Fehlerbehebung/kleine Änderungen = dritte Stelle
 (2.1.0 → 2.1.1), neue Funktionen = zweite Stelle (2.1.x → 2.2.0), großer Umbau = erste Stelle. Stand:
-iOS 2.1.2 (28.10.2026; 2.1.1 von Apple freigegeben). Android (`versionCode`/`versionName` in `android/app/build.gradle`, zuletzt 19 / 2.1.1, gebaut 24.10.2026 beim Betreiber, im Repo noch 18 / 2.0.1)
+iOS 2.2.0 (29.10.2026, neue Funktion Knöpfe an Mitteilungen; 2.1.1 von Apple freigegeben). Android (`versionCode`/`versionName` in `android/app/build.gradle`, zuletzt 19 / 2.1.1, gebaut 24.10.2026 beim Betreiber, im Repo noch 18 / 2.0.1)
 nur nach Rücksprache ändern – `android/` fasst Claude sonst nicht an.
 
 Folgen daraus:
@@ -266,6 +266,13 @@ Supabase-Secrets gelöscht werden.
   40 Min. Budget jede Minute, darüber gleichmäßig. Ab dem Build nach dem 23.10.2026.
 - Hooks, deren Funktionen in Effekt-Abhängigkeiten stehen, müssen stabile Funktionen liefern
   (`useEarnedMinutesTracker` = feste Funktionen): Am 21.10.2026 schickte Klaras Handy ~1.900 Abfragen je Minute.
+- Knöpfe an Mitteilungen (29.10.2026, ab iOS 2.2.0, auch auf der Apple Watch): Anfrage mit „Genehmigen“/„Ablehnen“
+  (`LZ_ANFRAGE`), „Eltern fragen“ mit „15/30 Min. geben“ (`LZ_ELTERN_FRAGEN`, je Elternteil eine Mitteilung).
+  send-push legt je Mitteilung einen Schlüssel an (`mitteilung_schluessel`, nur Hash, einmalig, 24 h bzw. 12 h) und
+  setzt `ios_category`; der Tipp weckt LernZeit im Hintergrund, `MitteilungsKnoepfe.swift` (vor Capacitors
+  NotificationRouter, Start in `ScreenTimePlugin.load()`) schickt ihn an `mitteilung-antwort` und zeigt das Ergebnis
+  als kurze Mitteilung. Genehmigen/Ablehnen gemeinsam mit der App über `_shared/anfrage-beantworten.ts`.
+  Ältere Apps zeigen die Mitteilung ohne Knöpfe. Ob iOS die App im Hintergrund weckt, zeigt erst das Gerät.
 - Offene Punkte der eigenen Sperre: `docs/handysperre-pruefung.md`.
 
 ## Klecksi und die Heftrand-Reise (Stand 11.10.2026)

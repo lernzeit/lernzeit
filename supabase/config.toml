@@ -99,3 +99,7 @@ project_id = "fsmgynpdfxkaiiuguqyr"
     verify_jwt = false
   [functions.eltern-fragen]
     verify_jwt = false
+
+  # Knöpfe an Mitteilungen (Apple Watch): Schlüssel je Mitteilung statt Anmeldung
+  [functions.mitteilung-antwort]
+    verify_jwt = false

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { anfrageBeantworten } from '../_shared/anfrage-beantworten.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -443,91 +444,17 @@ async function respondToRequest(supabase: any, parentId: string, body: Record<st
 
   const sanitizedResponse = sanitizeString(response, 500);
 
-  // Verify the request belongs to this parent
-  const { data: request } = await supabase
-    .from('screen_time_requests')
-    .select('*')
-    .eq('id', requestId)
-    .eq('parent_id', parentId)
-    .eq('status', 'pending')
-    .single();
-
-  if (!request) {
-    return new Response(JSON.stringify({ error: 'Anfrage nicht gefunden oder bereits bearbeitet' }), {
-      status: 404,
+  const ergebnis = await anfrageBeantworten(
+    supabase, parentId, requestId as string, status as 'approved' | 'denied', sanitizedResponse,
+  );
+  if (!ergebnis.ok) {
+    return new Response(JSON.stringify({ error: ergebnis.error }), {
+      status: ergebnis.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
-  // Update the request
-  const { data: updatedRequest, error } = await supabase
-    .from('screen_time_requests')
-    .update({
-      status,
-      parent_response: sanitizedResponse,
-      responded_at: new Date().toISOString()
-    })
-    .eq('id', requestId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Database update error:', error);
-    return new Response(JSON.stringify({ error: 'Anfrage konnte nicht aktualisiert werden' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-
-  // If request is denied, release the reserved minutes
-  if (status === 'denied') {
-    let minutesToRelease = request.requested_minutes;
-    
-    const { data: reservedMinutes } = await supabase
-      .from('user_earned_minutes')
-      .select('*')
-      .eq('user_id', request.child_id)
-      .gt('minutes_requested', 0)
-      .order('earned_at', { ascending: true });
-
-    for (const earnedRecord of reservedMinutes || []) {
-      if (minutesToRelease <= 0) break;
-      
-      const minutesToUnreserve = Math.min(minutesToRelease, earnedRecord.minutes_requested);
-      
-      await supabase
-        .from('user_earned_minutes')
-        .update({
-          minutes_requested: earnedRecord.minutes_requested - minutesToUnreserve
-        })
-        .eq('id', earnedRecord.id);
-      
-      minutesToRelease -= minutesToUnreserve;
-    }
-  }
-
-  // Update daily request summary
-  if (status === 'approved') {
-    const { dateKey: todayKey } = getUtcDayRange();
-
-    const { data: dailySummary } = await supabase
-      .from('daily_request_summary')
-      .select('*')
-      .eq('user_id', request.child_id)
-      .eq('request_date', todayKey)
-      .single();
-
-    if (dailySummary) {
-      await supabase
-        .from('daily_request_summary')
-        .update({
-          total_minutes_approved: dailySummary.total_minutes_approved + request.requested_minutes
-        })
-        .eq('id', dailySummary.id);
-    }
-  }
-
-  return new Response(JSON.stringify({ success: true, request: updatedRequest }), {
+  return new Response(JSON.stringify({ success: true, request: ergebnis.request }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
   });
 }

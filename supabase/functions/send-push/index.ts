@@ -1,6 +1,7 @@
 // Sends OneSignal push notifications based on database trigger events
 // or scheduled cron jobs. Uses ONESIGNAL_APP_ID + ONESIGNAL_REST_API_KEY.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { neuerSchluessel, sha256hex } from "../_shared/mitteilung-schluessel.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,8 @@ interface PushPayload {
   data?: Record<string, unknown>;
   /** When true, only send to users with profiles.daily_push_enabled = true */
   respectDailyToggle?: boolean;
+  /** iOS-Mitteilungsart mit Knöpfen (MitteilungsKnoepfe.swift), z. B. LZ_ANFRAGE */
+  iosCategory?: string;
 }
 
 async function sendOneSignalPush(payload: PushPayload): Promise<unknown> {
@@ -72,6 +75,7 @@ async function sendOneSignalPush(payload: PushPayload): Promise<unknown> {
     headings: { en: payload.title, de: payload.title },
     contents: { en: payload.message, de: payload.message },
     data: payload.data ?? {},
+    ...(payload.iosCategory ? { ios_category: payload.iosCategory } : {}),
     android_channel_id: undefined,
     priority: 10,
   };
@@ -120,6 +124,37 @@ async function getChildName(childId: string): Promise<string> {
   return data?.name?.trim() || "Dein Kind";
 }
 
+/**
+ * Knöpfe an der Mitteilung (29.10.2026): eigener Schlüssel je Elternteil und
+ * Mitteilung, eingelöst von der Funktion mitteilung-antwort. Ohne Schlüssel
+ * (Fehler) geht die Mitteilung trotzdem raus, nur ohne Knöpfe.
+ */
+async function knopfDaten(
+  parentId: string,
+  childId: string,
+  art: "anfrage" | "eltern_fragen",
+  requestId: string | null,
+  stunden: number,
+): Promise<Record<string, string> | null> {
+  const schluessel = neuerSchluessel();
+  const { error } = await supabase.from("mitteilung_schluessel").insert({
+    schluessel_hash: await sha256hex(schluessel),
+    parent_id: parentId,
+    child_id: childId,
+    art,
+    request_id: requestId,
+    gueltig_bis: new Date(Date.now() + stunden * 3_600_000).toISOString(),
+  });
+  if (error) {
+    console.error("mitteilung_schluessel:", error);
+    return null;
+  }
+  // Alte Schlüssel nebenbei aufräumen
+  await supabase.from("mitteilung_schluessel").delete()
+    .lt("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString());
+  return { schluessel, antwort_url: `${SUPABASE_URL}/functions/v1/mitteilung-antwort` };
+}
+
 async function handleEvent(event: string, body: Record<string, unknown>) {
   switch (event) {
     case "screen_time_request_new": {
@@ -133,11 +168,15 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
         { title: "✋ Bitte um Freigabe", message: `${childName} möchte ${minutes} Minuten Bildschirmzeit nutzen.` },
       ];
       const v = pickVariant(variants, `${body.request_id}`);
+      const knopf = await knopfDaten(
+        body.parent_id as string, body.child_id as string, "anfrage", body.request_id as string, 24,
+      );
       return sendOneSignalPush({
         userIds: [body.parent_id as string],
         title: v.title,
         message: v.message,
-        data: { type: "screen_time_request_new", request_id: body.request_id },
+        data: { type: "screen_time_request_new", request_id: body.request_id, ...(knopf ?? {}) },
+        iosCategory: knopf ? "LZ_ANFRAGE" : undefined,
       });
     }
     case "geraet_freigabe_neu": {
@@ -174,12 +213,20 @@ async function handleEvent(event: string, body: Record<string, unknown>) {
       const uhr = zuletzt && !Number.isNaN(zuletzt.getTime())
         ? zuletzt.toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit" })
         : null;
-      return sendOneSignalPush({
-        userIds: (eltern ?? []).map((e) => e.parent_id as string),
-        title: `📱 ${childName} möchte mehr Handyzeit`,
-        message: `${uhr ? `Um ${uhr} Uhr auf dem Sperrbildschirm. ` : ""}Extra-Zeit gibst du unter Kinder → Regeln → Handysperre.`,
-        data: { type: "eltern_fragen", child_id: childId },
-      });
+      // Je Elternteil eine eigene Mitteilung: Jeder bekommt seinen Schlüssel
+      // für die Knöpfe „15 Min.“/„30 Min.“.
+      const ergebnisse = [];
+      for (const { parent_id } of eltern ?? []) {
+        const knopf = await knopfDaten(parent_id as string, childId, "eltern_fragen", null, 12);
+        ergebnisse.push(await sendOneSignalPush({
+          userIds: [parent_id as string],
+          title: `📱 ${childName} möchte mehr Handyzeit`,
+          message: `${uhr ? `Um ${uhr} Uhr auf dem Sperrbildschirm. ` : ""}Extra-Zeit gibst du unter Kinder → Regeln → Handysperre.`,
+          data: { type: "eltern_fragen", child_id: childId, ...(knopf ?? {}) },
+          iosCategory: knopf ? "LZ_ELTERN_FRAGEN" : undefined,
+        }).catch((e) => ({ error: String(e) })));
+      }
+      return ergebnisse;
     }
     case "handysperre_aus": {
       // Kinder-Handy meldet: LernZeit-Sperre nicht mehr eingerichtet

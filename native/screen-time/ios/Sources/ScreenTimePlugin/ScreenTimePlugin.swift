@@ -55,6 +55,12 @@ public class ScreenTimePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setAnfrageZugang", returnType: CAPPluginReturnPromise)
     ]
 
+    /// Läuft beim Start der Bridge, auch wenn iOS die App für einen Knopf an
+    /// einer Mitteilung nur im Hintergrund weckt (MitteilungsKnoepfe.swift).
+    override public func load() {
+        MitteilungsKnoepfe.einrichten()
+    }
+
     // MARK: - Zustand
     //
     // Alles liegt in LernzeitScreenTime, damit App und Erweiterung dieselbe
