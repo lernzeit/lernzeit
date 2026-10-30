@@ -568,7 +568,9 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
             </CardContent>
           </Card>
   );
-  const familyReady = familyLoadedFor === userId && !loading;
+  // Nur das erste Laden zeigt den Ladehinweis. Beim Aktualisieren bleibt die
+  // Seite stehen, nur das Symbol dreht sich (30.10.2026: hing sonst sichtbar).
+  const familyReady = familyLoadedFor === userId;
   const showFocusedEntry = familyReady && linkedChildren.length === 0
     && !(entryDeferred.userId === userId && entryDeferred.until > Date.now());
 

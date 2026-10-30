@@ -37,7 +37,27 @@ const resolveAuthStorage = () => {
 export const SUPABASE_PROJECT_URL = SUPABASE_URL;
 export const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
 
+// Zeitgrenze für Datenbank- und Anmelde-Abfragen (30.10.2026). Auf dem iPhone
+// kam eine Abfrage, die beim Wechsel in den Hintergrund lief, manchmal nie
+// zurück. Hing dabei die Erneuerung der Sitzung, warteten alle weiteren
+// Abfragen auf sie: Die Eltern-App blieb bei „Familiendaten werden geladen …“
+// stehen. Funktionen (KI, Vorlesen) und Speicher dürfen länger brauchen.
+const ZEITGRENZE_MS = 20_000;
+const mitZeitgrenze: typeof fetch = (eingabe, init) => {
+  const url = typeof eingabe === 'string' ? eingabe : eingabe instanceof URL ? eingabe.href : eingabe.url;
+  if (!/\/(rest|auth)\/v1\//.test(url)) return fetch(eingabe, init);
+  const abbruch = new AbortController();
+  const timer = setTimeout(() => abbruch.abort(new DOMException('Zeitgrenze', 'TimeoutError')), ZEITGRENZE_MS);
+  const vorher = init?.signal;
+  if (vorher) {
+    if (vorher.aborted) abbruch.abort(vorher.reason);
+    else vorher.addEventListener('abort', () => abbruch.abort(vorher.reason), { once: true });
+  }
+  return fetch(eingabe, { ...init, signal: abbruch.signal }).finally(() => clearTimeout(timer));
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  global: { fetch: mitZeitgrenze },
   auth: {
     storage: resolveAuthStorage(),
     persistSession: true,
