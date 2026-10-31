@@ -57,10 +57,10 @@ zeigt erst der Tag Assistant.
 **Offen – Nachweis im Events Manager (braucht den Browser des Betreibers):**
 1. Events Manager → Datensatz 1463780805688443 → „Test-Ereignisse“ → Website-URL `https://lernzeit.app/start` → „Website öffnen“.
 2. Auf der Seite „Zustimmen“ (bzw. „Auswahl“ → Meta). Erwartet: **PageView** erscheint binnen Sekunden in „Test-Ereignisse“.
-3. Mit einer Adresse registrieren, die vorher in `admin_testkonten` steht, ist nicht möglich (das Konto entsteht erst) –
-   deshalb Testkonto mit einer `@lernzeit.app`-Adresse anlegen (zählt laut `lz_testkonten()` als Testkonto):
-   Es darf **kein** CompleteRegistration kommen. Ein CompleteRegistration lässt sich nur mit einem echten
-   (Nicht-Test-)Konto auslösen; das ist nach den Regeln nicht erlaubt und wird deshalb nicht empfohlen.
+3. CompleteRegistration-Gegenprobe mit Testkonto: Konto anlegen, **vor dem Klick auf den Bestätigungslink** in
+   `admin_testkonten` eintragen, dann bestätigen. Erwartet: **kein** CompleteRegistration, keine Google-Conversion,
+   keine Zeile in `werbe_conversions`. Ein positives CompleteRegistration entsteht nur mit einem echten Konto; dafür
+   die erste echte Registrierung nach dem Einspielen abwarten (Zeile in `werbe_conversions`, Ereignis im Events Manager).
 4. Seit der neuen Einwilligungsfassung (Version 2) fragt die Seite alle erneut, auch wer vorher zugestimmt hatte.
 
 ### Eigene Datenbank
