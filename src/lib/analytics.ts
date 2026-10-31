@@ -244,18 +244,12 @@ function getPagePath(): string | null {
  * Einwilligung fuer geraeteuebergreifende Messung vorliegt. Wer nur `gclid`
  * erfasst, verliert genau die Klicks, die aus der Zielgruppe kommen.
  *
- * ── Warum `fbclid` fehlt ──────────────────────────────────────────────────
+ * ── Meta ──────────────────────────────────────────────────────────────────
  *
- * Meta ist abgeschaltet. Die Kanzlei hat am 21.09.2026 einen technischen
- * Konflikt festgestellt: Metas dokumentierte Schnittstelle verlangt fuer
- * Website-Ereignisse zusaetzlich Ereignis-URL und User-Agent. Beides ist von
- * der abgestimmten Zielkonfiguration nicht gedeckt. Solange Meta nichts
- * empfaengt, hat das Erfassen der Kennung keinen Zweck — und Daten ohne
- * Zweck werden nicht erhoben.
- *
- * Die Spalten `fbclid`, `fbp` und `fbc` stehen weiter in `ad_attribution`.
- * Sie bleiben leer; die Kanzlei hat eine ausdruecklich gekennzeichnete
- * Erweiterungsvariante vorbereitet, fuer die sie wieder gebraucht wuerden.
+ * Seit 31.10.2026 (Variante B, Entscheidung des Betreibers vom 26.10.2026)
+ * stehen `fbp` und `fbc` mit Meta-Zustimmung in `ad_attribution`. Beide setzt
+ * das Meta-Pixel selbst als Cookie (`_fbc` aus der `fbclid` des Anzeigenklicks);
+ * die `fbclid` selbst wird nicht gespeichert.
  */
 const AD_CLICK_PARAMS = ['gclid', 'gbraid', 'wbraid'] as const;
 
@@ -273,14 +267,15 @@ type AdClick = Record<string, string | null>;
  * wissen, welcher Anbieter die Einwilligung einholt. Wenn die CMP steht, ruft
  * sie setWerbeEinwilligung() — eine Stelle, an der alles andere haengt.
  */
-let werbeEinwilligung = false;
+let werbeEinwilligung = { google: false, meta: false };
 
-export function setWerbeEinwilligung(erteilt: boolean): void {
-  werbeEinwilligung = erteilt;
+/** Seit 31.10.2026 je Dienst: Google-Kennungen nur mit Google-, Meta-Kennungen nur mit Meta-Zustimmung. */
+export function setWerbeEinwilligung(google: boolean, meta = false): void {
+  werbeEinwilligung = { google, meta };
 }
 
 function hatWerbeEinwilligung(): boolean {
-  return werbeEinwilligung;
+  return werbeEinwilligung.google || werbeEinwilligung.meta;
 }
 
 /**
@@ -352,9 +347,12 @@ async function resolveAdClick(userId: string | null, audience: Audience | null):
     // Seit 26.10.2026 genügt auch eine Kampagnenbezeichnung ohne Klick-Kennung (iOS ohne
     // gclid, Meta): Dann steht in der Zeile utm_source/utm_campaign, damit sich das
     // Elternkonto der Kampagne zuordnen lässt. Weiterhin nur mit Einwilligung.
-    const klick = leseKlickAusAdresse() ?? {};
+    const klick = werbeEinwilligung.google ? (leseKlickAusAdresse() ?? {}) : {};
     const kampagne = getAttribution();
-    if (Object.keys(klick).length === 0 && !kampagne.utm_source && !kampagne.utm_campaign) return;
+    // _fbp/_fbc setzt das Meta-Pixel (nur mit Meta-Zustimmung geladen); seit 31.10.2026 gespeichert
+    const { metaKennungen } = await import('./werbemessung');
+    const meta = metaKennungen();
+    if (Object.keys(klick).length === 0 && !kampagne.utm_source && !kampagne.utm_campaign && !meta.fbc) return;
 
     writeLocal(AD_RECORDED_KEY, userId);
 
@@ -364,6 +362,8 @@ async function resolveAdClick(userId: string | null, audience: Audience | null):
       gclid: klick.gclid ?? null,
       gbraid: klick.gbraid ?? null,
       wbraid: klick.wbraid ?? null,
+      fbp: meta.fbp,
+      fbc: meta.fbc,
       utm_source: attribution.utm_source ?? null,
       utm_medium: attribution.utm_medium ?? null,
       utm_campaign: attribution.utm_campaign ?? null,
@@ -586,11 +586,11 @@ export async function track(
     void resolveAdClick(userId, audience);
     if (audience !== 'child') {
       pushToDataLayer(eventName, { ...properties, platform, page_path: pagePath });
-      // „Registrierung abgeschlossen“ eines Elternkontos an Google und Meta: nur mit Einwilligung
-      // und Notaus offen (werbemessung.ts prüft beides). Dynamisch geladen, damit die Tags nie
-      // zum Startpaket gehören.
+      // „Registrierung abgeschlossen“ an Google und Meta erst mit bestätigter E-Mail (31.10.2026).
+      // Bei E-Mail-Konten ist sie hier noch offen – gemeldet wird nach dem Bestätigungslink
+      // (WerbeEinwilligung.tsx); bei Google/Apple ist sie schon bestätigt.
       if (eventName === 'sign_up_completed' && properties.role === 'parent') {
-        void import('./werbemessung').then((m) => m.meldeRegistrierung()).catch(() => undefined);
+        void import('./werbemessung').then((m) => m.meldeBestaetigteRegistrierung()).catch(() => undefined);
       }
     }
 

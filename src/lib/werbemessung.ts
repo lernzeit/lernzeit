@@ -8,11 +8,14 @@
  *  2. `ad_settings.tags_enabled` ist true (der Notaus, docs/werbung-notaus.md)
  *  3. Die Person hat für genau diesen Dienst zugestimmt (werbeEinwilligung.ts)
  *  4. Es ist eine Seite für Erwachsene: eine Marketing-Seite ohne Einladungscode,
- *     oder der Augenblick der Eltern-Registrierung
+ *     oder ein angemeldetes Elternkonto mit bestätigter E-Mail (Conversion)
  *
- * Gesendet wird genau ein Ereignis: „Registrierung abgeschlossen“ eines Elternkontos
- * (Google: Conversion, Meta: CompleteRegistration). Keine E-Mail, kein Name, keine
- * Nutzer-ID, kein Betrag. Keine Seitenaufrufe an Meta, keine Personalisierung bei Google.
+ * Gesendet wird:
+ *  - Meta: Seitenaufruf (PageView) auf den Seiten für Erwachsene (seit 31.10.2026, vorher lud
+ *    das Pixel erst bei der Registrierung: kein PageView, kein _fbp, keine Zuordnung zum Klick)
+ *  - Google und Meta: „Registrierung abgeschlossen“ eines Elternkontos, seit 31.10.2026 erst
+ *    nach bestätigter E-Mail und je Konto genau einmal (Server: werbe_conversion_beanspruchen)
+ * Keine E-Mail, kein Name, keine Nutzer-ID, kein Betrag. Keine Personalisierung bei Google.
  */
 import { supabase } from '@/lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -147,33 +150,70 @@ export async function ladeWerbeTags(): Promise<void> {
     if (!e || (!e.google && !e.meta)) return;
     if (!(await werbeTagsErlaubt())) return;
     if (e.google) await googleLaden();
-    // Meta bekommt keinen Seitenaufruf, nur die Registrierung; das Skript wird erst dann nötig.
+    if (e.meta && (await metaLaden())) metaSeitenaufruf();
   } catch { /* Messung darf nie stören */ }
 }
 
-let zuletztGemeldet = 0;
+let letzterSeitenaufruf = '';
+/** PageView an Meta, einmal je Seitenwechsel (die Website wechselt Seiten ohne Neuladen). */
+function metaSeitenaufruf(): void {
+  const pfad = window.location.pathname;
+  if (pfad === letzterSeitenaufruf) return;
+  letzterSeitenaufruf = pfad;
+  w().fbq!('track', 'PageView');
+}
+
+let pruefungLaeuft = false;
+const GEPRUEFT_KEY = 'lernzeit_conversion_geprueft';
+
 /**
- * „Registrierung abgeschlossen“ eines ELTERNkontos melden. Aufgerufen aus
- * `track('sign_up_completed', { role: 'parent' })` (analytics.ts) – dort ist die
- * Rollenprüfung; hier zusätzlich: Zustimmung, Notaus, Browser.
+ * „Registrierung abgeschlossen“ eines ELTERNkontos melden – erst wenn die E-Mail
+ * bestätigt ist, und je Konto genau einmal (31.10.2026).
+ *
+ * Aufgerufen nach jeder Anmeldung, nach einer Zustimmung und nach `sign_up_completed`
+ * (Google/Apple: dort ist die E-Mail schon bestätigt). Den Ausschlag gibt der Server:
+ * `werbe_conversion_beanspruchen()` liefert die transaction_id nur beim ersten Mal und nur
+ * für bestätigte Elternkonten ab dem 31.10.2026, nie für Test- oder Kinderkonten. Neuladen,
+ * erneute Anmeldung oder der Bestätigungslink ein zweites Mal melden deshalb nichts.
  */
-export async function meldeRegistrierung(): Promise<void> {
+export async function meldeBestaetigteRegistrierung(): Promise<void> {
+  if (pruefungLaeuft) return;
+  pruefungLaeuft = true;
   try {
-    if (Date.now() - zuletztGemeldet < 15000) return;
     if (!webMessungMoeglich()) return;
     const e = leseEinwilligung();
     if (!e || (!e.google && !e.meta)) return;
     if (!(await werbeTagsErlaubt())) return;
-    zuletztGemeldet = Date.now();
-    // Zufallskennung gegen Doppelzählung bei Google und Meta; crypto.randomUUID fehlt ohne sicheren Kontext
-    const kennung = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `reg-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    const { data } = await supabase.auth.getSession();
+    const nutzer = data?.session?.user;
+    if (!nutzer?.email_confirmed_at) return;
+    try { if (localStorage.getItem(GEPRUEFT_KEY) === nutzer.id) return; } catch { /* ohne Speicher fragt der Server */ }
+
+    const { data: kennung, error } = await supabase.rpc('werbe_conversion_beanspruchen');
+    // null: schon gemeldet, altes Konto, Test- oder Kinderkonto, oder (Google/Apple) die Rolle
+    // ist noch nicht gewählt. Dann beim nächsten Anlass wieder fragen; der Server bleibt dabei.
+    if (error || typeof kennung !== 'string' || !kennung) return;
+    try { localStorage.setItem(GEPRUEFT_KEY, nutzer.id); } catch { /* egal */ }
+
     if (e.google && (await googleLaden())) {
       w().gtag!('event', 'conversion', { send_to: GOOGLE_CONVERSION, transaction_id: kennung });
     }
     if (e.meta && (await metaLaden())) {
       w().fbq!('track', 'CompleteRegistration', {}, { eventID: kennung });
     }
-  } catch { /* Messung darf nie stören */ }
+  } catch { /* Messung darf nie stören */ } finally {
+    pruefungLaeuft = false;
+  }
+}
+
+/** Meta-Kennungen aus den Cookies (_fbp, _fbc), nur mit Zustimmung für Meta. */
+export function metaKennungen(): { fbp: string | null; fbc: string | null } {
+  try {
+    if (!leseEinwilligung()?.meta) return { fbp: null, fbc: null };
+    const keks = (n: string) => document.cookie.split(';').map((c) => c.trim())
+      .find((c) => c.startsWith(`${n}=`))?.slice(n.length + 1).slice(0, 200) ?? null;
+    return { fbp: keks('_fbp'), fbc: keks('_fbc') };
+  } catch {
+    return { fbp: null, fbc: null };
+  }
 }

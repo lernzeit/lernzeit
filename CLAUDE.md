@@ -126,13 +126,18 @@ Supabase-Secrets gelöscht werden.
   Entsperren automatisch, Eltern genehmigen immer von Hand, Android nur Family Link; nie „unumgehbar“ oder „Sperre
   immer aktiv“.
 
-## Werbemessung (Stand 26.10.2026)
+## Werbemessung (Stand 31.10.2026)
 
 - Google-Tag (`AW-18531716505`) und Meta-Pixel (`1463780805688443`) nur im Browser auf lernzeit.app, nur nach Einwilligung
   (`WerbeEinwilligung.tsx`, „Werbe-Einstellungen“ im Seitenfuß), nur auf Seiten für Erwachsene, nie in den Apps, nie für Kinder.
-  Gemeldet wird allein „Registrierung abgeschlossen“ eines Elternkontos. Notaus `ad_settings.tags_enabled` (seit 28.10.2026 `true`, vom Betreiber eingeschaltet;
+  Meta bekommt PageView auf diesen Seiten (seit 31.10.2026). „Registrierung abgeschlossen“ eines Elternkontos erst nach
+  bestätigter E-Mail, einmal je Konto: RPC `werbe_conversion_beanspruchen()` (Tabelle `werbe_conversions`, liefert die
+  `transaction_id` nur beim ersten Mal, nie für Test-/Kinder-/Altkonten), Aufruf nach Anmeldung/Zustimmung; dafür lädt
+  das Tag auch auf `/` beim angemeldeten, bestätigten Elternkonto. `/` → `/start` behält die Adresszeile (fbclid/gclid).
+  Prüfbericht `docs/tracking-pruefbericht-2026-10-31.md`. Notaus `ad_settings.tags_enabled` (seit 28.10.2026 `true`, vom Betreiber eingeschaltet;
   Entscheidung und Ausschalten: `docs/conversion-tracking-2026-10-26.md`). Test: `npm run test:werbemessung`.
-- Neue Seiten mit Werbemessung nur in `MARKETING_PFADE` (`lib/werbemessung.ts`) eintragen; nie auf `/`, nie auf Kinderseiten.
+- Neue Seiten mit Werbemessung nur in `MARKETING_PFADE` (`lib/werbemessung.ts`) eintragen; nie auf `/` (außer der Conversion
+  oben), nie auf Kinderseiten. Einwilligung Fassung 2 (`EINWILLIGUNG_VERSION`); bei neuen Zwecken erhöhen.
 
 ## Rechtstexte (Stand 04.10.2026)
 

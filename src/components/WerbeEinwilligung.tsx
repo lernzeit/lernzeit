@@ -5,7 +5,7 @@ import {
   EINWILLIGUNG_GEAENDERT, WERBE_EINSTELLUNGEN_OEFFNEN, leseEinwilligung, loescheWerbeCookies,
   speichereEinwilligung, uebernimmEinwilligung,
 } from '@/lib/werbeEinwilligung';
-import { istMarketingSeite, ladeWerbeTags, webMessungMoeglich, werbeTagsErlaubt } from '@/lib/werbemessung';
+import { istMarketingSeite, ladeWerbeTags, meldeBestaetigteRegistrierung, webMessungMoeglich, werbeTagsErlaubt } from '@/lib/werbemessung';
 
 /**
  * Einwilligung in die Werbemessung (Google Ads, Meta), Entscheidung vom 26.10.2026.
@@ -31,6 +31,18 @@ const WerbeEinwilligung = () => {
     uebernimmEinwilligung();
     void ladeWerbeTags();
   }, [pathname]);
+
+  // Conversion erst mit bestätigter E-Mail (31.10.2026): Der Bestätigungslink meldet das
+  // Elternkonto an; danach fragt der Server einmal je Konto (werbemessung.ts).
+  useEffect(() => {
+    void meldeBestaetigteRegistrierung();
+    const { data } = supabase.auth.onAuthStateChange((ereignis) => {
+      if (ereignis === 'SIGNED_IN' || ereignis === 'USER_UPDATED') {
+        setTimeout(() => { void meldeBestaetigteRegistrierung(); }, 0);
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   // Erstmals fragen: nur wenn noch keine Entscheidung vorliegt
   useEffect(() => {
@@ -74,6 +86,7 @@ const WerbeEinwilligung = () => {
       return;
     }
     void ladeWerbeTags();
+    void meldeBestaetigteRegistrierung();
   }, []);
 
   if (!offen) return null;
@@ -89,8 +102,8 @@ const WerbeEinwilligung = () => {
     >
       <div className="mx-auto max-w-xl rounded-[20px] bg-white p-4 shadow-[0_20px_60px_-20px_rgba(26,43,109,0.45)] ring-1 ring-inset ring-karo">
         <p id="werbe-titel" className="text-sm leading-snug text-tinte">
-          <b>Wirken unsere Anzeigen?</b> Das messen wir nur mit deiner Zustimmung und nur, wenn du dich als Elternteil
-          registrierst, ohne E-Mail-Adresse oder Namen. Für Kinder nie.{' '}
+          <b>Wirken unsere Anzeigen?</b> Das messen wir nur mit deiner Zustimmung: Seitenaufrufe (nur Meta) und deine
+          Registrierung als Elternteil, ohne E-Mail-Adresse oder Namen. Für Kinder nie.{' '}
           <Link to="/datenschutz#werbung" className="font-semibold text-primary underline underline-offset-2">Mehr</Link>
         </p>
         {auswahl && (

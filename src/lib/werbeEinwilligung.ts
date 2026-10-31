@@ -17,7 +17,8 @@ import { setWerbeEinwilligung } from '@/lib/analytics';
 
 export const EINWILLIGUNG_KEY = 'lernzeit_werbe_einwilligung';
 /** Bei einer inhaltlichen Änderung der Zwecke erhöhen: Dann wird neu gefragt. */
-export const EINWILLIGUNG_VERSION = 1;
+// 2 (31.10.2026): Meta bekommt zusätzlich Seitenaufrufe – wer vorher zugestimmt hat, wird neu gefragt.
+export const EINWILLIGUNG_VERSION = 2;
 export const EINWILLIGUNG_GEAENDERT = 'lernzeit:werbe-einwilligung';
 export const WERBE_EINSTELLUNGEN_OEFFNEN = 'lernzeit:werbe-einstellungen';
 
@@ -40,17 +41,17 @@ export function leseEinwilligung(): Einwilligung | null {
   }
 }
 
-/** Setzt analytics.ts auf den gespeicherten Stand (Google-Zustimmung öffnet die Klick-Zuordnung bei der Eltern-Registrierung). */
+/** Setzt analytics.ts auf den gespeicherten Stand (Zustimmung öffnet die Klick-Zuordnung bei der Eltern-Registrierung). */
 export function uebernimmEinwilligung(): Einwilligung | null {
   const e = leseEinwilligung();
-  setWerbeEinwilligung(Boolean(e?.google));
+  setWerbeEinwilligung(Boolean(e?.google), Boolean(e?.meta));
   return e;
 }
 
 export function speichereEinwilligung(google: boolean, meta: boolean): Einwilligung {
   const e: Einwilligung = { v: EINWILLIGUNG_VERSION, google, meta, am: new Date().toISOString() };
   try { localStorage.setItem(EINWILLIGUNG_KEY, JSON.stringify(e)); } catch { /* ohne Speicher keine Messung */ }
-  setWerbeEinwilligung(google);
+  setWerbeEinwilligung(google, meta);
   try { window.dispatchEvent(new Event(EINWILLIGUNG_GEAENDERT)); } catch { /* kein Fenster */ }
   return e;
 }

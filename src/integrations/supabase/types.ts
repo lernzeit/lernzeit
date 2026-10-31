@@ -3089,6 +3089,7 @@ export type Database = {
             }
             Returns: Json
           }
+      werbe_conversion_beanspruchen: { Args: never; Returns: string }
     }
     Enums: {
       achievement_category:

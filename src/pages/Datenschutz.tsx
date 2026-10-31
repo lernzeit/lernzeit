@@ -17,7 +17,7 @@ import { RechtsKasten, RechtsSeite } from '@/components/landing/RechtsSeite';
  * Skripte vor). Offene Punkte: docs/rechtstexte-pruefung.md.
  */
 const Datenschutz = () => (
-  <RechtsSeite titel="Datenschutzerklärung" stand="26. Oktober 2026">
+  <RechtsSeite titel="Datenschutzerklärung" stand="31. Oktober 2026">
     <Seo
       title={META_DATENSCHUTZ.title}
       description={META_DATENSCHUTZ.description}
@@ -176,8 +176,8 @@ const Datenschutz = () => (
       <ul>
         <li>
           <strong>Wo und für wen:</strong> nur auf unserer Website (lernzeit.app), nur auf Seiten für Erwachsene
-          (Startseite, Zielseiten, Ratgeber, Preise, FAQ) und beim Anlegen eines Elternkontos. Nie in den Apps, nie
-          für Kinder, nie auf Seiten mit Einladungscode, nie bei angemeldeten Konten.
+          (Startseite, Zielseiten, Ratgeber, Preise, FAQ) und einmalig, wenn ein Elternkonto seine E-Mail-Adresse bestätigt
+          hat. Nie in den Apps, nie für Kinder, nie auf Seiten mit Einladungscode.
         </li>
         <li>
           <strong>Was Sie gefragt werden:</strong> Beim ersten Besuch erscheint ein Hinweis. Sie können ablehnen, zustimmen oder getrennt
@@ -192,14 +192,15 @@ const Datenschutz = () => (
           Anzeigen ausgeschaltet.
         </li>
         <li>
-          <strong>Was gemeldet wird:</strong> ausschließlich das Ereignis „Registrierung abgeschlossen“ eines Elternkontos.
-          Keine E-Mail-Adresse, kein Name, keine Nutzerkennung, kein Betrag, keine Daten von Kindern. Kinder- und
-          Testkonten werden nicht gemeldet.
+          <strong>Was gemeldet wird:</strong> das Ereignis „Registrierung abgeschlossen“ eines Elternkontos, und zwar erst
+          nach Bestätigung der E-Mail-Adresse und je Konto nur einmal; an Meta zusätzlich der Aufruf der genannten Seiten
+          für Erwachsene. Keine E-Mail-Adresse, kein Name, keine Nutzerkennung, kein Betrag, keine Daten von Kindern.
+          Kinder- und Testkonten werden nicht gemeldet.
         </li>
         <li>
           <strong>Zuordnung bei uns:</strong> Haben Sie zugestimmt und registrieren sich als Elternteil, speichern wir bei
           Ihrem Konto die Kampagnenangaben des Links (utm_source, utm_campaign u. a.) und, falls vorhanden, die Klick-Kennung
-          der Anzeige (gclid, gbraid, wbraid). Sie dienen nur dazu, Konten Anzeigen zuzuordnen, und werden nach
+          der Anzeige (Google: gclid, gbraid, wbraid; Meta: die Kennungen aus den Cookies _fbp und _fbc). Sie dienen nur dazu, Konten Anzeigen zuzuordnen, und werden nach
           13 Monaten gelöscht.
         </li>
         <li>

@@ -215,7 +215,9 @@ const Index = () => {
 
   // Redirect unauthenticated visitors to /start (unless they requested auth or demo)
   if (!user && !showAuth && !selectedGrade && !demoMode) {
-    navigate('/start', { replace: true });
+    // Adresse mitnehmen (31.10.2026): Meta- und Google-Anzeigen führen auf /, die
+    // Weiterleitung verwarf utm_*, fbclid und gclid.
+    navigate(`/start${window.location.search}${window.location.hash}`, { replace: true });
     return null;
   }
 
