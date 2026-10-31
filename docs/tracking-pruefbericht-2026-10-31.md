@@ -72,9 +72,10 @@ zeigt erst der Tag Assistant.
 | `ad_attribution`: bisher 2 Zeilen, beide Testkonten (Messtest 30.10.) | belegt |
 | `fbp`/`fbc` in `ad_attribution` mit Meta-Zustimmung | gebaut; lokal nicht in der Zeile geprüft (die Zeile entsteht erst mit angemeldetem Elternkonto) |
 
-**Offen:** Prüfung von `werbe_conversion_beanspruchen()` mit simulierten Konten (unbestätigt, bestätigt zweimal, Kind,
-Altkonto, Testkonto) in einer Transaktion mit Rücksetzung – die Supabase-Abfrage wartete auf eine Bestätigung, die
-nicht kam. Nachholen, sobald die Rückfrage bestätigt werden kann.
+**Geprüft (31.10.2026, Transaktion mit Rücksetzung, danach 0 Zeilen in `werbe_conversions`, keine Prüfkonten übrig):**
+`werbe_conversion_beanspruchen()` liefert für ein neues Elternkonto vor der Bestätigung `null`, nach der Bestätigung beim
+ersten Aufruf eine `transaction_id`, beim zweiten `null`; für ein bestätigtes Kinderkonto, ein Elternkonto von vor dem
+31.10.2026 und ein Konto in `admin_testkonten` jeweils `null`.
 
 ## Empfehlungen für Meta (nicht selbst geändert)
 
