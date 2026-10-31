@@ -58,6 +58,7 @@ export function OnboardingNextStepCard({
    */
   const [limits, setLimits] = useState<(DailyLimits & SecondsPerTask) | null>(null);
   const [sharing, setSharing] = useState(false);
+  const kinderIds = linkedChildren.map((k) => k.id).join(',');
   const lastTrackedStep = useRef<number | null>(null);
 
   useEffect(() => {
@@ -68,11 +69,25 @@ export function OnboardingNextStepCard({
         .from('screen_time_requests')
         .select('id', { count: 'exact', head: true })
         .eq('parent_id', parentId);
-      if (!cancelled) setHasRequest(!error && (count ?? 0) > 0);
+      if (cancelled) return;
+      if (!error && (count ?? 0) > 0) { setHasRequest(true); return; }
+      // Schritt 3 ist auch erledigt, sobald ein Kind eine Runde gespielt hat
+      // (31.10.2026): Ein Kind mit 29 Runden, aber ohne Anfrage (Android, Zeit
+      // über Family Link) hielt die Karte sonst bei jedem Öffnen offen.
+      const kinder = kinderIds ? kinderIds.split(',') : [];
+      if (kinder.length > 0) {
+        const { count: runden, error: rundenFehler } = await supabase
+          .from('game_sessions')
+          .select('id', { count: 'exact', head: true })
+          .in('user_id', kinder);
+        if (cancelled) return;
+        if (!rundenFehler && (runden ?? 0) > 0) { setHasRequest(true); return; }
+      }
+      setHasRequest(false);
     };
     check();
     return () => { cancelled = true; };
-  }, [parentId, linkedChildren.length]);
+  }, [parentId, kinderIds]);
 
   const ersterChildId = linkedChildren[0]?.id;
 
@@ -92,7 +107,7 @@ export function OnboardingNextStepCard({
     return () => { cancelled = true; };
   }, [parentId, ersterChildId]);
 
-  // Zustand bestimmen
+  // Zustand bestimmen (hasRequest: Anfrage gestellt ODER Runde gespielt)
   let step: 1 | 2 | 3 | null = null;
   if (hasRequest === null) {
     step = null;
@@ -107,9 +122,13 @@ export function OnboardingNextStepCard({
   useEffect(() => {
     if (step && lastTrackedStep.current !== step) {
       lastTrackedStep.current = step;
+      // Einmal je Schritt und Gerät, nicht bei jedem Öffnen der App
+      const schluessel = `lernzeit_onboarding_schritt_${parentId}`;
+      try { if (localStorage.getItem(schluessel) === String(step)) return; } catch { /* dann zählen */ }
       trackFireAndForget('onboarding_step_viewed', { step });
+      try { localStorage.setItem(schluessel, String(step)); } catch { /* egal */ }
     }
-  }, [step]);
+  }, [step, parentId]);
 
   if (!step) return null;
 

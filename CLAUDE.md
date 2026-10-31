@@ -262,6 +262,10 @@ Supabase-Secrets gelöscht werden.
   überschreibt statt zu löschen), gefüllt von `handyzeit_stand_melden`. Welche Apps: gibt Apple nicht heraus, Hinweis
   auf Bildschirmzeit am Eltern-iPhone. Keine Plakette („zu/offen“) mehr in „Handy sperren“. Ohne erklärende
   Sätze (Wunsch des Betreibers): kein „Stand … Uhr“, keine Legende, kein Apps-Hinweis, kein „Eltern fragen“-Zähler.
+- `useAuth()` hält den Nutzer je Komponente und beginnt mit `null`: Hooks dürfen „kein Nutzer“ erst nach
+  `loading === false` als abgemeldet werten (31.10.2026: zahlende Eltern sahen beim Öffnen jeder Kinderseite kurz die
+  Premium-Sperre, `useSubscription`; Test `npm run test:premium-sperre`). Onboarding-Karte Schritt 3 endet mit der ersten
+  Anfrage ODER der ersten Runde des Kindes. Lernrunden stehen in `game_sessions`; `learning_sessions` ist seit 08/2025 leer.
 - Premium-Vorschau (`PremiumFeature`): verschwommen und gekappt; die Lernanalyse zeigt ohne Premium nur
   Beispielwerte (`BEISPIEL_*` in `ChildLearningAnalysis.tsx`), nie die echten Ergebnisse.
 - Freiminuten (22.10.2026): eigene Gruppe in den Regeln, gelten für alle (Standard 30); nur die Höhe ändern ist Premium.

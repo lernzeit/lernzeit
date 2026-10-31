@@ -132,16 +132,20 @@ function aktualisiere(userId: string): Promise<void> {
  * For child accounts, the edge function checks the parent's subscription.
  */
 export function useSubscription(): SubscriptionState {
-  const { user } = useAuth();
+  const { user, loading: anmeldungLaedt } = useAuth();
   const userId = user?.id ?? null;
 
-  const [state, setState] = useState<SubscriptionState>(() =>
-    userId && speicher.userId === userId ? speicher.state : userId ? LEER : ABGEMELDET,
-  );
+  const [state, setState] = useState<SubscriptionState>(() => startStand(userId, anmeldungLaedt));
 
   useEffect(() => {
     if (!userId) {
-      setState(ABGEMELDET);
+      // useAuth() beginnt in jeder Komponente mit user = null und prüft die
+      // Sitzung erst danach. Bis zum 31.10.2026 galt das hier als „abgemeldet,
+      // kein Premium“: Jede neu geöffnete Seite (Kind, Lernanalyse, Regeln)
+      // zeigte zahlenden Eltern kurz die Premium-Sperre und meldete
+      // trial_ended_paywall_seen (eine Kundin 68-mal). Solange die Anmeldung
+      // noch prüft, gilt der letzte Stand bzw. „lädt“.
+      setState(startStand(null, anmeldungLaedt));
       return;
     }
     speicher.hoerer.add(setState);
@@ -165,9 +169,16 @@ export function useSubscription(): SubscriptionState {
         }
       }
     };
-  }, [userId]);
+  }, [userId, anmeldungLaedt]);
 
   return state;
+}
+
+function startStand(userId: string | null, anmeldungLaedt: boolean): SubscriptionState {
+  if (userId) return speicher.userId === userId ? speicher.state : LEER;
+  if (!anmeldungLaedt) return ABGEMELDET;
+  // Anmeldung wird noch geprüft: zuletzt bekannter Stand dieses Geräts, sonst „lädt“
+  return speicher.userId && !speicher.state.loading ? speicher.state : LEER;
 }
 
 async function lade(userId: string): Promise<{ state: SubscriptionState; gueltig: boolean }> {
