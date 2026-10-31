@@ -8,10 +8,12 @@
  * was ein Kind sich geholt hat, bleibt.
  *
  * Adventskalender: je Tuerchen 5 Aufgaben aus zufaelligen Faechern, ab 4
- * richtigen geht es auf (Weihnachts-Sticker, Tuerchen 6 und 24 auch eine
- * Figur). Sonst keine Belohnung: keine Zeit, keine Tinte, keine Reise.
- * Gleiche Regeln in der Datenbank: advent_runde() in
- * supabase/migrations/20261011230000_weihnachten_advent.sql.
+ * richtigen geht es auf. Seit 01.11.2026 gemischte Ueberraschungen (ADVENT_PLAN):
+ * Sticker, Weihnachts-Figuren, Tinte und ein paar Frei-Minuten (je 5). Die
+ * Runde selbst bringt keine Zeit, keine Tinte, keine Reise.
+ * Gleiche Regeln in der Datenbank: advent_runde() und advent_ueberraschung() in
+ * supabase/migrations/20261011230000_weihnachten_advent.sql und
+ * 20261101100000_advent_ueberraschungen.sql.
  */
 
 export const ADVENT_AUFGABEN = 5;
@@ -50,17 +52,44 @@ export function tageBisHeiligabend(jetzt: Date = new Date()): number | null {
   return monat === 12 && tag < 24 ? 24 - tag : null;
 }
 
-/** Sticker hinter einem Tuerchen. Reihenfolge wie advent_sticker(). */
-export const ADVENT_STICKER = [
-  'schneeflocke', 'plaetzchen', 'kerze', 'socke', 'glocke', 'weihnachtsmann',
-  'rentier', 'schleife', 'bonbon', 'engel', 'schlitten', 'weihnachtsbaum',
-] as const;
+export type AdventArt = 'sticker' | 'avatar' | 'tinte' | 'minuten';
+export interface AdventUeberraschung { art: AdventArt; ding?: string; menge?: number }
 
-export const adventSticker = (tuer: number): string => ADVENT_STICKER[(Math.max(1, tuer) - 1) % ADVENT_STICKER.length];
+/**
+ * Was hinter jedem Tuerchen steckt (Index = Tuerchen − 1). Wie advent_ueberraschung().
+ * 10 Sticker, 5 Figuren (6. Nikolaus, 24. Heiligabend), 6 × Tinte (300), 3 × 5 Frei-Minuten.
+ */
+export const ADVENT_PLAN: AdventUeberraschung[] = [
+  { art: 'sticker', ding: 'schneeflocke' },
+  { art: 'tinte', menge: 30 },
+  { art: 'sticker', ding: 'plaetzchen' },
+  { art: 'minuten', menge: 5 },
+  { art: 'sticker', ding: 'kerze' },
+  { art: 'avatar', ding: 'weihnachtsmann' },
+  { art: 'tinte', menge: 40 },
+  { art: 'sticker', ding: 'socke' },
+  { art: 'avatar', ding: 'rentier' },
+  { art: 'sticker', ding: 'glocke' },
+  { art: 'minuten', menge: 5 },
+  { art: 'tinte', menge: 50 },
+  { art: 'sticker', ding: 'schleife' },
+  { art: 'avatar', ding: 'schneemann' },
+  { art: 'tinte', menge: 40 },
+  { art: 'sticker', ding: 'bonbon' },
+  { art: 'minuten', menge: 5 },
+  { art: 'sticker', ding: 'engel' },
+  { art: 'tinte', menge: 60 },
+  { art: 'avatar', ding: 'elf' },
+  { art: 'sticker', ding: 'schlitten' },
+  { art: 'tinte', menge: 80 },
+  { art: 'sticker', ding: 'weihnachtsbaum' },
+  { art: 'avatar', ding: 'tannenbaum' },
+];
 
-/** Figur hinter einem Tuerchen (Nikolaus und Heiligabend). Wie advent_avatar(). */
-export const adventAvatar = (tuer: number): string | null =>
-  tuer === 6 ? 'weihnachtsmann' : tuer === 24 ? 'tannenbaum' : null;
+/** Ersatz, wenn ein Kind die Figur hinter einem Tuerchen schon hat (wie in der Datenbank) */
+export const ADVENT_ERSATZ_TINTE = 50;
+
+export const adventUeberraschung = (tuer: number): AdventUeberraschung => ADVENT_PLAN[Math.min(24, Math.max(1, tuer)) - 1];
 
 /** 5 Faecher fuer ein Tuerchen: gemischt, jedes Fach kommt dran, bevor sich eines wiederholt */
 export function adventFaecher(auswahl: string[], zufall: () => number = Math.random): string[] {
@@ -89,6 +118,11 @@ export interface AdventErgebnis {
   schon?: boolean;
   tag?: number;
   richtig?: number;
-  sticker?: string;
+  art?: AdventArt;
+  sticker?: string | null;
   avatar?: string | null;
+  /** Tinte oder Frei-Minuten */
+  menge?: number | null;
+  /** Figur schon vorhanden: Tinte statt Figur */
+  ersatz?: boolean;
 }

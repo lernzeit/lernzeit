@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { adventJahr, adventOffenBis, istWeihnachtszeit } from '@/lib/weihnachten';
+import { adventJahr, adventOffenBis, istWeihnachtszeit, type AdventArt } from '@/lib/weihnachten';
 
 export interface AdventTuer {
   tag: number;
-  sticker: string;
+  art: AdventArt;
+  sticker: string | null;
   avatar: string | null;
+  /** Tinte oder Frei-Minuten */
+  menge: number | null;
 }
 
 /** Geoeffnete Tuerchen dieses Advents (nur in der Weihnachtszeit geladen) */
@@ -18,10 +21,10 @@ export function useAdvent(kindId?: string) {
     if (!kindId || !zeit) return;
     const { data } = await supabase
       .from('advent_tueren')
-      .select('tag, sticker, avatar')
+      .select('tag, art, sticker, avatar, menge')
       .eq('child_id', kindId)
       .eq('jahr', adventJahr());
-    setOffen(new Map((data ?? []).map((t) => [t.tag, t])));
+    setOffen(new Map((data ?? []).map((t) => [t.tag, t as AdventTuer])));
     setGeladen(true);
   }, [kindId, zeit]);
 

@@ -246,6 +246,19 @@ All colors MUST be HSL.
   .schnee-flocke { display: none; }
 }
 
+/* Adventskalender (01.11.2026): Türchen klappt auf, die Überraschung springt heraus, kleine Funken */
+.advent-tuer { transform-origin: left center; animation: advent-tuer-auf 0.9s cubic-bezier(.5, 0, .3, 1) 0.35s both; backface-visibility: hidden; }
+.advent-geschenk { animation: advent-geschenk 0.7s cubic-bezier(.3, 1.5, .5, 1) 0.95s both; }
+.advent-funke { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; opacity: 0; animation: advent-funke 0.9s ease-out 1.15s both; }
+@keyframes advent-tuer-auf { 0% { transform: perspective(600px) rotateY(0); } 20% { transform: perspective(600px) rotateY(12deg); } 100% { transform: perspective(600px) rotateY(-112deg); opacity: .0; } }
+@keyframes advent-geschenk { 0% { opacity: 0; transform: scale(.3) translateY(18px); } 70% { opacity: 1; transform: scale(1.12) translateY(-6px); } 100% { opacity: 1; transform: none; } }
+@keyframes advent-funke { 0% { opacity: 0; transform: translate(0, 0) scale(.4); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(1) rotate(90deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .advent-tuer { display: none; }
+  .advent-geschenk { animation: none; }
+  .advent-funke { display: none; }
+}
+
 /* Responsive page container – fluid width that scales with viewport */
 @layer components {
   .page-container {

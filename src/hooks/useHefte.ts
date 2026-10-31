@@ -42,7 +42,7 @@ export function useHefte(kindId: string | undefined, klasse: number) {
         supabase.from('kind_hefte').select('fach, farbe, sticker').eq('child_id', kindId),
         supabase.from('kind_sticker').select('sticker').eq('child_id', kindId).order('created_at', { ascending: true }),
         // Sticker aus dem Adventskalender (je geoeffnetes Tuerchen einer)
-        supabase.from('advent_tueren').select('sticker').eq('child_id', kindId).order('geoeffnet_am', { ascending: true }),
+        supabase.from('advent_tueren').select('sticker').eq('child_id', kindId).not('sticker', 'is', null).order('geoeffnet_am', { ascending: true }),
       ]);
 
       let liste = standardFaecher();
@@ -67,7 +67,7 @@ export function useHefte(kindId: string | undefined, klasse: number) {
         g[h.fach] = { farbe: h.farbe, sticker: Array.isArray(h.sticker) ? (h.sticker as string[]) : [] };
       });
       setGestaltung(g);
-      setSammlung([...(sticker.data ?? []), ...(advent.data ?? [])].map((s) => s.sticker));
+      setSammlung([...(sticker.data ?? []), ...(advent.data ?? [])].map((s) => s.sticker).filter((x): x is string => !!x));
     } catch {
       setFaecher(standardFaecher());
     } finally {

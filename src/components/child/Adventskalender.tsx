@@ -2,10 +2,9 @@
  * Adventskalender auf dem Kind-Start (1. bis 26. Dezember, lib/weihnachten.ts).
  * 24 Tuerchen; offen sind alle bis zum heutigen Datum, verpasste lassen sich
  * nachholen. Hinter jedem: 5 Aufgaben aus zufaelligen Faechern, ab 4 richtigen
- * ein Weihnachts-Sticker (Tuerchen 6 und 24 auch eine Figur). Sonst gibt es
- * fuer diese Aufgaben nichts.
+ * eine Ueberraschung (ADVENT_PLAN: Sticker, Figur, Tinte oder Frei-Minuten).
  */
-import { Sticker } from '@/components/child/Hefte';
+import { AdventBild } from '@/components/child/AdventGeschenk';
 import { ADVENT_RICHTIG, ADVENT_AUFGABEN } from '@/lib/weihnachten';
 import type { AdventTuer } from '@/hooks/useAdvent';
 import { cn } from '@/lib/utils';
@@ -41,7 +40,7 @@ export function Adventskalender({ offen, offenBis, heute, onTuer }: {
                   aria-label={`Türchen ${tag}: offen`}
                   className="grid aspect-square place-items-center rounded-xl bg-[#fff4c9] ring-1 ring-inset ring-karo"
                 >
-                  <Sticker id={tuer.sticker} className="text-[1.4rem]" />
+                  <AdventBild inhalt={tuer} />
                 </div>
               ) : bereit ? (
                 <button
@@ -67,7 +66,7 @@ export function Adventskalender({ offen, offenBis, heute, onTuer }: {
           );
         })}
       </ol>
-      <p className="mt-2 text-xs text-muted-foreground">Kein Zeitgewinn, nur Sticker. Türchen 6 und 24 haben eine Figur dabei.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Dahinter: Sticker, Figuren, Tinte und ab und zu ein paar Minuten.</p>
     </section>
   );
 }

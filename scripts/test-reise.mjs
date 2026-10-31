@@ -98,12 +98,24 @@ pruefe('Weihnachtszeit 30.11. nein, 1.12. ja, 26.12. ja, 27.12. nein, 3.1. nein'
 pruefe('Berliner Datum: 30.11. 23:30 UTC ist schon der 1.12.', weihnachten.istWeihnachtszeit(new Date('2026-11-30T23:30:00Z')), true);
 pruefe('Tuerchen offen bis: 3.12. → 3, 26.12. → 24, 27.12. → 0, Januar → 0, Oktober → 0',
   ['2026-12-03', '2026-12-26', '2026-12-27', '2027-01-05', '2026-10-11'].map((t) => weihnachten.adventOffenBis(tag(t))), [3, 24, 0, 0, 0]);
-const sqlAdventSticker = [...sqlAdvent.match(/function public\.advent_sticker[\s\S]*?array\[([^\]]+)\]/)[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 pruefe('Weihnachtszeit in der Datenbank bis 26.12.', /month from p_tag\) = 12 and extract\(day from p_tag\) <= 26/.test(sqlAdvent), true);
-pruefe('Tuerchen-Sticker wie in der Datenbank', [...weihnachten.ADVENT_STICKER], sqlAdventSticker);
-pruefe('Tuerchen 13 wie Tuerchen 1', weihnachten.adventSticker(13), weihnachten.adventSticker(1));
-pruefe('Figuren hinter Tuerchen 6 und 24', [6, 24, 7].map(weihnachten.adventAvatar), ['weihnachtsmann', 'tannenbaum', null]);
-pruefe('Tuerchen-Figuren haben einen Preis', [weihnachten.adventAvatar(6), weihnachten.adventAvatar(24)].every((a) => feder.AVATAR_PREIS[a] > 0), true);
+// Ueberraschungen hinter den Tuerchen (01.11.2026): Plan wie advent_ueberraschung()
+const sqlUeber = await readFile('supabase/migrations/20261101100000_advent_ueberraschungen.sql', 'utf8');
+const sqlPlan = [...sqlUeber.match(/function public\.advent_ueberraschung[\s\S]*?\(values([\s\S]*?)\) as x/)[1]
+  .matchAll(/\(\s*(\d+),\s*'([a-z]+)',\s*(null|'[a-z_]+'),\s*(null(?:::integer)?|\d+)\)/g)]
+  .map((m) => ({ tuer: Number(m[1]), art: m[2], ding: m[3] === 'null' ? undefined : m[3].slice(1, -1), menge: /^\d+$/.test(m[4]) ? Number(m[4]) : undefined }));
+const json = (x) => JSON.parse(JSON.stringify(x));
+pruefe('Advent: 24 Tuerchen wie in der Datenbank', json(weihnachten.ADVENT_PLAN.map((u, i) => ({ tuer: i + 1, ...u }))), json(sqlPlan));
+const zaehle = (art) => weihnachten.ADVENT_PLAN.filter((u) => u.art === art).length;
+pruefe('Advent: 10 Sticker, 5 Figuren, 6 × Tinte, 3 × Minuten', [zaehle('sticker'), zaehle('avatar'), zaehle('tinte'), zaehle('minuten')], [10, 5, 6, 3]);
+pruefe('Advent: Frei-Minuten je Tuerchen 5 (nie mehr als 10)', weihnachten.ADVENT_PLAN.filter((u) => u.art === 'minuten').every((u) => u.menge === 5), true);
+pruefe('Advent: nie zweimal dieselbe Art hintereinander', weihnachten.ADVENT_PLAN.every((u, i, l) => i === 0 || u.art !== l[i - 1].art), true);
+pruefe('Advent: Nikolaus und Heiligabend mit Figur', [6, 24].map((t) => weihnachten.adventUeberraschung(t).ding), ['weihnachtsmann', 'tannenbaum']);
+pruefe('Advent: alle Figuren sind Weihnachts-Figuren mit Preis',
+  weihnachten.ADVENT_PLAN.filter((u) => u.art === 'avatar').every((u) => feder.WEIHNACHTS_FIGUREN.includes(u.ding) && feder.AVATAR_PREIS[u.ding] > 0), true);
+pruefe('Advent: Sticker sind Weihnachts-Sticker, keiner doppelt',
+  (() => { const st = weihnachten.ADVENT_PLAN.filter((u) => u.art === 'sticker').map((u) => u.ding); return st.every((x) => hefte.WEIHNACHTS_STICKER.includes(x)) && new Set(st).size === st.length; })(), true);
+pruefe('Advent: Tinte als Grund erlaubt', /'advent'\]\)/.test(sqlUeber), true);
 const katalogSql = (name) => [...sqlAdvent.match(new RegExp(`${name} text\\[\\] := array\\[([^\\]]+)\\]`))[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 pruefe('Sticker-Katalog wie in sticker_waehlen', Object.keys(hefte.STICKER).sort(), [...katalogSql('v_katalog'), ...katalogSql('v_weihnachten')].sort());
 pruefe('Weihnachts-Sticker wie in sticker_waehlen', hefte.WEIHNACHTS_STICKER, katalogSql('v_weihnachten'));

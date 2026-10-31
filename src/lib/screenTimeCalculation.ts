@@ -78,7 +78,7 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
   const startIso = start.toISOString();
   const endIso = end.toISOString();
 
-  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes, childSettingsRes, reiseRes] = await Promise.all([
+  const [gameSessionsRes, learningSessionsRes, achievementsRes, requestsRes, childSettingsRes, reiseRes, adventRes] = await Promise.all([
     supabase
       .from('game_sessions')
       .select('time_earned')
@@ -121,6 +121,14 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       .gt('bonus_minuten', 0)
       .gte('fertig_am', startIso)
       .lt('fertig_am', endIso),
+    // Frei-Minuten aus dem Adventskalender (01.11.2026), am Tag des Öffnens
+    supabase
+      .from('advent_tueren')
+      .select('tag, menge, geoeffnet_am')
+      .eq('child_id', userId)
+      .eq('art', 'minuten')
+      .gte('geoeffnet_am', startIso)
+      .lt('geoeffnet_am', endIso),
   ]);
 
   const queryErrors = [
@@ -152,6 +160,12 @@ export async function fetchTodayScreenTimeBreakdown(userId: string): Promise<Tod
       icon: '📄',
       reward_minutes: Number(s.bonus_minuten) || 0,
       earned_at: s.fertig_am,
+    })))
+    .concat((adventRes.error ? [] : adventRes.data || []).map((t: { tag: number; menge: number | null; geoeffnet_am: string }) => ({
+      name: `Adventskalender, Türchen ${t.tag}`,
+      icon: '🎁',
+      reward_minutes: Number(t.menge) || 0,
+      earned_at: t.geoeffnet_am,
     })));
 
   const rawAchievementMinutes = rawAchievementDetails.reduce(

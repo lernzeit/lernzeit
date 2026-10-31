@@ -178,27 +178,33 @@ export type Database = {
       }
       advent_tueren: {
         Row: {
+          art: string
           avatar: string | null
           child_id: string
           geoeffnet_am: string
           jahr: number
-          sticker: string
+          menge: number | null
+          sticker: string | null
           tag: number
         }
         Insert: {
+          art?: string
           avatar?: string | null
           child_id: string
           geoeffnet_am?: string
           jahr: number
-          sticker: string
+          menge?: number | null
+          sticker?: string | null
           tag: number
         }
         Update: {
+          art?: string
           avatar?: string | null
           child_id?: string
           geoeffnet_am?: string
           jahr?: number
-          sticker?: string
+          menge?: number | null
+          sticker?: string | null
           tag?: number
         }
         Relationships: []

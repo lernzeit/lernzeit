@@ -1,13 +1,12 @@
 /*
  * Ende einer Adventskalender-Runde (lib/weihnachten.ts): ab 4 von 5 richtig
- * geht das Tuerchen auf (Sticker, Tuerchen 6 und 24 auch eine Figur), sonst
- * gleich nochmal mit neuen Aufgaben. Keine Zeit, keine Tinte, keine Reise.
+ * geht das Tuerchen auf (AdventGeschenk: Sticker, Figur, Tinte oder Frei-Minuten,
+ * mit Animation), sonst gleich nochmal mit neuen Aufgaben.
  */
 import { Klecksi } from '@/components/klecksi/Klecksi';
 import { useKlecksiAn } from '@/hooks/useKlecksi';
-import { Sticker } from '@/components/child/Hefte';
+import { AdventGeschenk, adventText, type AdventInhalt } from '@/components/child/AdventGeschenk';
 import { Button } from '@/components/ui/button';
-import { getAvatarById } from '@/data/avatars';
 import { ADVENT_RICHTIG, type AdventErgebnis } from '@/lib/weihnachten';
 
 export function AdventAbschluss({ tag, richtig, gesamt, ergebnis, fehler, onErneutSenden, onNochmal, onFertig }: {
@@ -20,7 +19,6 @@ export function AdventAbschluss({ tag, richtig, gesamt, ergebnis, fehler, onErne
   onNochmal?: () => void;
   onFertig: () => void;
 }) {
-  const figur = ergebnis?.avatar ? getAvatarById(ergebnis.avatar) : undefined;
   const mitKlecksi = useKlecksiAn();
 
   let inhalt: React.ReactNode;
@@ -45,26 +43,23 @@ export function AdventAbschluss({ tag, richtig, gesamt, ergebnis, fehler, onErne
       </>
     );
   } else if (ergebnis.offen) {
+    // Ältere Zeilen (vor 01.11.2026) haben nur einen Sticker
+    const geschenk: AdventInhalt | null = ergebnis.art
+      ? { art: ergebnis.art, sticker: ergebnis.sticker, avatar: ergebnis.avatar, menge: ergebnis.menge }
+      : ergebnis.sticker ? { art: 'sticker', sticker: ergebnis.sticker } : null;
     inhalt = (
       <>
-        {mitKlecksi && <Klecksi groesse={120} stimmung="jubel" label="Klecksi jubelt" />}
         <h1 className="text-2xl font-extrabold text-tinte">
           {ergebnis.schon ? `Türchen ${tag} war schon offen.` : `Türchen ${tag} ist offen!`}
         </h1>
         {!ergebnis.schon && (
           <p className="text-sm text-muted-foreground">{richtig} von {gesamt} richtig</p>
         )}
-        {ergebnis.sticker && (
-          <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-[#fff4c9] ring-1 ring-inset ring-karo">
-            <Sticker id={ergebnis.sticker} className="text-[3.5rem]" />
-          </div>
+        {geschenk && <AdventGeschenk tag={tag} inhalt={geschenk} oeffnen={!ergebnis.schon} />}
+        {geschenk && !ergebnis.schon && (
+          <p className="font-hand text-lg leading-snug text-tinte">{adventText(geschenk, ergebnis.ersatz)}</p>
         )}
-        {!ergebnis.schon && (
-          <p className="font-hand text-lg leading-snug text-tinte">
-            Den Sticker kannst du auf deine Hefte kleben.
-            {figur && <> Neue Figur im Federmäppchen: {figur.name} {figur.emoji}</>}
-          </p>
-        )}
+        {mitKlecksi && !ergebnis.schon && <Klecksi groesse={90} stimmung="jubel" label="Klecksi jubelt" />}
         <Button size="lg" className="w-full" onClick={onFertig}>Zum Start</Button>
       </>
     );

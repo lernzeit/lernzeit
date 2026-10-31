@@ -329,8 +329,11 @@ Supabase-Secrets gelöscht werden.
   Mütze, Schnee auf der Begrüßung, Weihnachtssätze, 12 Weihnachts-Sticker (`sticker_waehlen` nur dann)
   und 5 Figuren (`mit_tinte_freischalten` nur dann; Besitz bleibt).
 - Adventskalender: Türchen bis heute, nachholen bis 26.12.; 5 Aufgaben aus zufälligen Fächern
-  (`faecher` im Vorlader), ab 4 richtigen `advent_runde` → `advent_tueren` (Sticker, Tür 6/24 Figur).
-  Keine `game_sessions`-Zeile, also keine Zeit, Tinte, Reise, Erfolge, kein Streak, keine Berichtigung.
+  (`faecher` im Vorlader), ab 4 richtigen `advent_runde` → `advent_tueren`. Seit 01.11.2026 gemischte Überraschungen,
+  fester Plan `ADVENT_PLAN` (`lib/weihnachten.ts`) = SQL `advent_ueberraschung()`: 10 Sticker, 5 Figuren (6./24.), 6 × Tinte
+  (300, Grund `advent`), 3 × 5 Frei-Minuten (zählen am Tag des Öffnens zur verdienten Zeit, Anfrage wie immer). Figur schon
+  da → 50 Tinte. Öffnen mit Animation (`child/AdventGeschenk.tsx`, CSS `advent-*`). Die Runde selbst: keine `game_sessions`,
+  also keine Zeit, keine Reise, kein Streak, keine Berichtigung.
 - Testen: Playwright-Uhr auf Dezember (`clock.setFixedTime`, Sitzung `expires_at` passend);
   SQL über `advent_runde_werten(kind, tag, richtig, gesamt, p_heute)` (nur Service-Rolle).
 
