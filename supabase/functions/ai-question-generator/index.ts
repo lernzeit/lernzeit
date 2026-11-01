@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { ladeAktiveRegeln, regelBlock, waehleRegeln } from '../_shared/prompt-regeln.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
 import { effectiveGrade, schoolYearHint } from "../_shared/school-year.ts";
@@ -462,30 +463,14 @@ serve(async (req) => {
     const lernstand = sourceGrade === grade ? schoolYearHint(grade) : '';
     const prompt = buildQuestionPrompt(sourceGrade, subject, difficulty, questionType, excludeTexts, topicHint, category, lernstand, lernstoff, planRahmen);
 
-    // Load active prompt rules from DB (max 5, most relevant first)
+    // Prompt-Regeln aus Nutzer-Feedback: hoechstens 3 passende, ganze Saetze
+    // (bis 01.11.2026 nach 100 Zeichen abgeschnitten), siehe _shared/prompt-regeln.ts.
     let rulesBlock = '';
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const ruleClient = createClient(supabaseUrl, serviceRoleKey);
-      
-      const { data: rules } = await ruleClient
-        .from('prompt_rules')
-        .select('rule_text')
-        .eq('is_active', true)
-        .or(`subject.is.null,subject.eq.${subject}`)
-        .or(`grade_min.is.null,grade_min.lte.${grade}`)
-        .or(`grade_max.is.null,grade_max.gte.${grade}`)
-        .order('source_feedback_count', { ascending: false })
-        .limit(3);
-
-      if (rules && rules.length > 0) {
-        rulesBlock = '\n\nQUALITÄTSREGELN:\n' +
-          rules.map((r: { rule_text: string }) => `- ${r.rule_text.substring(0, 100)}`).join('\n');
-        console.log(`📏 Injecting ${rules.length} prompt rules`);
-      }
-    } catch (rulesErr) {
-      console.warn('Could not load prompt rules:', rulesErr);
+    {
+      const ruleClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const passend = waehleRegeln(await ladeAktiveRegeln(ruleClient), subject, grade);
+      rulesBlock = regelBlock(passend);
+      if (passend.length > 0) console.log(`📏 Injecting ${passend.length} prompt rules`);
     }
 
     const systemPrompt = getSystemPrompt(category, subject) + rulesBlock;

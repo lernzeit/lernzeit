@@ -180,6 +180,16 @@ Supabase-Secrets gelöscht werden.
 - Lernplan-Fragen: nur Inhalte des Plans (Thema, Tages-Schwerpunkte, Foto-Stoff), bis zu drei
   Versuche, nie eine Ersatzfrage aus dem Cache.
 
+## Prompt-Regeln aus Feedback (Stand 01.11.2026)
+
+- `analyze-feedback` antwortet sofort und arbeitet im Hintergrund; Stand in `feedback_analyse_laeufe` (Admin-Panel „Regeln“
+  fragt ihn ab, auch nach Neuladen). EIN KI-Aufruf je Lauf gibt das ganze bereinigte Regelwerk zurück (`_shared/regel-analyse.ts`,
+  höchstens 12 aktiv, je Fach 2, fachübergreifend 4, je Regel 180 Zeichen; keine Verbote von Themen/Fragetypen). Feedback gilt erst
+  nach dem Speichern als ausgewertet. Vorher: ein Aufruf je Gruppe, Zeitgrenze vor dem Markieren → jede Analyse erzeugte dieselben Regeln neu.
+- Von Hand bearbeitete Regeln (`prompt_rules.manuell`) fasst die Analyse nicht an. Cron `feedback-analyse-woechentlich` (Mo 04:17 UTC),
+  läuft nur ab 10 neuen auswertbaren Meldungen (wrong_answer, confusing_question, other …; nicht too_hard/too_easy/good_question).
+- In Prompts höchstens 3 passende Regeln je Frage, Fach vor allgemein (`_shared/prompt-regeln.ts`, Live, Vorproduktion, Modellvergleich).
+
 ## Sicherheit (Stand 05.10.2026)
 
 - SECURITY-DEFINER-Funktionen sind über `/rest/v1/rpc` für jeden aufrufbar, der EXECUTE hat

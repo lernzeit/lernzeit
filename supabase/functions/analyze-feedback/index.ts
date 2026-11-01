@@ -1,616 +1,198 @@
+/**
+ * Feedback-Analyse → Prompt-Regeln (neu 01.11.2026).
+ *
+ * - Antwortet sofort mit der Lauf-id und arbeitet im Hintergrund (EdgeRuntime.waitUntil).
+ *   Der Stand steht in `feedback_analyse_laeufe`; das Admin-Panel fragt ihn ab und
+ *   zeigt ihn auch nach Neuladen oder App-Wechsel.
+ * - EIN KI-Aufruf je Lauf: bestehende Regeln + neues Feedback rein, bereinigtes
+ *   Regelwerk raus (doppelte zusammengefasst, überflüssige weg, Obergrenzen).
+ * - Feedback gilt erst als ausgewertet, wenn das Regelwerk gespeichert ist; bei einem
+ *   Fehler bleibt alles unverändert.
+ * - Von Hand bearbeitete Regeln (`manuell`) bleiben unangetastet.
+ * - Aufruf: Admin (JWT) oder Service-Rolle (wöchentlicher Cron, nur ab 10 Meldungen).
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { callAI } from "../_shared/ai-client.ts";
+import {
+  baueAnalysePrompt,
+  type BestehendeRegel,
+  type Feedback,
+  gruppiere,
+  MIN_FEEDBACK_FUER_LAUF,
+  pruefeRegelwerk,
+  REGEL_ARTEN,
+  REGELWERK_TOOL,
+} from "../_shared/regel-analyse.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-analyze-secret',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-const MAX_NEW_RULES_PER_RUN = 5;
-const MAX_ACTIVE_RULES = 30;
-const MIN_CLUSTER_SIZE = 3;
+const MAX_FEEDBACK_JE_LAUF = 400;
+/** Ein laufender Lauf, der älter ist, gilt als abgebrochen. */
+const LAUF_HAENGT_NACH_MS = 10 * 60 * 1000;
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const sb = createClient(supabaseUrl, serviceRoleKey);
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) return json({ error: 'Nicht authentifiziert' }, 401);
+  const token = authHeader.replace('Bearer ', '');
+  const istDienst = token === serviceRoleKey;
+  if (!istDienst) {
+    const anon = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } } });
+    const { data: { user } } = await anon.auth.getUser();
+    if (!user) return json({ error: 'Nicht authentifiziert' }, 401);
+    const { data: isAdmin } = await sb.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+    if (!isAdmin) return json({ error: 'Nur Admins' }, 403);
   }
 
+  let ausloeser = istDienst ? 'cron' : 'admin';
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const body = await req.json();
+    if (body && typeof body.ausloeser === 'string') ausloeser = body.ausloeser.slice(0, 20);
+  } catch { /* leerer Body */ }
 
-    // Auth: admin JWT OR service_role key in Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Nicht authentifiziert' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+  // Läuft schon einer? Dann denselben zurückgeben statt doppelt zu starten.
+  const { data: laufend } = await sb.from('feedback_analyse_laeufe')
+    .select('id, gestartet_am').eq('status', 'laeuft')
+    .order('gestartet_am', { ascending: false }).limit(1).maybeSingle();
+  if (laufend) {
+    if (Date.now() - new Date(laufend.gestartet_am).getTime() < LAUF_HAENGT_NACH_MS) {
+      return json({ success: true, laufId: laufend.id, schonGestartet: true });
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Check if it's the service role key (for automated/cron invocations)
-    if (token !== serviceRoleKey) {
-      // Verify as user JWT
-      const anonClient = createClient(
-        supabaseUrl,
-        Deno.env.get('SUPABASE_ANON_KEY')!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user } } = await anonClient.auth.getUser();
-      if (!user) {
-        return new Response(JSON.stringify({ error: 'Nicht authentifiziert' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const { data: isAdmin } = await supabase.rpc('has_role', {
-        _user_id: user.id,
-        _role: 'admin',
-      });
-      if (!isAdmin) {
-        return new Response(JSON.stringify({ error: 'Nur Admins' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    // 1. Load unanalyzed feedback
-    const { data: feedbacks, error: fbError } = await supabase
-      .from('question_feedback')
-      .select('*')
-      .is('analyzed_at', null)
-      .order('created_at', { ascending: true })
-      .limit(200);
-
-    if (fbError) throw fbError;
-    if (!feedbacks || feedbacks.length === 0) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Keine unanalysierten Feedbacks vorhanden',
-        newRules: 0,
-        analyzedFeedbacks: 0,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log(`📊 Found ${feedbacks.length} unanalyzed feedbacks`);
-
-    // 2. Cluster by feedback_type + category (content quality rules)
-    const clusters = new Map<string, typeof feedbacks>();
-    // 2b. Also cluster for variant/question-type issues
-    const variantIssues: typeof feedbacks = [];
-
-    for (const fb of feedbacks) {
-      // Skip too_hard/too_easy from clustering — these are user-specific
-      // Skip good_question — handled separately for positive reinforcement rules
-      if (fb.feedback_type === 'too_hard' || fb.feedback_type === 'too_easy' || fb.feedback_type === 'good_question') {
-        continue;
-      }
-
-      const key = `${fb.feedback_type}__${fb.category}`;
-      if (!clusters.has(key)) clusters.set(key, []);
-      clusters.get(key)!.push(fb);
-
-      // Detect variant mismatch feedback (from details mentioning Zuordnung, Reihenfolge, etc.)
-      if (fb.feedback_details) {
-        const detailsLower = typeof fb.feedback_details === 'string' 
-          ? fb.feedback_details.toLowerCase() 
-          : JSON.stringify(fb.feedback_details).toLowerCase();
-        if (detailsLower.includes('zuordnung') || 
-            detailsLower.includes('reihenfolge') || 
-            detailsLower.includes('fragetyp') ||
-            detailsLower.includes('sortier') ||
-            detailsLower.includes('multiple choice') ||
-            detailsLower.includes('falscher typ')) {
-          variantIssues.push(fb);
-        }
-      }
-    }
-
-    // 3. Filter clusters with >= MIN_CLUSTER_SIZE
-    const significantClusters = Array.from(clusters.entries())
-      .filter(([, items]) => items.length >= MIN_CLUSTER_SIZE)
-      .slice(0, MAX_NEW_RULES_PER_RUN);
-
-    // Die KI laeuft ueber callAI (Gemini direkt, sonst OpenRouter). Bis zum
-    // 03.10.2026 verlangte die Funktion hier noch den Lovable-Schluessel,
-    // obwohl sie ihn nicht mehr nutzte.
-    const KI_SCHLUESSEL = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('OPENROUTER_API_KEY');
-    if (!KI_SCHLUESSEL) {
-      return new Response(JSON.stringify({ error: 'Kein KI-Schluessel konfiguriert (GEMINI_API_KEY oder OPENROUTER_API_KEY)' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Load existing rules for deduplication & merging
-    const { data: existingRules } = await supabase
-      .from('prompt_rules')
-      .select('id, rule_text, subject, grade_min, grade_max, source_feedback_count, source_feedback_ids')
-      .eq('is_active', true);
-
-    const activeRules = (existingRules || []) as Array<{
-      id: string; rule_text: string; subject: string | null;
-      grade_min: number | null; grade_max: number | null;
-      source_feedback_count: number; source_feedback_ids: string[];
-    }>;
-    const existingTexts = activeRules.map(r => r.rule_text.toLowerCase());
-    const activeRuleCount = existingTexts.length;
-
-    let newRulesCreated = 0;
-
-    // 4. For each significant cluster, generate a content quality rule
-    for (const [clusterKey, items] of significantClusters) {
-      if (activeRuleCount + newRulesCreated >= MAX_ACTIVE_RULES) {
-        await deactivateOldestRule(supabase);
-      }
-
-      const [feedbackType, category] = clusterKey.split('__');
-      const sampleTexts = items.slice(0, 5).map(i =>
-        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Grund: ${i.feedback_type} | Details: ${i.feedback_details || 'keine'}`
-      ).join('\n');
-
-      const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
-
-      const ruleText = await generateRule(KI_SCHLUESSEL, {
-        type: 'content_quality',
-        category,
-        feedbackType,
-        sampleTexts,
-        itemCount: items.length,
-      });
-
-      if (!ruleText) continue;
-
-      // Check for similar existing rule → merge instead of skip
-      const similarMatch = findSimilarRule(activeRules, ruleText);
-      if (similarMatch) {
-        console.log(`🔀 Merging with existing rule ${similarMatch.id} for ${clusterKey}`);
-        const merged = await mergeRules(KI_SCHLUESSEL, similarMatch.rule_text, ruleText);
-        if (merged) {
-          const newFeedbackIds = [...new Set([...similarMatch.source_feedback_ids, ...items.map(i => i.id)])];
-          await supabase
-            .from('prompt_rules')
-            .update({
-              rule_text: merged,
-              source_feedback_count: similarMatch.source_feedback_count + items.length,
-              source_feedback_ids: newFeedbackIds,
-              grade_min: grades.length > 0 ? Math.min(similarMatch.grade_min ?? Infinity, ...grades) : similarMatch.grade_min,
-              grade_max: grades.length > 0 ? Math.max(similarMatch.grade_max ?? -Infinity, ...grades) : similarMatch.grade_max,
-            })
-            .eq('id', similarMatch.id);
-          // Update local cache
-          similarMatch.rule_text = merged;
-          console.log(`✅ Merged rule: "${merged}"`);
-        }
-        continue;
-      }
-
-      const ruleSubject = normalizeCategory(category);
-      const { error: insertError } = await supabase
-        .from('prompt_rules')
-        .insert({
-          rule_text: ruleText,
-          subject: ruleSubject,
-          grade_min: grades.length > 0 ? Math.min(...grades) : null,
-          grade_max: grades.length > 0 ? Math.max(...grades) : null,
-          source_feedback_ids: items.map(i => i.id),
-          source_feedback_count: items.length,
-        });
-
-      if (insertError) {
-        console.error(`Error inserting rule: ${insertError.message}`);
-        continue;
-      }
-
-      newRulesCreated++;
-      activeRules.push({
-        id: 'new',
-        rule_text: ruleText,
-        subject: normalizeCategory(category),
-        grade_min: grades.length > 0 ? Math.min(...grades) : null,
-        grade_max: grades.length > 0 ? Math.max(...grades) : null,
-        source_feedback_count: items.length,
-        source_feedback_ids: items.map(i => i.id),
-      });
-      console.log(`✅ Content rule for ${clusterKey}: "${ruleText}"`);
-    }
-
-    // 5. Generate VARIANT OPTIMIZATION rules from question type feedback
-    if (variantIssues.length > 0) {
-      console.log(`🔄 Found ${variantIssues.length} variant-related feedbacks`);
-
-      const variantRule = await generateRule(KI_SCHLUESSEL, {
-        type: 'variant_optimization',
-        category: 'all',
-        feedbackType: 'variant_mismatch',
-        sampleTexts: variantIssues.slice(0, 8).map(i => {
-          const details = typeof i.feedback_details === 'string' 
-            ? i.feedback_details 
-            : JSON.stringify(i.feedback_details);
-          return `- Fach: ${i.category} | Klasse: ${i.grade} | Frage: "${(i.question_content || '').substring(0, 150)}" | Nutzer-Feedback: ${details?.substring(0, 300) || 'keine'}`;
-        }).join('\n'),
-        itemCount: variantIssues.length,
-      });
-
-      if (variantRule) {
-        const mergeResult = await mergeOrInsertRule(supabase, KI_SCHLUESSEL, activeRules, variantRule, {
-          subject: null,
-          grade_min: null,
-          grade_max: null,
-          feedbackIds: variantIssues.map(i => i.id),
-          feedbackCount: variantIssues.length,
-        }, activeRuleCount, newRulesCreated, MAX_ACTIVE_RULES);
-        if (mergeResult === 'inserted') newRulesCreated++;
-      }
-    }
-
-    // 6. Also generate subject-specific variant preference rules
-    // Cluster variant issues by category
-    const variantByCategory = new Map<string, typeof feedbacks>();
-    for (const fb of feedbacks) {
-      // Analyze question content for type mismatches
-      const content = (fb.question_content || '').toLowerCase();
-      const isAssignment = content.includes('ordne') || content.includes('zuordnung') || content.includes('sortiere') || content.includes('passend');
-      const questionType = fb.question_type || '';
-      
-      if (isAssignment && (questionType.includes('sort') || questionType.includes('SORT'))) {
-        const key = `variant__${fb.category}`;
-        if (!variantByCategory.has(key)) variantByCategory.set(key, []);
-        variantByCategory.get(key)!.push(fb);
-      }
-    }
-
-    for (const [key, items] of variantByCategory) {
-      if (items.length < MIN_CLUSTER_SIZE) continue;
-      
-      const category = key.split('__')[1];
-      const sampleTexts = items.slice(0, 5).map(i =>
-        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Typ: ${i.question_type}`
-      ).join('\n');
-
-      const variantRule = await generateRule(KI_SCHLUESSEL, {
-        type: 'variant_selection',
-        category,
-        feedbackType: 'wrong_variant',
-        sampleTexts,
-        itemCount: items.length,
-      });
-
-      if (variantRule) {
-        const ruleSubject = normalizeCategory(category);
-        const mergeResult = await mergeOrInsertRule(supabase, KI_SCHLUESSEL, activeRules, variantRule, {
-          subject: ruleSubject,
-          grade_min: null,
-          grade_max: null,
-          feedbackIds: items.map(i => i.id),
-          feedbackCount: items.length,
-        }, activeRuleCount, newRulesCreated, MAX_ACTIVE_RULES);
-        if (mergeResult === 'inserted') newRulesCreated++;
-      }
-    }
-
-    // 7. Generate POSITIVE REINFORCEMENT rules from good_question feedback
-    const positiveClusters = new Map<string, typeof feedbacks>();
-    for (const fb of feedbacks) {
-      if (fb.feedback_type !== 'good_question') continue;
-      const key = `good_question__${fb.category}`;
-      if (!positiveClusters.has(key)) positiveClusters.set(key, []);
-      positiveClusters.get(key)!.push(fb);
-    }
-
-    for (const [key, items] of positiveClusters) {
-      if (items.length < MIN_CLUSTER_SIZE) continue;
-
-      const category = key.split('__')[1];
-      const sampleTexts = items.slice(0, 8).map(i =>
-        `- Frage: "${(i.question_content || '').substring(0, 200)}" | Klasse: ${i.grade} | Typ: ${i.question_type}`
-      ).join('\n');
-
-      const grades = [...new Set(items.map(i => i.grade))].sort((a, b) => a - b);
-
-      const positiveRule = await generateRule(KI_SCHLUESSEL, {
-        type: 'positive_reinforcement',
-        category,
-        feedbackType: 'good_question',
-        sampleTexts,
-        itemCount: items.length,
-      });
-
-      if (positiveRule) {
-        const ruleSubject = normalizeCategory(category);
-        const mergeResult = await mergeOrInsertRule(supabase, KI_SCHLUESSEL, activeRules, positiveRule, {
-          subject: ruleSubject,
-          grade_min: grades.length > 0 ? Math.min(...grades) : null,
-          grade_max: grades.length > 0 ? Math.max(...grades) : null,
-          feedbackIds: items.map(i => i.id),
-          feedbackCount: items.length,
-        }, activeRuleCount, newRulesCreated, MAX_ACTIVE_RULES);
-        if (mergeResult === 'inserted') newRulesCreated++;
-      }
-    }
-
-    // 8. Mark ALL feedbacks as analyzed
-    const allFeedbackIds = feedbacks.map(f => f.id);
-    for (let i = 0; i < allFeedbackIds.length; i += 50) {
-      const batch = allFeedbackIds.slice(i, i + 50);
-      await supabase
-        .from('question_feedback')
-        .update({ analyzed_at: new Date().toISOString() })
-        .in('id', batch);
-    }
-
-    const response = {
-      success: true,
-      message: `${newRulesCreated} neue Regel(n) erstellt`,
-      newRules: newRulesCreated,
-      analyzedFeedbacks: feedbacks.length,
-      clusters: significantClusters.length,
-      variantIssuesFound: variantIssues.length,
-    };
-
-    console.log(`📋 Analysis complete:`, response);
-
-    return new Response(JSON.stringify(response), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    console.error('analyze-feedback error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Interner Fehler bei der Feedback-Analyse',
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    await sb.from('feedback_analyse_laeufe')
+      .update({ status: 'fehler', beendet_am: new Date().toISOString(), meldung: 'Abgebrochen (Zeitüberschreitung)' })
+      .eq('id', laufend.id);
   }
+
+  const { data: lauf, error: laufErr } = await sb.from('feedback_analyse_laeufe')
+    .insert({ ausloeser }).select('id').single();
+  if (laufErr || !lauf) return json({ error: 'Lauf konnte nicht angelegt werden' }, 500);
+
+  const arbeit = analysiere(sb, lauf.id, ausloeser === 'cron').catch(async (e) => {
+    console.error('analyze-feedback:', e);
+    await sb.from('feedback_analyse_laeufe').update({
+      status: 'fehler', beendet_am: new Date().toISOString(), meldung: String(e?.message ?? e).slice(0, 300),
+    }).eq('id', lauf.id);
+  });
+  const rt = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+  if (rt) rt.waitUntil(arbeit); else await arbeit;
+
+  return json({ success: true, laufId: lauf.id }, 202);
 });
 
-// --- Helper functions ---
+async function analysiere(sb: SupabaseClient, laufId: string, nurWennGenug: boolean) {
+  const ende = (felder: Record<string, unknown>) =>
+    sb.from('feedback_analyse_laeufe').update({ beendet_am: new Date().toISOString(), ...felder }).eq('id', laufId);
 
-async function deactivateOldestRule(supabase: any) {
-  const { data: oldestRule } = await supabase
-    .from('prompt_rules')
-    .select('id')
-    .eq('is_active', true)
+  const { data: fbDaten, error: fbErr } = await sb.from('question_feedback')
+    .select('id, feedback_type, category, grade, question_content, question_type, feedback_details')
+    .is('analyzed_at', null)
     .order('created_at', { ascending: true })
-    .limit(1)
-    .single();
+    .limit(MAX_FEEDBACK_JE_LAUF);
+  if (fbErr) throw fbErr;
+  const feedback = (fbDaten ?? []) as Feedback[];
+  const auswertbar = feedback.filter((f) => REGEL_ARTEN.includes(f.feedback_type));
 
-  if (oldestRule) {
-    await supabase
-      .from('prompt_rules')
-      .update({ is_active: false, deactivated_at: new Date().toISOString() })
-      .eq('id', oldestRule.id);
-  }
-}
+  const { data: regelDaten, error: rErr } = await sb.from('prompt_rules')
+    .select('id, rule_text, subject, grade_min, grade_max, source_feedback_count, manuell')
+    .eq('is_active', true);
+  if (rErr) throw rErr;
+  const bisher = (regelDaten ?? []) as BestehendeRegel[];
 
-function normalizeCategory(category: string): string | null {
-  const map: Record<string, string> = {
-    'mathematik': 'math', 'mathe': 'math', 'math': 'math',
-    'deutsch': 'german', 'german': 'german',
-    'englisch': 'english', 'english': 'english',
-    'erdkunde': 'geography', 'geography': 'geography',
-    'geschichte': 'history', 'history': 'history',
-    'physik': 'physics', 'physics': 'physics',
-    'biologie': 'biology', 'biology': 'biology',
-    'chemie': 'chemistry', 'chemistry': 'chemistry',
-    'latein': 'latin', 'latin': 'latin',
-  };
-  const normalized = map[category.toLowerCase()];
-  return normalized || (category === 'general' ? null : category.toLowerCase());
-}
-
-interface RuleGenerationContext {
-  type: 'content_quality' | 'variant_optimization' | 'variant_selection' | 'positive_reinforcement';
-  category: string;
-  feedbackType: string;
-  sampleTexts: string;
-  itemCount: number;
-}
-
-async function generateRule(apiKey: string, ctx: RuleGenerationContext): Promise<string | null> {
-  let prompt: string;
-
-  if (ctx.type === 'positive_reinforcement') {
-    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
-
-Hier sind ${ctx.itemCount} positiv bewertete Fragen (👍 Daumen hoch) im Fach "${ctx.category}":
-
-${ctx.sampleTexts}
-
-Analysiere, was diese Fragen gut macht (z.B. klare Formulierung, passender Schwierigkeitsgrad, gute Antwortalternativen).
-Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze), die der Fragengenerator befolgen soll, um mehr solcher guten Fragen zu erzeugen.
-
-Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
-  } else if (ctx.type === 'content_quality') {
-    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
-
-Hier sind ${ctx.itemCount} Beschwerden zum Fach "${ctx.category}", Typ "${ctx.feedbackType}":
-
-${ctx.sampleTexts}
-
-Formuliere EINE kurze, präzise Imperativ-Regel (max. 1 Satz), die der Fragengenerator befolgen soll, um diesen Fehlertyp in Zukunft zu vermeiden.
-
-Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
-  } else if (ctx.type === 'variant_optimization') {
-    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
-Der Generator kann 4 Fragetypen erstellen: MULTIPLE_CHOICE, FREETEXT, SORT (Reihenfolge), MATCH (Zuordnung).
-
-Nutzer haben sich beschwert, dass Fragen den FALSCHEN Fragetyp verwenden:
-
-${ctx.sampleTexts}
-
-Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze), die definiert, WANN welcher Fragetyp verwendet werden soll. Fokussiere auf die häufigsten Fehler aus dem Feedback.
-Beispiel: "Verwende MATCH statt SORT, wenn Elemente Kategorien zugeordnet werden sollen; SORT nur für echte Reihenfolgen (zeitlich, numerisch, alphabetisch)."
-
-Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
-  } else {
-    // variant_selection
-    prompt = `Du bist ein Qualitätsmanager für einen KI-Fragengenerator für Schulkinder.
-Der Generator kann 4 Fragetypen erstellen: MULTIPLE_CHOICE, FREETEXT, SORT (Reihenfolge), MATCH (Zuordnung).
-
-Bei folgenden Fragen im Fach "${ctx.category}" wurde der falsche Fragetyp (SORT statt MATCH) verwendet:
-
-${ctx.sampleTexts}
-
-Formuliere EINE kurze, präzise Imperativ-Regel (max. 2 Sätze) für das Fach "${ctx.category}", die beschreibt, wann MATCH statt SORT verwendet werden soll.
-
-Antworte NUR mit der Regel, ohne Anführungszeichen, ohne Erklärung.`;
+  if (nurWennGenug && auswertbar.length < MIN_FEEDBACK_FUER_LAUF) {
+    await ende({ status: 'uebersprungen', feedback_anzahl: feedback.length, regeln_vorher: bisher.length, regeln_nachher: bisher.length,
+      meldung: `Nur ${auswertbar.length} auswertbare Meldungen (ab ${MIN_FEEDBACK_FUER_LAUF})` });
+    return;
   }
 
-  try {
-    const { response } = await callAI({
-      model: 'google/gemini-3.8-flash',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-    }, undefined, 'analyze_feedback');
-
-    if (!response.ok) {
-      console.error(`AI error: ${response.status}`);
-      return null;
-    }
-
-    const result = await response.json();
-    const ruleText = result.choices?.[0]?.message?.content?.trim();
-
-    if (!ruleText || ruleText.length < 10 || ruleText.length > 500) {
-      console.warn(`Invalid rule text: "${ruleText}"`);
-      return null;
-    }
-
-    return ruleText;
-  } catch (err) {
-    console.error('AI call failed:', err);
-    return null;
+  // Ohne auswertbares Feedback nur dann die KI fragen, wenn es etwas aufzuräumen gibt.
+  const gruppen = gruppiere(feedback);
+  if (gruppen.length === 0 && bisher.filter((r) => !r.manuell).length === 0) {
+    await markiereAusgewertet(sb, feedback.map((f) => f.id));
+    await ende({ status: 'fertig', feedback_anzahl: feedback.length, regeln_vorher: bisher.length, regeln_nachher: bisher.length,
+      meldung: 'Kein auswertbares Feedback' });
+    return;
   }
-}
 
-function calculateSimilarity(a: string, b: string): number {
-  const wordsA = new Set(a.split(/\s+/).filter(w => w.length > 2));
-  const wordsB = new Set(b.split(/\s+/).filter(w => w.length > 2));
-  if (wordsA.size === 0 && wordsB.size === 0) return 1;
-  const intersection = new Set([...wordsA].filter(w => wordsB.has(w)));
-  const union = new Set([...wordsA, ...wordsB]);
-  return union.size === 0 ? 0 : intersection.size / union.size;
-}
+  const { response } = await callAI({
+    model: 'google/gemini-3.8-flash',
+    messages: [{ role: 'user', content: baueAnalysePrompt(bisher, gruppen) }],
+    temperature: 0.2,
+    tools: [REGELWERK_TOOL],
+    tool_choice: { type: 'function', function: { name: 'regelwerk_speichern' } },
+    timeoutMs: 120_000,
+  }, undefined, 'analyze_feedback');
+  if (!response.ok) throw new Error(`KI-Fehler ${response.status}`);
+  const result = await response.json();
+  const args = result.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+  let roh: unknown;
+  try { roh = typeof args === 'string' ? JSON.parse(args) : args; } catch { roh = null; }
+  if (!roh || !Array.isArray((roh as { regeln?: unknown }).regeln)) throw new Error('KI-Antwort ohne Regelwerk');
 
-type ActiveRule = {
-  id: string; rule_text: string; subject: string | null;
-  grade_min: number | null; grade_max: number | null;
-  source_feedback_count: number; source_feedback_ids: string[];
-};
+  const ziel = pruefeRegelwerk(roh, bisher);
+  const auto = bisher.filter((r) => !r.manuell);
+  const behalten = new Set(ziel.map((z) => z.id).filter(Boolean) as string[]);
+  const jetzt = new Date().toISOString();
+  const idsJeFach = new Map<string, string[]>();
+  for (const g of gruppen) {
+    const k = g.fach ?? '-';
+    idsJeFach.set(k, [...(idsJeFach.get(k) ?? []), ...g.ids]);
+  }
+  let neu = 0, geaendert = 0, deaktiviert = 0;
 
-function findSimilarRule(activeRules: ActiveRule[], newRuleText: string): ActiveRule | null {
-  const newLower = newRuleText.toLowerCase();
-  let bestMatch: ActiveRule | null = null;
-  let bestScore = 0;
-  for (const rule of activeRules) {
-    const score = calculateSimilarity(rule.rule_text.toLowerCase(), newLower);
-    if (score > 0.7 && score > bestScore) {
-      bestScore = score;
-      bestMatch = rule;
+  for (const z of ziel) {
+    const belege = z.fach ? (idsJeFach.get(z.fach) ?? []) : [];
+    if (z.id) {
+      const alt = auto.find((r) => r.id === z.id)!;
+      const anders = alt.rule_text !== z.text || alt.subject !== z.fach || alt.grade_min !== z.klasse_von || alt.grade_max !== z.klasse_bis;
+      if (anders || belege.length) {
+        const { error } = await sb.from('prompt_rules').update({
+          rule_text: z.text, subject: z.fach, grade_min: z.klasse_von, grade_max: z.klasse_bis,
+          source_feedback_count: (alt.source_feedback_count ?? 0) + belege.length,
+        }).eq('id', z.id);
+        if (error) throw error;
+        if (anders) geaendert++;
+      }
+    } else {
+      const { error } = await sb.from('prompt_rules').insert({
+        rule_text: z.text, subject: z.fach, grade_min: z.klasse_von, grade_max: z.klasse_bis,
+        source_feedback_ids: belege.slice(0, 200), source_feedback_count: Math.max(belege.length, 1),
+      });
+      if (error) throw error;
+      neu++;
     }
   }
-  return bestMatch;
+  for (const r of auto) {
+    if (behalten.has(r.id)) continue;
+    const { error } = await sb.from('prompt_rules').update({
+      is_active: false, deactivated_at: jetzt, deaktiviert_grund: 'Bei der Feedback-Analyse zusammengefasst oder als überflüssig entfernt',
+    }).eq('id', r.id);
+    if (error) throw error;
+    deaktiviert++;
+  }
+
+  await markiereAusgewertet(sb, feedback.map((f) => f.id));
+  const nachher = bisher.length - deaktiviert + neu;
+  await ende({ status: 'fertig', feedback_anzahl: feedback.length, regeln_vorher: bisher.length, regeln_nachher: nachher,
+    neu, geaendert, deaktiviert,
+    meldung: `${auswertbar.length} auswertbare von ${feedback.length} Meldungen` });
+  console.log(`📋 Feedback-Analyse fertig: ${feedback.length} Meldungen, ${bisher.length} → ${nachher} Regeln (+${neu}, ~${geaendert}, -${deaktiviert})`);
 }
 
-async function mergeRules(apiKey: string, existingRule: string, newRule: string): Promise<string | null> {
-  const prompt = `Du bist ein Qualitätsmanager. Zwei Regeln für einen KI-Fragengenerator sind sich sehr ähnlich.
-
-Bestehende Regel: "${existingRule}"
-Neue Regel: "${newRule}"
-
-Kombiniere beide zu EINER optimierten, präzisen Regel (max. 2 Sätze), die alle Aspekte beider Regeln abdeckt. Entferne Redundanzen. Falls die neue Regel einen neuen Aspekt hinzufügt, integriere ihn.
-
-Antworte NUR mit der kombinierten Regel, ohne Anführungszeichen, ohne Erklärung.`;
-
-  try {
-    const { response } = await callAI({
-      model: 'google/gemini-3.8-flash',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-    }, undefined, 'analyze_feedback');
-    if (!response.ok) return null;
-    const result = await response.json();
-    const merged = result.choices?.[0]?.message?.content?.trim();
-    if (!merged || merged.length < 10 || merged.length > 500) return null;
-    return merged;
-  } catch {
-    return null;
+async function markiereAusgewertet(sb: SupabaseClient, ids: string[]) {
+  const jetzt = new Date().toISOString();
+  for (let i = 0; i < ids.length; i += 100) {
+    const { error } = await sb.from('question_feedback').update({ analyzed_at: jetzt }).in('id', ids.slice(i, i + 100));
+    if (error) throw error;
   }
-}
-
-interface InsertRuleParams {
-  subject: string | null;
-  grade_min: number | null;
-  grade_max: number | null;
-  feedbackIds: string[];
-  feedbackCount: number;
-}
-
-async function mergeOrInsertRule(
-  supabase: any, apiKey: string, activeRules: ActiveRule[],
-  newRuleText: string, params: InsertRuleParams,
-  activeRuleCount: number, newRulesCreated: number, maxActive: number,
-): Promise<'merged' | 'inserted' | 'skipped'> {
-  const similarMatch = findSimilarRule(activeRules, newRuleText);
-
-  if (similarMatch) {
-    console.log(`🔀 Merging with existing rule ${similarMatch.id}`);
-    const merged = await mergeRules(apiKey, similarMatch.rule_text, newRuleText);
-    if (merged) {
-      const newFeedbackIds = [...new Set([...similarMatch.source_feedback_ids, ...params.feedbackIds])];
-      await supabase
-        .from('prompt_rules')
-        .update({
-          rule_text: merged,
-          source_feedback_count: similarMatch.source_feedback_count + params.feedbackCount,
-          source_feedback_ids: newFeedbackIds,
-        })
-        .eq('id', similarMatch.id);
-      similarMatch.rule_text = merged;
-      console.log(`✅ Merged rule: "${merged}"`);
-    }
-    return 'merged';
-  }
-
-  if (activeRuleCount + newRulesCreated >= maxActive) {
-    await deactivateOldestRule(supabase);
-  }
-
-  const { error } = await supabase
-    .from('prompt_rules')
-    .insert({
-      rule_text: newRuleText,
-      subject: params.subject,
-      grade_min: params.grade_min,
-      grade_max: params.grade_max,
-      source_feedback_ids: params.feedbackIds,
-      source_feedback_count: params.feedbackCount,
-    });
-
-  if (error) {
-    console.error(`Error inserting rule: ${error.message}`);
-    return 'skipped';
-  }
-
-  activeRules.push({
-    id: 'new',
-    rule_text: newRuleText,
-    subject: params.subject,
-    grade_min: params.grade_min,
-    grade_max: params.grade_max,
-    source_feedback_count: params.feedbackCount,
-    source_feedback_ids: params.feedbackIds,
-  });
-  console.log(`✅ New rule: "${newRuleText}"`);
-  return 'inserted';
 }

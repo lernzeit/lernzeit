@@ -1777,14 +1777,61 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_analyse_laeufe: {
+        Row: {
+          id: string
+          gestartet_am: string
+          beendet_am: string | null
+          status: string
+          ausloeser: string
+          feedback_anzahl: number
+          regeln_vorher: number | null
+          regeln_nachher: number | null
+          neu: number
+          geaendert: number
+          deaktiviert: number
+          meldung: string | null
+        }
+        Insert: {
+          id?: string
+          gestartet_am?: string
+          beendet_am?: string | null
+          status?: string
+          ausloeser?: string
+          feedback_anzahl?: number
+          regeln_vorher?: number | null
+          regeln_nachher?: number | null
+          neu?: number
+          geaendert?: number
+          deaktiviert?: number
+          meldung?: string | null
+        }
+        Update: {
+          id?: string
+          gestartet_am?: string
+          beendet_am?: string | null
+          status?: string
+          ausloeser?: string
+          feedback_anzahl?: number
+          regeln_vorher?: number | null
+          regeln_nachher?: number | null
+          neu?: number
+          geaendert?: number
+          deaktiviert?: number
+          meldung?: string | null
+        }
+        Relationships: []
+      }
       prompt_rules: {
         Row: {
           created_at: string
           deactivated_at: string | null
+          deaktiviert_grund: string | null
           grade_max: number | null
           grade_min: number | null
           id: string
           is_active: boolean
+          manuell: boolean
           rule_text: string
           source_feedback_count: number
           source_feedback_ids: string[]
@@ -1793,10 +1840,12 @@ export type Database = {
         Insert: {
           created_at?: string
           deactivated_at?: string | null
+          deaktiviert_grund?: string | null
           grade_max?: number | null
           grade_min?: number | null
           id?: string
           is_active?: boolean
+          manuell?: boolean
           rule_text: string
           source_feedback_count?: number
           source_feedback_ids?: string[]
@@ -1805,10 +1854,12 @@ export type Database = {
         Update: {
           created_at?: string
           deactivated_at?: string | null
+          deaktiviert_grund?: string | null
           grade_max?: number | null
           grade_min?: number | null
           id?: string
           is_active?: boolean
+          manuell?: boolean
           rule_text?: string
           source_feedback_count?: number
           source_feedback_ids?: string[]

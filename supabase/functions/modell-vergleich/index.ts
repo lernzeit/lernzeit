@@ -210,7 +210,7 @@ async function erzeugen(client: ReturnType<typeof createClient>, lauf: string, m
     if (!erledigt.has(`${slot}|${m.id}`)) offen.push({ slot, modell: m });
   }));
 
-  const { block: rulesBlock } = await loadRulesBlock(client);
+  const { blockFuer: rulesBlockFuer } = await loadRulesBlock(client);
   const ausschlussCache = new Map<string, string[]>();
   let fertig = 0;
 
@@ -223,7 +223,7 @@ async function erzeugen(client: ReturnType<typeof createClient>, lauf: string, m
       const vorhandeneFragen = ausschlussCache.get(key)!;
 
       // Exakt wie cache-prefill: System-Prompt + Regeln, Nutzer-Prompt + Ausschlussliste.
-      const systemPrompt = buildSystemPrompt(s.category, s.subject) + rulesBlock;
+      const systemPrompt = buildSystemPrompt(s.category, s.subject) + rulesBlockFuer(s.subject, s.grade);
       let userPrompt = buildQuestionPrompt(s.grade, s.subject, s.difficulty, s.type, s.category);
       if (vorhandeneFragen.length > 0) {
         userPrompt += `\n\nWICHTIG – Diese Fragen existieren bereits. Erstelle eine VÖLLIG ANDERE Frage:\n${vorhandeneFragen.map((t) => `- "${t.substring(0, 60)}"`).join('\n')}`;

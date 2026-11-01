@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -19,7 +19,27 @@ interface PromptRule {
   is_active: boolean;
   source_feedback_count: number;
   created_at: string;
+  manuell: boolean;
+  deaktiviert_grund: string | null;
 }
+
+/** Ein Lauf von analyze-feedback (Tabelle feedback_analyse_laeufe). */
+interface AnalyseLauf {
+  id: string;
+  gestartet_am: string;
+  beendet_am: string | null;
+  status: 'laeuft' | 'fertig' | 'fehler' | 'uebersprungen';
+  ausloeser: string;
+  feedback_anzahl: number;
+  regeln_vorher: number | null;
+  regeln_nachher: number | null;
+  neu: number;
+  geaendert: number;
+  deaktiviert: number;
+  meldung: string | null;
+}
+
+const laeufeTabelle = () => supabase.from('feedback_analyse_laeufe');
 
 const SUBJECT_OPTIONS = [
   { value: '_all', label: 'Alle Fächer' },
@@ -45,14 +65,50 @@ const GRADE_OPTIONS = [
 export function PromptRulesPanel() {
   const [rules, setRules] = useState<PromptRule[]>([]);
   const [unanalyzedCount, setUnanalyzedCount] = useState(0);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [lauf, setLauf] = useState<AnalyseLauf | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const isAnalyzing = isStarting || lauf?.status === 'laeuft';
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [zeigeInaktive, setZeigeInaktive] = useState(false);
   const [editForm, setEditForm] = useState<Partial<PromptRule>>({});
   const { toast } = useToast();
 
+  // Der Lauf arbeitet auf dem Server weiter; sein Stand steht in der Tabelle. Beim Öffnen
+  // (auch nach Neuladen oder App-Wechsel) wird der letzte Lauf geladen und, solange er
+  // läuft, alle 4 s abgefragt.
+  const ladeLauf = useCallback(async (): Promise<AnalyseLauf | null> => {
+    const { data } = await laeufeTabelle()
+      .select('*')
+      .order('gestartet_am', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLauf((data as AnalyseLauf) ?? null);
+    return (data as AnalyseLauf) ?? null;
+  }, []);
+
+  const stopPoll = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = null;
+  };
+
+  const startPoll = useCallback(() => {
+    stopPoll();
+    pollRef.current = setInterval(async () => {
+      const l = await ladeLauf();
+      if (!l || l.status !== 'laeuft') {
+        stopPoll();
+        await loadData();
+      }
+    }, 4000);
+  }, [ladeLauf]);
+
   useEffect(() => {
     loadData();
+    ladeLauf().then((l) => { if (l?.status === 'laeuft') startPoll(); });
+    return stopPoll;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
@@ -66,7 +122,8 @@ export function PromptRulesPanel() {
         supabase
           .from('question_feedback')
           .select('*', { count: 'exact', head: true })
-          .is('analyzed_at', null),
+          .is('analyzed_at', null)
+          .in('feedback_type', ['wrong_answer', 'confusing_question', 'other', 'wrong_question_type', 'inappropriate']),
       ]);
 
       setRules((rulesData as PromptRule[]) || []);
@@ -121,6 +178,7 @@ export function PromptRulesPanel() {
         subject: editForm.subject || null,
         grade_min: editForm.grade_min || null,
         grade_max: editForm.grade_max || null,
+        manuell: true,
       })
       .eq('id', editingId);
 
@@ -134,6 +192,7 @@ export function PromptRulesPanel() {
           subject: editForm.subject || null,
           grade_min: editForm.grade_min || null,
           grade_max: editForm.grade_max || null,
+          manuell: true,
         } : r)
       );
       toast({ title: 'Gespeichert', description: 'Regel wurde aktualisiert.' });
@@ -157,35 +216,31 @@ export function PromptRulesPanel() {
   };
 
   const runAnalysis = async () => {
-    setIsAnalyzing(true);
+    setIsStarting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({ title: 'Fehler', description: 'Nicht eingeloggt', variant: 'destructive' });
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('analyze-feedback', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
+      const { data, error } = await supabase.functions.invoke('analyze-feedback', { body: { ausloeser: 'admin' } });
       if (error) throw error;
-
+      if (!data?.laufId) throw new Error(data?.error || 'Kein Lauf gestartet');
+      await ladeLauf();
+      startPoll();
+    } catch (err: unknown) {
       toast({
-        title: 'Analyse abgeschlossen',
-        description: `${data.newRules} neue Regel(n), ${data.analyzedFeedbacks} Feedbacks verarbeitet`,
-      });
-
-      await loadData();
-    } catch (err: any) {
-      toast({
-        title: 'Analyse fehlgeschlagen',
-        description: err.message || 'Unbekannter Fehler',
+        title: 'Analyse nicht gestartet',
+        description: err instanceof Error ? err.message : 'Unbekannter Fehler',
         variant: 'destructive',
       });
     } finally {
-      setIsAnalyzing(false);
+      setIsStarting(false);
     }
+  };
+
+  const laufText = (l: AnalyseLauf): string => {
+    const wann = new Date(l.beendet_am ?? l.gestartet_am).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+    const wer = l.ausloeser === 'cron' ? 'automatisch' : 'von Hand';
+    if (l.status === 'laeuft') return 'Analyse läuft … (du kannst die Seite verlassen)';
+    if (l.status === 'fehler') return `Letzte Analyse (${wann}, ${wer}) fehlgeschlagen: ${l.meldung ?? 'unbekannt'}. Es wurde nichts geändert.`;
+    if (l.status === 'uebersprungen') return `Letzte Prüfung (${wann}, ${wer}): ${l.meldung ?? 'übersprungen'}`;
+    return `Letzte Analyse (${wann}, ${wer}): ${l.feedback_anzahl} Meldungen, Regeln ${l.regeln_vorher ?? '?'} → ${l.regeln_nachher ?? '?'} (neu ${l.neu}, geändert ${l.geaendert}, entfernt ${l.deaktiviert})`;
   };
 
   const getSubjectLabel = (subject: string | null) => {
@@ -238,12 +293,12 @@ export function PromptRulesPanel() {
             className="flex items-center gap-1"
           >
             <AlertTriangle className="w-3 h-3" />
-            {unanalyzedCount} unanalysierte Feedbacks
+            {unanalyzedCount} neue auswertbare Meldungen
           </Badge>
         </div>
         <Button
           onClick={runAnalysis}
-          disabled={isAnalyzing || unanalyzedCount === 0}
+          disabled={isAnalyzing}
           size="sm"
           className="flex items-center gap-2"
         >
@@ -255,6 +310,11 @@ export function PromptRulesPanel() {
           {isAnalyzing ? 'Analysiere...' : 'Feedback analysieren'}
         </Button>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        {lauf ? laufText(lauf) : 'Noch keine Analyse.'} Läuft jeden Montag automatisch ab 10 neuen Meldungen.
+        Pro Frage gehen höchstens 3 passende Regeln in den Prompt; von Hand bearbeitete Regeln ändert die Analyse nicht.
+      </p>
 
       {/* Rules list */}
       <Card>
@@ -280,7 +340,7 @@ export function PromptRulesPanel() {
             </p>
           ) : (
             <div className="space-y-3">
-              {rules.map((rule) => (
+              {[...rules.filter(r => r.is_active), ...(zeigeInaktive ? rules.filter(r => !r.is_active) : [])].map((rule) => (
                 <div
                   key={rule.id}
                   className={`p-3 rounded-lg border transition-colors ${
@@ -395,6 +455,12 @@ export function PromptRulesPanel() {
                           <Badge variant="outline" className="text-xs">
                             {getGradeLabel(rule.grade_min, rule.grade_max)}
                           </Badge>
+                          {rule.manuell && (
+                            <Badge variant="outline" className="text-xs">von Hand</Badge>
+                          )}
+                          {!rule.is_active && rule.deaktiviert_grund && (
+                            <Badge variant="outline" className="text-xs">{rule.deaktiviert_grund}</Badge>
+                          )}
                           <Badge variant="secondary" className="text-xs">
                             {rule.source_feedback_count} Meldungen
                           </Badge>
@@ -411,6 +477,11 @@ export function PromptRulesPanel() {
                   )}
                 </div>
               ))}
+              {rules.some(r => !r.is_active) && (
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => setZeigeInaktive(v => !v)}>
+                  {zeigeInaktive ? 'Inaktive Regeln ausblenden' : `${rules.filter(r => !r.is_active).length} inaktive Regeln anzeigen`}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

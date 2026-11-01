@@ -213,8 +213,8 @@ serve(async (req) => {
   }
 
   // ── Step 2c: Load active prompt rules ─────────────────────────────────────
-  const { block: rulesBlock, count: ruleCount } = await loadRulesBlock(adminClient);
-  if (ruleCount > 0) console.log(`📏 Injecting ${ruleCount} prompt rules into cache-prefill`);
+  const { blockFuer: rulesBlockFuer, count: ruleCount } = await loadRulesBlock(adminClient);
+  if (ruleCount > 0) console.log(`📏 ${ruleCount} aktive Prompt-Regeln, je Frage höchstens 3 passende`);
 
   // ── Step 3: Generate questions with rate-limit-safe delays ───────────────
   // Der Theorie-Anteil wird einmal geladen und pro Frage gezogen, damit der
@@ -276,7 +276,7 @@ serve(async (req) => {
     console.log(`[${generated + 1}/${maxQuestions}] G${grade} ${subject} | ${questionType} | ${difficulty} | ${category} | Existing: ${existingTexts.length}`);
 
     try {
-      const systemPrompt = buildSystemPrompt(category, subject) + rulesBlock;
+      const systemPrompt = buildSystemPrompt(category, subject) + rulesBlockFuer(subject, grade);
       let userPrompt = buildQuestionPrompt(grade, subject, difficulty, questionType, category);
       if (excludeSample.length > 0) {
         userPrompt += `\n\nWICHTIG – Diese Fragen existieren bereits. Erstelle eine VÖLLIG ANDERE Frage:\n${excludeSample.map(t => `- "${t.substring(0, 60)}"`).join('\n')}`;

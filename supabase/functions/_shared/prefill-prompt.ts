@@ -6,6 +6,7 @@
  * statt Modelle. Inhalt unveraendert aus cache-prefill/index.ts uebernommen.
  */
 
+import { ladeAktiveRegeln, regelBlock, waehleRegeln } from './prompt-regeln.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import {
   answerableFromMemoryRule,
@@ -392,25 +393,13 @@ export function parseAndValidate(
 }
 
 /**
- * Aktive Regeln aus `prompt_rules` (Nutzer-Feedback) als Block fuer den
- * System-Prompt. Leer, wenn keine Regeln aktiv sind oder das Laden scheitert.
+ * Aktive Regeln aus `prompt_rules` einmal laden; `blockFuer(fach, klasse)` liefert
+ * je Frage hoechstens 3 passende (vorher alle aktiven in jedem Prompt).
  */
-export async function loadRulesBlock(client: ReturnType<typeof createClient>): Promise<{ block: string; count: number }> {
-  try {
-    const { data: rules } = await client
-      .from('prompt_rules')
-      .select('rule_text')
-      .eq('is_active', true);
-
-    if (rules && rules.length > 0) {
-      return {
-        block: '\n\nZUSÄTZLICHE QUALITÄTSREGELN (aus Nutzer-Feedback):\n' +
-          rules.map((r: { rule_text: string }) => `- ${r.rule_text}`).join('\n'),
-        count: rules.length,
-      };
-    }
-  } catch (rulesErr) {
-    console.warn('Could not load prompt rules:', rulesErr);
-  }
-  return { block: '', count: 0 };
+export async function loadRulesBlock(client: ReturnType<typeof createClient>): Promise<{ blockFuer: (fach: string, klasse: number) => string; count: number }> {
+  const regeln = await ladeAktiveRegeln(client);
+  return {
+    blockFuer: (fach: string, klasse: number) => regelBlock(waehleRegeln(regeln, fach, klasse)),
+    count: regeln.length,
+  };
 }

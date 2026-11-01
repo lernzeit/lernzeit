@@ -55,7 +55,13 @@ interface CombinationStat {
 }
 
 export function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+  // Reiter in der Adresse (#rules …), damit er Neuladen und App-Wechsel übersteht.
+  const [activeTab, setActiveTabState] = useState(() =>
+    (typeof window !== 'undefined' && window.location.hash.slice(1)) || 'overview');
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    try { window.history.replaceState(null, '', `#${tab}`); } catch { /* egal */ }
+  };
   const [cacheStats, setCacheStats] = useState<CacheStats>({
     totalCached: 0,
     uniqueCombinations: 0,
