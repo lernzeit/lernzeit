@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AppLogo } from '@/components/AppLogo';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { AppEmpfehlung } from '@/components/AppEmpfehlung';
@@ -14,7 +15,7 @@ import { googleDirekterWeg, googleImAppBrowserGesperrt, googleNativ, googleWebAb
 import { track, trackFireAndForget } from '@/lib/analytics';
 import { translateError } from '@/utils/errorMessages';
 import { fehlerTyp, useRegistrierungsMessung } from '@/hooks/useRegistrierungsMessung';
-import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, BookOpen, KeyRound, ChevronLeft, Check, Smartphone } from 'lucide-react';
+import { Shield, Heart, Mail, Lock, User, GraduationCap, Gift, UserPlus, KeyRound, ChevronLeft, Check, Smartphone } from 'lucide-react';
 import Handy from '@/components/landing/Handy';
 import Randnotiz from '@/components/landing/Randnotiz';
 import { useTurnstile } from '@/hooks/useTurnstile';
@@ -760,9 +761,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
     <div className="lp min-h-screen lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="lp-band lp-karo relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-10 xl:px-16">
         <Link to="/start" className="flex items-center gap-2.5" aria-label="LernZeit – zur Startseite">
-          <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-gradient-to-br from-primary to-secondary">
-            <BookOpen className="h-5 w-5 text-white" strokeWidth={2.25} />
-          </span>
+          <AppLogo size={36} />
           <span className="text-[1.25rem] font-extrabold tracking-[-0.02em] text-white">LernZeit</span>
         </Link>
         <div className="py-10">
@@ -801,9 +800,7 @@ export function AuthForm({ onAuthSuccess }: AuthFormProps) {
             Zur Startseite
           </Link>
           <Link to="/start" className="flex items-center gap-2 lg:hidden" aria-label="LernZeit – zur Startseite">
-            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-primary to-secondary">
-              <BookOpen className="h-[18px] w-[18px] text-white" strokeWidth={2.25} />
-            </span>
+            <AppLogo size={32} />
             <span className="text-[1.0625rem] font-extrabold tracking-[-0.02em] text-[var(--lp-tinte)]">LernZeit</span>
           </Link>
         </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AppLogo } from '@/components/AppLogo';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +29,7 @@ import { track, trackFireAndForget } from '@/lib/analytics';
 import { 
   RefreshCw, Users, Smartphone, Plus, Copy, Trash2, Key, User,
   GraduationCap, Settings, BarChart3, Loader2, Crown, Check,
-  AlertTriangle, Clock, Sparkles, BookOpen, CheckCircle, Droplet, ChevronDown, ChevronLeft, ChevronRight, LogOut, Download, Apple, Gift, Share2
+  AlertTriangle, Clock, Sparkles, CheckCircle, Droplet, ChevronDown, ChevronLeft, ChevronRight, LogOut, Download, Apple, Gift, Share2
 } from 'lucide-react';
 import { ChildLearningAnalysis } from '@/components/ChildLearningAnalysis';
 import { HandyzeitUebersicht } from '@/components/parent/HandyzeitUebersicht';
@@ -598,9 +599,7 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
           fehlte jeder Hinweis, wo man ist und wer angemeldet ist). */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-primary" aria-hidden="true">
-            <BookOpen className="h-5 w-5 text-white" strokeWidth={2.25} />
-          </span>
+          <AppLogo size={36} />
           <span className="text-[1.1875rem] font-extrabold tracking-[-0.02em] text-tinte">LernZeit</span>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">Eltern</span>
         </div>

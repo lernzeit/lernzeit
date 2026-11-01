@@ -1,4 +1,5 @@
-import { BookOpen, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
 import { useAppStoreBanner } from '@/hooks/useAndroidAppBanner';
 
 const PLAY_STORE_URL =
@@ -30,9 +31,7 @@ export function AndroidAppBanner() {
           <X className="h-4 w-4" />
         </button>
 
-        <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-          <BookOpen className="h-5 w-5 text-primary-foreground" />
-        </div>
+        <AppLogo size={40} />
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight truncate">

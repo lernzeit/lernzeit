@@ -93,6 +93,8 @@ Supabase-Secrets gelöscht werden.
 
 ## App-Gestaltung „Heft“ (Stand 04.10.2026)
 
+- Logo überall `components/AppLogo.tsx` (echtes App-Icon `public/pwa-192x192.png` bzw. `app-icon-1024.png`), nie
+  ein nachgebautes Buch-Symbol (bis 01.11.2026 lucide `BookOpen` auf Blau). Werbekarten nutzen dasselbe Icon.
 - Gleiche Bildwelt wie die Website: Plus Jakarta Sans, Tokens `tinte`, `primary` (Blau),
   `gruen-hell`/`gruen-text`, `rotstift`, `karo` (tailwind), `.heft-karo`, `font-hand`.
   Keine Verläufe, Emoji nur bei Avatar und Stickern.

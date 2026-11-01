@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { AppLogo } from '@/components/AppLogo';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { trackFireAndForget } from '@/lib/analytics';
 import { sichtbareArtikel } from '@/content/ratgeber';
@@ -47,9 +47,7 @@ const LandingNav = () => {
     >
       <nav className="lp-container flex h-16 items-center justify-between gap-6" aria-label="Hauptnavigation">
         <Link to="/start" className="flex items-center gap-2.5 shrink-0" aria-label="LernZeit – zur Startseite">
-          <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-primary to-secondary shadow-sm">
-            <BookOpen className="h-[18px] w-[18px] text-white" strokeWidth={2.25} />
-          </span>
+          <AppLogo size={32} className="shadow-sm" />
           <span className="text-[1.125rem] font-extrabold tracking-[-0.02em] text-[var(--lp-tinte)]">LernZeit</span>
         </Link>
 

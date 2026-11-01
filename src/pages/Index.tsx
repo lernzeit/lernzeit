@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { AppLogo } from '@/components/AppLogo';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -358,9 +359,7 @@ const Index = () => {
       <div className="relative z-10 page-container">
         <div className="text-center mb-12 animate-fade-in">
           {/* Logo */}
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-primary to-secondary rounded-3xl mb-6 shadow-lg animate-scale-in">
-            <BookOpen className="w-12 h-12 text-white" />
-          </div>
+          <AppLogo size={96} className="mx-auto mb-6 shadow-lg animate-scale-in" />
           
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-6">
             LernZeit – Lernen belohnen, Handyzeit verdienen
