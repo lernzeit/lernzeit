@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useBetreiberPremium } from '@/hooks/useBetreiberPremium';
 import { AppLogo } from '@/components/AppLogo';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -179,7 +180,8 @@ export function ParentDashboard({ userId, onSignOut }: ParentDashboardProps) {
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Echtes (bezahltes) Premium – Trial zählt nicht.
-  const isPaidPremium = isPremium && !isTrialing;
+  const betreiberPremium = useBetreiberPremium(userId);
+  const isPaidPremium = isPremium && (!isTrialing || betreiberPremium);
 
   const [referralInfoOpen, setReferralInfoOpen] = useState(false);
   const [referralIntroOpen, setReferralIntroOpen] = useState(false);
