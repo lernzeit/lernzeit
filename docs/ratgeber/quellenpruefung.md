@@ -116,3 +116,31 @@ Namen. Die Erklärungen stammen deshalb aus dem iPhone-Handbuch für iOS 26.
 (Apple [1]–[4], Google [5]–[6], am 04.10.2026 geprüft) und nur Aussagen, die dort schon stehen. Die Aussagen zu LernZeit
 stammen aus `docs/funktionsstand.md`. Zwei Sätze sind Folgerungen und als solche formuliert: „Ohne Familienfreigabe fehlt
 dir dieser Weg“ und die Hinweise für gemischte Familien (Eltern ohne Apple-Gerät). Beim nächsten Quellencheck am Original prüfen.
+
+## Artikel 7 (Entwurf, 17.11.2026): Bildschirmzeit als Belohnung fürs Lernen
+
+Datei: `src/content/ratgeber/bildschirmzeit-als-belohnung.ts`, `veroeffentlicht: false`.
+Anlass: Rückmeldung einer Initiative für smartphonefreie Schulen (ohne Namen, sinngemäß). Am 17.11.2026 waren
+register.awmf.org, medienleitlinie.de, bitkom.org und volksstimme.de aus der Arbeitsumgebung nicht erreichbar
+(Netzsperre). Deshalb sind [1] und [3] **nicht geprüft**; der Artikel bleibt unsichtbar, bis das nachgeholt ist.
+[1] = AWMF 027-075, [2] = KIM-Studie 2024 (Zeile 2.3 oben, am 04.10.2026 geprüft),
+[3] = Bitkom, Studienbericht „Eltern in der digitalen Welt“ 2025 (PDF, URL im Artikel).
+
+| Nr. | Aussage im Text | Quelle | Befund |
+|---|---|---|---|
+| 7.1 | Leitlinie 2023, federführend DGKJ | [1] | ok (Zeile 1.1 oben) |
+| 7.2 | Leitlinie rät davon ab, Bildschirmmedien als Belohnung, Bestrafung oder zur Beruhigung einzusetzen | [1] | **offen**: Wortlaut, Empfehlungsnummer und Seite im PDF suchen; stimmen alle drei Verwendungen („Belohnung“, „Bestrafung“, „Beruhigung“)? Sonst Satz anpassen |
+| 7.3 | 10–11 Jahre: 63 %, 12–13 Jahre: 79 % mit eigenem Smartphone | [2] | ok (Zeile 2.3, S. 9) |
+| 7.4 | Eltern 10- bis 12-Jähriger: 88 % streiten über die Smartphone-Nutzung | [3] | **offen**: Zahl stammt aus einer PDF-Auslesung mit unvollständigen Diagrammen; am Original mit Abbildung 4 abgleichen, Bezugsgruppe (Eltern von 10- bis 12-Jährigen?) und Basis prüfen |
+| 7.5 | Eltern 10- bis 12-Jähriger: 58 % nehmen das Smartphone als Strafe weg | [3] | **offen**: wie 7.4. Die zweite Fundstelle (Volksstimme/dpa) ist keine Primärquelle und steht nicht im Artikel |
+| 7.6 | „in der Praxis vor allem ab etwa zehn Jahren“ | [2] | Folgerung aus Zeile 2.3 (Sprung von 33 % auf 63 % zwischen 8–9 und 10–11 Jahren); bei der Prüfung bestätigen |
+| 7.7 | Grundzeit bei Eltern: iPhone Freiminuten in LernZeit, Android Family Link | `docs/funktionsstand.md` (Abschnitt Handysperre), CLAUDE.md | ok laut Projektstand; beim Veröffentlichen mit der App abgleichen |
+| 7.8 | 30 Sek. je Aufgabe; ab Werk höchstens 30 Min. werktags, 60 am Wochenende | `docs/faktenpruefung.md` 3 und 4 | ok |
+| 7.9 | Eltern genehmigen jede Freigabe von Hand | `docs/faktenpruefung.md` 10 | ok |
+| 7.10 | Sticker, Figuren, Lerntage nicht in Bildschirmzeit tauschbar | `docs/plan-motivation-kinder.md` Z. 62–66 | ok laut Plan; im Code stichprobenartig bestätigen (kein Tauschweg) |
+| 7.11 | Ratschläge „Lernerfolge ohne Medienzeit sichtbar machen“ | – | Hinweis der Redaktion, im Text als solcher gekennzeichnet |
+
+Bewusst nicht übernommen aus dem Mailentwurf: die Zahl „76 % der 10- bis 12-Jährigen“ und „107 Minuten“ (Bitkom-Kinderstudie,
+nicht gelesen; die KIM-Zahlen sind geprüft), die Aussage „Über die Hälfte der Eltern verzichtet auf technische Kontrolle“
+(widerspricht der Elternstudie), der Satz zur Umgehung von Limits (ohne Beleg) und die Behauptung, Serien und
+Meilensteine liefen auch bei erreichtem Tageslimit weiter (nicht belegt).
