@@ -5,7 +5,7 @@ import { mediennutzungsvertrag } from './mediennutzungsvertrag';
 import { bildschirmzeitEinstellen } from './bildschirmzeit-einstellen';
 import { bildschirmzeitIphoneKind } from './bildschirmzeit-iphone-kind';
 import { familyLinkOderBildschirmzeit } from './family-link-oder-bildschirmzeit';
-import { bildschirmzeitAlsBelohnung } from './bildschirmzeit-als-belohnung';
+import { handyBildschirmzeitStreit } from './handy-bildschirmzeit-streit';
 
 // Alle Artikel, auch Entwuerfe. Sichtbar ist nur, was sichtbareArtikel() liefert.
 export const artikel: RatgeberArtikel[] = [
@@ -15,7 +15,7 @@ export const artikel: RatgeberArtikel[] = [
   bildschirmzeitEinstellen,
   bildschirmzeitIphoneKind,
   familyLinkOderBildschirmzeit,
-  bildschirmzeitAlsBelohnung, // Entwurf, Quellen offen
+  handyBildschirmzeitStreit, // Entwurf, Quellen offen
 ];
 
 // Nur veröffentlichte Artikel, deren Quellen alle geprüft sind, werden
