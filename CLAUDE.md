@@ -372,9 +372,14 @@ Supabase-Secrets gelöscht werden.
 ## Mathe-Grundlagen ohne KI (Stand 11.10.2026)
 
 - `ai-question-generator` liefert bei Mathe ohne Thema einen Anteil kurzer Aufgaben aus
-  `_shared/grundlagen-mathe.ts` (Klasse ≤4: 50 %, ≤6: 35 %, 7: 25 %): Runden, Vorgänger, Stellenwerte,
+  `_shared/grundlagen-mathe.ts` (Klasse ≤4: 50 %, ≤6: 25 %, 7: 15 %; Stand 21.11.2026): Runden, Vorgänger, Stellenwerte,
   Einmaleins, negative Zahlen, Brüche … Auswahlfragen tragen den Index der richtigen Option (wie der
   Cache); ein Text wie „3“ würde in älteren Apps als Option Nr. 3 gelesen.
+- Gegen Wiederholung (21.11.2026, Klara Klasse 7, 100+ Mathe-Aufgaben am Tag): Grundlagen nach der Klasse des Kindes,
+  nicht nach der Stoff-Klasse (sonst Klasse-6-Grundlagen zusätzlich zur Vorklassen-Hälfte aus `school-year.ts`);
+  Muster, die das Kind zuletzt hatte (Signatur ohne Zahlen), werden übersprungen. Der Prompt nennt die jüngsten 8 statt
+  der ältesten 8 gestellten Fragen. Die App merkt sich 300 statt 100 Fragen je Klasse/Fach und schickt die letzten 150
+  (wirkt erst mit dem nächsten App-Build).
 
 ## Meldungen und App Review (Stand 17.10.2026)
 

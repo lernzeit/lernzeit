@@ -263,7 +263,8 @@ interface UseQuestionPreloaderOptions {
 
 const RECENT_QUESTIONS_KEY = (grade: number, subject: string) =>
   `recent_questions_${grade}_${subject}`;
-const RECENT_QUESTIONS_MAX = 100;
+// 300 statt 100 (21.11.2026): Ein Kind mit 100+ Mathe-Aufgaben am Tag bekam nach einem Tag Fragen aus dem Vorrat wieder.
+const RECENT_QUESTIONS_MAX = 300;
 const REQUEST_TIMEOUT_MS = 30000; // 30 second timeout per question
 const ALTERNATIVE_ATTEMPTS = 3;
 // Cache-First in der Edge Function macht die meisten Calls zu schnellen DB-Reads,
@@ -356,7 +357,7 @@ export const useQuestionPreloader = ({
         console.warn('⏱️ Question generation timed out after', REQUEST_TIMEOUT_MS, 'ms');
       }, REQUEST_TIMEOUT_MS);
 
-      const excludeArr = Array.from(attemptedExclusions).slice(-100);
+      const excludeArr = Array.from(attemptedExclusions).slice(-150);
       const fetchPromise = supabase.functions.invoke('ai-question-generator', {
         body: {
           grade: gradeRef.current,

@@ -258,14 +258,14 @@ serve(async (req) => {
     const excludeTexts: string[] = Array.isArray(body.excludeTexts)
       ? (body.excludeTexts as unknown[])
           .filter((t): t is string => typeof t === 'string')
-          .slice(-100)
+          .slice(-150)
       : [];
 
     // Semantic signatures from the client (fall back to computing from texts)
     const clientSignatures: string[] = Array.isArray(body.excludeSignatures)
       ? (body.excludeSignatures as unknown[])
           .filter((t): t is string => typeof t === 'string')
-          .slice(-120)
+          .slice(-200)
       : [];
     const excludeSignatureSet = new Set<string>(
       [...clientSignatures, ...excludeTexts.map(questionSignature)].filter(Boolean)
@@ -344,15 +344,19 @@ serve(async (req) => {
     // verlangt ist, den sie nicht liefern.
     if (subject === 'math' && !topicHint && !forceFresh
         && (!questionType || questionType === 'FREETEXT' || questionType === 'MULTIPLE_CHOICE')
-        && Math.random() < grundlagenAnteil(sourceGrade)) {
-      const g = grundlagenFrage(sourceGrade, difficulty, excludeTexts);
+        && Math.random() < grundlagenAnteil(grade)) {
+      // Klasse des Kindes statt Stoff-Klasse (21.11.2026): Sonst bekam ein Siebtklässler im Herbst auch Grundlagen
+      // der Klasse 6 (Bruch ↔ Dezimalzahl, ·10), zusätzlich zur Hälfte Vorklassen-Stoff. Muster, die das Kind zuletzt
+      // hatte, werden übersprungen (Signatur ohne Zahlen).
+      const g = grundlagenFrage(grade, difficulty, excludeTexts, Math.random,
+        (t) => excludeSignatureSet.has(questionSignature(t)));
       if (g && (!questionType || g.questionType === questionType)) {
         console.log(`🧮 Grundlagen (${g.thema}): ${g.questionText}`);
         return new Response(JSON.stringify({
           success: true,
           question: {
             id: crypto.randomUUID(),
-            grade: sourceGrade,
+            grade,
             subject,
             difficulty,
             questionText: g.questionText,
@@ -1098,10 +1102,11 @@ function buildQuestionPrompt(
 
   // Exclude-Liste knapp halten: Der Server filtert den Cache ohnehin über
   // questionSignature(), der Prompt braucht nur noch einen groben Hinweis.
-  // Vorher 15 Einträge à 80 Zeichen — das waren ~300-400 Tokens pro Anfrage.
+  // Vorher 15 Einträge à 80 Zeichen — das waren ~300-400 Tokens pro Anfrage. Die JÜNGSTEN 8 (bis 21.11.2026 waren es
+  // die ältesten der Liste; die KI wiederholte dadurch gerade gestellte Themen).
   let exclusionNote = '';
   if (excludeTexts && excludeTexts.length > 0) {
-    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(0, 8).map(t => `- "${t.substring(0, 60)}"`).join('\n')}\n${planRahmen
+    exclusionNote = `\n\nWICHTIG - Vermeide diese bereits gestellten Fragen (auch keine minimalen Varianten, andere Zahlen alleine reichen NICHT):\n${excludeTexts.slice(-8).map(t => `- "${t.substring(0, 60)}"`).join('\n')}\n${planRahmen
       ? 'Wähle einen anderen Aspekt, ein anderes Beispiel oder eine andere Frageform – aber IMMER innerhalb der erlaubten Lernplan-Inhalte, nie ein anderes Thema.'
       : 'Wähle ein deutlich anderes Teilthema oder einen anderen Kontext.'}`;
   }

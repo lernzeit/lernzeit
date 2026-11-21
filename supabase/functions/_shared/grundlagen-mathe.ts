@@ -369,23 +369,34 @@ const KLASSEN: Record<number, Thema[]> = {
   ],
 };
 
-/** Anteil der Mathe-Fragen, die als Grundlagen-Aufgabe kommen. */
+/**
+ * Anteil der Mathe-Fragen, die als Grundlagen-Aufgabe kommen.
+ *
+ * 21.11.2026 gesenkt (Klasse 5–6: 35 → 25 %, Klasse 7: 25 → 15 %): Eine Siebtklässlerin bekam im November rund
+ * 30 % Grundlagen, weil zusätzlich die Hälfte der Fragen aus der Vorklasse kam (school-year.ts) und dort der höhere
+ * Anteil der Klasse 6 galt. Die Aufgaben wirkten zu leicht und wiederholten sich. Seitdem zählt außerdem immer die
+ * Klasse des Kindes, nicht die Stoff-Klasse (ai-question-generator).
+ */
 export function grundlagenAnteil(klasse: number): number {
   if (klasse <= 4) return 0.5;
-  if (klasse <= 6) return 0.35;
-  if (klasse === 7) return 0.25;
+  if (klasse <= 6) return 0.25;
+  if (klasse === 7) return 0.15;
   return 0;
 }
 
 /**
  * Eine Grundlagen-Aufgabe fuer die Klasse, nicht wortgleich mit `ausschliessen`.
- * null, wenn es fuer die Klasse keine gibt.
+ * `schonGesehen` (optional) verwirft zusaetzlich Aufgaben, deren Muster das Kind zuletzt schon hatte, z. B. dieselbe
+ * Aufgabe mit anderen Zahlen („Welcher Bruch ist 0,4?“ nach „Welcher Bruch ist 0,125?“). Sonst kamen dieselben wenigen
+ * Muster jeden Tag mehrmals.
+ * null, wenn es fuer die Klasse keine (neue) gibt; dann uebernimmt die KI.
  */
 export function grundlagenFrage(
   klasse: number,
   schwierigkeit: Schwierigkeit,
   ausschliessen: string[] = [],
   r: Zufall = Math.random,
+  schonGesehen: (text: string) => boolean = () => false,
 ): GrundlagenFrage | null {
   const themen = KLASSEN[klasse];
   if (!themen) return null;
@@ -395,7 +406,7 @@ export function grundlagenFrage(
     let x = r() * summe;
     const thema = themen.find((t) => (x -= t.gewicht) < 0) ?? themen[0];
     const f = thema.erzeugen(schwierigkeit, r);
-    if (!schon.has(f.questionText.trim().toLowerCase())) return f;
+    if (!schon.has(f.questionText.trim().toLowerCase()) && !schonGesehen(f.questionText)) return f;
   }
   return null;
 }

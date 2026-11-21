@@ -78,3 +78,23 @@ Deno.test('Grundlagen: keine Wiederholung ausgeschlossener Aufgaben, ab Klasse 8
   assertEquals(grundlagenAnteil(8), 0);
   assert(grundlagenAnteil(3) > 0.3);
 });
+
+Deno.test('Grundlagen: zuletzt gesehene Muster werden übersprungen (21.11.2026)', () => {
+  const r = zufall(7);
+  const muster = (t: string) => t.toLowerCase().replace(/\d+(?:[.,]\d+)?(?:\/\d+)?/g, '#');
+  const gesehen = new Set<string>();
+  // Klasse 7 hat nur wenige Muster: nach einigen Aufgaben gibt es keine neuen mehr, dann null (die KI übernimmt).
+  let n = 0;
+  for (; n < 40; n++) {
+    const f = grundlagenFrage(7, 'medium', [], r, (t) => gesehen.has(muster(t)));
+    if (!f) break;
+    assert(!gesehen.has(muster(f.questionText)), `Muster doppelt: ${f.questionText}`);
+    gesehen.add(muster(f.questionText));
+  }
+  assert(n > 2 && n < 40, `unerwartete Zahl verschiedener Muster: ${n}`);
+});
+
+Deno.test('Grundlagen: Anteile ab 21.11.2026', () => {
+  assertEquals(grundlagenAnteil(6), 0.25);
+  assertEquals(grundlagenAnteil(7), 0.15);
+});
